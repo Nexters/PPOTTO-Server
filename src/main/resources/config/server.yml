@@ -5,3 +5,12 @@ server:
 spring:
   lifecycle:
     timeout-per-shutdown-phase: 20s
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+server:
+  forward-headers-strategy: framework
