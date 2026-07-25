@@ -19,6 +19,11 @@ COPY --from=extractor --chown=spring:spring /builder/extracted/dependencies/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/spring-boot-loader/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/snapshot-dependencies/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/application/ ./
+RUN SPRING_PROFILES_ACTIVE=prod SPRING_FLYWAY_ENABLED=false \
+    SERVER_PORT=8080 POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_DB=aot \
+    POSTGRES_USER=aot POSTGRES_PASSWORD=aot CORS_ALLOWED_ORIGINS=http://localhost \
+    SWAGGER_USER=aot SWAGGER_PASSWORD=aot \
+    java -XX:AOTCacheOutput=application.aot -Dspring.context.exit=onRefresh -jar application.jar
 USER spring:spring
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "application.jar"]
+ENTRYPOINT ["java", "-XX:AOTCache=application.aot", "-jar", "application.jar"]
