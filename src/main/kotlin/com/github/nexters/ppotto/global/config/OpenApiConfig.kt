@@ -39,7 +39,7 @@ class OpenApiConfig {
                     """.trimIndent(),
                 ).contact(
                     Contact()
-                        .name("뽀또")
+                        .name("Github Repository")
                         .url("https://github.com/Nexters/Gallery100-Server"),
                 ),
         )
