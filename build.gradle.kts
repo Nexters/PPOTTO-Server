@@ -10,7 +10,9 @@ plugins {
 
 group = "com.github.nexters"
 version = "1.0.0-alpha"
-extra["jooq.version"] = libs.versions.jooq.get()
+extra["jooq.version"] =
+    libs.versions.jooq
+        .get()
 
 kotlin {
     jvmToolchain(25)

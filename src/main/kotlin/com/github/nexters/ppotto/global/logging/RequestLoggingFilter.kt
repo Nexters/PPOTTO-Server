@@ -18,7 +18,13 @@ class RequestLoggingFilter : OncePerRequestFilter() {
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        MDC.put("requestId", UUID.randomUUID().toString().substring(0, 8))
+        MDC.put(
+            "requestId",
+            UUID
+                .randomUUID()
+                .toString()
+                .substring(0, 8),
+        )
         val started = System.currentTimeMillis()
         try {
             filterChain.doFilter(request, response)

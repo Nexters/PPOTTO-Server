@@ -10,7 +10,10 @@ class ApplicationIntegrationTest(
         Given("애플리케이션이 기동된 상태에서") {
             When("데이터베이스에 쿼리를 실행하면") {
                 Then("정상적으로 응답한다") {
-                    dsl.selectOne().fetchSingle().value1() shouldBe 1
+                    dsl
+                        .selectOne()
+                        .fetchSingle()
+                        .value1() shouldBe 1
                 }
             }
         }
