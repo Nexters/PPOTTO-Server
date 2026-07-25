@@ -12,3 +12,4 @@ spring:
       - classpath:config/jackson.yml
       - classpath:config/actuator.yml
       - classpath:config/logging.yml
+      - classpath:config/springdoc.yml

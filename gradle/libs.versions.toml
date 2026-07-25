@@ -8,6 +8,7 @@ flyway = "12.4.0"
 postgresql = "42.7.11"
 kotest = "6.2.3"
 spring-dotenv = "5.1.0"
+springdoc = "3.0.3"
 
 [libraries]
 spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
@@ -20,6 +21,7 @@ spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-te
 spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 spring-boot-starter-flyway-test = { module = "org.springframework.boot:spring-boot-starter-flyway-test" }
 spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
+springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jooq-kotlin = { module = "org.jooq:jooq-kotlin", version.ref = "jooq" }

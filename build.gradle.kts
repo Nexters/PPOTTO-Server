@@ -36,6 +36,7 @@ dependencies {
     implementation(libs.spring.boot.starter.jooq)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.webmvc)
+    implementation(libs.springdoc.openapi.starter.webmvc.ui)
 
     runtimeOnly(libs.postgresql)
 
