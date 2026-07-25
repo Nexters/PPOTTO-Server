@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.spring)
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
     id("ppotto.database")
 }
 
@@ -53,6 +55,22 @@ dependencies {
     testImplementation(libs.testcontainers.postgresql)
 
     testRuntimeOnly(libs.junit.platform.launcher)
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom("config/detekt/detekt.yml")
+}
+
+configurations.matching { it.name == "detekt" }.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin") {
+            useVersion(
+                libs.versions.detekt.kotlin
+                    .get(),
+            )
+        }
+    }
 }
 
 tasks.jar {

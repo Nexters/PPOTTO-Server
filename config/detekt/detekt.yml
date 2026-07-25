@@ -1,0 +1,7 @@
+style:
+  MagicNumber:
+    active: false
+
+performance:
+  SpreadOperator:
+    active: false
