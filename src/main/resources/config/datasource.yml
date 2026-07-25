@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:ppotto}
+    username: ${POSTGRES_USER:ppotto}
+    password: ${POSTGRES_PASSWORD:ppotto}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:5432}/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    hikari:
+      maximum-pool-size: 20

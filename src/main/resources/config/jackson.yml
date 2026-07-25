@@ -1,0 +1,4 @@
+spring:
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: Asia/Seoul

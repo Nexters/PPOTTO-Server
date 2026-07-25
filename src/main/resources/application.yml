@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: ppotto
+  profiles:
+    default: local
+  config:
+    import:
+      - classpath:config/server.yml
+      - classpath:config/datasource.yml
+      - classpath:config/flyway.yml
+      - classpath:config/jooq.yml
+      - classpath:config/jackson.yml
+      - classpath:config/actuator.yml
+      - classpath:config/logging.yml

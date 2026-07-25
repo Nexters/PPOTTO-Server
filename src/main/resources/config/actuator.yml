@@ -1,0 +1,20 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always

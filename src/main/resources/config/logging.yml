@@ -1,0 +1,14 @@
+logging:
+  level:
+    com.github.nexters.ppotto: info
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+
+logging:
+  level:
+    com.github.nexters.ppotto: debug
+    org.jooq.tools.LoggerListener: debug
