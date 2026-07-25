@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.global.error
 
-import java.time.Instant
 import org.springframework.validation.BindingResult
+import java.time.Instant
 
 data class ErrorResponse(
     val code: String,
@@ -16,10 +16,15 @@ data class ErrorResponse(
     )
 
     companion object {
-        fun of(errorCode: ErrorCode, message: String = errorCode.message): ErrorResponse =
-            ErrorResponse(errorCode.code, message, emptyList(), Instant.now())
+        fun of(
+            errorCode: ErrorCode,
+            message: String = errorCode.message,
+        ): ErrorResponse = ErrorResponse(errorCode.code, message, emptyList(), Instant.now())
 
-        fun of(errorCode: ErrorCode, bindingResult: BindingResult): ErrorResponse =
+        fun of(
+            errorCode: ErrorCode,
+            bindingResult: BindingResult,
+        ): ErrorResponse =
             ErrorResponse(
                 errorCode.code,
                 errorCode.message,

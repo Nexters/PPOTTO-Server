@@ -16,7 +16,6 @@ import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
-
     private val log = LoggerFactory.getLogger(javaClass)
 
     @ExceptionHandler(BusinessException::class)
@@ -48,7 +47,11 @@ class GlobalExceptionHandler {
     fun handleException(e: Exception): ResponseEntity<ApiResponse<Unit>> =
         respond(HttpStatus.INTERNAL_SERVER_ERROR, ErrorResponse.of(CommonErrorCode.INTERNAL_ERROR), e)
 
-    private fun respond(status: HttpStatus, error: ErrorResponse, e: Exception): ResponseEntity<ApiResponse<Unit>> {
+    private fun respond(
+        status: HttpStatus,
+        error: ErrorResponse,
+        e: Exception,
+    ): ResponseEntity<ApiResponse<Unit>> {
         if (status.is5xxServerError) {
             log.error("unhandled exception", e)
         } else {

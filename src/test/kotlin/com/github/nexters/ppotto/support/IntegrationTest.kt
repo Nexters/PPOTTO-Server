@@ -6,4 +6,6 @@ import org.springframework.context.annotation.Import
 
 @SpringBootTest
 @Import(TestcontainersConfiguration::class)
-abstract class IntegrationTest(body: BehaviorSpec.() -> Unit = {}) : BehaviorSpec(body)
+abstract class IntegrationTest(
+    body: BehaviorSpec.() -> Unit = {},
+) : BehaviorSpec(body)

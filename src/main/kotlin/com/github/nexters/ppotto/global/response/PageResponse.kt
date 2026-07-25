@@ -8,7 +8,11 @@ data class PageResponse<T>(
     val hasNext: Boolean,
 ) {
     companion object {
-        fun <T> of(items: List<T>, page: Int, size: Int, totalCount: Long): PageResponse<T> =
-            PageResponse(items, page, size, totalCount, (page + 1).toLong() * size < totalCount)
+        fun <T> of(
+            items: List<T>,
+            page: Int,
+            size: Int,
+            totalCount: Long,
+        ): PageResponse<T> = PageResponse(items, page, size, totalCount, (page + 1).toLong() * size < totalCount)
     }
 }

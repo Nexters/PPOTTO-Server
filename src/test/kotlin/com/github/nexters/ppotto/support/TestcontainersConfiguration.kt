@@ -7,7 +7,6 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 
 @TestConfiguration(proxyBeanMethods = false)
 class TestcontainersConfiguration {
-
     @Bean
     @ServiceConnection
     fun postgresContainer(): PostgreSQLContainer = PostgreSQLContainer("postgres:18-alpine")
