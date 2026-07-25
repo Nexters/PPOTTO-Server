@@ -10,6 +10,7 @@ Backend server for ppotto (뽀또). Kotlin 2.3 / Spring Boot 4.1 / JDK 25 / Post
 | `./gradlew ktlintFormat` | Auto-fix code style violations |
 | `./gradlew flywayMigrate jooqCodegen` | Apply migrations + regenerate jOOQ code (needs local DB: `docker compose up -d`) |
 | `./gradlew bootRun` | Run locally (reads `.env` via spring-dotenv) |
+| `./gradlew koverHtmlReport` | Test coverage report (`build/reports/kover/html`) |
 
 ## Architecture (DDD-lite)
 

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.spring.dependency.management)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kover)
     id("ppotto.database")
 }
 
