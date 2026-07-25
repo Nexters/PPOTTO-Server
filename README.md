@@ -17,7 +17,7 @@ docker compose up -d
 Server/
 ├── build.gradle.kts             빌드 스크립트 (버전은 gradle/libs.versions.toml에서 관리)
 ├── buildSrc/                    Flyway + jOOQ codegen 빌드 플러그인
-├── compose.yaml                 로컬 PostgreSQL (기본 포트 54782)
+├── compose.yaml                 로컬 PostgreSQL + pgvector (기본 포트 54782)
 ├── Dockerfile                   멀티스테이지 + 레이어 분리 + non-root 실행
 └── src/
     ├── main/kotlin/com/github/nexters/ppotto/
@@ -35,7 +35,7 @@ Server/
     ├── main/resources/
     │   ├── application.yml      프로파일 기본값과 config import 목록만
     │   ├── config/*.yml         관심사별 설정 분리 (datasource, security, cors 등)
-    │   └── db/migration/        Flyway 마이그레이션 (V{n}__{설명}.sql)
+    │   └── db/migration/        Flyway 마이그레이션 (V{yyyyMMddHHmmss}__{설명}.sql)
     ├── generated/jooq/          jOOQ 생성 코드 (커밋 대상, 직접 수정 금지)
     └── test/kotlin/             Kotest BehaviorSpec + Testcontainers
 ```

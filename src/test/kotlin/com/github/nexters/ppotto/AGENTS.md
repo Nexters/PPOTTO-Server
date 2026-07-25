@@ -8,7 +8,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 |------|-------------|
 | `ProjectConfig.kt` | Kotest global config; registers `SpringExtension` (required — base-class registration does not work in Kotest 6) |
 | `support/IntegrationTest.kt` | Base class: `@SpringBootTest` + `@ActiveProfiles("test")` + Testcontainers import. Extend this for integration tests |
-| `support/TestcontainersConfiguration.kt` | `@ServiceConnection` PostgreSQLContainer (postgres:18-alpine) |
+| `support/TestcontainersConfiguration.kt` | `@ServiceConnection` PostgreSQLContainer (pgvector/pgvector:pg18, matches compose image) |
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
 | `../../../../../resources/application-test.yml` | Supplies values for env placeholders in tests (tests do not read `.env`) |
 

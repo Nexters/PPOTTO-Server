@@ -9,5 +9,5 @@ import org.testcontainers.postgresql.PostgreSQLContainer
 class TestcontainersConfiguration {
     @Bean
     @ServiceConnection
-    fun postgresContainer(): PostgreSQLContainer = PostgreSQLContainer("postgres:18-alpine")
+    fun postgresContainer(): PostgreSQLContainer = PostgreSQLContainer("pgvector/pgvector:pg18")
 }
