@@ -3,6 +3,9 @@ server:
   shutdown: graceful
 
 spring:
+  threads:
+    virtual:
+      enabled: true
   lifecycle:
     timeout-per-shutdown-phase: 20s
 

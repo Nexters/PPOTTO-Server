@@ -7,7 +7,7 @@ Configuration and database migrations.
 | File / Directory | Description |
 |------|-------------|
 | `application.yml` | Only app name, `profiles.default: local`, and the `spring.config.import` list. No other keys |
-| `config/server.yml` | Port, graceful shutdown; prod adds `forward-headers-strategy: framework` (nginx reverse proxy) |
+| `config/server.yml` | Port, graceful shutdown, virtual threads enabled; prod adds `forward-headers-strategy: framework` (nginx reverse proxy) |
 | `config/datasource.yml` | Postgres connection from `${POSTGRES_*}`; prod overrides hikari pool size |
 | `config/flyway.yml` | Flyway settings (`classpath:db/migration`) |
 | `config/jooq.yml` | jOOQ dialect |
