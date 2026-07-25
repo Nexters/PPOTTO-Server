@@ -2,6 +2,7 @@ FROM eclipse-temurin:25-jdk AS build
 WORKDIR /workspace
 COPY gradlew settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle/ gradle/
+COPY buildSrc/ buildSrc/
 RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon dependencies || true
 COPY src/ src/
 RUN --mount=type=cache,target=/root/.gradle ./gradlew --no-daemon clean bootJar -x test
