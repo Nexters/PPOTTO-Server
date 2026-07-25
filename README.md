@@ -29,7 +29,7 @@ docker compose up -d
 curl localhost:8080/actuator/health
 ```
 
-로컬에서 5432 포트를 이미 다른 Postgres가 쓰고 있다면 `.env`의 `POSTGRES_PORT`를 5433 등으로 변경합니다.
+로컬 Postgres는 다른 서비스와의 충돌을 피하기 위해 기본적으로 54782 포트에 매핑됩니다. 변경이 필요하면 `.env`의 `POSTGRES_PORT`를 수정합니다.
 
 ## 설정 구조
 
