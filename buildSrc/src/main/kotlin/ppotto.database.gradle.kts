@@ -67,3 +67,7 @@ tasks.named("jooqCodegen") {
         .withPropertyName("migrations")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 }
+
+tasks.named("compileKotlin") {
+    mustRunAfter(tasks.named("jooqCodegen"))
+}
