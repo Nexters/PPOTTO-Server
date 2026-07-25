@@ -43,6 +43,7 @@ photo/
 - API responses use the `ApiResponse` envelope. Throw `BusinessException` subclasses; `GlobalExceptionHandler` converts them.
 - No default values in yml placeholders (`${VAR}` only). Defaults live only in `.env.template`. New env vars must be added there.
 - `@ConfigurationProperties` data classes get `@Validated` + jakarta validation annotations.
+- Validation annotations on data class constructor properties always use the `@field:` use-site (`@field:NotBlank val title: String`); without it Hibernate Validator may not see them. Controllers take `@Valid @RequestBody`.
 
 ## DB Workflow
 
