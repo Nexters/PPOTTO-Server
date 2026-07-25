@@ -43,8 +43,6 @@ dependencies {
     developmentOnly(libs.spring.boot.docker.compose)
     developmentOnly(libs.spring.dotenv)
 
-    jooqCodegen(libs.postgresql)
-
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.extensions.spring)
     testImplementation(libs.kotest.runner.junit5)

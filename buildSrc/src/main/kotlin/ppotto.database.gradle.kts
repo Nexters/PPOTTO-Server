@@ -3,6 +3,12 @@ plugins {
     id("org.jooq.jooq-codegen-gradle")
 }
 
+val libs = the<VersionCatalogsExtension>().named("libs")
+
+dependencies {
+    "jooqCodegen"(libs.findLibrary("postgresql").get())
+}
+
 val dotenv = file(".env").takeIf { it.exists() }
     ?.readLines()
     ?.filter { it.isNotBlank() && !it.trimStart().startsWith("#") && it.contains("=") }
