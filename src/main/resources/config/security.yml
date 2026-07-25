@@ -1,0 +1,5 @@
+spring:
+  security:
+    user:
+      name: ${SWAGGER_USER}
+      password: ${SWAGGER_PASSWORD}
