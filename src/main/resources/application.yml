@@ -13,3 +13,4 @@ spring:
       - classpath:config/actuator.yml
       - classpath:config/logging.yml
       - classpath:config/springdoc.yml
+      - classpath:config/cors.yml
