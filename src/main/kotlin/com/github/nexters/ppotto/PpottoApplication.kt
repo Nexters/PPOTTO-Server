@@ -1,9 +1,11 @@
 package com.github.nexters.ppotto
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
+@ConfigurationPropertiesScan
 class PpottoApplication
 
 fun main(args: Array<String>) {
