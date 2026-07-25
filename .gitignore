@@ -1,0 +1,12 @@
+.gradle/
+build/
+.kotlin/
+.idea/
+*.iml
+out/
+.vscode/
+.DS_Store
+.omc/
+.env
+.env.*
+!.env.template

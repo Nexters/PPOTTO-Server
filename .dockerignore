@@ -1,0 +1,15 @@
+.git
+.github
+.gradle
+.kotlin
+.idea
+.vscode
+.omc
+build
+out
+.env
+.env.*
+*.md
+compose.yaml
+Dockerfile
+.DS_Store
