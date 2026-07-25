@@ -1,6 +1,14 @@
+complexity:
+  LongParameterList:
+    ignoreDefaultParameters: true
+
 style:
   MagicNumber:
     active: false
+  MaxLineLength:
+    maxLineLength: 140
+  ReturnCount:
+    excludeGuardClauses: true
 
 performance:
   SpreadOperator:
