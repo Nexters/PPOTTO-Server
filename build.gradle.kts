@@ -1,3 +1,5 @@
+import dev.detekt.gradle.Detekt
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.spring)
@@ -61,9 +63,25 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
+ktlint {
+    filter {
+        exclude {
+            it.file.path
+                .contains("src/generated")
+        }
+    }
+}
+
 detekt {
     buildUponDefaultConfig = true
     config.setFrom("config/detekt/detekt.yml")
+}
+
+tasks.withType<Detekt>().configureEach {
+    exclude {
+        it.file.path
+            .contains("src/generated")
+    }
 }
 
 configurations.matching { it.name == "detekt" }.all {

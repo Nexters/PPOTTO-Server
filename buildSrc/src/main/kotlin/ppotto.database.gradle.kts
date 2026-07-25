@@ -27,6 +27,7 @@ flyway {
     user = dbUser
     password = dbPassword
     locations = arrayOf("filesystem:src/main/resources/db/migration")
+    outOfOrder = true
 }
 
 jooq {
@@ -43,6 +44,7 @@ jooq {
                 name = "org.jooq.meta.postgres.PostgresDatabase"
                 inputSchema = "public"
                 excludes = "flyway_schema_history"
+                isIncludeRoutines = false
             }
             generate {
                 isPojos = true
