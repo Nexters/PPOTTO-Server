@@ -12,6 +12,9 @@ jobs:
   build:
     name: 빌드 및 테스트
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -19,7 +22,14 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew build
+      - run: ./gradlew build koverXmlReport
+      - uses: mi-kas/kover-report@v2.5
+        if: github.event_name == 'pull_request'
+        with:
+          path: build/reports/kover/report.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: 커버리지
+          update-comment: true
 
   docker:
     name: Docker 이미지 빌드
