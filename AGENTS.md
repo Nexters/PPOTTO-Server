@@ -46,9 +46,14 @@ photo/
 - `@ConfigurationProperties` data classes get `@Validated` + jakarta validation annotations.
 - Validation annotations on data class constructor properties always use the `@field:` use-site (`@field:NotBlank val title: String`); without it Hibernate Validator may not see them. Controllers take `@Valid @RequestBody`.
 
+## Planned Conventions
+
+- Primary keys for new tables: `uuid primary key default uuidv7()` (Postgres 18 built-in, time-ordered).
+- API versioning: adopt Spring Framework 7 native API versioning when the first public API ships.
+
 ## DB Workflow
 
-1. Write `src/main/resources/db/migration/V{n}__{description}.sql`
+1. Write `src/main/resources/db/migration/V{yyyyMMddHHmmss}__{description}.sql` — timestamp versions avoid collisions between parallel branches, and `out-of-order: true` lets an older-versioned migration from a merged branch apply later
 2. Run `./gradlew flywayMigrate jooqCodegen`
 3. Commit generated code in `src/generated/jooq/`
 
