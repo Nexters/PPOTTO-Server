@@ -19,6 +19,7 @@ spring-boot-docker-compose = { module = "org.springframework.boot:spring-boot-do
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
 spring-boot-starter-flyway-test = { module = "org.springframework.boot:spring-boot-starter-flyway-test" }
+spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jooq-kotlin = { module = "org.jooq:jooq-kotlin", version.ref = "jooq" }

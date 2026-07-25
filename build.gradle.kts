@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "com.github.nexters"
-version = "0.0.1-SNAPSHOT"
+version = "1.0.0-alpha"
 extra["jooq.version"] = libs.versions.jooq.get()
 
 kotlin {
@@ -24,34 +24,35 @@ repositories {
     mavenCentral()
 }
 
-dependencyManagement {
-    imports {
-        mavenBom("org.springframework.cloud:spring-cloud-dependencies:${libs.versions.spring.cloud.get()}")
-    }
-}
-
 dependencies {
-    implementation(libs.spring.boot.starter.webmvc)
-    implementation(libs.spring.boot.starter.validation)
-    implementation(libs.spring.boot.starter.actuator)
-    implementation(libs.kotlin.reflect)
-    implementation(libs.jackson.module.kotlin)
-    implementation(libs.spring.boot.starter.jooq)
-    implementation(libs.jooq.kotlin)
-    implementation(libs.spring.boot.starter.flyway)
+    implementation(platform(libs.spring.cloud.dependencies))
+
     implementation(libs.flyway.database.postgresql)
+    implementation(libs.jackson.module.kotlin)
+    implementation(libs.jooq.kotlin)
+    implementation(libs.kotlin.reflect)
+    implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.flyway)
+    implementation(libs.spring.boot.starter.jooq)
+    implementation(libs.spring.boot.starter.validation)
+    implementation(libs.spring.boot.starter.webmvc)
+
     runtimeOnly(libs.postgresql)
-    developmentOnly(libs.spring.dotenv)
+
     developmentOnly(libs.spring.boot.docker.compose)
+    developmentOnly(libs.spring.dotenv)
+
     jooqCodegen(libs.postgresql)
-    testImplementation(libs.spring.boot.starter.webmvc.test)
+
+    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotest.extensions.spring)
+    testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.spring.boot.starter.flyway.test)
+    testImplementation(libs.spring.boot.starter.webmvc.test)
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
-    testImplementation(libs.kotest.runner.junit5)
-    testImplementation(libs.kotest.assertions.core)
-    testImplementation(libs.kotest.extensions.spring)
+
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
