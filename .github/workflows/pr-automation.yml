@@ -1,0 +1,39 @@
+name: PR 자동화
+
+on:
+  pull_request:
+    types:
+      - opened
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  automate:
+    name: assign 및 이슈 연동
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      AUTHOR: ${{ github.event.pull_request.user.login }}
+      HEAD_REF: ${{ github.head_ref }}
+    steps:
+      - name: PR 작성자 assign
+        run: gh pr edit "$PR_NUMBER" --repo "$REPO" --add-assignee "$AUTHOR"
+      - name: 이슈 링크 및 라벨 복사
+        run: |
+          ISSUE=$(echo "$HEAD_REF" | sed -nE 's#^[^/]+/([0-9]+)-.*#\1#p')
+          if [ -z "$ISSUE" ]; then
+            echo "브랜치명에 이슈번호가 없어 건너뜁니다"
+            exit 0
+          fi
+          BODY=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json body --jq .body)
+          if ! printf '%s' "$BODY" | grep -qiE "(close[sd]?|fix(e[sd])?|resolve[sd]?) #$ISSUE\b"; then
+            printf '%s\n\nCloses #%s\n' "$BODY" "$ISSUE" | gh pr edit "$PR_NUMBER" --repo "$REPO" --body-file -
+          fi
+          LABELS=$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")')
+          if [ -n "$LABELS" ]; then
+            gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABELS"
+          fi
