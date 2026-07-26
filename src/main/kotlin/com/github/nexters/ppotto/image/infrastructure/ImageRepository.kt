@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.image.infrastructure
 
 import com.github.nexters.ppotto.image.domain.Image
 import com.github.nexters.ppotto.image.domain.UploadStatus
+import com.github.nexters.ppotto.jooq.tables.records.ImagesRecord
 import com.github.nexters.ppotto.jooq.tables.references.IMAGES
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
@@ -36,7 +37,7 @@ class ImageRepository(
             .fetch()
             .map { it.toDomain() }
 
-    private fun com.github.nexters.ppotto.jooq.tables.records.ImagesRecord.toDomain() =
+    private fun ImagesRecord.toDomain() =
         Image(
             id = id!!,
             boardId = boardId,
