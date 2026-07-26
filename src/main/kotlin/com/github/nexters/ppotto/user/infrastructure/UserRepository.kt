@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.infrastructure
 
+import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.user.domain.User
 import org.jooq.DSLContext
@@ -25,7 +26,7 @@ class UserRepository(
             .fetchOne()
             ?.toDomain()
 
-    private fun com.github.nexters.ppotto.jooq.tables.records.UsersRecord.toDomain() =
+    private fun UsersRecord.toDomain() =
         User(
             id = id!!,
             createdAt = createdAt!!,
