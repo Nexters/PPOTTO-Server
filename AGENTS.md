@@ -30,6 +30,11 @@ photo/
 - Reads: QueryService may project directly to dto with jOOQ. Writes go through the domain model.
 - Never expose jOOQ-generated POJOs/Records in API responses. Always map to dto.
 
+## Branch & PR Rules
+
+- Branch: off `dev`, named `feat/이슈번호-기능간단설명` (e.g. `feat/1-user-board-image-entity`).
+- PR target: `dev`, not `main`. `main` is only updated by promoting `dev`.
+
 ## Commit Rules
 
 - Format: `$operator($domain): $message` — e.g. `feat(photo): 사진 업로드 API 추가`
