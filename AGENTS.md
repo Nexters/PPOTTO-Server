@@ -30,6 +30,11 @@ photo/
 - Reads: QueryService may project directly to dto with jOOQ. Writes go through the domain model.
 - Never expose jOOQ-generated POJOs/Records in API responses. Always map to dto.
 
+## Branch & PR Rules
+
+- Branch: off `dev`, named `feat/이슈번호-기능간단설명` (e.g. `feat/1-user-board-image-entity`).
+- PR target: `dev`, not `main`. `main` is only updated by promoting `dev`.
+
 ## Commit Rules
 
 - Format: `$operator($domain): $message` — e.g. `feat(photo): 사진 업로드 API 추가`
@@ -45,6 +50,7 @@ photo/
 - No default values in yml placeholders (`${VAR}` only). Defaults live only in `.env.template`. New env vars must be added there.
 - `@ConfigurationProperties` data classes get `@Validated` + jakarta validation annotations.
 - Validation annotations on data class constructor properties always use the `@field:` use-site (`@field:NotBlank val title: String`); without it Hibernate Validator may not see them. Controllers take `@Valid @RequestBody`.
+- Never write a fully-qualified name (FQN) inline. Import the short name whenever there's no naming conflict.
 
 ## Planned Conventions
 

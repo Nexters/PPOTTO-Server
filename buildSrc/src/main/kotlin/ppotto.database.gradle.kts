@@ -45,6 +45,13 @@ jooq {
                 inputSchema = "public"
                 excludes = "flyway_schema_history"
                 isIncludeRoutines = false
+                forcedTypes {
+                    forcedType {
+                        includeTypes = "(?i)TIMESTAMPTZ"
+                        userType = "java.time.Instant"
+                        converter = "com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter"
+                    }
+                }
             }
             generate {
                 isPojos = true

@@ -107,6 +107,7 @@ enum class PhotoErrorCode(
 
 ## 규칙
 
+- 브랜치: `dev` 기준으로 `feat/이슈번호-기능간단설명` 형식(예: `feat/1-user-board-image-entity`)으로 만들고, PR은 `main`이 아니라 `dev`로 보냅니다.
 - 커밋 메시지: `$operator($domain): $message` 형식, 한글로 작성합니다. operator는 `feat` `fix` `refactor` `chore` `test` `docs` `style` `ci`.
 - 코드 스타일은 ktlint와 detekt가 강제합니다. 커밋 전 `./gradlew build`가 통과해야 합니다.
 - API 응답은 `ApiResponse` envelope로 감싸고, 에러 코드는 `도메인-번호` 형식(`COMMON-001`)을 씁니다.
