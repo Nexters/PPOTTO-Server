@@ -95,6 +95,16 @@ configurations.matching { it.name == "detekt" }.all {
     }
 }
 
+kover {
+    reports {
+        filters {
+            excludes {
+                packages("com.github.nexters.ppotto.jooq")
+            }
+        }
+    }
+}
+
 tasks.jar {
     enabled = false
 }
