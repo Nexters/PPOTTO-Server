@@ -30,7 +30,7 @@ jobs:
             exit 0
           fi
           BODY=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json body --jq .body)
-          if ! printf '%s' "$BODY" | grep -qiE "(close[sd]?|fix(e[sd])?|resolve[sd]?) #$ISSUE\b"; then
+          if ! printf '%s' "$BODY" | grep -qiE "\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+(https://github\.com/[^[:space:]]+/issues/$ISSUE\b|([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)?#$ISSUE\b)"; then
             printf '%s\n\nCloses #%s\n' "$BODY" "$ISSUE" | gh pr edit "$PR_NUMBER" --repo "$REPO" --body-file -
           fi
           LABELS=$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")')
