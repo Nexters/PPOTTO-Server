@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.infrastructure
 
 import com.github.nexters.ppotto.board.domain.Board
+import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
@@ -32,7 +33,7 @@ class BoardRepository(
             .fetch()
             .map { it.toDomain() }
 
-    private fun com.github.nexters.ppotto.jooq.tables.records.BoardsRecord.toDomain() =
+    private fun BoardsRecord.toDomain() =
         Board(
             id = id!!,
             userId = userId,
