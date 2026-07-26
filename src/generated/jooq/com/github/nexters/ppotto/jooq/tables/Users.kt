@@ -4,11 +4,12 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.keys.USERS_PKEY
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 import kotlin.collections.Collection
@@ -80,12 +81,12 @@ open class Users(
     /**
      * The column <code>public.users.created_at</code>.
      */
-    val CREATED_AT: TableField<UsersRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<UsersRecord, Instant?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
     /**
      * The column <code>public.users.updated_at</code>.
      */
-    val UPDATED_AT: TableField<UsersRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val UPDATED_AT: TableField<UsersRecord, Instant?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
     private constructor(alias: Name, aliased: Table<UsersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<UsersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

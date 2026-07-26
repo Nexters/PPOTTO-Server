@@ -4,12 +4,13 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_BOARDS_USER_ID
 import com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 import kotlin.collections.Collection
@@ -88,12 +89,12 @@ open class Boards(
     /**
      * The column <code>public.boards.created_at</code>.
      */
-    val CREATED_AT: TableField<BoardsRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<BoardsRecord, Instant?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
     /**
      * The column <code>public.boards.updated_at</code>.
      */
-    val UPDATED_AT: TableField<BoardsRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val UPDATED_AT: TableField<BoardsRecord, Instant?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
     private constructor(alias: Name, aliased: Table<BoardsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<BoardsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

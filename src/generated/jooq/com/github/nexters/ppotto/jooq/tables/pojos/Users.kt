@@ -5,7 +5,7 @@ package com.github.nexters.ppotto.jooq.tables.pojos
 
 
 import java.io.Serializable
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 
@@ -15,8 +15,8 @@ import java.util.UUID
 @Suppress("warnings")
 data class Users(
     val id: UUID? = null,
-    val createdAt: OffsetDateTime? = null,
-    val updatedAt: OffsetDateTime? = null
+    val createdAt: Instant? = null,
+    val updatedAt: Instant? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {

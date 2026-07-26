@@ -6,7 +6,7 @@ package com.github.nexters.ppotto.jooq.tables.records
 
 import com.github.nexters.ppotto.jooq.tables.Users
 
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 import org.jooq.Record1
@@ -23,13 +23,13 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
         set(value): Unit = set(0, value)
         get(): UUID? = get(0) as UUID?
 
-    open var createdAt: OffsetDateTime?
+    open var createdAt: Instant?
         set(value): Unit = set(1, value)
-        get(): OffsetDateTime? = get(1) as OffsetDateTime?
+        get(): Instant? = get(1) as Instant?
 
-    open var updatedAt: OffsetDateTime?
+    open var updatedAt: Instant?
         set(value): Unit = set(2, value)
-        get(): OffsetDateTime? = get(2) as OffsetDateTime?
+        get(): Instant? = get(2) as Instant?
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -40,7 +40,7 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
     /**
      * Create a detached, initialised UsersRecord
      */
-    constructor(id: UUID? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: UUID? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.createdAt = createdAt
         this.updatedAt = updatedAt

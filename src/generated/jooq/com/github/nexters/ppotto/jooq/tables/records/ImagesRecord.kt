@@ -6,7 +6,7 @@ package com.github.nexters.ppotto.jooq.tables.records
 
 import com.github.nexters.ppotto.jooq.tables.Images
 
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 import org.jooq.Record1
@@ -35,13 +35,13 @@ open class ImagesRecord private constructor() : UpdatableRecordImpl<ImagesRecord
         set(value): Unit = set(3, value)
         get(): UUID = get(3) as UUID
 
-    open var createdAt: OffsetDateTime?
+    open var createdAt: Instant?
         set(value): Unit = set(4, value)
-        get(): OffsetDateTime? = get(4) as OffsetDateTime?
+        get(): Instant? = get(4) as Instant?
 
-    open var updatedAt: OffsetDateTime?
+    open var updatedAt: Instant?
         set(value): Unit = set(5, value)
-        get(): OffsetDateTime? = get(5) as OffsetDateTime?
+        get(): Instant? = get(5) as Instant?
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -52,7 +52,7 @@ open class ImagesRecord private constructor() : UpdatableRecordImpl<ImagesRecord
     /**
      * Create a detached, initialised ImagesRecord
      */
-    constructor(id: UUID? = null, boardId: UUID, uploadStatus: String? = null, uploadSessionId: UUID, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: UUID? = null, boardId: UUID, uploadStatus: String? = null, uploadSessionId: UUID, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.boardId = boardId
         this.uploadStatus = uploadStatus

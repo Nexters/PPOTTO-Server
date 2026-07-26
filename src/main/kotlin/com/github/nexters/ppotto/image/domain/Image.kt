@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.image.domain
 
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 class Image(
@@ -8,6 +8,6 @@ class Image(
     val boardId: UUID,
     val uploadStatus: UploadStatus,
     val uploadSessionId: UUID,
-    val createdAt: OffsetDateTime,
-    val updatedAt: OffsetDateTime,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )

@@ -1,10 +1,10 @@
 package com.github.nexters.ppotto.user.domain
 
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 class User(
     val id: UUID,
-    val createdAt: OffsetDateTime,
-    val updatedAt: OffsetDateTime,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )
