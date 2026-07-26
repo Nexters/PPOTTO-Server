@@ -34,8 +34,13 @@ CREATE TABLE images (
     board_id UUID NOT NULL,
     upload_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     upload_session_id UUID NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_images_board_id ON images (board_id);
 CREATE INDEX idx_images_upload_session_id ON images (upload_session_id);
+
+CREATE TRIGGER images_set_updated_at
+BEFORE UPDATE ON images
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();

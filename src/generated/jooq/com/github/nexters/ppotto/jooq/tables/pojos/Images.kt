@@ -18,7 +18,8 @@ data class Images(
     val boardId: UUID,
     val uploadStatus: String? = null,
     val uploadSessionId: UUID,
-    val createdAt: OffsetDateTime? = null
+    val createdAt: OffsetDateTime? = null,
+    val updatedAt: OffsetDateTime? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -51,6 +52,12 @@ data class Images(
         }
         else if (this.createdAt != o.createdAt)
             return false
+        if (this.updatedAt == null) {
+            if (o.updatedAt != null)
+                return false
+        }
+        else if (this.updatedAt != o.updatedAt)
+            return false
         return true
     }
 
@@ -62,6 +69,7 @@ data class Images(
         result = prime * result + (if (this.uploadStatus == null) 0 else this.uploadStatus.hashCode())
         result = prime * result + this.uploadSessionId.hashCode()
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
+        result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         return result
     }
 
@@ -73,6 +81,7 @@ data class Images(
         sb.append(", ").append(uploadStatus)
         sb.append(", ").append(uploadSessionId)
         sb.append(", ").append(createdAt)
+        sb.append(", ").append(updatedAt)
 
         sb.append(")")
         return sb.toString()

@@ -44,5 +44,6 @@ class ImageRepository(
             uploadStatus = UploadStatus.valueOf(uploadStatus!!),
             uploadSessionId = uploadSessionId,
             createdAt = createdAt!!,
+            updatedAt = updatedAt!!,
         )
 }

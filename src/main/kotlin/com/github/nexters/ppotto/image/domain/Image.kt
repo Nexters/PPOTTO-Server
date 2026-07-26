@@ -9,4 +9,5 @@ class Image(
     val uploadStatus: UploadStatus,
     val uploadSessionId: UUID,
     val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
 )
