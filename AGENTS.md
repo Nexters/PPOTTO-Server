@@ -65,6 +65,7 @@ photo/
 | `gradle/` | Version catalog + wrapper (see `gradle/AGENTS.md`) |
 | `buildSrc/` | DB build convention plugin (see `buildSrc/AGENTS.md`) |
 | `.github/` | CI workflow + templates (see `.github/AGENTS.md`) |
+| `.gitattributes` | Marks `src/generated/**` as `linguist-generated` so PR diffs collapse generated files |
 
 ## Maintenance
 
