@@ -8,6 +8,7 @@ Shared module used by all domains. Contains no business logic.
 |-----------|---------|
 | `config/` | Spring configuration beans (see `config/AGENTS.md`) |
 | `error/` | Error codes, exceptions, global handler (see `error/AGENTS.md`) |
+| `jooq/` | Custom jOOQ converters used by codegen `forcedType` |
 | `logging/` | Request logging filter (see `logging/AGENTS.md`) |
 | `response/` | Response envelope models (see `response/AGENTS.md`) |
 
