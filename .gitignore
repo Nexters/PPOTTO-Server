@@ -10,3 +10,4 @@ out/
 .env
 .env.*
 !.env.template
+/secrets/

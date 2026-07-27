@@ -8,6 +8,7 @@ spring:
       - classpath:config/server.yml
       - classpath:config/datasource.yml
       - classpath:config/flyway.yml
+      - classpath:config/gcs.yml
       - classpath:config/jooq.yml
       - classpath:config/jackson.yml
       - classpath:config/actuator.yml

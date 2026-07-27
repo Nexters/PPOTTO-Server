@@ -1,0 +1,4 @@
+gcs:
+  bucket: ${GCS_BUCKET}
+  credentials-path: ${GCS_CREDENTIALS_PATH}
+  signed-url-expiration-minutes: ${GCS_SIGNED_URL_EXPIRATION_MINUTES}

@@ -7,3 +7,6 @@ POSTGRES_PASSWORD: ppotto
 CORS_ALLOWED_ORIGINS: http://localhost:3000
 SWAGGER_USER: ppotto
 SWAGGER_PASSWORD: ppotto
+GCS_BUCKET: ppotto-test-bucket
+GCS_CREDENTIALS_PATH: ./src/test/resources/dummy-gcs-key.json
+GCS_SIGNED_URL_EXPIRATION_MINUTES: 60

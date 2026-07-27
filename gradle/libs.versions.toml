@@ -5,6 +5,7 @@ spring-dependency-management = "1.1.7"
 spring-cloud = "2025.1.2"
 jooq = "3.21.6"
 flyway = "12.4.0"
+google-cloud-storage = "2.70.0"
 postgresql = "42.7.11"
 kotest = "6.2.3"
 spring-dotenv = "5.1.0"
@@ -31,6 +32,7 @@ kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jooq-kotlin = { module = "org.jooq:jooq-kotlin", version.ref = "jooq" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", version.ref = "google-cloud-storage" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 spring-dotenv = { module = "me.paulschwarz:springboot4-dotenv", version.ref = "spring-dotenv" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
