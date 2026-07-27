@@ -15,13 +15,28 @@ class ImageRepository(
     fun save(
         boardId: UUID,
         uploadSessionId: UUID,
+        originalFileName: String,
     ): Image =
         dslContext
-            .insertInto(IMAGES, IMAGES.BOARD_ID, IMAGES.UPLOAD_SESSION_ID)
-            .values(boardId, uploadSessionId)
+            .insertInto(IMAGES, IMAGES.BOARD_ID, IMAGES.UPLOAD_SESSION_ID, IMAGES.ORIGINAL_FILE_NAME)
+            .values(boardId, uploadSessionId, originalFileName)
             .returning()
             .fetchOne()!!
             .toDomain()
+
+    fun updateStatus(
+        id: UUID,
+        expectedStatus: UploadStatus,
+        newStatus: UploadStatus,
+    ): Image? =
+        dslContext
+            .update(IMAGES)
+            .set(IMAGES.UPLOAD_STATUS, newStatus.name)
+            .where(IMAGES.ID.eq(id))
+            .and(IMAGES.UPLOAD_STATUS.eq(expectedStatus.name))
+            .returning()
+            .fetchOne()
+            ?.toDomain()
 
     fun findById(id: UUID): Image? =
         dslContext
@@ -43,6 +58,7 @@ class ImageRepository(
             boardId = boardId,
             uploadStatus = UploadStatus.valueOf(uploadStatus!!),
             uploadSessionId = uploadSessionId,
+            originalFileName = originalFileName,
             createdAt = createdAt!!,
             updatedAt = updatedAt!!,
         )

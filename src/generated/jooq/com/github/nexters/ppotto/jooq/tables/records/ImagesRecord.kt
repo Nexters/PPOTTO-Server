@@ -43,6 +43,10 @@ open class ImagesRecord private constructor() : UpdatableRecordImpl<ImagesRecord
         set(value): Unit = set(5, value)
         get(): Instant? = get(5) as Instant?
 
+    open var originalFileName: String
+        set(value): Unit = set(6, value)
+        get(): String = get(6) as String
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -52,13 +56,14 @@ open class ImagesRecord private constructor() : UpdatableRecordImpl<ImagesRecord
     /**
      * Create a detached, initialised ImagesRecord
      */
-    constructor(id: UUID? = null, boardId: UUID, uploadStatus: String? = null, uploadSessionId: UUID, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, boardId: UUID, uploadStatus: String? = null, uploadSessionId: UUID, createdAt: Instant? = null, updatedAt: Instant? = null, originalFileName: String): this() {
         this.id = id
         this.boardId = boardId
         this.uploadStatus = uploadStatus
         this.uploadSessionId = uploadSessionId
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.originalFileName = originalFileName
         resetTouchedOnNotNull()
     }
 
@@ -73,6 +78,7 @@ open class ImagesRecord private constructor() : UpdatableRecordImpl<ImagesRecord
             this.uploadSessionId = value.uploadSessionId
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.originalFileName = value.originalFileName
             resetTouchedOnNotNull()
         }
     }

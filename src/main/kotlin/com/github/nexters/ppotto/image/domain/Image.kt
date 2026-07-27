@@ -8,6 +8,7 @@ class Image(
     val boardId: UUID,
     val uploadStatus: UploadStatus,
     val uploadSessionId: UUID,
+    val originalFileName: String,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

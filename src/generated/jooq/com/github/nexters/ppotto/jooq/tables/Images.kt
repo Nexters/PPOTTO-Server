@@ -107,6 +107,11 @@ open class Images(
      */
     val UPDATED_AT: TableField<ImagesRecord, Instant?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
+    /**
+     * The column <code>public.images.original_file_name</code>.
+     */
+    val ORIGINAL_FILE_NAME: TableField<ImagesRecord, String?> = createField(DSL.name("original_file_name"), SQLDataType.VARCHAR(255).nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<ImagesRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<ImagesRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<ImagesRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
