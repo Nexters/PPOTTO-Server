@@ -25,6 +25,13 @@ class AnalysisControllerTest(
     userRepository: UserRepository,
     analysisService: AnalysisService,
 ) : IntegrationTest({
+        fun createPhotosJson(count: Int): String {
+            val photos =
+                (0 until count).joinToString(",") {
+                    """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/jpeg"}"""
+                }
+            return "[$photos]"
+        }
         Given("Board가 등록된 상태에서") {
             val board = boardRepository.save(userRepository.save().id)
 
@@ -38,17 +45,14 @@ class AnalysisControllerTest(
                                     """
                                     {
                                         "boardId": "${board.id}",
-                                        "photos": [
-                                            {"takenAt": "2026-07-01T00:00:00Z", "contentType": "image/jpeg"},
-                                            {"takenAt": "2026-07-02T00:00:00Z"}
-                                        ]
+                                        "photos": ${createPhotosJson(90)}
                                     }
                                     """.trimIndent(),
                                 ),
                         ).andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.analysisId").exists())
-                        .andExpect(jsonPath("$.data.uploads.length()").value(2))
+                        .andExpect(jsonPath("$.data.uploads.length()").value(90))
                         .andExpect(jsonPath("$.data.uploads[0].photoId").exists())
                         .andExpect(jsonPath("$.data.uploads[0].uploadUrl").exists())
                 }
@@ -61,6 +65,25 @@ class AnalysisControllerTest(
                             post("/analysis")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""{"boardId": "${board.id}", "photos": []}"""),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                }
+            }
+
+            When("사진이 89장으로(하한 미만) 요청하면") {
+                Then("400 응답을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": ${createPhotosJson(89)}
+                                    }
+                                    """.trimIndent(),
+                                ),
                         ).andExpect(status().isBadRequest)
                         .andExpect(jsonPath("$.success").value(false))
                 }
@@ -112,7 +135,12 @@ class AnalysisControllerTest(
                             post("/analysis")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
-                                    """{"boardId": "${UUID.randomUUID()}", "photos": [{"takenAt": "2026-07-01T00:00:00Z"}]}""",
+                                    """
+                                    {
+                                        "boardId": "${UUID.randomUUID()}",
+                                        "photos": ${createPhotosJson(90)}
+                                    }
+                                    """.trimIndent(),
                                 ),
                         ).andExpect(status().isNotFound)
                 }
