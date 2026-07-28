@@ -78,7 +78,9 @@ class PhotoRepository(
             id = id!!,
             analysisId = analysisId,
             boardId = boardId,
-            contentType = PhotoContentType.fromMimeType(contentType),
+            contentType =
+                PhotoContentType.entries.find { it.mimeType == contentType }
+                    ?: error("unknown photos.content_type: $contentType"),
             uploadStatus = UploadStatus.valueOf(uploadStatus!!),
             uploadedAt = uploadedAt,
             takenAt = takenAt,
