@@ -95,7 +95,7 @@ class AnalysisControllerTest(
                 Then("성공 응답에 업로드/실패 카운트가 담긴다") {
                     mockMvc
                         .perform(post("/analysis/${created.analysisId}/start"))
-                        .andExpect(status().isOk)
+                        .andExpect(status().isAccepted)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.uploadedCount").exists())
                         .andExpect(jsonPath("$.data.failedCount").exists())
