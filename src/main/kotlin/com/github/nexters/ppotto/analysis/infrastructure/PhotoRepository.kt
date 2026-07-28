@@ -46,6 +46,13 @@ class PhotoRepository(
             .fetch()
             .map { it.toDomain() }
 
+    fun findAllByAnalysisId(analysisId: UUID): List<Photo> =
+        dslContext
+            .selectFrom(PHOTOS)
+            .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
+            .fetch()
+            .map { it.toDomain() }
+
     fun updateStatusBatch(
         ids: List<UUID>,
         expectedStatus: UploadStatus,

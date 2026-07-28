@@ -130,8 +130,8 @@ class AnalysisServiceTest(
                 photoStorage.markUploaded(photoObjectKeys.keyFor(created.analysisId, missingPhotoId, missingPhoto.contentType))
                 val result = analysisService.startUpload(created.analysisId)
 
-                Then("뒤늦게 업로드된 사진도 COMPLETED로 바뀐다") {
-                    result.uploadedCount shouldBe 1
+                Then("뒤늦게 업로드된 사진도 COMPLETED로 바뀌고, 응답은 이번 호출의 델타가 아닌 analysis 전체의 최종 집계다") {
+                    result.uploadedCount shouldBe 2
                     result.failedCount shouldBe 0
                     result.failedPhotoIds.shouldBeEmpty()
                     photoRepository.findPendingByAnalysisId(created.analysisId).shouldBeEmpty()

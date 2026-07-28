@@ -15,6 +15,7 @@ import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
 import java.util.UUID
 
@@ -25,6 +26,7 @@ class AnalysisService(
     private val boardQueryService: BoardQueryService,
     private val photoStorage: PhotoStorage,
     private val photoObjectKeys: PhotoObjectKeys,
+    private val transactionTemplate: TransactionTemplate,
 ) {
     @Transactional
     fun createAnalysis(
@@ -65,21 +67,24 @@ class AnalysisService(
         if (pendingPhotos.isEmpty()) return UploadVerificationResult(0, 0, emptyList())
 
         val existingKeys = photoStorage.existingObjectKeys(photoObjectKeys.prefixFor(analysisId))
+        val completedIds =
+            pendingPhotos
+                .filter { photoObjectKeys.keyFor(analysisId, it.id, it.contentType) in existingKeys }
+                .map { it.id }
 
-        val (completed, missing) =
-            pendingPhotos.partition {
-                photoObjectKeys.keyFor(analysisId, it.id, it.contentType) in existingKeys
+        return transactionTemplate.execute {
+            analysisRepository.findByIdForUpdate(analysisId)
+
+            if (completedIds.isNotEmpty()) {
+                photoRepository.updateStatusBatch(completedIds, UploadStatus.PENDING, UploadStatus.COMPLETED, Instant.now())
             }
 
-        if (completed.isNotEmpty()) {
-            photoRepository.updateStatusBatch(
-                completed.map { it.id },
-                UploadStatus.PENDING,
-                UploadStatus.COMPLETED,
-                Instant.now(),
-            )
-        }
+            val (completed, pending) =
+                photoRepository
+                    .findAllByAnalysisId(analysisId)
+                    .partition { it.uploadStatus == UploadStatus.COMPLETED }
 
-        return UploadVerificationResult(completed.size, missing.size, missing.map { it.id })
+            UploadVerificationResult(completed.size, pending.size, pending.map { it.id })
+        }
     }
 }

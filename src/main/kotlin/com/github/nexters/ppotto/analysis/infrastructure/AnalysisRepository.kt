@@ -30,6 +30,14 @@ class AnalysisRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun findByIdForUpdate(id: UUID): Analysis? =
+        dslContext
+            .selectFrom(ANALYSIS)
+            .where(ANALYSIS.ID.eq(id))
+            .forUpdate()
+            .fetchOne()
+            ?.toDomain()
+
     private fun AnalysisRecord.toDomain() =
         Analysis(
             id = id!!,
