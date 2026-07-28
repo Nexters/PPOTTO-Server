@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
+import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.domain.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
@@ -9,6 +11,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardQueryService
+import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -54,14 +57,17 @@ class AnalysisService(
 
     @Transactional
     fun startUpload(analysisId: UUID): UploadVerificationResult {
-        analysisRepository.findById(analysisId) ?: throw NotFoundException()
+        val analysis = analysisRepository.findById(analysisId) ?: throw NotFoundException()
+        if (analysis.status != AnalysisStatus.UPLOADING) {
+            throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
+        }
 
         val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
         if (pendingPhotos.isEmpty()) return UploadVerificationResult(0, 0, emptyList())
 
         val existingKeys = photoStorage.existingObjectKeys(photoObjectKeys.prefixFor(analysisId))
 
-        val (completed, failed) =
+        val (completed, missing) =
             pendingPhotos.partition {
                 photoObjectKeys.keyFor(analysisId, it.id, it.contentType) in existingKeys
             }
@@ -74,11 +80,7 @@ class AnalysisService(
                 Instant.now(),
             )
         }
-        if (failed.isNotEmpty()) {
-            photoRepository.updateStatusBatch(failed.map { it.id }, UploadStatus.PENDING, UploadStatus.FAILED, null)
-        }
 
-        // analysis.status/progress/startedAt은 의도적으로 건드리지 않는다 — 분석 파이프라인 시작은 스코프 밖.
-        return UploadVerificationResult(completed.size, failed.size, failed.map { it.id })
+        return UploadVerificationResult(completed.size, missing.size, missing.map { it.id })
     }
 }

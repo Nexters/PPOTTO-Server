@@ -17,4 +17,8 @@ class FakePhotoStorage : PhotoStorage {
     fun markMissing(objectKey: String) {
         existingKeys -= objectKey
     }
+
+    fun markUploaded(objectKey: String) {
+        existingKeys += objectKey
+    }
 }
