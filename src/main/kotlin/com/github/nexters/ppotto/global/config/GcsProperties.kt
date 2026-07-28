@@ -15,7 +15,7 @@ data class GcsProperties(
     val credentialsPath: String,
     @field:Positive
     @field:Max(SIGNED_URL_MAX_EXPIRATION_MINUTES)
-    val signedUrlExpirationMinutes: Long,
+    val uploadSignedUrlExpirationMinutes: Long,
     @field:Positive
     val timeoutMillis: Long,
 )

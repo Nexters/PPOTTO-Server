@@ -44,7 +44,7 @@ class GcsPhotoStorage(
         return storage
             .signUrl(
                 blobInfo,
-                gcsProperties.signedUrlExpirationMinutes,
+                gcsProperties.uploadSignedUrlExpirationMinutes,
                 TimeUnit.MINUTES,
                 Storage.SignUrlOption.httpMethod(HttpMethod.PUT),
                 Storage.SignUrlOption.withV4Signature(),
