@@ -52,6 +52,9 @@ class AnalysisService(
                 PhotoUploadTarget(photoObjectKeys.keyFor(analysis.id, it.id, it.contentType), it.contentType.mimeType)
             }
         val uploadUrls = photoStorage.issueUploadUrls(targets)
+        check(uploadUrls.size == savedPhotos.size) {
+            "issueUploadUrls가 요청한 개수(${savedPhotos.size})와 다른 개수(${uploadUrls.size})의 URL을 반환했습니다."
+        }
 
         val uploads = savedPhotos.zip(uploadUrls) { photo, url -> PhotoUploadUrlItem(photo.id, url) }
         return AnalysisCreationResult(analysis.id, uploads)
