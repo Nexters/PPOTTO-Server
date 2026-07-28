@@ -10,6 +10,7 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 class PhotoRepositoryTest(
@@ -67,7 +68,9 @@ class PhotoRepositoryTest(
             When("기대 상태(PENDING)를 걸고 COMPLETED로 배치 갱신하면") {
                 val saved =
                     photoRepository.saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, null)))
-                val uploadedAt = Instant.now()
+                // Postgres TIMESTAMPTZ는 마이크로초까지만 저장하므로, Instant.now()의 나노초 부분까지
+                // 그대로 왕복 비교하면 시스템 클럭 해상도에 따라(특히 Linux) 정밀도가 달라 실패할 수 있다.
+                val uploadedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
                 val updated =
                     photoRepository.updateStatusBatch(
                         saved.map { it.id },
