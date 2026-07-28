@@ -1,9 +1,9 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
-import com.github.nexters.ppotto.analysis.domain.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.analysis.support.FakePhotoStorage
@@ -32,12 +32,13 @@ class AnalysisServiceTest(
     private val analysisService: AnalysisService,
     private val analysisRepository: AnalysisRepository,
     private val photoRepository: PhotoRepository,
-    private val photoObjectKeys: PhotoObjectKeys,
     private val photoStorage: FakePhotoStorage,
     private val dslContext: DSLContext,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
 ) : IntegrationTest({
+        val photoObjectKeys = PhotoObjectKeys
+
         Given("Board가 등록된 상태에서 여러 장의 사진으로 분석 생성을 요청하면") {
             val board = boardRepository.save(userRepository.save().id)
             val photos =

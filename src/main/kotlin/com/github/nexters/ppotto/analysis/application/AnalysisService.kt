@@ -3,12 +3,12 @@ package com.github.nexters.ppotto.analysis.application
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
-import com.github.nexters.ppotto.analysis.domain.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.PhotoUploadTarget
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
+import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardQueryService
 import com.github.nexters.ppotto.global.error.ConflictException
@@ -24,7 +24,6 @@ class AnalysisService(
     private val photoRepository: PhotoRepository,
     private val boardQueryService: BoardQueryService,
     private val photoStorage: PhotoStorage,
-    private val photoObjectKeys: PhotoObjectKeys,
     private val transactionTemplate: TransactionTemplate,
 ) {
     @Transactional
@@ -48,7 +47,7 @@ class AnalysisService(
 
         val targets =
             savedPhotos.map {
-                PhotoUploadTarget(photoObjectKeys.keyFor(analysis.id, it.id, it.contentType), it.contentType.mimeType)
+                PhotoUploadTarget(PhotoObjectKeys.keyFor(analysis.id, it.id, it.contentType), it.contentType.mimeType)
             }
         val uploadUrls = photoStorage.issueUploadUrls(targets)
         check(uploadUrls.size == savedPhotos.size) {
@@ -68,11 +67,11 @@ class AnalysisService(
         val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
         if (pendingPhotos.isEmpty()) return UploadVerificationResult(0, 0, emptyList())
 
-        val existingObjects = photoStorage.existingObjects(photoObjectKeys.prefixFor(analysisId))
+        val existingObjects = photoStorage.existingObjects(PhotoObjectKeys.prefixFor(analysisId))
         val completedUpdates =
             pendingPhotos
                 .mapNotNull { photo ->
-                    val meta = existingObjects[photoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)]
+                    val meta = existingObjects[PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)]
                     if (meta != null && meta.size > 0) photo.id to meta.createdAt else null
                 }.toMap()
 
