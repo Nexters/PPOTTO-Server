@@ -16,7 +16,6 @@ import com.github.nexters.ppotto.global.error.NotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
-import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -69,17 +68,19 @@ class AnalysisService(
         val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
         if (pendingPhotos.isEmpty()) return UploadVerificationResult(0, 0, emptyList())
 
-        val existingKeys = photoStorage.existingObjectKeys(photoObjectKeys.prefixFor(analysisId))
-        val completedIds =
+        val existingObjects = photoStorage.existingObjects(photoObjectKeys.prefixFor(analysisId))
+        val completedUpdates =
             pendingPhotos
-                .filter { photoObjectKeys.keyFor(analysisId, it.id, it.contentType) in existingKeys }
-                .map { it.id }
+                .mapNotNull { photo ->
+                    val meta = existingObjects[photoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)]
+                    if (meta != null && meta.size > 0) photo.id to meta.createdAt else null
+                }.toMap()
 
         return transactionTemplate.execute {
             analysisRepository.findByIdForUpdate(analysisId)
 
-            if (completedIds.isNotEmpty()) {
-                photoRepository.updateStatusBatch(completedIds, UploadStatus.PENDING, UploadStatus.COMPLETED, Instant.now())
+            if (completedUpdates.isNotEmpty()) {
+                photoRepository.updateStatusBatch(completedUpdates, UploadStatus.PENDING, UploadStatus.COMPLETED)
             }
 
             val (completed, pending) =

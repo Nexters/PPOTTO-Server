@@ -54,22 +54,23 @@ class PhotoRepository(
             .map { it.toDomain() }
 
     fun updateStatusBatch(
-        ids: List<UUID>,
+        updates: Map<UUID, Instant>,
         expectedStatus: UploadStatus,
         newStatus: UploadStatus,
-        uploadedAt: Instant?,
     ): List<Photo> {
-        if (ids.isEmpty()) return emptyList()
+        if (updates.isEmpty()) return emptyList()
 
-        return dslContext
-            .update(PHOTOS)
-            .set(PHOTOS.UPLOAD_STATUS, newStatus.name)
-            .set(PHOTOS.UPLOADED_AT, uploadedAt)
-            .where(PHOTOS.ID.`in`(ids))
-            .and(PHOTOS.UPLOAD_STATUS.eq(expectedStatus.name))
-            .returning()
-            .fetch()
-            .map { it.toDomain() }
+        return updates.mapNotNull { (id, uploadedAt) ->
+            dslContext
+                .update(PHOTOS)
+                .set(PHOTOS.UPLOAD_STATUS, newStatus.name)
+                .set(PHOTOS.UPLOADED_AT, uploadedAt)
+                .where(PHOTOS.ID.eq(id))
+                .and(PHOTOS.UPLOAD_STATUS.eq(expectedStatus.name))
+                .returning()
+                .fetchOne()
+                ?.toDomain()
+        }
     }
 
     private fun PhotosRecord.toDomain() =

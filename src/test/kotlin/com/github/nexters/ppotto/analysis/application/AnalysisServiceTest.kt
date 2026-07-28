@@ -24,6 +24,7 @@ import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 @Import(AnalysisTestConfig::class)
@@ -127,7 +128,11 @@ class AnalysisServiceTest(
 
             When("누락됐던 사진이 이후 업로드를 마치고 다시 통보하면") {
                 analysisService.startUpload(created.analysisId)
-                photoStorage.markUploaded(photoObjectKeys.keyFor(created.analysisId, missingPhotoId, missingPhoto.contentType))
+                val uploadedAt = Instant.parse("2026-06-15T10:00:00Z").truncatedTo(ChronoUnit.MICROS)
+                photoStorage.markUploaded(
+                    photoObjectKeys.keyFor(created.analysisId, missingPhotoId, missingPhoto.contentType),
+                    createdAt = uploadedAt,
+                )
                 val result = analysisService.startUpload(created.analysisId)
 
                 Then("뒤늦게 업로드된 사진도 COMPLETED로 바뀌고, 응답은 이번 호출의 델타가 아닌 analysis 전체의 최종 집계다") {
@@ -135,6 +140,11 @@ class AnalysisServiceTest(
                     result.failedCount shouldBe 0
                     result.failedPhotoIds.shouldBeEmpty()
                     photoRepository.findPendingByAnalysisId(created.analysisId).shouldBeEmpty()
+                }
+
+                Then("uploadedAt은 확인 시각이 아닌 실제 업로드(GCS 객체 생성) 시각으로 저장된다") {
+                    val completedPhoto = photoRepository.findAllByAnalysisId(created.analysisId).first { it.id == missingPhotoId }
+                    completedPhoto.uploadedAt shouldBe uploadedAt
                 }
             }
 
@@ -148,6 +158,29 @@ class AnalysisServiceTest(
                     result.uploadedCount shouldBe 0
                     result.failedCount shouldBe 0
                     result.failedPhotoIds.shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("분석이 생성되고 사진이 0바이트로(빈 바디로) 업로드된 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+            val created =
+                analysisService.createAnalysis(board.id, listOf(PhotoUploadItemRequest(Instant.now(), "image/jpeg")))
+            val photo = photoRepository.findPendingByAnalysisId(created.analysisId).first()
+            photoStorage.markUploaded(photoObjectKeys.keyFor(created.analysisId, photo.id, photo.contentType), size = 0)
+
+            When("업로드 완료를 통보하면") {
+                val result = analysisService.startUpload(created.analysisId)
+
+                Then("COMPLETED로 확정하지 않고 PENDING을 유지한 채 failedPhotoIds로 보고한다") {
+                    result.uploadedCount shouldBe 0
+                    result.failedCount shouldBe 1
+                    result.failedPhotoIds shouldContainExactly listOf(photo.id)
+
+                    val pending = photoRepository.findPendingByAnalysisId(created.analysisId)
+                    pending shouldHaveSize 1
+                    pending.first().id shouldBe photo.id
+                    pending.first().uploadStatus shouldBe UploadStatus.PENDING
                 }
             }
         }

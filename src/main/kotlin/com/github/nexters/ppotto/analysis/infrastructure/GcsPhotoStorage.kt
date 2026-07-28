@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
+import com.github.nexters.ppotto.analysis.domain.BlobMeta
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.PhotoUploadTarget
 import com.github.nexters.ppotto.global.config.GcsProperties
@@ -24,12 +25,11 @@ class GcsPhotoStorage(
         // 반복은 이 구현 내부로 캡슐화하고 서비스 레이어는 이 메서드를 한 번만 호출한다.
         targets.map { signUrl(it.objectKey, it.contentType) }
 
-    override fun existingObjectKeys(prefix: String): Set<String> =
+    override fun existingObjects(prefix: String): Map<String, BlobMeta> =
         storage
             .list(gcsProperties.bucket, Storage.BlobListOption.prefix(prefix))
             .iterateAll()
-            .map { it.name }
-            .toSet()
+            .associate { it.name to BlobMeta(it.size, it.createTimeOffsetDateTime.toInstant()) }
 
     private fun signUrl(
         objectKey: String,

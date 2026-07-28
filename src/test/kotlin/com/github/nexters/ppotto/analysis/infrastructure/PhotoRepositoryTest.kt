@@ -73,10 +73,9 @@ class PhotoRepositoryTest(
                 val uploadedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
                 val updated =
                     photoRepository.updateStatusBatch(
-                        saved.map { it.id },
+                        saved.associate { it.id to uploadedAt },
                         UploadStatus.PENDING,
                         UploadStatus.COMPLETED,
-                        uploadedAt,
                     )
 
                 Then("갱신된 Photo를 반환한다") {
@@ -89,9 +88,9 @@ class PhotoRepositoryTest(
             When("이미 다른 상태로 바뀐 뒤 다시 기대 상태(PENDING)를 걸고 갱신하면") {
                 val saved =
                     photoRepository.saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, null)))
-                photoRepository.updateStatusBatch(saved.map { it.id }, UploadStatus.PENDING, UploadStatus.COMPLETED, Instant.now())
+                photoRepository.updateStatusBatch(saved.associate { it.id to Instant.now() }, UploadStatus.PENDING, UploadStatus.COMPLETED)
                 val updated =
-                    photoRepository.updateStatusBatch(saved.map { it.id }, UploadStatus.PENDING, UploadStatus.FAILED, null)
+                    photoRepository.updateStatusBatch(saved.associate { it.id to Instant.now() }, UploadStatus.PENDING, UploadStatus.FAILED)
 
                 Then("빈 목록을 반환한다") {
                     updated.shouldBeEmpty()
@@ -99,7 +98,7 @@ class PhotoRepositoryTest(
             }
 
             When("빈 id 목록으로 갱신하면") {
-                val updated = photoRepository.updateStatusBatch(emptyList<UUID>(), UploadStatus.PENDING, UploadStatus.COMPLETED, null)
+                val updated = photoRepository.updateStatusBatch(emptyMap<UUID, Instant>(), UploadStatus.PENDING, UploadStatus.COMPLETED)
 
                 Then("빈 목록을 반환한다") {
                     updated.shouldBeEmpty()
