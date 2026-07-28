@@ -1,0 +1,33 @@
+<!-- Parent: ../AGENTS.md -->
+
+# analysis
+
+Analysis domain. Owns both `Analysis` and `Photo` — a photo only ever exists as part of an analysis (`Analysis : Photo = 1:N` via `photos.analysis_id`), so they share one domain package instead of being split into `analysis`/`photo`. No DB-level FK constraints (same reasoning as `board/`). This is a minimal first pass: analysis-lifecycle business rules (90–100 photo count check, one-active-analysis-per-user limit, daily quota, and actually starting the AI pipeline) are intentionally not implemented yet — see Rules below.
+
+| Directory | Description |
+|-----------|---------|
+| `domain/Analysis.kt` | Pure Kotlin model: `id`, `userId`, `boardId`, `status`, `progress`, `failedReason`, `startedAt`, `completedAt`, `createdAt`, `updatedAt` |
+| `domain/AnalysisStatus.kt` | `UPLOADING` / `ANALYZING` / `GENERATING` / `COMPLETED` / `FAILED` — pure Kotlin enum, not the jOOQ-generated type |
+| `domain/Photo.kt` | Pure Kotlin model: `id`, `analysisId`, `boardId`, `contentType: PhotoContentType`, `uploadStatus`, `uploadedAt`, `takenAt`, `createdAt`, `updatedAt` |
+| `domain/UploadStatus.kt` | `PENDING` / `COMPLETED` / `FAILED` |
+| `domain/PhotoContentType.kt` | `JPEG`/`PNG`/`HEIC` enum, each carrying `mimeType` (`"image/jpeg"` etc., stored in `photos.content_type` and sent to GCS as the `Content-Type` header) and `extension` (`"jpg"` etc., used for the object key). This is the single source of truth for which content types are accepted. `fromMimeType(String)` throws `InvalidInputException` (→ 400 `COMMON-001` via `GlobalExceptionHandler`'s `BusinessException` handler) for an unsupported value — the request DTO field itself stays a plain `String?`; conversion/validation happens in `AnalysisService`, not at the Jackson/bean-validation boundary |
+| `domain/PhotoObjectKeys.kt` | Wraps the shared `global/storage/ObjectKeyGenerator` with this domain's own convention: namespace `"photos"`, prefix `photos/{analysisId}/`, key `photos/{analysisId}/{photoId}.{PhotoContentType.extension}`. The `analysisId` segment lets `GcsPhotoStorage.existingObjectKeys(prefix)` list all of one analysis's objects in a single GCS call |
+| `domain/PhotoStorage.kt` | Port interface: `issueUploadUrls(targets): List<String>` (batch, same order as input), `existingObjectKeys(prefix): Set<String>`. No Spring/GCS SDK imports — the adapter is `infrastructure/GcsPhotoStorage.kt` |
+| `infrastructure/AnalysisRepository.kt` | DSLContext-based persistence: `save(userId, boardId)` (always inserts `status = UPLOADING`), `findById()` |
+| `infrastructure/PhotoRepository.kt` | `saveAll(analysisId, boardId, items)` — single multi-row `INSERT ... RETURNING`, relies on Postgres preserving input order for plain multi-VALUES inserts so the response can zip photos back to the request order. `findPendingByAnalysisId()`. `updateStatusBatch(ids, expectedStatus, newStatus, uploadedAt)` — optimistic conditional `UPDATE ... WHERE id IN (...) AND upload_status = expectedStatus`, empty `ids` short-circuits without a query |
+| `infrastructure/GcsPhotoStorage.kt` | GCS SDK implementation of `PhotoStorage`. `issueUploadUrls` loops internally (GCS V4 signing has no batch API) but is called once per request from the service. `existingObjectKeys` uses `Storage.list(bucket, prefix(...))` — one GCS call instead of one `get()` per photo |
+| `application/AnalysisService.kt` | `createAnalysis(boardId, photos)`: validates the board exists (`BoardQueryService`) → derives `userId` from `board.userId` (no auth wired up yet, see Rules) → converts each raw `contentType` string to `PhotoContentType` via `fromMimeType` (`null` defaults to `PhotoContentType.DEFAULT` without validation) → creates the `Analysis` row → batch-inserts `Photo` rows → batch-issues signed upload URLs → returns them zipped with `photoId`, in request order. `startUpload(analysisId)`: verifies the analysis exists → lists this analysis's existing GCS objects once → partitions its `PENDING` photos into uploaded/missing by object-key membership → two batch status updates (`COMPLETED`/`FAILED`) → returns counts + failed ids. Does **not** touch `Analysis.status`/`progress`/`startedAt` — starting the actual pipeline is out of scope for this pass |
+| `application/AnalysisResults.kt` | Result types returned by the service (kept separate from the presentation dto): `AnalysisCreationResult`, `PhotoUploadUrlItem`, `PhotoUploadItemRequest` (`contentType: String?` — raw, unvalidated), `UploadVerificationResult` |
+| `presentation/AnalysisController.kt` | `POST /api/v1/analysis`, `POST /api/v1/analysis/{analysisId}/start` |
+| `presentation/dto/` | `CreateAnalysisRequest`/`PhotoUploadItem` (`contentType: String? = null`, no bean-validation annotation — validity is enforced by `AnalysisService` via `PhotoContentType.fromMimeType`), `CreateAnalysisResponse`, `StartUploadResponse` |
+
+## Rules
+
+- This tracks the client's real OpenAPI spec (`analysis` tag) for `POST /analysis` and `POST /analysis/{analysisId}/start` only. Not implemented yet: `GET /analysis/active`, `GET /analysis/{id}`, `DELETE /analysis/{id}`, `POST /analysis/{id}/reissue`, the 90–100 photo count check (`ANALYSIS-001`), the one-active-analysis-per-user conflict (`ANALYSIS-002`), the daily quota (`ANALYSIS-006`), and actually kicking off the analysis pipeline from `start`. No domain-specific `AnalysisErrorCode` exists yet — not-found cases use the generic `NotFoundException()` (`COMMON-002`).
+- No authentication is wired up in this codebase yet (`SecurityConfig` is `permitAll` everywhere, no current-user resolver). `Analysis.userId` is derived from `board.userId` as a stand-in for real ownership until auth lands — revisit once it does.
+- `startUpload` only ever acts on photos currently `PENDING`; calling it again after all photos are resolved is a no-op (`uploadedCount = 0, failedCount = 0`).
+- `upload_status`/`status`/`content_type` are DB `VARCHAR`, not Postgres `ENUM`s — value-set validation lives only in the Kotlin enums; repositories map `String ↔ enum` at the boundary (`PhotoContentType.fromMimeType(...)` / `.mimeType`, same pattern as `UploadStatus.valueOf(...)` / `.name`).
+- Any new test that invokes `AnalysisService` must `@Import` `analysis/support/AnalysisTestConfig` so the `@Primary` fake (`FakePhotoStorage`) replaces the real GCS adapter, same mechanism the former `image` domain used.
+- The old `images` table / `image` domain (file-name-based, per-image signed URL issuance and client-reported upload completion) was fully replaced by this domain in the same change — see git history if you need the old shape.
+
+Update this file when layers are added to this domain.

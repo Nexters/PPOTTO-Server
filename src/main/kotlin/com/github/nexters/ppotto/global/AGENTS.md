@@ -11,6 +11,7 @@ Shared module used by all domains. Contains no business logic.
 | `jooq/` | Custom jOOQ converters used by codegen `forcedType` |
 | `logging/` | Request logging filter (see `logging/AGENTS.md`) |
 | `response/` | Response envelope models (see `response/AGENTS.md`) |
+| `storage/` | `ObjectKeyGenerator` — domain-agnostic GCS object key/prefix builder shared across domains (see `storage/AGENTS.md`) |
 
 ## Rules
 

@@ -10,7 +10,7 @@ Application root package. One top-level subpackage = one domain.
 | `global/` | Shared module: config, error, logging, response (see `global/AGENTS.md`) |
 | `user/` | User domain: `domain`/`infrastructure` only so far, no `presentation`/`application` yet (see `user/AGENTS.md`) |
 | `board/` | Board domain, 1:N with User: `domain`/`infrastructure` only so far (see `board/AGENTS.md`) |
-| `image/` | Image domain, 1:N with Board: `domain`/`infrastructure` only so far (see `image/AGENTS.md`) |
+| `analysis/` | Analysis domain, owns `Analysis` and `Photo` (1:N with Board): full DDD-lite layout (see `analysis/AGENTS.md`) |
 
 ## Adding a new domain
 

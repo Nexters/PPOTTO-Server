@@ -55,7 +55,7 @@ photo/
 ## Planned Conventions
 
 - Primary keys for new tables: `uuid primary key default uuidv7()` (Postgres 18 built-in, time-ordered).
-- API versioning: 첫 공개 API(`image/presentation/ImageUploadController.kt`)는 `/api/v1/...` URL 경로 프리픽스로 버저닝했다 — Spring Framework 7 네이티브 API 버저닝(`ApiVersionConfigurer`)은 아직 도입하지 않음. 다음 공개 API를 추가할 때 네이티브 버저닝으로 전환할지, 경로 프리픽스 방식을 계속 쓸지 결정 필요.
+- API versioning: 첫 공개 API(`analysis/presentation/AnalysisController.kt`)는 `/api/v1/...` URL 경로 프리픽스로 버저닝했다 — Spring Framework 7 네이티브 API 버저닝(`ApiVersionConfigurer`)은 아직 도입하지 않음. 다음 공개 API를 추가할 때 네이티브 버저닝으로 전환할지, 경로 프리픽스 방식을 계속 쓸지 결정 필요.
 
 ## DB Workflow
 
