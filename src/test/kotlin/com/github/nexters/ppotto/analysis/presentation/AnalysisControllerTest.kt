@@ -32,7 +32,7 @@ class AnalysisControllerTest(
                 Then("성공 응답에 analysisId와 사진별 signed URL이 담긴다") {
                     mockMvc
                         .perform(
-                            post("/api/v1/analysis")
+                            post("/analysis")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -58,7 +58,7 @@ class AnalysisControllerTest(
                 Then("400 응답을 반환한다") {
                     mockMvc
                         .perform(
-                            post("/api/v1/analysis")
+                            post("/analysis")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""{"boardId": "${board.id}", "photos": []}"""),
                         ).andExpect(status().isBadRequest)
@@ -70,7 +70,7 @@ class AnalysisControllerTest(
                 Then("400 응답을 반환한다") {
                     mockMvc
                         .perform(
-                            post("/api/v1/analysis")
+                            post("/analysis")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -94,7 +94,7 @@ class AnalysisControllerTest(
 
                 Then("성공 응답에 업로드/실패 카운트가 담긴다") {
                     mockMvc
-                        .perform(post("/api/v1/analysis/${created.analysisId}/start"))
+                        .perform(post("/analysis/${created.analysisId}/start"))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.uploadedCount").exists())
@@ -109,7 +109,7 @@ class AnalysisControllerTest(
                 Then("404 응답을 반환한다") {
                     mockMvc
                         .perform(
-                            post("/api/v1/analysis")
+                            post("/analysis")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """{"boardId": "${UUID.randomUUID()}", "photos": [{"takenAt": "2026-07-01T00:00:00Z"}]}""",
@@ -123,7 +123,7 @@ class AnalysisControllerTest(
             When("업로드 완료를 통보하면") {
                 Then("404 응답을 반환한다") {
                     mockMvc
-                        .perform(post("/api/v1/analysis/${UUID.randomUUID()}/start"))
+                        .perform(post("/analysis/${UUID.randomUUID()}/start"))
                         .andExpect(status().isNotFound)
                 }
             }

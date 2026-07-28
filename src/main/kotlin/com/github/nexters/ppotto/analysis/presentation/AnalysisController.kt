@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("/api/v1/analysis")
+@RequestMapping("/analysis", version = "1")
 class AnalysisController(
     private val analysisService: AnalysisService,
 ) {

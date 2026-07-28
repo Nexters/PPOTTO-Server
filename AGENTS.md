@@ -51,11 +51,11 @@ photo/
 - `@ConfigurationProperties` data classes get `@Validated` + jakarta validation annotations.
 - Validation annotations on data class constructor properties always use the `@field:` use-site (`@field:NotBlank val title: String`); without it Hibernate Validator may not see them. Controllers take `@Valid @RequestBody`.
 - Never write a fully-qualified name (FQN) inline. Import the short name whenever there's no naming conflict.
+- API versioning: `X-API-Version` 요청 헤더로 버전을 지정한다(Spring Framework 7 네이티브 API 버저닝, `WebMvcConfigurer.configureApiVersioning`, 설정은 `global/config/WebMvcConfig.kt`). 헤더가 없으면 기본값 `1`로 처리한다. URL 경로에는 버전을 포함하지 않으며 `/api` 프리픽스도 쓰지 않는다(예: `/analysis`). 각 컨트롤러의 클래스 레벨 `@RequestMapping`에 `version = "N"`을 명시한다.
 
 ## Planned Conventions
 
 - Primary keys for new tables: `uuid primary key default uuidv7()` (Postgres 18 built-in, time-ordered).
-- API versioning: 첫 공개 API(`analysis/presentation/AnalysisController.kt`)는 `/api/v1/...` URL 경로 프리픽스로 버저닝했다 — Spring Framework 7 네이티브 API 버저닝(`ApiVersionConfigurer`)은 아직 도입하지 않음. 다음 공개 API를 추가할 때 네이티브 버저닝으로 전환할지, 경로 프리픽스 방식을 계속 쓸지 결정 필요.
 
 ## DB Workflow
 
