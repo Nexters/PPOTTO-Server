@@ -10,7 +10,7 @@ Spring configuration beans.
 | `CorsProperties.kt` | `@ConfigurationProperties("cors")` + `@Validated`. Bound from `CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig.kt` | Swagger metadata: title "뽀또 API", response envelope contract, common error code table |
 | `WebMvcConfig.kt` | `WebMvcConfigurer.configureApiVersioning`: `X-API-Version` request header, default version `1` (Spring Framework 7 native API versioning) |
-| `GcsProperties.kt` | `@ConfigurationProperties("gcs")` + `@Validated`. `bucket`, `credentialsPath`, `signedUrlExpirationMinutes`, `timeoutMillis` — bound from `GCS_*` env vars |
+| `GcsProperties.kt` | `@ConfigurationProperties("gcs")` + `@Validated`. `bucket`, `credentialsPath`, `uploadSignedUrlExpirationMinutes` (15 min per spec — named `upload*` since read/GET signed URLs, when added, need a different 1-hour expiration and can't share this property), `timeoutMillis` — bound from `GCS_*` env vars |
 | `GcsConfig.kt` | Defines the `Storage` bean. Authenticates by reading the service account key file (`gcsProperties.credentialsPath`) via `ServiceAccountCredentials.fromStream` — not the `GOOGLE_APPLICATION_CREDENTIALS` ambient method. Sets connect/read timeout (`gcsProperties.timeoutMillis`) via `HttpTransportOptions` so a slow/hanging GCS call can't block indefinitely |
 
 ## Rules
