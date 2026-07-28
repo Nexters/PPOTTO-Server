@@ -5,11 +5,13 @@
 package com.github.nexters.ppotto.jooq.keys
 
 
+import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
-import com.github.nexters.ppotto.jooq.tables.Images
+import com.github.nexters.ppotto.jooq.tables.Photos
 import com.github.nexters.ppotto.jooq.tables.Users
+import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
-import com.github.nexters.ppotto.jooq.tables.records.ImagesRecord
+import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 
 import org.jooq.UniqueKey
@@ -22,6 +24,7 @@ import org.jooq.impl.Internal
 // UNIQUE and PRIMARY KEY definitions
 // -------------------------------------------------------------------------
 
+val ANALYSIS_PKEY: UniqueKey<AnalysisRecord> = Internal.createUniqueKey(Analysis.ANALYSIS, DSL.name("analysis_pkey"), arrayOf(Analysis.ANALYSIS.ID), true)
 val BOARDS_PKEY: UniqueKey<BoardsRecord> = Internal.createUniqueKey(Boards.BOARDS, DSL.name("boards_pkey"), arrayOf(Boards.BOARDS.ID), true)
-val IMAGES_PKEY: UniqueKey<ImagesRecord> = Internal.createUniqueKey(Images.IMAGES, DSL.name("images_pkey"), arrayOf(Images.IMAGES.ID), true)
+val PHOTOS_PKEY: UniqueKey<PhotosRecord> = Internal.createUniqueKey(Photos.PHOTOS, DSL.name("photos_pkey"), arrayOf(Photos.PHOTOS.ID), true)
 val USERS_PKEY: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, DSL.name("users_pkey"), arrayOf(Users.USERS.ID), true)

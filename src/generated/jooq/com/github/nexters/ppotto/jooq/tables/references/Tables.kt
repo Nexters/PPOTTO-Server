@@ -5,11 +5,17 @@
 package com.github.nexters.ppotto.jooq.tables.references
 
 
+import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
-import com.github.nexters.ppotto.jooq.tables.Images
+import com.github.nexters.ppotto.jooq.tables.Photos
 import com.github.nexters.ppotto.jooq.tables.Users
 
 
+
+/**
+ * The table <code>public.analysis</code>.
+ */
+val ANALYSIS: Analysis = Analysis.ANALYSIS
 
 /**
  * The table <code>public.boards</code>.
@@ -17,9 +23,9 @@ import com.github.nexters.ppotto.jooq.tables.Users
 val BOARDS: Boards = Boards.BOARDS
 
 /**
- * The table <code>public.images</code>.
+ * The table <code>public.photos</code>.
  */
-val IMAGES: Images = Images.IMAGES
+val PHOTOS: Photos = Photos.PHOTOS
 
 /**
  * The table <code>public.users</code>.
