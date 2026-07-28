@@ -10,3 +10,4 @@ SWAGGER_PASSWORD: ppotto
 GCS_BUCKET: ppotto-test-bucket
 GCS_CREDENTIALS_PATH: ./src/test/resources/dummy-gcs-key.json
 GCS_SIGNED_URL_EXPIRATION_MINUTES: 60
+GCS_TIMEOUT_MILLIS: 5000

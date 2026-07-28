@@ -55,7 +55,6 @@ class AnalysisService(
         return AnalysisCreationResult(analysis.id, uploads)
     }
 
-    @Transactional
     fun startUpload(analysisId: UUID): UploadVerificationResult {
         val analysis = analysisRepository.findById(analysisId) ?: throw NotFoundException()
         if (analysis.status != AnalysisStatus.UPLOADING) {

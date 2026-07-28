@@ -16,6 +16,8 @@ data class GcsProperties(
     @field:Positive
     @field:Max(SIGNED_URL_MAX_EXPIRATION_MINUTES)
     val signedUrlExpirationMinutes: Long,
+    @field:Positive
+    val timeoutMillis: Long,
 )
 
 // GCS V4 signed URL의 실제 프로토콜 상한은 7일이지만, URL 유출 시 악용 가능 기간을 줄이기 위해 서비스
