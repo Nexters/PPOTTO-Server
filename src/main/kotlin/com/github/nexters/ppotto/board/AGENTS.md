@@ -7,8 +7,9 @@ Board domain. `User : Board = 1:N` via `boards.user_id`, kept as a plain column 
 | Directory | Description |
 |-----------|---------|
 | `domain/Board.kt` | Pure Kotlin model: `id`, `userId`, `createdAt`, `updatedAt` |
+| `domain/BoardErrorCode.kt` | Error codes: `NOT_FOUND` (BOARD-002) |
 | `infrastructure/BoardRepository.kt` | DSLContext-based persistence: `save(userId)`, `findById()`, `findByUserId()` |
-| `application/BoardQueryService.kt` | `getById(id)` — throws `NotFoundException` if not found. The `analysis` domain accesses this only through this Service when validating board existence (cross-domain access must never go through the Repository directly) |
+| `application/BoardQueryService.kt` | `getById(id)` — throws `NotFoundException(BoardErrorCode.NOT_FOUND)` if not found. The `analysis` domain accesses this only through this Service when validating board existence (cross-domain access must never go through the Repository directly) |
 
 ## Rules
 
