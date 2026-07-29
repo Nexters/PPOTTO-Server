@@ -12,7 +12,9 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardQueryService
 import com.github.nexters.ppotto.global.error.ConflictException
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
@@ -31,8 +33,10 @@ class AnalysisService(
         boardId: UUID,
         photos: List<PhotoUploadItemRequest>,
     ): AnalysisCreationResult {
+        validatePhotoCount(photos.size)
         val board = boardQueryService.getById(boardId)
-        val analysis = analysisRepository.save(userId = board.userId, boardId = boardId)
+        validateNoActiveAnalysis(board.userId)
+        val analysis = saveAnalysisWithConstraintFallback(board.userId, boardId)
 
         val savedPhotos =
             photoRepository.saveAll(
@@ -89,5 +93,29 @@ class AnalysisService(
 
             UploadVerificationResult(completed.size, pending.size, pending.map { it.id })
         }
+    }
+
+    private fun validatePhotoCount(size: Int) {
+        if (size !in 90..100) {
+            throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
+        }
+    }
+
+    private fun validateNoActiveAnalysis(userId: UUID) {
+        if (analysisRepository.existsActiveByUserId(userId)) {
+            throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
+        }
+    }
+
+    private fun saveAnalysisWithConstraintFallback(
+        userId: UUID,
+        boardId: UUID,
+    ) = try {
+        analysisRepository.save(userId = userId, boardId = boardId)
+    } catch (
+        @Suppress("SwallowedException")
+        e: DataIntegrityViolationException,
+    ) {
+        throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
     }
 }

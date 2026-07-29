@@ -38,6 +38,16 @@ class AnalysisRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun existsActiveByUserId(userId: UUID): Boolean =
+        dslContext.fetchExists(
+            dslContext
+                .selectFrom(ANALYSIS)
+                .where(ANALYSIS.USER_ID.eq(userId))
+                .and(
+                    ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }),
+                ),
+        )
+
     private fun AnalysisRecord.toDomain() =
         Analysis(
             id = id!!,
