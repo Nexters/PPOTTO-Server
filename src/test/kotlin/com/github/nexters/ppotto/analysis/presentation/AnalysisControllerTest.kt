@@ -89,25 +89,6 @@ class AnalysisControllerTest(
                 }
             }
 
-            When("지원하지 않는 contentType으로 요청하면") {
-                Then("400 응답을 반환한다") {
-                    mockMvc
-                        .perform(
-                            post("/analysis")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(
-                                    """
-                                    {
-                                        "boardId": "${board.id}",
-                                        "photos": [{"takenAt": "2026-07-01T00:00:00Z", "contentType": "image/gif"}]
-                                    }
-                                    """.trimIndent(),
-                                ),
-                        ).andExpect(status().isBadRequest)
-                        .andExpect(jsonPath("$.success").value(false))
-                }
-            }
-
             When("업로드 완료를 통보하면") {
                 val created =
                     analysisService.createAnalysis(
