@@ -39,6 +39,10 @@ class AnalysisServiceTest(
 ) : IntegrationTest({
         val photoObjectKeys = PhotoObjectKeys
 
+        beforeSpec {
+            photoStorage.clear()
+        }
+
         Given("사진이 89장으로(하한 미만) 요청되면") {
             val board = boardRepository.save(userRepository.save().id)
             val photos =
@@ -47,7 +51,7 @@ class AnalysisServiceTest(
             When("분석 생성을 요청하면") {
                 Then("InvalidInputException(ANALYSIS-001)이 발생한다") {
                     val exception =
-                        shouldThrow<com.github.nexters.ppotto.global.error.InvalidInputException> {
+                        shouldThrow<InvalidInputException> {
                             analysisService.createAnalysis(board.id, photos)
                         }
                     exception.errorCode.code shouldBe "ANALYSIS-001"
@@ -63,7 +67,7 @@ class AnalysisServiceTest(
             When("분석 생성을 요청하면") {
                 Then("InvalidInputException(ANALYSIS-001)이 발생한다") {
                     val exception =
-                        shouldThrow<com.github.nexters.ppotto.global.error.InvalidInputException> {
+                        shouldThrow<InvalidInputException> {
                             analysisService.createAnalysis(board.id, photos)
                         }
                     exception.errorCode.code shouldBe "ANALYSIS-001"
@@ -128,12 +132,13 @@ class AnalysisServiceTest(
 
         Given("존재하지 않는 boardId로") {
             When("분석 생성을 요청하면") {
-                Then("NotFoundException이 발생한다") {
+                Then("NotFoundException(BOARD-002)이 발생한다") {
                     val photos =
                         (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), null) }
-                    shouldThrow<NotFoundException> {
+                    val exception = shouldThrow<NotFoundException> {
                         analysisService.createAnalysis(UUID.randomUUID(), photos)
                     }
+                    exception.errorCode.code shouldBe "BOARD-002"
                 }
             }
         }
@@ -155,8 +160,8 @@ class AnalysisServiceTest(
             When("업로드 완료를 통보하면") {
                 val result = analysisService.startUpload(created.analysisId)
 
-                Then("업로드된 사진은 COMPLETED로 바뀌고, 누락된 사진은 PENDING을 유지한 채 failedPhotoIds로만 보고된다") {
-                    result.uploadedCount shouldBe 1
+                Then("업로드된 사진들은 COMPLETED로 바뀌고, 누락된 사진은 PENDING을 유지한 채 failedPhotoIds로만 보고된다") {
+                    result.uploadedCount shouldBe 89
                     result.failedCount shouldBe 1
                     result.failedPhotoIds shouldContainExactly listOf(missingPhotoId)
 
@@ -183,8 +188,8 @@ class AnalysisServiceTest(
                 )
                 val result = analysisService.startUpload(created.analysisId)
 
-                Then("뒤늦게 업로드된 사진도 COMPLETED로 바뀌고, 응답은 이번 호출의 델타가 아닌 analysis 전체의 최종 집계다") {
-                    result.uploadedCount shouldBe 2
+                Then("뒤늦게 업로드된 사진도 COMPLETED로 바뀌고, 응답은 analysis 전체의 최종 집계다") {
+                    result.uploadedCount shouldBe 90
                     result.failedCount shouldBe 0
                     result.failedPhotoIds.shouldBeEmpty()
                     photoRepository.findPendingByAnalysisId(created.analysisId).shouldBeEmpty()
@@ -222,7 +227,7 @@ class AnalysisServiceTest(
                 val result = analysisService.startUpload(created.analysisId)
 
                 Then("COMPLETED로 확정하지 않고 PENDING을 유지한 채 failedPhotoIds로 보고한다") {
-                    result.uploadedCount shouldBe 0
+                    result.uploadedCount shouldBe 89
                     result.failedCount shouldBe 1
                     result.failedPhotoIds shouldContainExactly listOf(photo.id)
 

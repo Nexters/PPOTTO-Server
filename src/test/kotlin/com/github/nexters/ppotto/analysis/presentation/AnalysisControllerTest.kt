@@ -153,7 +153,7 @@ class AnalysisControllerTest(
 
         Given("존재하지 않는 boardId로") {
             When("분석 생성을 요청하면") {
-                Then("404 응답을 반환한다") {
+                Then("404 응답과 BOARD-002를 반환한다") {
                     mockMvc
                         .perform(
                             post("/analysis")
@@ -167,6 +167,8 @@ class AnalysisControllerTest(
                                     """.trimIndent(),
                                 ),
                         ).andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("BOARD-002"))
                 }
             }
         }

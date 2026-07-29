@@ -31,4 +31,8 @@ class FakePhotoStorage : PhotoStorage {
     fun reset() {
         objects.clear()
     }
+
+    fun clear() {
+        objects.clear()
+    }
 }
