@@ -34,7 +34,7 @@ CREATE TABLE analysis (
     user_id UUID NOT NULL,
     board_id UUID NOT NULL,
     status VARCHAR(50) NOT NULL,
-    progress INT NOT NULL DEFAULT 0,
+    progress INT NOT NULL DEFAULT 0 CHECK (progress BETWEEN 0 AND 100),
     failed_reason TEXT,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,
