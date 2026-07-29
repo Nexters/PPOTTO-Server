@@ -23,7 +23,7 @@ class AnalysisControllerTest(
     @Autowired val mockMvc: MockMvc,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
-    analysisService: AnalysisService,
+    analysisService: AnalysisService
 ) : IntegrationTest({
         fun createPhotosJson(count: Int): String {
             val photos =
@@ -71,7 +71,7 @@ class AnalysisControllerTest(
             }
 
             When("사진이 89장으로(하한 미만) 요청하면") {
-                Then("400 응답을 반환한다") {
+                Then("400 응답과 ANALYSIS-001을 반환한다") {
                     mockMvc
                         .perform(
                             post("/analysis")
@@ -86,15 +86,59 @@ class AnalysisControllerTest(
                                 ),
                         ).andExpect(status().isBadRequest)
                         .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-001"))
+                }
+            }
+
+            When("사진이 101장으로(상한 초과) 요청하면") {
+                Then("400 응답과 ANALYSIS-001을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": ${createPhotosJson(101)}
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-001"))
+                }
+            }
+
+            When("이미 활성 분석이 있는 상태에서 새 분석을 요청하면") {
+                val existingBoard = boardRepository.save(userRepository.save().id)
+                val existingPhotos = (0 until 90).map { PhotoUploadItemRequest(Instant.now(), "image/jpeg") }
+                analysisService.createAnalysis(existingBoard.id, existingPhotos)
+
+                Then("409 응답과 ANALYSIS-002을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${existingBoard.id}",
+                                        "photos": ${createPhotosJson(90)}
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isConflict)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-002"))
                 }
             }
 
             When("업로드 완료를 통보하면") {
-                val created =
-                    analysisService.createAnalysis(
-                        board.id,
-                        listOf(PhotoUploadItemRequest(Instant.now(), "image/jpeg")),
-                    )
+                val uploadBoard = boardRepository.save(userRepository.save().id)
+                val photos =
+                    (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
+                val created = analysisService.createAnalysis(uploadBoard.id, photos)
 
                 Then("성공 응답에 업로드/실패 카운트가 담긴다") {
                     mockMvc
