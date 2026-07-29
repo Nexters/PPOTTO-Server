@@ -21,11 +21,15 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.Collections
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import kotlin.concurrent.thread
 
 @Import(AnalysisTestConfig::class)
 class AnalysisServiceTest(
@@ -88,6 +92,37 @@ class AnalysisServiceTest(
                             analysisService.createAnalysis(board.id, photos)
                         }
                     exception.errorCode.code shouldBe "ANALYSIS-002"
+                }
+            }
+        }
+
+        Given("동일 사용자가 동시에 분석 생성을 요청하면") {
+            val board = boardRepository.save(userRepository.save().id)
+            val photos =
+                (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
+
+            When("두 요청이 거의 동시에 들어오면") {
+                val startLatch = CountDownLatch(1)
+                val results = Collections.synchronizedList(mutableListOf<Result<AnalysisCreationResult>>())
+
+                val threads =
+                    (0 until 2).map {
+                        thread {
+                            startLatch.await()
+                            results += runCatching { analysisService.createAnalysis(board.id, photos) }
+                        }
+                    }
+                startLatch.countDown()
+                threads.forEach { it.join() }
+
+                Then("정확히 하나만 성공하고, 나머지는 DataIntegrityViolationException이 ConflictException(ANALYSIS-002)으로 변환된다") {
+                    results shouldHaveSize 2
+                    results.count { it.isSuccess } shouldBe 1
+
+                    val failure = results.single { it.isFailure }.exceptionOrNull()
+                    failure.shouldBeInstanceOf<ConflictException>()
+                    @Suppress("UselessCast")
+                    (failure as ConflictException).errorCode.code shouldBe "ANALYSIS-002"
                 }
             }
         }
