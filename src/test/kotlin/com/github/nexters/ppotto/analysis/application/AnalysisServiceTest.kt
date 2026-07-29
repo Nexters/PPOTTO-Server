@@ -42,10 +42,12 @@ class AnalysisServiceTest(
         Given("Board가 등록된 상태에서 여러 장의 사진으로 분석 생성을 요청하면") {
             val board = boardRepository.save(userRepository.save().id)
             val photos =
-                listOf(
-                    PhotoUploadItemRequest(Instant.parse("2026-07-01T00:00:00Z"), "image/jpeg"),
-                    PhotoUploadItemRequest(Instant.parse("2026-07-02T00:00:00Z"), null),
-                )
+                (0 until 90).map { i ->
+                    PhotoUploadItemRequest(
+                        Instant.parse("2026-07-01T00:00:00Z").plusSeconds(i.toLong()),
+                        if (i % 2 == 0) "image/jpeg" else "image/png",
+                    )
+                }
 
             val result = analysisService.createAnalysis(board.id, photos)
 
@@ -59,20 +61,19 @@ class AnalysisServiceTest(
 
             Then("요청 순서와 동일하게 photo가 PENDING 상태로 생성되고 signed URL이 발급된다") {
                 result.uploads shouldHaveSize photos.size
-                val savedPhotos = photoRepository.findPendingByAnalysisId(result.analysisId)
-                savedPhotos.map { it.id }.toSet() shouldBe
-                    result.uploads
-                        .map { it.photoId }
-                        .toSet()
+                val savedPhotos = photoRepository.findAllByAnalysisId(result.analysisId)
+                savedPhotos shouldHaveSize photos.size
                 savedPhotos.forEach { it.uploadStatus shouldBe UploadStatus.PENDING }
 
-                result.uploads.forEach { upload ->
-                    val expectedKey =
-                        photoObjectKeys.keyFor(
-                            result.analysisId,
-                            upload.photoId,
-                            savedPhotos.first { it.id == upload.photoId }.contentType,
-                        )
+                // 인덱스별 순서 검증: result.uploads[i]의 photoId가 가리키는 사진의 takenAt이
+                // 요청 photos[i]의 takenAt과 일치하는지 확인
+                result.uploads.forEachIndexed { i, upload ->
+                    val photo = savedPhotos.first { it.id == upload.photoId }
+                    photo.takenAt shouldBe photos[i].takenAt
+                    photo.contentType.mimeType shouldBe
+                        (photos[i].contentType ?: "image/jpeg")
+
+                    val expectedKey = photoObjectKeys.keyFor(result.analysisId, upload.photoId, photo.contentType)
                     upload.uploadUrl shouldBe "https://fake-signed-url/$expectedKey"
                 }
             }
