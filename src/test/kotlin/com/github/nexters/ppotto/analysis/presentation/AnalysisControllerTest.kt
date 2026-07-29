@@ -182,4 +182,101 @@ class AnalysisControllerTest(
                 }
             }
         }
+
+        Given("Board가 등록된 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+
+            When("contentType 필드를 누락하고 요청하면") {
+                Then("400 응답을 반환한다") {
+                    val photosJson =
+                        (0 until 90).joinToString(",") {
+                            """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z"}"""
+                        }
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": [$photosJson]
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                }
+            }
+
+            When("contentType이 null이고 요청하면") {
+                Then("400 응답을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": [{"takenAt": "2026-07-01T00:00:00Z", "contentType": null}]
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                }
+            }
+
+            When("지원하지 않는 contentType(image/gif)으로 요청하면") {
+                Then("400 응답을 반환한다") {
+                    val photosJson =
+                        (0 until 90).joinToString(",") {
+                            if (it == 0)
+                                """{"takenAt": "2026-07-01T00:00:00Z", "contentType": "image/gif"}"""
+                            else
+                                """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/jpeg"}"""
+                        }
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": [$photosJson]
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                }
+            }
+
+            When("정상 contentType(image/heic)로 요청하면") {
+                Then("성공 응답에 analysisId와 사진별 signed URL이 담긴다") {
+                    val photosJson =
+                        (0 until 90).joinToString(",") {
+                            """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/heic"}"""
+                        }
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": [$photosJson]
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.analysisId").exists())
+                        .andExpect(jsonPath("$.data.uploads.length()").value(90))
+                }
+            }
+        }
     })

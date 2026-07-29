@@ -156,8 +156,7 @@ class AnalysisServiceTest(
                 result.uploads.forEachIndexed { i, upload ->
                     val photo = savedPhotos.first { it.id == upload.photoId }
                     photo.takenAt shouldBe photos[i].takenAt
-                    photo.contentType.mimeType shouldBe
-                        (photos[i].contentType ?: "image/jpeg")
+                    photo.contentType.mimeType shouldBe photos[i].contentType
 
                     val expectedKey = photoObjectKeys.keyFor(result.analysisId, upload.photoId, photo.contentType)
                     upload.uploadUrl shouldBe "https://fake-signed-url/$expectedKey"
@@ -169,7 +168,7 @@ class AnalysisServiceTest(
             When("분석 생성을 요청하면") {
                 Then("NotFoundException(BOARD-002)이 발생한다") {
                     val photos =
-                        (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), null) }
+                        (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
                     val exception = shouldThrow<NotFoundException> {
                         analysisService.createAnalysis(UUID.randomUUID(), photos)
                     }
