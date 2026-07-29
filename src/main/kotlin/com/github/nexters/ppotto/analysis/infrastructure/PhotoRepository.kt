@@ -12,7 +12,7 @@ import java.util.UUID
 
 data class PhotoCreate(
     val contentType: PhotoContentType,
-    val takenAt: Instant?,
+    val takenAt: Instant,
 )
 
 @Repository

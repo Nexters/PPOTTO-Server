@@ -56,7 +56,7 @@ CREATE TABLE photos (
     content_type VARCHAR(50) NOT NULL,
     upload_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     uploaded_at TIMESTAMPTZ,
-    taken_at TIMESTAMPTZ,
+    taken_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
