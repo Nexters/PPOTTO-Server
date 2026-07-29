@@ -23,7 +23,7 @@ class AnalysisControllerTest(
     @Autowired val mockMvc: MockMvc,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
-    analysisService: AnalysisService
+    analysisService: AnalysisService,
 ) : IntegrationTest({
         fun createPhotosJson(count: Int): String {
             val photos =
@@ -232,10 +232,11 @@ class AnalysisControllerTest(
                 Then("400 응답을 반환한다") {
                     val photosJson =
                         (0 until 90).joinToString(",") {
-                            if (it == 0)
+                            if (it == 0) {
                                 """{"takenAt": "2026-07-01T00:00:00Z", "contentType": "image/gif"}"""
-                            else
+                            } else {
                                 """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/jpeg"}"""
+                            }
                         }
                     mockMvc
                         .perform(

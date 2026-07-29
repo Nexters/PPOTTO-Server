@@ -16,10 +16,22 @@ class DatabaseCleaner(
     }
 
     private fun truncateAll() {
-        dsl.truncate(PHOTOS).cascade().execute()
-        dsl.truncate(ANALYSIS).cascade().execute()
-        dsl.truncate(BOARDS).cascade().execute()
-        dsl.truncate(USERS).cascade().execute()
+        dsl
+            .truncate(PHOTOS)
+            .cascade()
+            .execute()
+        dsl
+            .truncate(ANALYSIS)
+            .cascade()
+            .execute()
+        dsl
+            .truncate(BOARDS)
+            .cascade()
+            .execute()
+        dsl
+            .truncate(USERS)
+            .cascade()
+            .execute()
     }
 
     companion object {

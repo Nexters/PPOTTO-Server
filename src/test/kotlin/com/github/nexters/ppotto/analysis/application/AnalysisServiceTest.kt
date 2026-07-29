@@ -168,10 +168,17 @@ class AnalysisServiceTest(
             When("분석 생성을 요청하면") {
                 Then("NotFoundException(BOARD-002)이 발생한다") {
                     val photos =
-                        (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
-                    val exception = shouldThrow<NotFoundException> {
-                        analysisService.createAnalysis(UUID.randomUUID(), photos)
-                    }
+                        (0 until 90)
+                            .map { i ->
+                                PhotoUploadItemRequest(
+                                    Instant.now().plusSeconds(i.toLong()),
+                                    "image/jpeg",
+                                )
+                            }
+                    val exception =
+                        shouldThrow<NotFoundException> {
+                            analysisService.createAnalysis(UUID.randomUUID(), photos)
+                        }
                     exception.errorCode.code shouldBe "BOARD-002"
                 }
             }
