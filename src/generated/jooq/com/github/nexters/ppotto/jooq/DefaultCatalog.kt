@@ -25,7 +25,7 @@ open class DefaultCatalog : CatalogImpl("") {
     }
 
     /**
-     * standard public schema
+     * The schema <code>public</code>.
      */
     val PUBLIC: Public get(): Public = Public.PUBLIC
 

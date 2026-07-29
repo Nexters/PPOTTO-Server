@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.image.domain
+package com.github.nexters.ppotto.analysis.domain
 
 enum class UploadStatus {
     PENDING,
