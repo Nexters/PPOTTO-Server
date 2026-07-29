@@ -42,7 +42,7 @@ CREATE TABLE analysis (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_analysis_user_id ON analysis (user_id);
+CREATE INDEX idx_analysis_user_created ON analysis (user_id, created_at);
 CREATE INDEX idx_analysis_board_id ON analysis (board_id);
 
 CREATE TRIGGER analysis_set_updated_at
