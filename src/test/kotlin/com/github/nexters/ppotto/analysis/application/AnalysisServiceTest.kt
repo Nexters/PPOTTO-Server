@@ -65,8 +65,6 @@ class AnalysisServiceTest(
                 savedPhotos shouldHaveSize photos.size
                 savedPhotos.forEach { it.uploadStatus shouldBe UploadStatus.PENDING }
 
-                // 인덱스별 순서 검증: result.uploads[i]의 photoId가 가리키는 사진의 takenAt이
-                // 요청 photos[i]의 takenAt과 일치하는지 확인
                 result.uploads.forEachIndexed { i, upload ->
                     val photo = savedPhotos.first { it.id == upload.photoId }
                     photo.takenAt shouldBe photos[i].takenAt
