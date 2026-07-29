@@ -111,9 +111,8 @@ class AnalysisControllerTest(
             }
 
             When("이미 활성 분석이 있는 상태에서 새 분석을 요청하면") {
-                val existingBoard = boardRepository.save(userRepository.save().id)
                 val existingPhotos = (0 until 90).map { PhotoUploadItemRequest(Instant.now(), "image/jpeg") }
-                analysisService.createAnalysis(existingBoard.id, existingPhotos)
+                analysisService.createAnalysis(board.id, existingPhotos)
 
                 Then("409 응답과 ANALYSIS-002을 반환한다") {
                     mockMvc
@@ -123,7 +122,7 @@ class AnalysisControllerTest(
                                 .content(
                                     """
                                     {
-                                        "boardId": "${existingBoard.id}",
+                                        "boardId": "${board.id}",
                                         "photos": ${createPhotosJson(90)}
                                     }
                                     """.trimIndent(),
