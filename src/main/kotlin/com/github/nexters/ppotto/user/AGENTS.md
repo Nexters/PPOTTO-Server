@@ -28,6 +28,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 - Concurrent social signup uses the active-identity partial unique index as the conflict target, then reloads the winner instead of surfacing a unique violation.
 - Pre-social legacy rows remain nullable under the unvalidated completeness check and are excluded from application lookup until a real-identity backfill is completed. New social users always write provider, provider user id, and email together.
 - Controllers consume the auth domain's UUID principal through nullable `@AuthenticationPrincipal`; absence returns `COMMON-004`.
+- Application and presentation flows prefer `let`/`run`/`also` chains and collection transforms over mutable accumulators.
 - Missing auth adapters fail closed: provider-account revoke aborts Apple withdrawal.
 - The cleanup caller supplies the retention cutoff. A scheduler must not invent a retention period; wire the approved policy and an idempotent cross-domain deletion adapter during integration.
 

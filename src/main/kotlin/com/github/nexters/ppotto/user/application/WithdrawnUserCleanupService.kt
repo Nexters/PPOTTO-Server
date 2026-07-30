@@ -16,19 +16,19 @@ class WithdrawnUserCleanupService(
         batchSize: Int,
     ): WithdrawnUserCleanupResult {
         require(batchSize in 1..MAX_BATCH_SIZE)
-        val candidates = userRepository.findWithdrawnBefore(deletedBefore, batchSize)
-        val deletedUserIds = mutableListOf<UUID>()
-
-        candidates.forEach { user ->
-            withdrawnUserDataDeletionPort.deleteAllFor(user.id)
-            check(userRepository.hardDelete(user.id))
-            deletedUserIds += user.id
-        }
-
-        return WithdrawnUserCleanupResult(
-            attempted = candidates.size,
-            deletedUserIds = deletedUserIds,
-        )
+        return userRepository
+            .findWithdrawnBefore(deletedBefore, batchSize)
+            .let { candidates ->
+                WithdrawnUserCleanupResult(
+                    attempted = candidates.size,
+                    deletedUserIds =
+                        candidates.map { user ->
+                            user.id
+                                .also(withdrawnUserDataDeletionPort::deleteAllFor)
+                                .also { check(userRepository.hardDelete(it)) }
+                        },
+                )
+            }
     }
 
     companion object {

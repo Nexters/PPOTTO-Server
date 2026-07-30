@@ -16,13 +16,12 @@ data class User(
     val isActive: Boolean
         get() = deletedAt == null
 
-    fun withdraw(at: Instant): User {
-        require(isActive)
-        return copy(
-            email = "deleted+$id@users.invalid",
-            providerRefreshToken = null,
-            updatedAt = at,
-            deletedAt = at,
-        )
-    }
+    fun withdraw(at: Instant): User =
+        also { require(isActive) }
+            .copy(
+                email = "deleted+$id@users.invalid",
+                providerRefreshToken = null,
+                updatedAt = at,
+                deletedAt = at,
+            )
 }

@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.user.application
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.user.application.port.ProviderRefreshTokenCipher
 import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
+import com.github.nexters.ppotto.user.domain.EncryptedProviderRefreshToken
 import com.github.nexters.ppotto.user.domain.User
 import com.github.nexters.ppotto.user.domain.UserErrorCode
 import com.github.nexters.ppotto.user.infrastructure.SocialUserRepository
@@ -20,44 +21,52 @@ class UserService(
     private val socialAccountRevoker: SocialAccountRevoker,
 ) {
     @Transactional
-    fun findOrCreate(command: SocialUserCommand): UserRegistrationResult {
-        val encryptedToken = command.providerRefreshToken?.let(tokenCipher::encrypt)
-        val created =
-            socialUserRepository.saveIfAbsent(
-                provider = command.provider,
-                providerUserId = command.providerUserId,
-                email = command.email,
-                providerRefreshToken = encryptedToken,
-            )
-        if (created != null) {
-            return UserRegistrationResult(created, true)
+    fun findOrCreate(command: SocialUserCommand): UserRegistrationResult =
+        command.run {
+            val encryptedToken = providerRefreshToken?.let(tokenCipher::encrypt)
+            socialUserRepository
+                .saveIfAbsent(
+                    provider = provider,
+                    providerUserId = providerUserId,
+                    email = email,
+                    providerRefreshToken = encryptedToken,
+                )?.let { UserRegistrationResult(it, true) }
+                ?: updateExisting(command, encryptedToken)
         }
 
-        val existing =
-            userRepository.findBySocialAccount(command.provider, command.providerUserId)
-                ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
-        val updated =
-            userRepository.updateSocialProfile(
-                id = existing.id,
-                email = command.email,
-                providerRefreshToken = encryptedToken,
-            ) ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
-        return UserRegistrationResult(updated, false)
-    }
+    private fun updateExisting(
+        command: SocialUserCommand,
+        encryptedToken: EncryptedProviderRefreshToken?,
+    ): UserRegistrationResult =
+        userRepository
+            .findBySocialAccount(command.provider, command.providerUserId)
+            ?.let { existing ->
+                userRepository.updateSocialProfile(
+                    id = existing.id,
+                    email = command.email,
+                    providerRefreshToken = encryptedToken,
+                )
+            }?.let { UserRegistrationResult(it, false) }
+            ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
 
     @Transactional(readOnly = true)
-    fun getById(id: UUID): User = userRepository.findById(id) ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
+    fun getById(id: UUID): User =
+        userRepository
+            .findById(id)
+            ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
 
     @Transactional
     fun withdraw(
         id: UUID,
         withdrawnAt: Instant = Instant.now(),
     ) {
-        val user = getById(id)
-        user.providerRefreshToken?.let {
-            socialAccountRevoker.revoke(user.provider, tokenCipher.decrypt(it))
-        }
-        userRepository.withdraw(user.withdraw(withdrawnAt))
+        getById(id)
+            .also { user ->
+                user.providerRefreshToken?.let {
+                    socialAccountRevoker.revoke(user.provider, tokenCipher.decrypt(it))
+                }
+            }.withdraw(withdrawnAt)
+            .let(userRepository::withdraw)
             ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
     }
 }
