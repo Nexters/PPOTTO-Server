@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.user.application.port.ProviderRefreshTokenCiphe
 import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
 import com.github.nexters.ppotto.user.domain.User
 import com.github.nexters.ppotto.user.domain.UserErrorCode
+import com.github.nexters.ppotto.user.infrastructure.SocialUserRepository
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -14,32 +15,34 @@ import java.util.UUID
 @Service
 class UserService(
     private val userRepository: UserRepository,
+    private val socialUserRepository: SocialUserRepository,
     private val tokenCipher: ProviderRefreshTokenCipher,
     private val socialAccountRevoker: SocialAccountRevoker,
 ) {
     @Transactional
     fun findOrCreate(command: SocialUserCommand): UserRegistrationResult {
         val encryptedToken = command.providerRefreshToken?.let(tokenCipher::encrypt)
-        val existing = userRepository.findBySocialAccount(command.provider, command.providerUserId)
-
-        if (existing != null) {
-            val updated =
-                userRepository.updateSocialProfile(
-                    id = existing.id,
-                    email = command.email,
-                    providerRefreshToken = encryptedToken,
-                ) ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
-            return UserRegistrationResult(updated, false)
-        }
-
         val created =
-            userRepository.save(
+            socialUserRepository.saveIfAbsent(
                 provider = command.provider,
                 providerUserId = command.providerUserId,
                 email = command.email,
                 providerRefreshToken = encryptedToken,
             )
-        return UserRegistrationResult(created, true)
+        if (created != null) {
+            return UserRegistrationResult(created, true)
+        }
+
+        val existing =
+            userRepository.findBySocialAccount(command.provider, command.providerUserId)
+                ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
+        val updated =
+            userRepository.updateSocialProfile(
+                id = existing.id,
+                email = command.email,
+                providerRefreshToken = encryptedToken,
+            ) ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
+        return UserRegistrationResult(updated, false)
     }
 
     @Transactional(readOnly = true)

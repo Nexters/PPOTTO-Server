@@ -10,7 +10,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `support/IntegrationTest.kt` | Base class: `@SpringBootTest` + `@ActiveProfiles("test")` + Testcontainers import. Extend this for integration tests |
 | `support/TestcontainersConfiguration.kt` | `@ServiceConnection` PostgreSQLContainer (pgvector/pgvector:pg18, matches compose image) |
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
-| `user/` | User domain, AES-GCM token cipher, repository, application-service, cleanup, and controller tests |
+| `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, cleanup, and controller tests |
 | `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including the local-only provider-token encryption key, in tests (tests do not read `.env`) |
 
 ## Rules

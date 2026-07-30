@@ -122,20 +122,20 @@ class UserRepository(
             .where(USERS.ID.eq(id))
             .and(USERS.DELETED_AT.isNotNull)
             .execute() == 1
-
-    private fun UsersRecord.toDomain() =
-        User(
-            id = id!!,
-            provider = provider!!.toDomain(),
-            providerUserId = providerUserId!!,
-            email = email!!,
-            providerRefreshToken = providerRefreshToken?.let(::EncryptedProviderRefreshToken),
-            createdAt = createdAt!!,
-            updatedAt = updatedAt!!,
-            deletedAt = deletedAt,
-        )
-
-    private fun OAuthProvider.toJooq(): OauthProvider = OauthProvider.valueOf(name)
-
-    private fun OauthProvider.toDomain(): OAuthProvider = OAuthProvider.valueOf(name)
 }
+
+internal fun UsersRecord.toDomain() =
+    User(
+        id = id!!,
+        provider = provider!!.toDomain(),
+        providerUserId = providerUserId!!,
+        email = email!!,
+        providerRefreshToken = providerRefreshToken?.let(::EncryptedProviderRefreshToken),
+        createdAt = createdAt!!,
+        updatedAt = updatedAt!!,
+        deletedAt = deletedAt,
+    )
+
+internal fun OAuthProvider.toJooq(): OauthProvider = OauthProvider.valueOf(name)
+
+internal fun OauthProvider.toDomain(): OAuthProvider = OAuthProvider.valueOf(name)

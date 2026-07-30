@@ -10,11 +10,12 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `application/port/ProviderRefreshTokenCipher.kt` | Plaintext-to-encrypted token boundary; AES-GCM adapter lives in infrastructure |
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain must provide the real adapter |
 | `application/port/WithdrawnUserDataDeletionPort.kt` | Idempotent cross-domain contract for deleting all DB and object-storage data owned by a withdrawn user |
-| `application/UserService.kt` | Transaction boundary for social lookup/create, account lookup, and withdrawal |
+| `application/UserService.kt` | Transaction boundary for atomic social lookup/create, account lookup, and withdrawal |
 | `application/WithdrawnUserCleanupService.kt` | Bounded cleanup batch; hard-deletes a user only after the cross-domain deletion port succeeds |
 | `presentation/UserController.kt` | Version 1 `GET /users/me` and `DELETE /users/me` endpoints |
 | `presentation/dto/UserResponse.kt` | Public account response without social-provider identifiers or tokens |
-| `infrastructure/UserRepository.kt` | DSLContext persistence for social account creation, active lookup, profile refresh, withdrawal, and hard deletion |
+| `infrastructure/UserRepository.kt` | DSLContext persistence for active account lookup, profile refresh, withdrawal, and hard deletion |
+| `infrastructure/SocialUserRepository.kt` | Atomic active social-account creation using the partial unique index as the conflict target |
 | `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration for provider refresh-token encryption |
 | `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Versioned AES-256-GCM provider refresh-token encryption adapter |
 | `infrastructure/UserPortFallbackConfig.kt` | Fail-closed fallback beans used until auth and deletion adapters are integrated |
@@ -24,6 +25,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 - `id`/`createdAt`/`updatedAt` are DB-generated (`uuidv7()` default, `now()` default, `set_updated_at()` trigger) and read back via `RETURNING`.
 - A provider refresh token crosses persistence only as `EncryptedProviderRefreshToken`; plaintext encryption/decryption belongs to an application port adapter.
 - Active account lookup always includes `deleted_at IS NULL`. Withdrawal anonymizes email and clears the provider refresh token before setting `deleted_at`.
+- Concurrent social signup uses the active-identity partial unique index as the conflict target, then reloads the winner instead of surfacing a unique violation.
 - Pre-social legacy rows remain nullable under the unvalidated completeness check and are excluded from application lookup until a real-identity backfill is completed. New social users always write provider, provider user id, and email together.
 - Controllers consume the auth domain's UUID principal through nullable `@AuthenticationPrincipal`; absence returns `COMMON-004`.
 - Missing auth adapters fail closed: provider-account revoke aborts Apple withdrawal.

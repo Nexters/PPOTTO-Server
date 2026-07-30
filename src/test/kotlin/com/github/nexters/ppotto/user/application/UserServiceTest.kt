@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.application
 
+import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.domain.OAuthProvider
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -9,15 +10,21 @@ import com.github.nexters.ppotto.user.support.UserTestConfig
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import com.github.nexters.ppotto.jooq.enums.OauthProvider as JooqOAuthProvider
 
 @Import(UserTestConfig::class)
 class UserServiceTest(
     userService: UserService,
     userRepository: UserRepository,
     revoker: FakeSocialAccountRevoker,
+    dslContext: DSLContext,
 ) : IntegrationTest({
         Given("처음 로그인한 Apple 소셜 계정이 있을 때") {
             revoker.clear()
@@ -54,6 +61,56 @@ class UserServiceTest(
                     second.isNewUser shouldBe false
                     second.user.id shouldBe first.user.id
                     second.user.email shouldBe "changed@example.com"
+                }
+            }
+        }
+
+        Given("같은 소셜 계정으로 여러 가입 요청이 동시에 시작될 때") {
+            val providerUserId = "concurrent-${UUID.randomUUID()}"
+            val command =
+                SocialUserCommand(
+                    provider = OAuthProvider.KAKAO,
+                    providerUserId = providerUserId,
+                    email = "concurrent@example.com",
+                    providerRefreshToken = null,
+                )
+            val requestCount = 8
+            val ready = CountDownLatch(requestCount)
+            val start = CountDownLatch(1)
+            val executor = Executors.newFixedThreadPool(requestCount)
+
+            When("사용자를 동시에 조회하거나 생성하면") {
+                val futures =
+                    List(requestCount) {
+                        executor.submit<UserRegistrationResult> {
+                            ready.countDown()
+                            start.await()
+                            userService.findOrCreate(command)
+                        }
+                    }
+                val results =
+                    try {
+                        ready.await(10, TimeUnit.SECONDS) shouldBe true
+                        start.countDown()
+                        futures.map { it.get(10, TimeUnit.SECONDS) }
+                    } finally {
+                        start.countDown()
+                        executor.shutdownNow()
+                    }
+
+                Then("한 사용자만 저장하고 한 요청만 신규 가입으로 반환한다") {
+                    results
+                        .map { it.user.id }
+                        .distinct()
+                        .size shouldBe 1
+                    results.count { it.isNewUser } shouldBe 1
+                    dslContext.fetchCount(
+                        USERS,
+                        USERS.PROVIDER
+                            .eq(JooqOAuthProvider.KAKAO)
+                            .and(USERS.PROVIDER_USER_ID.eq(providerUserId))
+                            .and(USERS.DELETED_AT.isNull),
+                    ) shouldBe 1
                 }
             }
         }
