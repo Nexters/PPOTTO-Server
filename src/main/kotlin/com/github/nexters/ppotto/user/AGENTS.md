@@ -11,6 +11,8 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `application/port/CurrentUserProvider.kt` | Authenticated user-id boundary; the auth domain must provide the real adapter |
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain must provide the real adapter |
 | `application/UserService.kt` | Transaction boundary for social lookup/create, account lookup, and withdrawal |
+| `presentation/UserController.kt` | Version 1 `GET /users/me` and `DELETE /users/me` endpoints |
+| `presentation/dto/UserResponse.kt` | Public account response without social-provider identifiers or tokens |
 | `infrastructure/UserRepository.kt` | DSLContext persistence for social account creation, active lookup, profile refresh, withdrawal, and hard deletion |
 | `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration for provider refresh-token encryption |
 | `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Versioned AES-256-GCM provider refresh-token encryption adapter |
