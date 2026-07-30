@@ -5,11 +5,12 @@ import com.github.nexters.ppotto.user.application.SocialUserCommand
 import com.github.nexters.ppotto.user.application.UserService
 import com.github.nexters.ppotto.user.domain.OAuthProvider
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
-import com.github.nexters.ppotto.user.support.FakeCurrentUserProvider
 import com.github.nexters.ppotto.user.support.UserTestConfig
 import io.kotest.matchers.nulls.shouldBeNull
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -23,7 +24,6 @@ class UserControllerTest(
     mockMvc: MockMvc,
     userService: UserService,
     userRepository: UserRepository,
-    currentUserProvider: FakeCurrentUserProvider,
 ) : IntegrationTest({
         Given("인증된 사용자가 있을 때") {
             val registered =
@@ -35,12 +35,18 @@ class UserControllerTest(
                         providerRefreshToken = null,
                     ),
                 )
-            currentUserProvider.userId = registered.user.id
+            val authentication =
+                UsernamePasswordAuthenticationToken.authenticated(
+                    registered.user.id,
+                    null,
+                    emptyList(),
+                )
 
             When("내 정보를 조회하면") {
                 val result =
                     mockMvc.perform(
                         get("/users/me")
+                            .with(authentication(authentication))
                             .header("X-API-Version", "1"),
                     )
 
@@ -65,6 +71,7 @@ class UserControllerTest(
                 val result =
                     mockMvc.perform(
                         delete("/users/me")
+                            .with(authentication(authentication))
                             .header("X-API-Version", "1"),
                     )
 
@@ -79,8 +86,6 @@ class UserControllerTest(
         }
 
         Given("인증되지 않은 요청일 때") {
-            currentUserProvider.userId = null
-
             When("내 정보를 조회하면") {
                 val result =
                     mockMvc.perform(

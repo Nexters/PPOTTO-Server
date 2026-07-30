@@ -8,9 +8,9 @@ import org.springframework.context.annotation.Primary
 class UserTestConfig {
     @Bean
     @Primary
-    fun fakeCurrentUserProvider(): FakeCurrentUserProvider = FakeCurrentUserProvider()
+    fun fakeSocialAccountRevoker(): FakeSocialAccountRevoker = FakeSocialAccountRevoker()
 
     @Bean
     @Primary
-    fun fakeSocialAccountRevoker(): FakeSocialAccountRevoker = FakeSocialAccountRevoker()
+    fun fakeWithdrawnUserDataDeletionPort(): FakeWithdrawnUserDataDeletionPort = FakeWithdrawnUserDataDeletionPort()
 }
