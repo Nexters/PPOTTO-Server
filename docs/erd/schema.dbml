@@ -1,0 +1,344 @@
+Project ppotto {
+  database_type: 'PostgreSQL'
+  Note: '''
+  마이그레이션 시 수동 반영 (DBML 표현 불가)
+  - CREATE EXTENSION IF NOT EXISTS citext;
+  - partial unique 로 교체:
+    uk_users_provider_uid -> WHERE deleted_at IS NULL
+    uk_session_active -> WHERE status IN ('UPLOADING','ANALYZING','GENERATING')
+  - CHECK 제약 (LLM 파이프라인이 직접 쓰는 경로라 API 검증이 닿지 않음):
+    stickers: (type='IMAGE' AND image_key IS NOT NULL) OR (type='TEXT' AND text_content IS NOT NULL)
+    drawings: (scope='STICKER') = (sticker_id IS NOT NULL)
+    recap_comments: NOT is_float OR (pos_x IS NOT NULL AND pos_y IS NOT NULL)
+    analysis_sessions: progress BETWEEN 0 AND 100
+    photos: upload_status <> 'UPLOADED' OR uploaded_at IS NOT NULL
+  '''
+}
+
+// ── enums ────────────────────────────────
+Enum oauth_provider {
+  KAKAO
+  APPLE
+}
+
+Enum session_status {
+  UPLOADING  [note: '세션 생성 = URL 발급이라 이게 시작 상태']
+  ANALYZING
+  GENERATING
+  COMPLETED
+  FAILED     [note: '실패/취소/만료. failed_reason 에 CANCELED, EXPIRED 등 기록']
+}
+
+Enum photo_upload_status {
+  PENDING  [note: 'signed URL 발급됨. 업로드 확인 전']
+  UPLOADED [note: 'GCS 오브젝트 존재 확인됨']
+  FAILED   [note: '만료/실패. 분석 대상에서 제외']
+}
+
+Enum sticker_type {
+  IMAGE [note: '이미지형. 피사체/장면 구분 없음']
+  TEXT  [note: '텍스트형']
+}
+
+Enum drawing_scope {
+  STICKER [note: '스티커 묶음에 포함']
+  BOARD   [note: '보드 배경에 고정']
+}
+
+// ── 공통 조각 ─────────────────────────────
+TablePartial base_id {
+  id uuid [pk, default: `uuidv7()`, note: 'PG18 내장 uuidv7(). 동일 taken_at 정렬이 생성 순서에 의존하므로 앱단 생성 금지']
+}
+
+TablePartial timestamps {
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+TablePartial soft_delete {
+  deleted_at timestamptz [null, note: 'NULL이면 활성']
+}
+
+// ── 계정 ──────────────────────────────────
+Table users {
+  ~base_id
+  provider               oauth_provider [not null]
+  provider_user_id       text           [not null, note: '카카오 id / 애플 sub']
+  provider_refresh_token text           [null, note: '애플 revoke API용. 만료 없음. 카카오는 NULL. 암호화 저장(마이그레이션 요건)']
+
+  email citext [not null, note: '애플은 private relay 가능. 카카오는 미동의 시 로그인 거부']
+
+  ~timestamps
+  ~soft_delete
+
+  Note: '''
+  소셜 계정 1개 = 서비스 계정 1개. 서비스 refresh token은 Redis.
+  email은 UNIQUE 아님(카카오/애플 각각 가입 시 중복 가능).
+  이메일은 필수. 카카오는 이메일 동의를 안 하면 가입/로그인을 거부하고
+  클라가 추가 동의(account_email)를 받아 재시도한다.
+
+  탈퇴 시 email 과 provider_refresh_token 은 즉시 익명화한다.
+  나머지는 soft delete 후 유예기간이 지나면 배치가 하드 삭제한다.
+  '''
+
+  indexes {
+    (provider, provider_user_id) [unique, name: 'uk_users_provider_uid', note: 'export 후 WHERE deleted_at IS NULL 추가']
+  }
+}
+
+Table terms {
+  ~base_id
+  code         text        [not null, note: 'TOS / PRIVACY']
+  version      text        [not null]
+  is_required  boolean     [not null, default: true]
+  content_url  text        [null, note: '노션 페이지 등 외부 링크']
+  effective_at timestamptz [not null, note: '시행일']
+  ~timestamps
+
+  Note: '''
+  code 별로 effective_at <= now() 인 것 중 가장 최근 행이 현재 버전이다.
+  version 은 text 라 정렬 기준이 될 수 없으므로 표시용으로만 쓴다.
+  개정은 새 행을 추가하고 effective_at 을 미래로 두면 예약된다.
+  '''
+
+  indexes {
+    (code, version)      [unique, name: 'uk_terms_code_version']
+    (code, effective_at) [name: 'ix_terms_code_effective']
+  }
+}
+
+Table term_agreements {
+  ~base_id
+  user_id   uuid        [not null, ref: > users.id]
+  term_id   uuid        [not null, ref: > terms.id]
+  agreed_at timestamptz [not null, default: `now()`]
+
+  Note: '''
+  동의 이력. 약관 개정 시 새 term 행 + 새 동의 행으로 누적.
+  재동의 대상 판정: 현재 버전 term_id 중 이 테이블에 없는 것.
+  '''
+
+  indexes {
+    (user_id, term_id) [unique, name: 'uk_term_agreement']
+    term_id [name: 'ix_term_agreement_term']
+  }
+}
+
+// ── 보드 ──────────────────────────────────
+Table boards {
+  ~base_id
+  user_id uuid [not null, ref: > users.id]
+  name    text [not null, note: '최대 10자. 미지정 시 서버가 기본 이름 부여, 사용자가 변경 가능']
+  ~timestamps
+  ~soft_delete
+
+  Note: '''
+  유저당 최대 100개. 가입 시 기본 보드 1개를 자동 생성한다.
+  개수 검증은 생성 시점에 활성 보드 수로 한다.
+
+  삭제하면 스티커, 리캡, 드로잉도 함께 soft delete 한다.
+  마지막 남은 보드와 진행 중인 분석의 대상 보드는 삭제할 수 없다.
+  '''
+
+  indexes {
+    (user_id, created_at) [name: 'ix_board_user_created']
+  }
+}
+
+// ── 분석 세션 ─────────────────────────────
+Table analysis_sessions {
+  ~base_id
+  user_id       uuid           [not null, ref: > users.id]
+  board_id      uuid           [not null, ref: > boards.id, note: '분석 결과 스티커가 붙을 보드']
+  status        session_status [not null, default: 'UPLOADING']
+  progress      smallint       [not null, default: 0, note: '0~100. 로딩 화면 진행률']
+  failed_reason text           [null]
+  started_at    timestamptz    [null]
+  completed_at  timestamptz    [null]
+  ~timestamps
+
+  Note: '''
+  사진 업로드 1회 = 세션 1개. 결과로 스티커가 최대 6개 생성되어
+  board_id 보드에 붙는다.
+
+  그룹핑·제외 과정은 클라가 처리하므로 서버에는 남기지 않는다.
+  업로드된 사진은 전부 분석에 사용한다(대표/열람용 구분 없음).
+  signed URL 을 일괄 발급할 때 photos 를 미리 만들어 두므로
+  업로드 도중에도 진행률 분모가 확정되어 있다.
+  사진 수 검증(정책상 90~100)은 발급 요청 시점에 한다.
+
+  새 분석 완료 시 서버가 스티커를 배치한다.
+  새 스티커는 중앙에 크게, 기존 스티커는 외곽에 작게 재배치한다.
+
+  동시 분석은 보드와 무관하게 유저당 1개다. uk_session_active 로 강제한다.
+
+  로딩 화면 문구는 클라가 만들고 서버는 관여하지 않는다.
+  서버가 로딩 화면에 제공하는 것은 status 와 progress 뿐이다.
+
+  취소와 만료 정리는 status=FAILED 로 두고 failed_reason 에
+  CANCELED / EXPIRED 를 기록한다.
+  '''
+
+  indexes {
+    (user_id, created_at) [name: 'ix_session_user_created']
+    user_id [unique, name: 'uk_session_active', note: 'export 후 WHERE status IN (UPLOADING, ANALYZING, GENERATING) 부분 유니크로 교체. 진행 중 세션 1개를 DB가 강제(더블탭 이중 세션 차단)']
+    board_id [name: 'ix_session_board']
+  }
+}
+
+// ── 사진 ──────────────────────────────────
+Table photos {
+  ~base_id
+  session_id  uuid    [not null, ref: > analysis_sessions.id, note: '업로드된 세션']
+  storage_key text    [not null, unique, note: 'GCS 오브젝트 키. 서버 생성']
+
+  upload_status photo_upload_status [not null, default: 'PENDING']
+  uploaded_at   timestamptz         [null]
+
+  taken_at timestamptz [not null, note: '사진 시각. 클라가 준 값을 그대로 저장한다']
+
+  ~timestamps
+
+  Note: '''
+  signed URL 발급 시점에 행을 만든다. 클라가 GCS 로 직접 올리므로
+  서버는 업로드 완료를 스스로 알 수 없다. upload_status 로 추적하고
+  UPLOADED 인 행 전부를 분석에 넣는다.
+  조회는 서버가 읽기용 signed URL 을 만들어 응답에 실어 준다.
+  UPLOADED 전환은 GCS 이벤트 알림이 정석이고, 클라 콜백만 믿으면
+  클라가 죽었을 때 영구 PENDING 이 된다.
+
+  스티커에 연결되는 사진은 열람용까지 전부 서버에 보관한다(기기가 바뀌어도 리캡 유지).
+  사용자가 제외한 사진은 애초에 업로드되지 않으므로 제외 이력 컬럼이 없다.
+  보관·삭제 기준은 개인정보 처리방침을 따른다.
+  탈퇴 시 유예기간이 지나면 GCS 오브젝트까지 배치가 하드 삭제한다.
+
+  정렬은 (taken_at, id). taken_at 이 같으면 uuidv7 이 발급 요청 배열 순서를
+  보존하므로 별도 seq 컬럼을 두지 않는다.
+
+  [메타데이터 보관 기준]
+  픽셀에서 읽어낼 수 있는 값(대표 색상, 피사체, 장소, 이미지 속 텍스트 등)은
+  저장하지 않는다. 멀티모달 모델이 GCS 이미지를 직접 보고 판단한다.
+  taken_at 만 남기는데, 이건 이미지에 담기지 않는 정보다.
+  값의 출처(EXIF, 갤러리 등록 시각 등)는 클라가 정하고 서버는 받은 값을 믿는다.
+  GPS는 쓰지 않기로 해서 저장하지 않는다.
+  '''
+
+  indexes {
+    (session_id, taken_at)      [name: 'ix_photo_session_taken']
+    (session_id, upload_status) [name: 'ix_photo_session_status']
+  }
+}
+
+// ── 스티커 ─────────────────────────────────
+Table stickers {
+  ~base_id
+  session_id uuid         [not null, ref: > analysis_sessions.id, note: '이 스티커를 만든 분석']
+  board_id   uuid         [not null, ref: > boards.id]
+  type       sticker_type [not null]
+
+  title     text        [not null, note: '최대 15자. 제목 뱃지 문구이자 리캡 제목. LLM 생성도 이 제한을 따른다']
+  viewed_at timestamptz [null, note: 'NULL이면 신규 = 빨간 점 표시. 리캡 진입 시 채운다']
+
+  source_photo_id uuid [null, ref: > photos.id, note: '이미지형일 때 원본 사진']
+  image_key       text [null, note: '서버가 누끼 처리해 올린 스티커 PNG 키. 이미지형은 필수']
+  text_content    text [null, note: '텍스트형일 때 문구']
+
+  // 보드 상 배치
+  pos_x    double  [not null]
+  pos_y    double  [not null]
+  scale    double  [not null, default: 1]
+  rotation double  [not null, default: 0, note: 'degree']
+  z_index  integer [not null, default: 0]
+
+  // 제목 뱃지 (스티커에 1:1로 붙는다)
+  badge_offset_x double [not null, default: 0, note: '스티커 기준 상대 좌표. 일정 범위 내로 제한']
+  badge_offset_y double [not null, default: 0]
+  badge_rotation double [not null, default: 0]
+
+  ~timestamps
+  ~soft_delete
+
+  Note: '''
+  분석 1회당 최대 6개 생성. 기존 스티커와 유사해도 병합하지 않고 별도로 추가.
+  리캡은 스티커 1개당 1개다. sticker_photos 와 recap_comments 가 연결된다.
+
+  "스티커 묶음" = 스티커 + 제목 뱃지 + scope=STICKER 인 드로잉.
+  개별 메뉴(공유하기/삭제하기)와 이동/크기변경은 모두 묶음 단위로 동작한다.
+  공유 이미지에도 뱃지와 드로잉을 합성해 하나의 이미지로 만든다.
+
+  제목을 수정해도 viewed_at 에는 영향을 주지 않는다.
+  삭제하면 연결된 드로잉과 리캡 데이터도 함께 soft delete 한다.
+  배치값은 편집 모드를 끌 때마다 서버에 저장한다.
+  '''
+
+  indexes {
+    (board_id, z_index) [name: 'ix_sticker_board_z']
+    session_id [name: 'ix_sticker_session']
+    source_photo_id [name: 'ix_sticker_source_photo', note: '사진 파기 배치의 역방향 조회용']
+  }
+}
+
+Table sticker_photos {
+  ~base_id
+  sticker_id uuid [not null, ref: > stickers.id]
+  photo_id   uuid [not null, ref: > photos.id]
+
+  Note: '''
+  리캡의 "사진 그리드". 열람용 사진까지 포함한다.
+  표시 순서는 photos.taken_at 을 따르므로 별도 seq 를 두지 않는다.
+  사용자 재정렬 기능이 생기면 그때 추가한다.
+  '''
+
+  indexes {
+    (sticker_id, photo_id) [unique, name: 'uk_sticker_photo']
+    photo_id [name: 'ix_sticker_photo_photo', note: '사진 파기 배치의 역방향 조회용']
+  }
+}
+
+Table drawings {
+  ~base_id
+  board_id   uuid          [not null, ref: > boards.id]
+  sticker_id uuid          [null, ref: > stickers.id, note: 'scope=STICKER 일 때만 채운다']
+  scope      drawing_scope [not null]
+
+  stroke       jsonb  [not null, note: '점 배열 등 선 데이터']
+  color        text   [not null]
+  stroke_width double [not null]
+
+  ~timestamps
+  ~soft_delete
+
+  Note: '''
+  스티커 주변에 그린 선은 해당 스티커 묶음에 포함되어 함께 이동/변형된다.
+  스티커와 무관하게 배경에 그린 선은 보드에 고정된다.
+  스티커 삭제 시 연결된 드로잉도 함께 제거.
+  '''
+
+  indexes {
+    board_id   [name: 'ix_drawing_board']
+    sticker_id [name: 'ix_drawing_sticker']
+  }
+}
+
+// ── 리캡 ──────────────────────────────────
+Table recap_comments {
+  ~base_id
+  sticker_id uuid    [not null, ref: > stickers.id]
+  content    text    [not null]
+  is_float   boolean [not null, default: false, note: 'true면 스티커 주변 말풍선, false면 하단 순차 노출']
+
+  pos_x double [null, note: 'is_float 일 때 스티커 기준 상대 좌표']
+  pos_y double [null]
+
+  ~timestamps
+
+  Note: '''
+  LLM 생성 코멘트. 리캡 화면의 말풍선들.
+  노출 순서는 id(uuidv7) 오름차순. 한 번에 생성하고 재정렬이 없다.
+  명세 TODO 상태라 확정 시 재검토 필요.
+  '''
+
+  indexes {
+    sticker_id [name: 'ix_recap_sticker']
+  }
+}

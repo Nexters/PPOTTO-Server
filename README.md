@@ -184,4 +184,9 @@ enum class PhotoErrorCode(
 
 ## 문서
 
+API와 DB 설계는 스펙 드리븐 개발 방식으로 `docs/`에서 먼저 정의하고 구현합니다. `docs/`는 항상 정본이므로, 구현 중 설계가 바뀌면 같은 변경 단위에서 문서도 갱신합니다.
+
+- API 계약 문서: `docs/api-spec/api-spec.md`
+- ERD 문서: `docs/erd/README.md`, `docs/erd/schema.dbml`
+
 AI 에이전트용 상세 규칙은 각 폴더의 `AGENTS.md`에 있습니다. 폴더의 코드를 수정하면 해당 `AGENTS.md`도 함께 갱신합니다.
