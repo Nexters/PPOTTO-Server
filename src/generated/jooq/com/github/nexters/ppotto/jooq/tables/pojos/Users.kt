@@ -19,10 +19,10 @@ data class Users(
     val id: UUID? = null,
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null,
-    val provider: OauthProvider,
-    val providerUserId: String,
+    val provider: OauthProvider? = null,
+    val providerUserId: String? = null,
     val providerRefreshToken: String? = null,
-    val email: String,
+    val email: String? = null,
     val deletedAt: Instant? = null
 ): Serializable {
 
@@ -52,9 +52,17 @@ data class Users(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
-        if (this.provider != o.provider)
+        if (this.provider == null) {
+            if (o.provider != null)
+                return false
+        }
+        else if (this.provider != o.provider)
             return false
-        if (this.providerUserId != o.providerUserId)
+        if (this.providerUserId == null) {
+            if (o.providerUserId != null)
+                return false
+        }
+        else if (this.providerUserId != o.providerUserId)
             return false
         if (this.providerRefreshToken == null) {
             if (o.providerRefreshToken != null)
@@ -62,7 +70,11 @@ data class Users(
         }
         else if (this.providerRefreshToken != o.providerRefreshToken)
             return false
-        if (this.email != o.email)
+        if (this.email == null) {
+            if (o.email != null)
+                return false
+        }
+        else if (this.email != o.email)
             return false
         if (this.deletedAt == null) {
             if (o.deletedAt != null)
@@ -79,10 +91,10 @@ data class Users(
         result = prime * result + (if (this.id == null) 0 else this.id.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
-        result = prime * result + this.provider.hashCode()
-        result = prime * result + this.providerUserId.hashCode()
+        result = prime * result + (if (this.provider == null) 0 else this.provider.hashCode())
+        result = prime * result + (if (this.providerUserId == null) 0 else this.providerUserId.hashCode())
         result = prime * result + (if (this.providerRefreshToken == null) 0 else this.providerRefreshToken.hashCode())
-        result = prime * result + this.email.hashCode()
+        result = prime * result + (if (this.email == null) 0 else this.email.hashCode())
         result = prime * result + (if (this.deletedAt == null) 0 else this.deletedAt.hashCode())
         return result
     }

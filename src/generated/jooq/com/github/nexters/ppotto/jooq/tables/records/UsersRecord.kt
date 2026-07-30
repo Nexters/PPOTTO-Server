@@ -32,21 +32,21 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
         set(value): Unit = set(2, value)
         get(): Instant? = get(2) as Instant?
 
-    open var provider: OauthProvider
+    open var provider: OauthProvider?
         set(value): Unit = set(3, value)
-        get(): OauthProvider = get(3) as OauthProvider
+        get(): OauthProvider? = get(3) as OauthProvider?
 
-    open var providerUserId: String
+    open var providerUserId: String?
         set(value): Unit = set(4, value)
-        get(): String = get(4) as String
+        get(): String? = get(4) as String?
 
     open var providerRefreshToken: String?
         set(value): Unit = set(5, value)
         get(): String? = get(5) as String?
 
-    open var email: String
+    open var email: String?
         set(value): Unit = set(6, value)
-        get(): String = get(6) as String
+        get(): String? = get(6) as String?
 
     open var deletedAt: Instant?
         set(value): Unit = set(7, value)
@@ -61,7 +61,7 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
     /**
      * Create a detached, initialised UsersRecord
      */
-    constructor(id: UUID? = null, createdAt: Instant? = null, updatedAt: Instant? = null, provider: OauthProvider, providerUserId: String, providerRefreshToken: String? = null, email: String, deletedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, createdAt: Instant? = null, updatedAt: Instant? = null, provider: OauthProvider? = null, providerUserId: String? = null, providerRefreshToken: String? = null, email: String? = null, deletedAt: Instant? = null): this() {
         this.id = id
         this.createdAt = createdAt
         this.updatedAt = updatedAt

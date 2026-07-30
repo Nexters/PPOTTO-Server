@@ -51,6 +51,9 @@ class UserRepository(
             .selectFrom(USERS)
             .where(USERS.ID.eq(id))
             .and(USERS.DELETED_AT.isNull)
+            .and(USERS.PROVIDER.isNotNull)
+            .and(USERS.PROVIDER_USER_ID.isNotNull)
+            .and(USERS.EMAIL.isNotNull)
             .fetchOne()
             ?.toDomain()
 
@@ -123,9 +126,9 @@ class UserRepository(
     private fun UsersRecord.toDomain() =
         User(
             id = id!!,
-            provider = provider.toDomain(),
-            providerUserId = providerUserId,
-            email = email,
+            provider = provider!!.toDomain(),
+            providerUserId = providerUserId!!,
+            email = email!!,
             providerRefreshToken = providerRefreshToken?.let(::EncryptedProviderRefreshToken),
             createdAt = createdAt!!,
             updatedAt = updatedAt!!,

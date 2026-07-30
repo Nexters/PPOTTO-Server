@@ -17,6 +17,7 @@ import java.util.UUID
 import kotlin.collections.Collection
 import kotlin.collections.List
 
+import org.jooq.Check
 import org.jooq.Condition
 import org.jooq.Field
 import org.jooq.ForeignKey
@@ -95,12 +96,12 @@ open class Users(
     /**
      * The column <code>public.users.provider</code>.
      */
-    val PROVIDER: TableField<UsersRecord, OauthProvider?> = createField(DSL.name("provider"), SQLDataType.VARCHAR.nullable(false).asEnumDataType(OauthProvider::class.java), this, "")
+    val PROVIDER: TableField<UsersRecord, OauthProvider?> = createField(DSL.name("provider"), SQLDataType.VARCHAR.asEnumDataType(OauthProvider::class.java), this, "")
 
     /**
      * The column <code>public.users.provider_user_id</code>.
      */
-    val PROVIDER_USER_ID: TableField<UsersRecord, String?> = createField(DSL.name("provider_user_id"), SQLDataType.CLOB.nullable(false), this, "")
+    val PROVIDER_USER_ID: TableField<UsersRecord, String?> = createField(DSL.name("provider_user_id"), SQLDataType.CLOB, this, "")
 
     /**
      * The column <code>public.users.provider_refresh_token</code>.
@@ -110,7 +111,7 @@ open class Users(
     /**
      * The column <code>public.users.email</code>.
      */
-    val EMAIL: TableField<UsersRecord, String?> = createField(DSL.name("email"), SQLDataType.VARCHAR.nullable(false), this, "")
+    val EMAIL: TableField<UsersRecord, String?> = createField(DSL.name("email"), SQLDataType.VARCHAR, this, "")
 
     /**
      * The column <code>public.users.deleted_at</code>.
@@ -138,6 +139,9 @@ open class Users(
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
     override fun getIndexes(): List<Index> = listOf(UK_USERS_PROVIDER_UID)
     override fun getPrimaryKey(): UniqueKey<UsersRecord> = USERS_PKEY
+    override fun getChecks(): List<Check<UsersRecord>> = listOf(
+        Internal.createCheck(this, DSL.name("ck_users_social_identity_complete"), "(((provider IS NOT NULL) AND (provider_user_id IS NOT NULL) AND (email IS NOT NULL))) NOT VALID", true)
+    )
     override fun `as`(alias: String): Users = Users(DSL.name(alias), this)
     override fun `as`(alias: Name): Users = Users(alias, this)
     override fun `as`(alias: Table<*>): Users = Users(alias.qualifiedName, this)
