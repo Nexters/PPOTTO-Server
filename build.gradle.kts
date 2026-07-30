@@ -36,6 +36,7 @@ dependencies {
 
     implementation(libs.flyway.database.postgresql)
     implementation(libs.google.cloud.storage)
+    implementation(libs.google.genai)
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jooq.kotlin)
     implementation(libs.kotlin.reflect)

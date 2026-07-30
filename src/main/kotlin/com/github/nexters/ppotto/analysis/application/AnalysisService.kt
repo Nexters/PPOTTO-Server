@@ -1,8 +1,10 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
+import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
+import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.PhotoUploadTarget
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
@@ -11,13 +13,16 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardQueryService
+import com.github.nexters.ppotto.global.config.GcsProperties
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
+import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -27,13 +32,9 @@ class AnalysisService(
     private val boardQueryService: BoardQueryService,
     private val photoStorage: PhotoStorage,
     private val transactionTemplate: TransactionTemplate,
+    private val gcsProperties: GcsProperties,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
-    // signed URL 발급 최적화 필요 (트래픽 증가 전에 우선순위)
-    // 현재: analysis/photos를 트랜잭션 내에서 저장하고, 같은 트랜잭션 내에서 signed URL을 발급한다.
-    // 이유: API 응답에 analysisId와 모든 uploads를 함께 반환해야 하며 (원자성), 실패 복구용 reissue API가 아직 없다.
-    // 리스크: signing 지연(credential 방식 의존) 동안 DB 커넥션을 90~100개 photo만큼 점유 → 트래픽 증가 시 병목 가능성
-    // 장기 방향: (1) analysis/photos 커밋 → (2) signed URL 발급 → (3) 실패 시 POST /analysis/{id}/reissue로 복구
-    // (reissue API 구현 및 analysis-status 추가 후 전환 추천)
     @Transactional
     fun createAnalysis(
         userId: UUID,
@@ -73,14 +74,21 @@ class AnalysisService(
         userId: UUID,
         analysisId: UUID,
     ): UploadVerificationResult {
-        val analysis = analysisRepository.findById(analysisId) ?: throw NotFoundException()
+        val analysis = analysisRepository.findById(analysisId) ?: throw NotFoundException(AnalysisErrorCode.ANALYSIS_NOT_FOUND)
         validateAnalysisOwner(analysis.userId, userId)
         validateUploading(analysis.status)
+        return performUploadVerification(analysisId)
+    }
 
+    private fun performUploadVerification(analysisId: UUID): UploadVerificationResult {
         val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
-        if (pendingPhotos.isEmpty()) return UploadVerificationResult(0, 0, emptyList())
+        val existingObjects =
+            if (pendingPhotos.isEmpty()) {
+                emptyMap()
+            } else {
+                photoStorage.existingObjects(PhotoObjectKeys.prefixFor(analysisId))
+            }
 
-        val existingObjects = photoStorage.existingObjects(PhotoObjectKeys.prefixFor(analysisId))
         val completedUpdates =
             pendingPhotos
                 .mapNotNull { photo ->
@@ -88,20 +96,35 @@ class AnalysisService(
                     if (meta != null && meta.size > 0) photo.id to meta.createdAt else null
                 }.toMap()
 
-        return transactionTemplate.execute {
-            analysisRepository.findByIdForUpdate(analysisId)
+        if (completedUpdates.isEmpty()) {
+            throw ConflictException(AnalysisErrorCode.NO_UPLOADED_PHOTOS)
+        }
 
-            if (completedUpdates.isNotEmpty()) {
-                photoRepository.updateStatusBatch(completedUpdates, UploadStatus.PENDING, UploadStatus.COMPLETED)
+        val failedIds = pendingPhotos.map { it.id } - completedUpdates.keys
+
+        transactionTemplate.execute {
+            val locked = analysisRepository.findByIdForUpdate(analysisId)!!
+            if (locked.status != AnalysisStatus.UPLOADING) {
+                throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
             }
 
-            val (completed, pending) =
-                photoRepository
-                    .findAllByAnalysisId(analysisId)
-                    .partition { it.uploadStatus == UploadStatus.COMPLETED }
+            photoRepository.updateStatusBatch(completedUpdates, UploadStatus.PENDING, UploadStatus.COMPLETED)
+            analysisRepository.markAnalyzing(analysisId, Instant.now())
 
-            UploadVerificationResult(completed.size, pending.size, pending.map { it.id })
+            val photosToPublish =
+                pendingPhotos
+                    .filter { it.id in completedUpdates.keys }
+                    .map { photo ->
+                        PhotoRef(
+                            photoId = photo.id,
+                            gcsUri = "gs://${gcsProperties.bucket}/${PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)}",
+                            mimeType = photo.contentType.mimeType,
+                        )
+                    }
+            eventPublisher.publishEvent(AnalysisStartRequestedEvent(analysisId, photosToPublish))
         }
+
+        return UploadVerificationResult(completedUpdates.size, failedIds.size, failedIds)
     }
 
     private fun validateAnalysisOwner(

@@ -1,0 +1,3 @@
+vertexai:
+  project: ${VERTEX_AI_PROJECT}
+  location: ${VERTEX_AI_LOCATION}

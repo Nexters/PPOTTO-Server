@@ -1,0 +1,166 @@
+package com.github.nexters.ppotto.analysis.infrastructure
+
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
+import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
+import com.github.nexters.ppotto.analysis.domain.PhotoRef
+import com.github.nexters.ppotto.analysis.domain.RecapContent
+import com.github.nexters.ppotto.analysis.domain.ThemeClassification
+import com.github.nexters.ppotto.global.error.BusinessException
+import com.google.genai.Client
+import com.google.genai.types.Content
+import com.google.genai.types.GenerateContentConfig
+import com.google.genai.types.Part
+import com.google.genai.types.Schema
+import com.google.genai.types.Type
+import org.springframework.stereotype.Component
+import tools.jackson.databind.ObjectMapper
+import java.util.UUID
+
+@Component
+class VertexAiGeminiClassifier(
+    private val genAiClient: Client,
+    private val objectMapper: ObjectMapper,
+) : GeminiClassifier {
+    override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> {
+        val parts =
+            photos.map { Part.fromUri(it.gcsUri, it.mimeType) } +
+                Part.fromText(buildPrompt(photos.map { it.photoId }))
+        val content = Content.fromParts(*parts.toTypedArray())
+
+        val config =
+            GenerateContentConfig
+                .builder()
+                .responseMimeType("application/json")
+                .responseSchema(RESPONSE_SCHEMA)
+                .build()
+
+        val response = genAiClient.models.generateContent(MODEL, content, config)
+        val rawThemes = objectMapper.readValue(response.text(), Array<GeminiThemeResponse>::class.java).toList()
+
+        val inputPhotoIds = photos.map { it.photoId }.toSet()
+        return rawThemes.map { it.toDomain(inputPhotoIds) }
+    }
+
+    private fun buildPrompt(photoIds: List<UUID>): String =
+        """
+        아래에 첨부된 사진들을 최대 $TARGET_THEME_COUNT 개의 테마로 분류해줘. 각 사진은 정확히 하나의 테마에만 속해야 하고,
+        어느 테마에도 어울리지 않는 사진은 결과에서 제외해도 돼.
+
+        사진 목록(순서대로): ${photoIds.joinToString(", ")}
+
+        각 테마에 대해 다음을 생성해줘:
+        - theme: 테마 이름 (한국어)
+        - categorizedPhotoIds: 이 테마로 분류된 사진 id 목록 (위 목록에 있는 값만 사용)
+        - recap.badge: 8자 내외의 짧은 뱃지 문구 (한국어)
+        - recap.text: 1~2문장의 리캡 문구 (한국어)
+        - sticker.targetSubject: 스티커로 만들 피사체에 대한 설명 (한국어)
+        - sticker.sourcePhotoId: 스티커의 원본으로 쓸 사진 id. 반드시 이 테마의 categorizedPhotoIds 안에 있는 값이어야 함
+
+        모든 텍스트 출력은 한국어로 작성해줘.
+        """.trimIndent()
+
+    private data class GeminiThemeResponse(
+        val theme: String,
+        val categorizedPhotoIds: List<UUID>,
+        val recap: GeminiRecapResponse,
+        val sticker: GeminiStickerResponse,
+    ) {
+        fun toDomain(inputPhotoIds: Set<UUID>): ThemeClassification {
+            if (!inputPhotoIds.containsAll(categorizedPhotoIds) || sticker.sourcePhotoId !in categorizedPhotoIds) {
+                throw BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE)
+            }
+            return ThemeClassification(
+                theme = theme,
+                categorizedPhotoIds = categorizedPhotoIds,
+                recap = RecapContent(badge = recap.badge, text = recap.text),
+                stickerTargetSubject = sticker.targetSubject,
+                stickerSourcePhotoId = sticker.sourcePhotoId,
+            )
+        }
+    }
+
+    private data class GeminiRecapResponse(
+        val badge: String,
+        val text: String,
+    )
+
+    private data class GeminiStickerResponse(
+        val targetSubject: String,
+        val sourcePhotoId: UUID,
+    )
+
+    companion object {
+        private const val MODEL = "gemini-2.5-flash"
+        private const val TARGET_THEME_COUNT = 6
+
+        private val RECAP_SCHEMA =
+            Schema
+                .builder()
+                .type(Type.Known.OBJECT)
+                .properties(
+                    mapOf(
+                        "badge" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+                        "text" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+                    ),
+                ).required("badge", "text")
+                .build()
+
+        private val STICKER_SCHEMA =
+            Schema
+                .builder()
+                .type(Type.Known.OBJECT)
+                .properties(
+                    mapOf(
+                        "targetSubject" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+                        "sourcePhotoId" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+                    ),
+                ).required("targetSubject", "sourcePhotoId")
+                .build()
+
+        private val THEME_SCHEMA =
+            Schema
+                .builder()
+                .type(Type.Known.OBJECT)
+                .properties(
+                    mapOf(
+                        "theme" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+                        "categorizedPhotoIds" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.ARRAY)
+                                .items(Schema.builder().type(Type.Known.STRING))
+                                .build(),
+                        "recap" to RECAP_SCHEMA,
+                        "sticker" to STICKER_SCHEMA,
+                    ),
+                ).required("theme", "categorizedPhotoIds", "recap", "sticker")
+                .build()
+
+        private val RESPONSE_SCHEMA =
+            Schema
+                .builder()
+                .type(Type.Known.ARRAY)
+                .items(THEME_SCHEMA)
+                .build()
+    }
+}
