@@ -1,0 +1,63 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro,z
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_started
+    restart: unless-stopped
+    mem_limit: 256m
+    security_opt:
+      - no-new-privileges:true
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SERVER_PORT: 8080
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      GCS_CREDENTIALS_PATH: /run/secrets/gcs-service-account.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8080"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 3g
+    cpus: 1.5
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    image: pgvector/pgvector:pg18
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    shm_size: 256mb
+    restart: unless-stopped
+    stop_grace_period: 30s
+    cpus: 1.0
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  caddy-data:
+  caddy-config:
+  postgres-data:
