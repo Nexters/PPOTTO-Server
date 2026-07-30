@@ -1,0 +1,3 @@
+user:
+  provider-refresh-token-encryption:
+    key-base64: ${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}

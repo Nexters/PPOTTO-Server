@@ -2,16 +2,20 @@
 
 # user
 
-User domain. Minimal by design: no profile fields yet, only identity and timestamps.
+User account domain. Owns active social identity uniqueness, encrypted provider refresh tokens, account anonymization, and eventual hard deletion.
 
 | Directory | Description |
 |-----------|---------|
-| `domain/User.kt` | Pure Kotlin model: `id`, `createdAt`, `updatedAt` |
-| `infrastructure/UserRepository.kt` | DSLContext-based persistence: `save()`, `findById()` |
+| `domain/` | Pure account model, `OAuthProvider`, encrypted-token value type, and `USER-*` errors |
+| `application/port/ProviderRefreshTokenCipher.kt` | Plaintext-to-encrypted token boundary; AES-GCM adapter lives in infrastructure |
+| `infrastructure/UserRepository.kt` | DSLContext persistence for social account creation, active lookup, profile refresh, withdrawal, and hard deletion |
+| `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration for provider refresh-token encryption |
+| `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Versioned AES-256-GCM provider refresh-token encryption adapter |
 
 ## Rules
 
-- No `presentation`/`application` layer yet — nothing calls this domain over HTTP. Add those when the first use case needing a User endpoint lands.
-- `id`/`createdAt`/`updatedAt` are DB-generated (`uuidv7()` default, `now()` default, `set_updated_at()` trigger) — `save()` inserts default values and reads them back via `RETURNING`, never sets them from application code.
+- `id`/`createdAt`/`updatedAt` are DB-generated (`uuidv7()` default, `now()` default, `set_updated_at()` trigger) and read back via `RETURNING`.
+- A provider refresh token crosses persistence only as `EncryptedProviderRefreshToken`; plaintext encryption/decryption belongs to an application port adapter.
+- Active account lookup always includes `deleted_at IS NULL`. Withdrawal anonymizes email and clears the provider refresh token before setting `deleted_at`.
 
 Update this file when layers are added to this domain.

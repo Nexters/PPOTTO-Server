@@ -16,3 +16,4 @@ spring:
       - classpath:config/springdoc.yml
       - classpath:config/cors.yml
       - classpath:config/security.yml
+      - classpath:config/user.yml
