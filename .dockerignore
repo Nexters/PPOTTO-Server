@@ -11,7 +11,9 @@ buildSrc/build
 buildSrc/.gradle
 .env
 .env.*
+secrets
 *.md
-compose.yaml
+compose*.yaml
+Caddyfile
 Dockerfile
 .DS_Store

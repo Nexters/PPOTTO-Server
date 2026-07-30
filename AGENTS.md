@@ -11,6 +11,8 @@ Backend server for ppotto (뽀또). Kotlin 2.3 / Spring Boot 4.1 / JDK 25 / Post
 | `./gradlew flywayMigrate jooqCodegen` | Apply migrations + regenerate jOOQ code (needs local DB: `docker compose up -d`) |
 | `./gradlew bootRun` | Run locally (reads `.env` via spring-dotenv) |
 | `./gradlew koverHtmlReport` | Test coverage report (`build/reports/kover/html`) |
+| `docker compose -f compose.deploy.yaml -f compose.dev.yaml up -d --build` | Run the shared Dev server stack |
+| `docker compose -f compose.deploy.yaml -f compose.production.yaml up -d --build` | Run the Production server stack |
 
 ## Architecture (DDD-lite)
 
@@ -72,6 +74,12 @@ photo/
 | `buildSrc/` | DB build convention plugin (see `buildSrc/AGENTS.md`) |
 | `.github/` | CI workflow + templates (see `.github/AGENTS.md`) |
 | `.gitattributes` | Marks `src/generated/**` as `linguist-generated` so PR diffs collapse generated files |
+| `compose.yaml` | Local PostgreSQL 18 + pgvector |
+| `compose.deploy.yaml` | Shared server deployment stack: Caddy + API + PostgreSQL |
+| `compose.dev.yaml` | Dev deployment overrides; mounts GCS credentials from `../secrets` |
+| `compose.production.yaml` | Production deployment overrides; mounts GCS credentials from `../secrets` |
+| `Caddyfile` | Shared automatic HTTPS and reverse proxy configuration |
+| `Dockerfile` | Layered JDK 25 image with a build-only mounted dummy GCS credential for AOT cache training |
 
 ## Maintenance
 
