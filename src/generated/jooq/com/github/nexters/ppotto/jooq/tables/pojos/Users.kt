@@ -4,6 +4,8 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.jooq.enums.OauthProvider
+
 import java.io.Serializable
 import java.time.Instant
 import java.util.UUID
@@ -16,7 +18,12 @@ import java.util.UUID
 data class Users(
     val id: UUID? = null,
     val createdAt: Instant? = null,
-    val updatedAt: Instant? = null
+    val updatedAt: Instant? = null,
+    val provider: OauthProvider,
+    val providerUserId: String,
+    val providerRefreshToken: String? = null,
+    val email: String,
+    val deletedAt: Instant? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -45,6 +52,24 @@ data class Users(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
+        if (this.provider != o.provider)
+            return false
+        if (this.providerUserId != o.providerUserId)
+            return false
+        if (this.providerRefreshToken == null) {
+            if (o.providerRefreshToken != null)
+                return false
+        }
+        else if (this.providerRefreshToken != o.providerRefreshToken)
+            return false
+        if (this.email != o.email)
+            return false
+        if (this.deletedAt == null) {
+            if (o.deletedAt != null)
+                return false
+        }
+        else if (this.deletedAt != o.deletedAt)
+            return false
         return true
     }
 
@@ -54,6 +79,11 @@ data class Users(
         result = prime * result + (if (this.id == null) 0 else this.id.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
+        result = prime * result + this.provider.hashCode()
+        result = prime * result + this.providerUserId.hashCode()
+        result = prime * result + (if (this.providerRefreshToken == null) 0 else this.providerRefreshToken.hashCode())
+        result = prime * result + this.email.hashCode()
+        result = prime * result + (if (this.deletedAt == null) 0 else this.deletedAt.hashCode())
         return result
     }
 
@@ -63,6 +93,11 @@ data class Users(
         sb.append(id)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
+        sb.append(", ").append(provider)
+        sb.append(", ").append(providerUserId)
+        sb.append(", ").append(providerRefreshToken)
+        sb.append(", ").append(email)
+        sb.append(", ").append(deletedAt)
 
         sb.append(")")
         return sb.toString()

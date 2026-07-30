@@ -8,6 +8,7 @@ package com.github.nexters.ppotto.jooq.indexes
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Photos
+import com.github.nexters.ppotto.jooq.tables.Users
 
 import org.jooq.Index
 import org.jooq.impl.DSL
@@ -20,7 +21,8 @@ import org.jooq.impl.Internal
 // -------------------------------------------------------------------------
 
 val IDX_ANALYSIS_BOARD_ID: Index = Internal.createIndex(DSL.name("idx_analysis_board_id"), Analysis.ANALYSIS, arrayOf(Analysis.ANALYSIS.BOARD_ID), false)
-val IDX_ANALYSIS_USER_ID: Index = Internal.createIndex(DSL.name("idx_analysis_user_id"), Analysis.ANALYSIS, arrayOf(Analysis.ANALYSIS.USER_ID), false)
+val IDX_ANALYSIS_USER_CREATED: Index = Internal.createIndex(DSL.name("idx_analysis_user_created"), Analysis.ANALYSIS, arrayOf(Analysis.ANALYSIS.USER_ID, Analysis.ANALYSIS.CREATED_AT), false)
 val IDX_BOARDS_USER_ID: Index = Internal.createIndex(DSL.name("idx_boards_user_id"), Boards.BOARDS, arrayOf(Boards.BOARDS.USER_ID), false)
 val IDX_PHOTOS_ANALYSIS_ID: Index = Internal.createIndex(DSL.name("idx_photos_analysis_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.ANALYSIS_ID), false)
 val IDX_PHOTOS_BOARD_ID: Index = Internal.createIndex(DSL.name("idx_photos_board_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.BOARD_ID), false)
+val UK_USERS_PROVIDER_UID: Index = Internal.createIndex(DSL.name("uk_users_provider_uid"), Users.USERS, arrayOf(Users.USERS.PROVIDER, Users.USERS.PROVIDER_USER_ID), true)

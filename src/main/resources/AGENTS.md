@@ -18,7 +18,7 @@ Configuration and database migrations.
 | `config/cors.yml` | `cors.allowed-origins` from `${CORS_ALLOWED_ORIGINS}` |
 | `config/security.yml` | Basic auth user for swagger from `${SWAGGER_USER}` / `${SWAGGER_PASSWORD}` |
 | `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` from `${GCS_*}` |
-| `db/migration/` | Flyway migrations: `V{yyyyMMddHHmmss}__{description}.sql` (timestamp version). The first migration enables the pgvector extension; the second creates `users`/`boards`/`analysis`/`photos` and the shared `set_updated_at()` trigger function |
+| `db/migration/` | Flyway migrations: `V{yyyyMMddHHmmss}__{description}.sql` (timestamp version). The user-account migration enables `citext`, adds the final social-account columns to `users`, and enforces active social identity uniqueness with a partial index |
 
 ## Rules
 

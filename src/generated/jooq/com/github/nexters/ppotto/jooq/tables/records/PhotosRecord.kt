@@ -43,9 +43,9 @@ open class PhotosRecord private constructor() : UpdatableRecordImpl<PhotosRecord
         set(value): Unit = set(5, value)
         get(): Instant? = get(5) as Instant?
 
-    open var takenAt: Instant?
+    open var takenAt: Instant
         set(value): Unit = set(6, value)
-        get(): Instant? = get(6) as Instant?
+        get(): Instant = get(6) as Instant
 
     open var createdAt: Instant?
         set(value): Unit = set(7, value)
@@ -64,7 +64,7 @@ open class PhotosRecord private constructor() : UpdatableRecordImpl<PhotosRecord
     /**
      * Create a detached, initialised PhotosRecord
      */
-    constructor(id: UUID? = null, analysisId: UUID, boardId: UUID, contentType: String, uploadStatus: String? = null, uploadedAt: Instant? = null, takenAt: Instant? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, analysisId: UUID, boardId: UUID, contentType: String, uploadStatus: String? = null, uploadedAt: Instant? = null, takenAt: Instant, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId

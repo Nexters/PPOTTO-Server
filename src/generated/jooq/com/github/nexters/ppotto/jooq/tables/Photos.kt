@@ -110,7 +110,7 @@ open class Photos(
     /**
      * The column <code>public.photos.taken_at</code>.
      */
-    val TAKEN_AT: TableField<PhotosRecord, Instant?> = createField(DSL.name("taken_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
+    val TAKEN_AT: TableField<PhotosRecord, Instant?> = createField(DSL.name("taken_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "", OffsetDateTimeInstantConverter())
 
     /**
      * The column <code>public.photos.created_at</code>.

@@ -4,6 +4,7 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.Users
 
 import java.time.Instant
@@ -31,6 +32,26 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
         set(value): Unit = set(2, value)
         get(): Instant? = get(2) as Instant?
 
+    open var provider: OauthProvider
+        set(value): Unit = set(3, value)
+        get(): OauthProvider = get(3) as OauthProvider
+
+    open var providerUserId: String
+        set(value): Unit = set(4, value)
+        get(): String = get(4) as String
+
+    open var providerRefreshToken: String?
+        set(value): Unit = set(5, value)
+        get(): String? = get(5) as String?
+
+    open var email: String
+        set(value): Unit = set(6, value)
+        get(): String = get(6) as String
+
+    open var deletedAt: Instant?
+        set(value): Unit = set(7, value)
+        get(): Instant? = get(7) as Instant?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -40,10 +61,15 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
     /**
      * Create a detached, initialised UsersRecord
      */
-    constructor(id: UUID? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, createdAt: Instant? = null, updatedAt: Instant? = null, provider: OauthProvider, providerUserId: String, providerRefreshToken: String? = null, email: String, deletedAt: Instant? = null): this() {
         this.id = id
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.provider = provider
+        this.providerUserId = providerUserId
+        this.providerRefreshToken = providerRefreshToken
+        this.email = email
+        this.deletedAt = deletedAt
         resetTouchedOnNotNull()
     }
 
@@ -55,6 +81,11 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
             this.id = value.id
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.provider = value.provider
+            this.providerUserId = value.providerUserId
+            this.providerRefreshToken = value.providerRefreshToken
+            this.email = value.email
+            this.deletedAt = value.deletedAt
             resetTouchedOnNotNull()
         }
     }

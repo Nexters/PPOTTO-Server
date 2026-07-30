@@ -43,9 +43,13 @@ jooq {
             database {
                 name = "org.jooq.meta.postgres.PostgresDatabase"
                 inputSchema = "public"
-                excludes = "flyway_schema_history"
+                excludes = "flyway_schema_history|regexp_matches|regexp_split_to_table|set_updated_at"
                 isIncludeRoutines = false
                 forcedTypes {
+                    forcedType {
+                        name = "VARCHAR"
+                        includeTypes = "(?i)CITEXT"
+                    }
                     forcedType {
                         includeTypes = "(?i)TIMESTAMPTZ"
                         userType = "java.time.Instant"
