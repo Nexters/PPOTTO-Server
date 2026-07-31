@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
@@ -81,23 +82,24 @@ class AnalysisStickerIntegrationTest(
                 )
 
             When("분석 결과를 저장하고 리캡을 조회하면") {
+                val stickerKey = StickerObjectKeys.keyFor(analysis.id, 0, photos.first().id)
                 val saved =
                     analysisResultSaveService.save(
                         SaveAnalysisResultCommand(
                             userId = board.userId,
                             analysisId = analysis.id,
                             boardId = board.id,
-                            stickers = listOf(stickerResult(photos.first().id, photos.map { it.id })),
+                            stickers = listOf(stickerResult(photos.first().id, photos.map { it.id }, stickerKey)),
                         ),
                     )
                 val recap = stickerQueryService.getRecap(board.userId, saved.stickerIds.single())
 
-                Then("분석 사진과 스티커 이미지를 읽기용 signed URL로 반환한다") {
+                Then("파이프라인이 만든 스티커 오브젝트 키를 그대로 읽기용 signed URL로 서명한다") {
                     recap.sticker.id shouldBe saved.stickerIds.single()
                     recap.comments.map { it.content } shouldContainExactly listOf("리캡 코멘트")
                     recap.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
                     requireNotNull(recap.sticker.imageUrl)
-                        .shouldStartWith("https://storage.googleapis.com/ppotto-test-bucket/stickers/result.png?")
+                        .shouldStartWith("https://storage.googleapis.com/ppotto-test-bucket/$stickerKey?")
                     recap.photos.first().imageUrl.shouldStartWith(
                         "https://storage.googleapis.com/ppotto-test-bucket/photos/${analysis.id}/${photos[1].id}.png?",
                     )
@@ -169,11 +171,12 @@ class AnalysisStickerIntegrationTest(
 private fun stickerResult(
     sourcePhotoId: UUID,
     photoIds: List<UUID>,
+    imageKey: String = "stickers/result.png",
 ) = AnalysisStickerResult(
     type = StickerType.IMAGE,
     title = "분석 결과",
     sourcePhotoId = sourcePhotoId,
-    imageKey = "stickers/result.png",
+    imageKey = imageKey,
     textContent = null,
     layout =
         StickerLayout(
