@@ -7,21 +7,26 @@ import com.github.nexters.ppotto.auth.application.port.OAuthClient
 import com.github.nexters.ppotto.auth.application.port.RefreshTokenStore
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
+import com.github.nexters.ppotto.auth.domain.AuthSignup
 import com.github.nexters.ppotto.auth.domain.LoginCommand
 import com.github.nexters.ppotto.auth.domain.LoginResult
 import com.github.nexters.ppotto.auth.domain.OAuthProvider
+import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionOperations
 import java.util.UUID
 
 @Service
 @ConditionalOnBean(AuthUserPort::class, AuthTermsPort::class, AuthActiveUserPort::class)
 class AuthService(
     oauthClients: List<OAuthClient>,
+    @Qualifier(SIGNUP_TRANSACTION)
+    private val signupTransaction: TransactionOperations,
     private val tokenProvider: TokenProvider,
     private val refreshTokenStore: RefreshTokenStore,
     private val authUserPort: AuthUserPort,
@@ -33,25 +38,15 @@ class AuthService(
             check(it.size == oauthClients.size) { "OAuth provider별 client는 하나만 등록할 수 있습니다." }
         }
 
-    @Transactional
     fun login(command: LoginCommand): LoginResult =
         (oauthClients[command.provider] ?: throw InvalidInputException())
             .authenticate(command)
-            .let { profile ->
-                authUserPort
-                    .findOrCreate(profile)
-                    .also { user ->
-                        user
-                            .takeUnless { profile.authorizationCodeExchangeFailed && it.isNewUser }
-                            ?: throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
-                    }
-            }.let { user ->
-                authTermsPort.findPendingTerms(user.userId).let { pendingTerms ->
-                    tokenProvider
-                        .issue(user.userId)
-                        .also { refreshTokenStore.save(user.userId, it.refreshToken) }
-                        .let { LoginResult(it, user.isNewUser, pendingTerms) }
-                }
+            .let(::signUp)
+            .let { signup ->
+                tokenProvider
+                    .issue(signup.user.userId)
+                    .also { refreshTokenStore.save(signup.user.userId, it.refreshToken) }
+                    .let { LoginResult(it, signup.user.isNewUser, signup.pendingTerms) }
             }
 
     fun refresh(refreshToken: String): TokenPair =
@@ -71,4 +66,17 @@ class AuthService(
         providerRefreshToken: String,
     ) = (oauthClients[provider] ?: throw InvalidInputException())
         .revoke(providerRefreshToken)
+
+    private fun signUp(profile: SocialProfile): AuthSignup =
+        signupTransaction.execute {
+            authUserPort
+                .findOrCreate(profile)
+                .takeUnless { profile.authorizationCodeExchangeFailed && it.isNewUser }
+                ?.let { AuthSignup(it, authTermsPort.findPendingTerms(it.userId)) }
+                ?: throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
+        }
+
+    companion object {
+        const val SIGNUP_TRANSACTION = "signupTransaction"
+    }
 }
