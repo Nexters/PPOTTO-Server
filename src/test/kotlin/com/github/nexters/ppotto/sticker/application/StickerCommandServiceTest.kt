@@ -14,17 +14,14 @@ import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
-import com.github.nexters.ppotto.sticker.support.StickerTestConfig
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import org.springframework.context.annotation.Import
 import java.util.UUID
 
-@Import(StickerTestConfig::class)
 class StickerCommandServiceTest(
     service: StickerCommandService,
     stickerRepository: StickerRepository,

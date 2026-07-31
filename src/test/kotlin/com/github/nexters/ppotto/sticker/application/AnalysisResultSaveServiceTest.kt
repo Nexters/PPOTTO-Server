@@ -13,15 +13,12 @@ import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
-import com.github.nexters.ppotto.sticker.support.FakeAnalysisPhotoOwnershipPort
-import com.github.nexters.ppotto.sticker.support.StickerTestConfig
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import org.springframework.context.annotation.Import
 import org.springframework.dao.DataIntegrityViolationException
 import java.time.Instant
 import java.util.UUID
@@ -29,7 +26,6 @@ import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 
-@Import(StickerTestConfig::class)
 class AnalysisResultSaveServiceTest(
     service: AnalysisResultSaveService,
     stickerRepository: StickerRepository,
@@ -39,7 +35,6 @@ class AnalysisResultSaveServiceTest(
     boardAccessService: BoardAccessService,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
-    fakeOwnershipPort: FakeAnalysisPhotoOwnershipPort,
 ) : IntegrationTest({
         Given("분석 결과에 스티커와 리캡이 포함된 상태에서") {
             val board = boardRepository.save(userRepository.save().id)
@@ -51,7 +46,6 @@ class AnalysisResultSaveServiceTest(
                         board.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
-            fakeOwnershipPort.allow(board.userId, board.id, analysis.id, listOf(photo.id))
             val command =
                 SaveAnalysisResultCommand(
                     userId = board.userId,
@@ -109,7 +103,6 @@ class AnalysisResultSaveServiceTest(
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             val invalidResult = imageResult(photo.id).copy(photoIds = listOf(photo.id, photo.id))
-            fakeOwnershipPort.allow(board.userId, board.id, analysis.id, listOf(photo.id))
 
             When("자식 저장 중 DB 제약 위반이 발생하면") {
                 Then("스티커 저장도 롤백한다") {
@@ -131,7 +124,6 @@ class AnalysisResultSaveServiceTest(
         Given("동일한 분석 결과 저장 요청이 반복될 때") {
             val board = boardRepository.save(userRepository.save().id)
             val analysis = analysisRepository.save(board.userId, board.id)
-            fakeOwnershipPort.allow(board.userId, board.id, analysis.id, emptyList())
             val command =
                 SaveAnalysisResultCommand(
                     board.userId,
@@ -154,7 +146,6 @@ class AnalysisResultSaveServiceTest(
         Given("동일한 분석 결과 저장 요청이 동시에 도착할 때") {
             val board = boardRepository.save(userRepository.save().id)
             val analysis = analysisRepository.save(board.userId, board.id)
-            fakeOwnershipPort.allow(board.userId, board.id, analysis.id, emptyList())
             val command =
                 SaveAnalysisResultCommand(
                     board.userId,
@@ -208,8 +199,6 @@ class AnalysisResultSaveServiceTest(
                         otherBoard.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z"))),
                     ).single()
-            fakeOwnershipPort.allow(ownerBoard.userId, ownerBoard.id, ownerAnalysis.id, listOf(ownerPhoto.id))
-            fakeOwnershipPort.allow(otherBoard.userId, otherBoard.id, otherAnalysis.id, listOf(otherPhoto.id))
 
             When("소유한 보드에 다른 사용자의 analysisId로 저장하면") {
                 Then("저장 전에 거부한다") {
