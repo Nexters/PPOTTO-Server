@@ -18,7 +18,7 @@ Configuration and database migrations.
 | `config/cors.yml` | `cors.allowed-origins` from `${CORS_ALLOWED_ORIGINS}` |
 | `config/security.yml` | Basic auth user for swagger from `${SWAGGER_USER}` / `${SWAGGER_PASSWORD}` |
 | `config/user.yml` | User-account provider refresh-token encryption key from `${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}` |
-| `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` from `${GCS_*}` |
+| `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` / `gcs.read-signed-url-expiration-minutes` / `gcs.timeout-millis` from `${GCS_*}` |
 | `config/redis.yml` | Redis host, port, password, and timeouts from `${REDIS_*}` for refresh token storage |
 | `config/auth.yml` | OAuth HTTP timeouts, Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
 | `db/migration/` | Flyway timestamp migrations. The base schema creates core tables; later migrations add legacy-compatible social accounts, terms, drawings, stickers, recap data, active-analysis index updates, and the six-stickers-per-analysis guard |

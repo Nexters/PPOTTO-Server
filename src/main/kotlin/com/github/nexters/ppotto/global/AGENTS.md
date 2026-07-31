@@ -13,7 +13,7 @@ Shared module used by all domains. Contains no business logic.
 | `openapi/` | Reusable Swagger error response annotations (see `openapi/AGENTS.md`) |
 | `response/` | Response envelope models (see `response/AGENTS.md`) |
 | `security/` | Required and optional authenticated-user MVC argument contracts (see `security/AGENTS.md`) |
-| `storage/` | `ObjectKeyGenerator` — domain-agnostic GCS object key/prefix builder shared across domains (see `storage/AGENTS.md`) |
+| `storage/` | `ObjectKeyGenerator` and `GcsReadUrlIssuer` — domain-agnostic GCS object key/prefix building and read signed URL issuing shared across domains (see `storage/AGENTS.md`) |
 
 ## Rules
 

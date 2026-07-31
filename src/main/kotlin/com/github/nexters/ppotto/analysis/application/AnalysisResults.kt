@@ -48,3 +48,9 @@ data class AnalysisStatusResult(
             )
     }
 }
+
+data class PhotoReadResult(
+    val id: UUID,
+    val imageUrl: String,
+    val takenAt: Instant,
+)

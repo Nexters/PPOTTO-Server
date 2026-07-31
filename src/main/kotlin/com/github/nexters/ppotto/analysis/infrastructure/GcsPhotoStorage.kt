@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.BlobMeta
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.PhotoUploadTarget
 import com.github.nexters.ppotto.global.config.GcsProperties
+import com.github.nexters.ppotto.global.storage.GcsReadUrlIssuer
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.HttpMethod
@@ -15,12 +16,15 @@ import java.util.concurrent.TimeUnit
 class GcsPhotoStorage(
     private val storage: Storage,
     private val gcsProperties: GcsProperties,
+    private val gcsReadUrlIssuer: GcsReadUrlIssuer,
 ) : PhotoStorage {
     companion object {
         private const val MAX_PHOTO_SIZE_BYTES = 15_728_640
     }
 
     override fun issueUploadUrls(targets: List<PhotoUploadTarget>): List<String> = targets.map { signUrl(it.objectKey, it.contentType) }
+
+    override fun issueReadUrls(objectKeys: Collection<String>): Map<String, String> = gcsReadUrlIssuer.issue(objectKeys)
 
     override fun existingObjects(prefix: String): Map<String, BlobMeta> =
         storage

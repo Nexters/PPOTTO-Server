@@ -2,4 +2,5 @@ gcs:
   bucket: ${GCS_BUCKET}
   credentials-path: ${GCS_CREDENTIALS_PATH}
   upload-signed-url-expiration-minutes: ${GCS_UPLOAD_SIGNED_URL_EXPIRATION_MINUTES}
+  read-signed-url-expiration-minutes: ${GCS_READ_SIGNED_URL_EXPIRATION_MINUTES}
   timeout-millis: ${GCS_TIMEOUT_MILLIS}
