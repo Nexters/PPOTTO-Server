@@ -16,6 +16,6 @@ data class CreateBoardRequest(
 data class RenameBoardRequest(
     @field:NotBlank
     @field:Size(max = Board.MAX_NAME_LENGTH)
-    @field:Schema(description = "새 보드 이름", example = "여름 휴가")
+    @field:Schema(description = "새 보드 이름. 최대 10자", example = "뽀또의 보드")
     val name: String,
 )

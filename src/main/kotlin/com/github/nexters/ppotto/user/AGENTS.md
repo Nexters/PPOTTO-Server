@@ -17,6 +17,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `presentation/UserApi.kt` | Version 1 `GET /users/me` and `DELETE /users/me` mapping and Swagger contract |
 | `presentation/UserController.kt` | Fluent User API implementation with required UUID user injection |
 | `presentation/dto/UserResponse.kt` | Swagger-described public account response without social-provider identifiers or tokens |
+| `presentation/dto/UserApiExamples.kt` | 카카오 사용자와 애플 private relay 사용자 조회 응답 예시 JSON 상수 |
 | `infrastructure/UserRepository.kt` | Fluent DSLContext persistence for active account lookup, profile refresh, withdrawal, and hard deletion |
 | `infrastructure/SocialUserRepository.kt` | Atomic active social-account creation using the partial unique index as the conflict target |
 | `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration following the shared constructor property spacing convention |

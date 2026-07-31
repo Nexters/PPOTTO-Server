@@ -31,6 +31,8 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/dto/BoardRequests.kt` | Swagger-described create and rename validation DTOs |
 | `presentation/dto/BoardResponses.kt` | Swagger-described board list/detail, sticker, and drawing response DTOs |
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
+| `presentation/dto/BoardApiExamples.kt` | 보드 목록/상세/생성/이름 변경 응답, 편집 모드별 layout 요청, `BOARD-001`~`BOARD-005` 실패 예시 JSON 상수 |
+| `presentation/BoardNotFoundApiResponse.kt` | 네 개 보드 엔드포인트가 공유하는 404 `BOARD-002` 합성 어노테이션 |
 
 ## Rules
 

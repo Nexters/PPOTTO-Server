@@ -10,7 +10,7 @@ Shared module used by all domains. Contains no business logic.
 | `error/` | Error codes, exceptions, global handler (see `error/AGENTS.md`) |
 | `jooq/` | Custom jOOQ converters used by codegen `forcedType` |
 | `logging/` | Request logging filter (see `logging/AGENTS.md`) |
-| `openapi/` | Reusable Swagger error response annotations (see `openapi/AGENTS.md`) |
+| `openapi/` | Reusable Swagger error response annotations, the documentation-only failure envelope schema, and cross-domain example JSON constants (see `openapi/AGENTS.md`) |
 | `response/` | Response envelope models (see `response/AGENTS.md`) |
 | `security/` | Required and optional authenticated-user MVC argument contracts (see `security/AGENTS.md`) |
 | `storage/` | `ObjectKeyGenerator`, `GcsReadUrlIssuer`, and `ObjectStorageCleaner` — domain-agnostic GCS object key/prefix building, read signed URL issuing, and object deletion shared across domains (see `storage/AGENTS.md`) |

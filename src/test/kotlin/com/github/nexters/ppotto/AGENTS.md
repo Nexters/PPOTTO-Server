@@ -23,7 +23,8 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, idempotent agreement, and schema-valid user fixture tests |
 | `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration with schema-valid users |
 | `global/security/CurrentUserArgumentResolverTest.kt` | Required and optional UUID principal resolution contract tests |
-| `global/openapi/OpenApiDocumentationTest.kt` | Generated OpenAPI metadata, interface-defined endpoint contracts, version header, schema description, error response, and authentication mode tests |
+| `global/openapi/OpenApiDocumentationTest.kt` | `/v3/api-docs` 실제 출력 검증: 메타데이터, 인터페이스에 선언한 엔드포인트 계약, operation마다 `X-API-Version` 파라미터가 정확히 1개인지, 성공 응답의 봉투 스키마와 상황별 `@ExampleObject`, 도메인 에러 코드 실패 예시, 스키마 필드 이름·예시, 인증 모드 |
+| `global/openapi/OpenApiExampleContractTest.kt` | Swagger `@ExampleObject`로 노출하는 모든 예시 JSON 상수를 실제 요청/응답 DTO로 strict 역직렬화하는 회귀 테스트. `FAIL_ON_UNKNOWN_PROPERTIES`와 `FAIL_ON_NULL_FOR_PRIMITIVES`를 켠 테스트 전용 `JsonMapper`를 쓰므로, 예시에만 있는 필드나 DTO에서 사라진 필드가 있으면 깨집니다. 운영 Jackson 설정은 건드리지 않습니다. 새 `@ExampleObject` 상수를 추가하면 여기에 등록해야 합니다 |
 | `terms/presentation/TermsControllerTest.kt` | Public anonymous current-term lookup, authenticated agreement state, protected agreement submission, and schema-valid user fixture integration tests |
 | `terms/support/TermsTestSecurityConfig.kt` | Test-only UUID authentication principal filter for MockMvc |
 | `board/BoardAnalysisDependencyTest.kt` | Source-level cross-domain contract: board never imports analysis types, analysis only imports the board application boundary and port |

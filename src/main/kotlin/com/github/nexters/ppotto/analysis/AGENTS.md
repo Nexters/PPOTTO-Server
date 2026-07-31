@@ -36,6 +36,8 @@ Analysis domain. Owns both `Analysis` and `Photo` — a photo only ever exists a
 | `application/AnalysisPipelineResults.kt` | Pipeline output types: `AnalysisPipelineResult` and per-theme `ThemeAnalysisResult` (`stickerUrl` is the `gs://` URI, nullable when generation failed) |
 | `presentation/AnalysisApi.kt` | `POST /analysis`, `GET /analysis/active`, `POST /analysis/{analysisId}/start`, and `GET /analysis/{analysisId}` v1 mapping and Swagger contract |
 | `presentation/AnalysisController.kt` | Fluent Analysis API implementation with request binding, result mapping, and required UUID user injection |
+| `presentation/AnalysisNotFoundApiResponse.kt` | `start`/`get`이 공유하는 404 `ANALYSIS-005` 합성 어노테이션 |
+| `presentation/dto/AnalysisApiExamples.kt` | 분석 생성 요청/응답, 상태별(ANALYZING/COMPLETED/FAILED) 폴링 응답, 진행 중 분석 없음 응답, 업로드 확인 응답, `ANALYSIS-001`·`002`·`003`·`005`·`008`과 전파되는 `BOARD-002` 실패 예시 JSON 상수. 도메인 경계를 지키려고 `BOARD-002` 예시는 board presentation을 import하지 않고 여기에 둡니다 |
 | `presentation/dto/` | Swagger-described request/response schemas: `CreateAnalysisRequest` (defers the 90–100 photo count policy to `AnalysisService`), `PhotoUploadItem` (`contentType` required and non-empty), `CreateAnalysisResponse`, `AnalysisStatusResponse`, `StartUploadResponse` |
 
 ## Rules
