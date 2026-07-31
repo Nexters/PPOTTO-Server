@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -35,7 +36,7 @@ class BoardLayoutConcurrencyTest(
     stickerPort: CoordinatedBoardStickerPort,
 ) : IntegrationTest({
         Given("삭제 가능한 보드의 레이아웃 검증이 끝난 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             val drawingId = uuidV7()

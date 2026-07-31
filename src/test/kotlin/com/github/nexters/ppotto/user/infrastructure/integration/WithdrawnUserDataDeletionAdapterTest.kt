@@ -28,6 +28,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.terms.application.TermsService
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
 import com.github.nexters.ppotto.user.application.port.WithdrawnUserDataDeletionPort
@@ -72,7 +73,7 @@ class WithdrawnUserDataDeletionAdapterTest(
 
         Given("모든 도메인 데이터를 가진 탈퇴 사용자가 유예기간을 지났을 때") {
             objectStorageCleaner.clear()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val drawing =
                 drawingRepository
@@ -171,7 +172,7 @@ class WithdrawnUserDataDeletionAdapterTest(
         }
 
         Given("연관 데이터가 없는 탈퇴 사용자가 있을 때") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             userRepository.withdraw(user.withdraw(Instant.parse("2026-07-01T00:00:00Z")))!!
 
             When("정리 배치를 두 번 실행하면") {

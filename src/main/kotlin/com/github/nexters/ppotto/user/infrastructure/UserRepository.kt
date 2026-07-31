@@ -37,15 +37,6 @@ class UserRepository(
             .fetchOne()!!
             .toDomain()
 
-    fun save(): User =
-        UUID.randomUUID().let {
-            save(
-                provider = OAuthProvider.KAKAO,
-                providerUserId = "test-$it",
-                email = "test-$it@example.com",
-            )
-        }
-
     fun findById(id: UUID): User? =
         dslContext
             .selectFrom(USERS)

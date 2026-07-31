@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.nulls.shouldBeNull
@@ -20,7 +21,7 @@ class AnalysisRepositoryTest(
     dslContext: DSLContext,
 ) : IntegrationTest({
         Given("Board가 등록된 상태에서 Analysis를 저장하면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val saved = analysisRepository.save(board.userId, board.id)
 
             When("저장된 아이디로 조회하면") {
@@ -37,7 +38,7 @@ class AnalysisRepositoryTest(
         }
 
         Given("UPLOADING 상태의 Analysis를 ANALYZING으로 변경하면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val saved = analysisRepository.save(board.userId, board.id)
             val startedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
 
@@ -55,7 +56,7 @@ class AnalysisRepositoryTest(
         }
 
         Given("ANALYZING 상태의 Analysis가 있을 때") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val saved = analysisRepository.save(board.userId, board.id)
             analysisRepository.markAnalyzing(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
 
@@ -77,7 +78,7 @@ class AnalysisRepositoryTest(
         }
 
         Given("UPLOADING 상태의 Analysis가 있을 때") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val saved = analysisRepository.save(board.userId, board.id)
 
             When("중간 진행률 갱신을 시도하면") {
@@ -91,7 +92,7 @@ class AnalysisRepositoryTest(
         }
 
         Given("ANALYZING 상태의 Analysis를 완료 처리하면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val saved = analysisRepository.save(board.userId, board.id)
             val completedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
             analysisRepository.markAnalyzing(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
@@ -111,7 +112,7 @@ class AnalysisRepositoryTest(
         }
 
         Given("ANALYZING 상태의 Analysis가 실패하면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val saved = analysisRepository.save(board.userId, board.id)
             analysisRepository.markAnalyzing(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
             analysisRepository.updateProgress(saved.id, 60)
@@ -144,7 +145,7 @@ class AnalysisRepositoryTest(
         }
 
         Given("사용자별로 활성 분석 존재 여부를 조회할 때") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
 
             Then("초기에는 활성 분석이 없다") {
@@ -189,10 +190,10 @@ class AnalysisRepositoryTest(
         }
 
         Given("사용자 소유 분석을 조회할 때") {
-            val owner = userRepository.save()
+            val owner = userRepository.saveTestUser()
             val board = boardRepository.save(owner.id)
             val analysis = analysisRepository.save(owner.id, board.id)
-            val otherUser = userRepository.save()
+            val otherUser = userRepository.saveTestUser()
 
             When("소유자 아이디로 조회하면") {
                 val found = analysisRepository.findByIdAndUserId(analysis.id, owner.id)
@@ -212,7 +213,7 @@ class AnalysisRepositoryTest(
         }
 
         Given("부분 유니크 인덱스 uk_analysis_active 제약 검증") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             analysisRepository.save(user.id, board.id)
 

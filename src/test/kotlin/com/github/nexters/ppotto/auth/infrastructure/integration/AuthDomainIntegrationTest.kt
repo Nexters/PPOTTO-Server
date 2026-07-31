@@ -25,6 +25,7 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.runConcurrently
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize
@@ -43,10 +44,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.Callable
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import com.github.nexters.ppotto.user.domain.OAuthProvider as UserOAuthProvider
 
 class AuthDomainIntegrationTest(
@@ -108,7 +105,9 @@ class AuthDomainIntegrationTest(
                 )
 
             When("가입 port를 동시에 호출하면") {
-                val users = runConcurrently(6) { authUserPort.findOrCreate(profile) }
+                val users =
+                    runConcurrently(6) { authUserPort.findOrCreate(profile) }
+                        .map { it.getOrThrow() }
 
                 Then("계정과 기본 보드를 각각 한 번만 생성한다") {
                     users.map { it.userId }.distinct() shouldHaveSize 1
@@ -241,31 +240,6 @@ class AuthSignupRollbackIntegrationTest(
             }
         }
     })
-
-private fun <T> runConcurrently(
-    taskCount: Int,
-    task: () -> T,
-): List<T> {
-    val ready = CountDownLatch(taskCount)
-    val start = CountDownLatch(1)
-    val executor = Executors.newFixedThreadPool(taskCount)
-    return try {
-        List(taskCount) {
-            executor.submit(
-                Callable {
-                    ready.countDown()
-                    start.await()
-                    task()
-                },
-            )
-        }.also { check(ready.await(10, TimeUnit.SECONDS)) }
-            .also { start.countDown() }
-            .map { it.get(30, TimeUnit.SECONDS) }
-    } finally {
-        start.countDown()
-        executor.shutdownNow()
-    }
-}
 
 @Import(FailingBoardAuthTestConfig::class)
 class AuthSignupBoardRollbackIntegrationTest(

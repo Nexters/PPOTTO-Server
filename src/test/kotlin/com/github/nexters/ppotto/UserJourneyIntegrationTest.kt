@@ -201,6 +201,28 @@ class UserJourneyIntegrationTest(
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.stickers.length()").value(0))
 
+                    val secondAnalysisId =
+                        mockMvc
+                            .perform(
+                                post("/analysis")
+                                    .authorized(accessToken)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(createAnalysisBody(boardId)),
+                            ).andExpect(status().isOk)
+                            .andReturn()
+                            .response
+                            .getContentAsString(Charsets.UTF_8)
+                            .let { UUID.fromString(JsonPath.read<String>(it, "$.data.analysisId")) }
+
+                    mockMvc
+                        .perform(post("/analysis/$secondAnalysisId/start").authorized(accessToken))
+                        .andExpect(status().isAccepted)
+
+                    mockMvc
+                        .perform(get("/boards/$boardId").authorized(accessToken))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.stickers.length()").value(1))
+
                     mockMvc
                         .perform(delete("/users/me").authorized(accessToken))
                         .andExpect(status().isOk)
@@ -219,12 +241,15 @@ class UserJourneyIntegrationTest(
                         ).andExpect(status().isUnauthorized)
                         .andExpect(jsonPath("$.error.code").value("AUTH-002"))
 
+                    dslContext.fetchExists(STICKERS, STICKERS.BOARD_ID.eq(boardId)) shouldBe true
+
                     cleanupService
                         .cleanup(deletedBefore = Instant.now().plusSeconds(1), batchSize = 10)
                         .deletedUserIds shouldContainExactly listOf(userId)
 
                     dslContext.fetchExists(STICKERS, STICKERS.BOARD_ID.eq(boardId)) shouldBe false
                     dslContext.fetchExists(PHOTOS, PHOTOS.ANALYSIS_ID.eq(analysisId)) shouldBe false
+                    dslContext.fetchExists(PHOTOS, PHOTOS.ANALYSIS_ID.eq(secondAnalysisId)) shouldBe false
                     dslContext.fetchExists(ANALYSIS, ANALYSIS.USER_ID.eq(userId)) shouldBe false
                     dslContext.fetchExists(BOARDS, BOARDS.USER_ID.eq(userId)) shouldBe false
                     dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(userId)) shouldBe false

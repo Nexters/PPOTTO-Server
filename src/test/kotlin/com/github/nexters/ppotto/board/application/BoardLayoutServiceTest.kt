@@ -12,6 +12,7 @@ import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -30,7 +31,7 @@ class BoardLayoutServiceTest(
 ) : IntegrationTest({
         Given("보드 배경 드로잉을 저장한 사용자가") {
             stickerPort.reset()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val drawingId = uuidV7()
             val command =
@@ -74,7 +75,7 @@ class BoardLayoutServiceTest(
 
         Given("스티커 범위 드로잉과 스티커 배치를 함께 저장하는 사용자가") {
             stickerPort.reset()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val sticker = boardStickerItem()
             stickerPort.stickersByBoardId[board.id] = listOf(sticker)
@@ -112,7 +113,7 @@ class BoardLayoutServiceTest(
 
         Given("다른 보드의 드로잉 아이디가 삭제 목록에 섞인 경우") {
             stickerPort.reset()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val otherBoard = boardRepository.save(user.id)
             val foreignDrawing =
@@ -150,7 +151,7 @@ class BoardLayoutServiceTest(
 
         Given("소유하지 않은 스티커를 참조하는 드로잉이 있는 경우") {
             stickerPort.reset()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
 
             When("레이아웃 저장을 요청하면") {

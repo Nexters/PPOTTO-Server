@@ -14,6 +14,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -37,7 +38,7 @@ class AnalysisResultSaveServiceTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("분석 결과에 스티커와 리캡이 포함된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photo =
                 photoRepository
@@ -73,7 +74,7 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("분석 결과 스티커가 7개인 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val command =
                 SaveAnalysisResultCommand(
@@ -94,7 +95,7 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("중복 사진 연결이 포함된 분석 결과에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photo =
                 photoRepository
@@ -124,7 +125,7 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("동일한 분석 결과 저장 요청이 반복될 때") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val command =
                 SaveAnalysisResultCommand(
@@ -146,7 +147,7 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("동일한 분석 결과 저장 요청이 동시에 도착할 때") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val command =
                 SaveAnalysisResultCommand(
@@ -183,7 +184,7 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("다른 사용자의 분석과 사진이 존재하는 상태에서") {
-            val ownerBoard = boardRepository.save(userRepository.save().id)
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
             val ownerAnalysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
             val ownerPhoto =
                 photoRepository
@@ -192,7 +193,7 @@ class AnalysisResultSaveServiceTest(
                         ownerBoard.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
-            val otherBoard = boardRepository.save(userRepository.save().id)
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
             val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
             val otherPhoto =
                 photoRepository
@@ -259,7 +260,7 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("분석과 사진 소유권 port가 없는 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val serviceWithoutPort =
                 AnalysisResultSaveService(

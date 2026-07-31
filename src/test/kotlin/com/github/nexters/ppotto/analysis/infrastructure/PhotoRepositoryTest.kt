@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -19,7 +20,7 @@ class PhotoRepositoryTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("Analysis가 등록된 상태에서 여러 Photo를 배치로 저장하면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val items =
                 listOf(
@@ -48,7 +49,7 @@ class PhotoRepositoryTest(
         }
 
         Given("빈 아이템 목록으로 배치 저장을 호출하면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
 
             When("저장을 수행하면") {
@@ -61,7 +62,7 @@ class PhotoRepositoryTest(
         }
 
         Given("PENDING 상태의 Photo가 저장된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
 
             When("기대 상태(PENDING)를 걸고 COMPLETED로 배치 갱신하면") {
@@ -104,7 +105,7 @@ class PhotoRepositoryTest(
         }
 
         Given("서로 다른 분석에 완료 사진과 대기 사진이 저장된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(
@@ -118,7 +119,7 @@ class PhotoRepositoryTest(
             val completedPhoto = photos.first()
             val pendingPhoto = photos.last()
             photoRepository.markCompletedBatch(mapOf(completedPhoto.id to Instant.now()))
-            val otherBoard = boardRepository.save(userRepository.save().id)
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
             val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
             val otherPhoto =
                 photoRepository

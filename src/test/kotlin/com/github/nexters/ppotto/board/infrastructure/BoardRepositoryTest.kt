@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.infrastructure
 
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
@@ -12,7 +13,7 @@ class BoardRepositoryTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("User가 등록된 상태에서 Board를 저장하면") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val saved = boardRepository.save(user.id)
 
             When("저장된 아이디로 조회하면") {

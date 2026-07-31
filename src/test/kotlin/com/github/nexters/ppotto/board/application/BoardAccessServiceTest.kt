@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
@@ -17,7 +18,7 @@ class BoardAccessServiceTest(
     transactionTemplate: TransactionTemplate,
 ) : IntegrationTest({
         Given("사용자가 소유한 보드가 있을 때") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
 
             When("호출부 트랜잭션 없이 행 잠금 조회를 호출하면") {
@@ -37,7 +38,7 @@ class BoardAccessServiceTest(
             }
 
             When("호출부 트랜잭션 안에서 소유자가 아닌 사용자가 행 잠금 조회를 호출하면") {
-                val stranger = userRepository.save()
+                val stranger = userRepository.saveTestUser()
 
                 Then("BOARD-002로 거부한다") {
                     shouldThrow<NotFoundException> {

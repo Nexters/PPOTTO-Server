@@ -19,6 +19,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -61,7 +62,7 @@ class AnalysisServiceTest(
         }
 
         Given("사진이 89장으로(하한 미만) 요청되면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 89).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
 
@@ -77,7 +78,7 @@ class AnalysisServiceTest(
         }
 
         Given("사진이 101장으로(상한 초과) 요청되면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 101).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
 
@@ -93,7 +94,7 @@ class AnalysisServiceTest(
         }
 
         Given("이미 활성 분석이 있는 사용자가") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             analysisService.createAnalysis(board.userId, board.id, photos)
@@ -110,7 +111,7 @@ class AnalysisServiceTest(
         }
 
         Given("동일 사용자가 동시에 분석 생성을 요청하면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
 
@@ -140,7 +141,7 @@ class AnalysisServiceTest(
         }
 
         Given("Board가 등록된 상태에서 여러 장의 사진으로 분석 생성을 요청하면") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i ->
                     PhotoUploadItemRequest(
@@ -189,7 +190,7 @@ class AnalysisServiceTest(
                             }
                     val exception =
                         shouldThrow<NotFoundException> {
-                            analysisService.createAnalysis(userRepository.save().id, UUID.randomUUID(), photos)
+                            analysisService.createAnalysis(userRepository.saveTestUser().id, UUID.randomUUID(), photos)
                         }
                     exception.errorCode.code shouldBe "BOARD-002"
                 }
@@ -197,8 +198,8 @@ class AnalysisServiceTest(
         }
 
         Given("다른 사용자의 Board로") {
-            val ownerBoard = boardRepository.save(userRepository.save().id)
-            val otherUserId = userRepository.save().id
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val otherUserId = userRepository.saveTestUser().id
             val photos =
                 (0 until 90)
                     .map { i ->
@@ -220,7 +221,7 @@ class AnalysisServiceTest(
         }
 
         Given("분석이 생성되고 사진 중 일부만 실제로 업로드된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i ->
                     PhotoUploadItemRequest(
@@ -259,7 +260,7 @@ class AnalysisServiceTest(
         }
 
         Given("분석 파이프라인이 실패하는 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i ->
                     PhotoUploadItemRequest(
@@ -285,7 +286,7 @@ class AnalysisServiceTest(
         }
 
         Given("Gemini 응답 스키마와 같은 분석 결과가 준비된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i ->
                     PhotoUploadItemRequest(
@@ -335,7 +336,7 @@ class AnalysisServiceTest(
         }
 
         Given("부분 업로드된 분석이 이미 시작된 뒤 누락됐던 사진이 이후 업로드된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i ->
                     PhotoUploadItemRequest(
@@ -359,7 +360,7 @@ class AnalysisServiceTest(
         }
 
         Given("모든 사진이 업로드되어 분석이 시작된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             val created = analysisService.createAnalysis(board.userId, board.id, photos)
@@ -375,7 +376,7 @@ class AnalysisServiceTest(
         }
 
         Given("분석이 생성되고 사진이 0바이트로(빈 바디로) 업로드된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             val created = analysisService.createAnalysis(board.userId, board.id, photos)
@@ -398,7 +399,7 @@ class AnalysisServiceTest(
         }
 
         Given("진행 중이 아닌(UPLOADING이 아닌) 분석에") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             val created = analysisService.createAnalysis(board.userId, board.id, photos)
@@ -417,11 +418,11 @@ class AnalysisServiceTest(
         }
 
         Given("다른 사용자의 분석이 진행 중이 아닌 상태일 때") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             val created = analysisService.createAnalysis(board.userId, board.id, photos)
-            val otherUserId = userRepository.save().id
+            val otherUserId = userRepository.saveTestUser().id
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
@@ -441,14 +442,14 @@ class AnalysisServiceTest(
             When("업로드 완료를 통보하면") {
                 Then("NotFoundException이 발생한다") {
                     shouldThrow<NotFoundException> {
-                        analysisService.startUpload(userRepository.save().id, UUID.randomUUID())
+                        analysisService.startUpload(userRepository.saveTestUser().id, UUID.randomUUID())
                     }
                 }
             }
         }
 
         Given("Board가 등록된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
 
             When("지원하지 않는 contentType으로 분석 생성을 요청하면") {
                 Then("InvalidInputException이 발생한다") {
@@ -464,7 +465,7 @@ class AnalysisServiceTest(
         }
 
         Given("기존 분석이 COMPLETED 상태인 사용자가") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             val created = analysisService.createAnalysis(board.userId, board.id, photos)
             dslContext
@@ -483,7 +484,7 @@ class AnalysisServiceTest(
         }
 
         Given("기존 분석이 FAILED 상태인 사용자가") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             val created = analysisService.createAnalysis(board.userId, board.id, photos)
             dslContext

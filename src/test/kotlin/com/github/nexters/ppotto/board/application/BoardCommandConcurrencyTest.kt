@@ -9,16 +9,14 @@ import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.runConcurrently
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.springframework.context.annotation.Import
-import java.util.concurrent.Callable
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 @Import(BoardTestConfig::class)
 class BoardCommandConcurrencyTest(
@@ -29,7 +27,7 @@ class BoardCommandConcurrencyTest(
     stickerPort: FakeBoardStickerPort,
 ) : IntegrationTest({
         Given("활성 보드가 99개인 사용자가") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             repeat(Board.MAX_COUNT - 1) {
                 boardRepository.save(user.id, Board.defaultName(it + 1))
             }
@@ -62,7 +60,7 @@ class BoardCommandConcurrencyTest(
         Given("활성 보드가 두 개인 사용자가") {
             analysisActivityPort.reset()
             stickerPort.reset()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val boards = List(2) { boardRepository.save(user.id) }
 
             When("두 보드를 동시에 삭제하면") {
@@ -84,29 +82,3 @@ class BoardCommandConcurrencyTest(
             }
         }
     })
-
-private fun <T> runConcurrently(
-    taskCount: Int,
-    task: (Int) -> T,
-): List<Result<T>> {
-    val ready = CountDownLatch(taskCount)
-    val start = CountDownLatch(1)
-    val executor = Executors.newFixedThreadPool(taskCount)
-    return try {
-        val futures =
-            List(taskCount) { index ->
-                executor.submit(
-                    Callable {
-                        ready.countDown()
-                        start.await()
-                        runCatching { task(index) }
-                    },
-                )
-            }
-        check(ready.await(10, TimeUnit.SECONDS))
-        start.countDown()
-        futures.map { it.get(30, TimeUnit.SECONDS) }
-    } finally {
-        executor.shutdownNow()
-    }
-}

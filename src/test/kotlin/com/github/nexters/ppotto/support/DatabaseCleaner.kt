@@ -18,11 +18,7 @@ import org.springframework.stereotype.Component
 class DatabaseCleaner(
     private val dsl: DSLContext,
 ) {
-    init {
-        instance = this
-    }
-
-    private fun truncateAll() =
+    fun clear() =
         TRUNCATION_ORDER.forEach {
             dsl
                 .truncate(it)
@@ -44,9 +40,5 @@ class DatabaseCleaner(
                 TERMS,
                 USERS,
             )
-
-        private lateinit var instance: DatabaseCleaner
-
-        fun clear() = instance.truncateAll()
     }
 }

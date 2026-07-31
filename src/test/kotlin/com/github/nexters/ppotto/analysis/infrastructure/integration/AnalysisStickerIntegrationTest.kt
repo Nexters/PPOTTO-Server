@@ -20,6 +20,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.GcsStickerImageStorage
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -69,7 +70,7 @@ class AnalysisStickerIntegrationTest(
         }
 
         Given("업로드된 사진을 가진 분석이 있는 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(
@@ -113,7 +114,7 @@ class AnalysisStickerIntegrationTest(
         }
 
         Given("서로 다른 사용자의 분석과 사진이 있는 상태에서") {
-            val ownerBoard = boardRepository.save(userRepository.save().id)
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
             val ownerAnalysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
             val ownerPhoto =
                 photoRepository
@@ -122,7 +123,7 @@ class AnalysisStickerIntegrationTest(
                         ownerBoard.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
-            val otherBoard = boardRepository.save(userRepository.save().id)
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
             val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
             val otherPhoto =
                 photoRepository
@@ -172,7 +173,7 @@ class AnalysisStickerIntegrationTest(
         }
 
         Given("업로드가 완료되지 않은 사진이 남아 있는 분석에서") {
-            val board = boardRepository.save(userRepository.save().id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(

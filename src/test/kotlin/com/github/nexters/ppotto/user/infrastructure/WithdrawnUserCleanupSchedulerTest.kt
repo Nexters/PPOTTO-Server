@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.user.infrastructure
 
 import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.shouldBe
@@ -37,7 +38,7 @@ class WithdrawnUserCleanupSchedulerTest(
         Given("방금 탈퇴한 사용자가 있을 때") {
             val withdrawn =
                 userRepository
-                    .save()
+                    .saveTestUser()
                     .let { userRepository.withdraw(it.withdraw(Instant.now()))!! }
 
             When("스케줄러를 직접 실행하면") {

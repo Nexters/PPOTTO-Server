@@ -20,6 +20,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -46,7 +47,7 @@ class BoardStickerIntegrationTest(
     dslContext: DSLContext,
 ) : IntegrationTest({
         Given("실제 보드와 스티커 연동 빈이 기동된 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id, "연동 보드")
             val analysis = analysisRepository.save(user.id, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
@@ -85,7 +86,7 @@ class BoardStickerIntegrationTest(
         }
 
         Given("실제 스티커가 있는 보드에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
@@ -130,7 +131,7 @@ class BoardStickerIntegrationTest(
         }
 
         Given("스티커와 보드 범위 드로잉이 함께 있는 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
@@ -154,7 +155,7 @@ class BoardStickerIntegrationTest(
         }
 
         Given("삭제 가능한 보드에 스티커와 리캡과 드로잉이 있는 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id, board.id)
@@ -185,7 +186,7 @@ class BoardStickerIntegrationTest(
         }
 
         Given("진행 중인 분석이 있는 삭제 가능한 보드에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             analysisRepository.save(user.id, board.id)

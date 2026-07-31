@@ -11,6 +11,7 @@ import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.nulls.shouldBeNull
@@ -44,7 +45,7 @@ class BoardAnalysisDeletionConcurrencyTest(
         beforeTest { stickerPort.reset() }
 
         Given("보드 삭제가 진행 중 분석 확인을 통과하고 스티커 정리 단계에 머문 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             val photos = photoRequests()
@@ -82,7 +83,7 @@ class BoardAnalysisDeletionConcurrencyTest(
         }
 
         Given("분석 생성이 대상 보드 행을 잠근 채 커밋 전에 머문 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             val photos = photoRequests()

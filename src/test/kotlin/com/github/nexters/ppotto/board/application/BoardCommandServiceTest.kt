@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -30,7 +31,7 @@ class BoardCommandServiceTest(
     stickerPort: FakeBoardStickerPort,
 ) : IntegrationTest({
         Given("보드가 없는 사용자가") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
 
             When("기본 보드를 생성하면") {
                 val board = boardCommandService.createDefault(user.id)
@@ -43,7 +44,7 @@ class BoardCommandServiceTest(
         }
 
         Given("활성 보드가 100개인 사용자가") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             repeat(Board.MAX_COUNT) { boardRepository.save(user.id, Board.defaultName(it + 1)) }
 
             When("보드를 하나 더 생성하면") {
@@ -58,7 +59,7 @@ class BoardCommandServiceTest(
         }
 
         Given("보드가 하나만 남은 사용자가") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
 
             When("마지막 보드를 삭제하면") {
@@ -74,7 +75,7 @@ class BoardCommandServiceTest(
 
         Given("분석이 진행 중인 보드가 있는 사용자가") {
             analysisActivityPort.reset()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             analysisActivityPort.activeBoardIds += board.id
@@ -94,7 +95,7 @@ class BoardCommandServiceTest(
         Given("삭제 가능한 보드와 드로잉이 있는 사용자가") {
             analysisActivityPort.reset()
             stickerPort.reset()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             drawingRepository.upsertAll(
