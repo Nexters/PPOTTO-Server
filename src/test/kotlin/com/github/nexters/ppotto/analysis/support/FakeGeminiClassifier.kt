@@ -6,8 +6,11 @@ import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 
 class FakeGeminiClassifier : GeminiClassifier {
-    override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> =
-        listOf(
+    var failureToThrow: Throwable? = null
+
+    override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> {
+        failureToThrow?.let { throw it }
+        return listOf(
             ThemeClassification(
                 theme = "테스트테마",
                 categorizedPhotoIds = photos.map { it.photoId },
@@ -16,4 +19,5 @@ class FakeGeminiClassifier : GeminiClassifier {
                 stickerSourcePhotoId = photos.first().photoId,
             ),
         )
+    }
 }

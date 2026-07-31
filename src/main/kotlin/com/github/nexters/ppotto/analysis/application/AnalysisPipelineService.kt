@@ -3,8 +3,8 @@ package com.github.nexters.ppotto.analysis.application
 import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.StickerGenerator
-import com.github.nexters.ppotto.analysis.domain.StickerObjectKeys
 import com.github.nexters.ppotto.analysis.domain.StickerStorage
+import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.UUID
@@ -14,15 +14,16 @@ class AnalysisPipelineService(
     private val geminiClassifier: GeminiClassifier,
     private val stickerGenerator: StickerGenerator,
     private val stickerStorage: StickerStorage,
-    private val stickerObjectKeys: StickerObjectKeys,
 ) {
-    fun run(photos: List<PhotoRef>): AnalysisPipelineResult {
-        val pipelineRunId = UUID.randomUUID()
+    fun run(
+        analysisId: UUID,
+        photos: List<PhotoRef>,
+    ): AnalysisPipelineResult {
         val photoRefById = photos.associateBy { it.photoId }
         val classifications = geminiClassifier.classifyAndRecap(photos)
 
         val themes =
-            classifications.map { classification ->
+            classifications.mapIndexed { themeIndex, classification ->
                 val sourcePhoto = photoRefById.getValue(classification.stickerSourcePhotoId)
                 val stickerUrl =
                     runCatching {
@@ -32,10 +33,16 @@ class AnalysisPipelineService(
                                 sourcePhoto.mimeType,
                                 classification.stickerTargetSubject,
                             )
-                        val objectKey = stickerObjectKeys.keyFor(pipelineRunId, classification.theme, sourcePhoto.photoId)
+                        val objectKey = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhoto.photoId)
                         stickerStorage.upload(objectKey, bytes)
                     }.onFailure {
-                        log.warn("스티커 생성 실패: theme={}, sourcePhotoId={}", classification.theme, sourcePhoto.photoId, it)
+                        log.warn(
+                            "스티커 생성 실패: analysisId={}, theme={}, sourcePhotoId={}",
+                            analysisId,
+                            classification.theme,
+                            sourcePhoto.photoId,
+                            it,
+                        )
                     }.getOrNull()
 
                 ThemeAnalysisResult(
@@ -49,7 +56,7 @@ class AnalysisPipelineService(
                 )
             }
 
-        return AnalysisPipelineResult(pipelineRunId, themes)
+        return AnalysisPipelineResult(analysisId, themes)
     }
 
     companion object {

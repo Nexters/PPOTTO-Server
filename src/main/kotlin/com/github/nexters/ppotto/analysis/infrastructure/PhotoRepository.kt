@@ -53,23 +53,32 @@ class PhotoRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun updateStatusBatch(
-        updates: Map<UUID, Instant>,
-        expectedStatus: UploadStatus,
-        newStatus: UploadStatus,
-    ): List<Photo> {
+    fun markCompletedBatch(updates: Map<UUID, Instant>): List<Photo> {
         if (updates.isEmpty()) return emptyList()
 
         return updates.mapNotNull { (id, uploadedAt) ->
             dslContext
                 .update(PHOTOS)
-                .set(PHOTOS.UPLOAD_STATUS, newStatus.name)
+                .set(PHOTOS.UPLOAD_STATUS, UploadStatus.COMPLETED.name)
                 .set(PHOTOS.UPLOADED_AT, uploadedAt)
                 .where(PHOTOS.ID.eq(id))
-                .and(PHOTOS.UPLOAD_STATUS.eq(expectedStatus.name))
+                .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
                 .returning()
                 .fetchOne()
                 ?.toDomain()
+        }
+    }
+
+    fun markFailedBatch(ids: List<UUID>) {
+        if (ids.isEmpty()) return
+
+        ids.forEach { id ->
+            dslContext
+                .update(PHOTOS)
+                .set(PHOTOS.UPLOAD_STATUS, UploadStatus.FAILED.name)
+                .where(PHOTOS.ID.eq(id))
+                .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
+                .execute()
         }
     }
 

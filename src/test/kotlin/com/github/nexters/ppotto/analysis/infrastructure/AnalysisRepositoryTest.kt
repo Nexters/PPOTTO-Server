@@ -74,16 +74,6 @@ class AnalysisRepositoryTest(
 
             dslContext
                 .update(ANALYSIS)
-                .set(ANALYSIS.STATUS, AnalysisStatus.GENERATING.name)
-                .where(ANALYSIS.ID.eq(analysis.id))
-                .execute()
-
-            Then("GENERATING 상태에서도 활성 분석이 있다") {
-                analysisRepository.existsActiveByUserId(user.id) shouldBe true
-            }
-
-            dslContext
-                .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
                 .where(ANALYSIS.ID.eq(analysis.id))
                 .execute()

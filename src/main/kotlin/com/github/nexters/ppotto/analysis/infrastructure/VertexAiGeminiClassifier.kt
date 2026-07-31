@@ -1,14 +1,16 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
-import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
-import com.github.nexters.ppotto.global.error.BusinessException
+import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
+import com.github.nexters.ppotto.global.config.VertexAiProperties
 import com.google.genai.Client
 import com.google.genai.types.Content
 import com.google.genai.types.GenerateContentConfig
+import com.google.genai.types.HttpOptions
+import com.google.genai.types.HttpRetryOptions
 import com.google.genai.types.Part
 import com.google.genai.types.Schema
 import com.google.genai.types.Type
@@ -20,6 +22,7 @@ import java.util.UUID
 class VertexAiGeminiClassifier(
     private val genAiClient: Client,
     private val objectMapper: ObjectMapper,
+    private val vertexAiProperties: VertexAiProperties,
 ) : GeminiClassifier {
     override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> {
         val parts =
@@ -27,23 +30,38 @@ class VertexAiGeminiClassifier(
                 Part.fromText(buildPrompt(photos.map { it.photoId }))
         val content = Content.fromParts(*parts.toTypedArray())
 
+        val httpOptions =
+            HttpOptions
+                .builder()
+                .timeout(vertexAiProperties.classifyTimeoutMs.toInt())
+                .retryOptions(
+                    HttpRetryOptions
+                        .builder()
+                        .attempts(2)
+                        .httpStatusCodes(listOf(429, 500, 502, 503, 504))
+                        .build(),
+                ).build()
+
         val config =
             GenerateContentConfig
                 .builder()
                 .responseMimeType("application/json")
                 .responseSchema(RESPONSE_SCHEMA)
+                .httpOptions(httpOptions)
                 .build()
 
         val response = genAiClient.models.generateContent(MODEL, content, config)
         val rawThemes = objectMapper.readValue(response.text(), Array<GeminiThemeResponse>::class.java).toList()
 
         val inputPhotoIds = photos.map { it.photoId }.toSet()
-        return rawThemes.map { it.toDomain(inputPhotoIds) }
+        val classifications = rawThemes.map { it.toDomain() }
+        ThemeClassificationValidator.validate(classifications, inputPhotoIds)
+        return classifications
     }
 
     private fun buildPrompt(photoIds: List<UUID>): String =
         """
-        아래에 첨부된 사진들을 최대 $TARGET_THEME_COUNT 개의 테마로 분류해줘. 각 사진은 정확히 하나의 테마에만 속해야 하고,
+        아래에 첨부된 사진들을 최대 ${ThemeClassificationValidator.MAX_THEME_COUNT} 개의 테마로 분류해줘. 각 사진은 정확히 하나의 테마에만 속해야 하고,
         어느 테마에도 어울리지 않는 사진은 결과에서 제외해도 돼.
 
         사진 목록(순서대로): ${photoIds.joinToString(", ")}
@@ -65,18 +83,14 @@ class VertexAiGeminiClassifier(
         val recap: GeminiRecapResponse,
         val sticker: GeminiStickerResponse,
     ) {
-        fun toDomain(inputPhotoIds: Set<UUID>): ThemeClassification {
-            if (!inputPhotoIds.containsAll(categorizedPhotoIds) || sticker.sourcePhotoId !in categorizedPhotoIds) {
-                throw BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE)
-            }
-            return ThemeClassification(
+        fun toDomain(): ThemeClassification =
+            ThemeClassification(
                 theme = theme,
                 categorizedPhotoIds = categorizedPhotoIds,
                 recap = RecapContent(badge = recap.badge, text = recap.text),
                 stickerTargetSubject = sticker.targetSubject,
                 stickerSourcePhotoId = sticker.sourcePhotoId,
             )
-        }
     }
 
     private data class GeminiRecapResponse(
@@ -91,7 +105,6 @@ class VertexAiGeminiClassifier(
 
     companion object {
         private const val MODEL = "gemini-2.5-flash"
-        private const val TARGET_THEME_COUNT = 6
 
         private val RECAP_SCHEMA =
             Schema
