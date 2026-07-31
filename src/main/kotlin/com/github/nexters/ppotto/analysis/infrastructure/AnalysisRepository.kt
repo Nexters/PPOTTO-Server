@@ -31,6 +31,28 @@ class AnalysisRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun findByIdAndUserId(
+        id: UUID,
+        userId: UUID,
+    ): Analysis? =
+        dslContext
+            .selectFrom(ANALYSIS)
+            .where(ANALYSIS.ID.eq(id))
+            .and(ANALYSIS.USER_ID.eq(userId))
+            .fetchOne()
+            ?.toDomain()
+
+    fun findActiveByUserId(userId: UUID): Analysis? =
+        dslContext
+            .selectFrom(ANALYSIS)
+            .where(ANALYSIS.USER_ID.eq(userId))
+            .and(
+                ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }),
+            ).orderBy(ANALYSIS.CREATED_AT.desc())
+            .limit(1)
+            .fetchOne()
+            ?.toDomain()
+
     fun findByIdForUpdate(id: UUID): Analysis? =
         dslContext
             .selectFrom(ANALYSIS)
@@ -38,16 +60,6 @@ class AnalysisRepository(
             .forUpdate()
             .fetchOne()
             ?.toDomain()
-
-    fun existsActiveByUserId(userId: UUID): Boolean =
-        dslContext.fetchExists(
-            dslContext
-                .selectFrom(ANALYSIS)
-                .where(ANALYSIS.USER_ID.eq(userId))
-                .and(
-                    ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }),
-                ),
-        )
 
     fun existsActiveByBoardIdAndUserId(
         boardId: UUID,

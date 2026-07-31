@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.user.application.SocialUserCommand
 import com.github.nexters.ppotto.user.application.UserRegistrationResult
 import com.github.nexters.ppotto.user.application.UserService
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Transactional
 import com.github.nexters.ppotto.user.domain.OAuthProvider as UserOAuthProvider
 
 @Component
@@ -16,6 +17,7 @@ class AuthUserAdapter(
     private val userService: UserService,
     private val boardCommandService: BoardCommandService,
 ) : AuthUserPort {
+    @Transactional
     override fun findOrCreate(profile: SocialProfile): AuthUser =
         userService
             .findOrCreate(profile.toCommand())

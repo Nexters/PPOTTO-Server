@@ -30,6 +30,11 @@ data class PendingTerm(
     val agreed: Boolean,
 )
 
+data class AuthSignup(
+    val user: AuthUser,
+    val pendingTerms: List<PendingTerm>,
+)
+
 data class LoginResult(
     val tokenPair: TokenPair,
     val isNewUser: Boolean,

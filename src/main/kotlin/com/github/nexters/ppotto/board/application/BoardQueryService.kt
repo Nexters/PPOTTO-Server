@@ -17,13 +17,6 @@ class BoardQueryService(
     private val drawingRepository: DrawingRepository,
     private val stickerQueryPort: BoardStickerQueryPort,
 ) {
-    fun getById(id: UUID): Board = boardAccessService.getById(id)
-
-    fun getOwnedById(
-        boardId: UUID,
-        userId: UUID,
-    ): Board = boardAccessService.getOwnedById(boardId, userId)
-
     @Transactional(readOnly = true)
     fun list(userId: UUID): List<BoardSummary> = boardRepository.findByUserId(userId).map(BoardSummary::from)
 

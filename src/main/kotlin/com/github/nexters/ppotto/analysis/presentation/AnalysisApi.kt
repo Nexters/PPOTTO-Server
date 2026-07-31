@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.presentation
 
+import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
@@ -10,6 +11,7 @@ import com.github.nexters.ppotto.global.response.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -31,6 +33,13 @@ interface AnalysisApi {
         request: CreateAnalysisRequest,
     ): ApiResponse<CreateAnalysisResponse>
 
+    @GetMapping("/active")
+    @Operation(
+        summary = "진행 중 분석 조회",
+        description = "앱 재진입 또는 분석 생성 충돌 이후 복구할 진행 중 분석을 조회함",
+    )
+    fun getActive(userId: UUID): ApiResponse<AnalysisStatusResponse?>
+
     @PostMapping("/{analysisId}/start")
     @ResponseStatus(HttpStatus.ACCEPTED)
     @Operation(
@@ -43,4 +52,15 @@ interface AnalysisApi {
         userId: UUID,
         analysisId: UUID,
     ): ApiResponse<StartUploadResponse>
+
+    @GetMapping("/{analysisId}")
+    @Operation(
+        summary = "분석 상태 조회",
+        description = "로딩 화면에서 특정 분석의 진행 상태를 조회함",
+    )
+    @NotFoundApiResponse
+    fun get(
+        userId: UUID,
+        analysisId: UUID,
+    ): ApiResponse<AnalysisStatusResponse>
 }

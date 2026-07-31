@@ -21,7 +21,7 @@ Configuration and database migrations.
 | `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / upload/read signed URL expiration minutes from `${GCS_*}` |
 | `config/redis.yml` | Redis host, port, password, and timeouts from `${REDIS_*}` for refresh token storage |
 | `config/auth.yml` | OAuth HTTP timeouts, Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
-| `db/migration/` | Flyway timestamp migrations. The base schema creates core tables; later migrations add legacy-compatible social accounts, terms, drawings, stickers, recap data, and the six-stickers-per-analysis guard |
+| `db/migration/` | Flyway timestamp migrations. The base schema creates core tables; later migrations add legacy-compatible social accounts, terms, drawings, stickers, recap data, active-analysis index updates, and the six-stickers-per-analysis guard |
 
 ## Rules
 
