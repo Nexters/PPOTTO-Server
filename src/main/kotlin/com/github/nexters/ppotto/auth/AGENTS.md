@@ -12,8 +12,9 @@
 | `infrastructure/integration/` | Fluent user 가입·활성 상태·기본 보드·약관·세션 연결과 provider 계정 해지 adapter. 가입 adapter는 `@Transactional`로 사용자와 기본 보드를 한 단위로 묶습니다 |
 | `infrastructure/token/` | Fluent HS256 access JWT와 opaque refresh token 발급, Redis rotation adapter |
 | `infrastructure/security/` | Expression-bodied Bearer 인증 context 조립과 예외 정규화, UUID principal, 401/403 ApiResponse writer |
-| `presentation/AuthApi.kt` | `/auth/login`, `/auth/refresh`, `/auth/logout` version 1 mapping and Swagger contract |
+| `presentation/AuthApi.kt` | `/auth/login`, `/auth/refresh`, `/auth/logout` version 1 mapping and Swagger contract: 응답 코드, 설명, 스키마만 선언하고 예시는 `AuthApiExamples`가 주입합니다 |
 | `presentation/AuthController.kt` | Fluent Auth API implementation with request binding and required UUID logout user injection |
+| `presentation/AuthApiExamples.kt` | `ApiExampleProvider` 구현. provider별 로그인 요청, 신규 가입/재로그인 응답, `AUTH-001`~`AUTH-004` 실패 예시를 실제 DTO 인스턴스로 정의합니다 |
 | `presentation/dto/` | Swagger-described authentication request and response schemas |
 | `config/` | 검증된 Kakao, Apple, OAuth HTTP timeout, JWT properties와 adapter/application bean wiring. `AuthTransactionConfig`는 가입 전용 `signupTransaction` bean(`TransactionOperations`, timeout `SIGNUP_TRANSACTION_TIMEOUT_SECONDS` = 5초)을 정의합니다. 생성자 프로퍼티 그룹 사이 한 줄 개행 유지 |
 

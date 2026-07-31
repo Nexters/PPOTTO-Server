@@ -17,7 +17,9 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | `application/port/` | Cross-domain contracts for analysis/photo ownership plus recap photo metadata and signed URLs |
 | `presentation/StickerApi.kt` | Version 1 sticker and recap mapping and Swagger contract |
 | `presentation/StickerController.kt` | Fluent Sticker API implementation with request binding and required UUID user injection |
+| `presentation/StickerApiExamples.kt` | `ApiExampleProvider` 구현. 리캡 상세, 제목 수정 요청/응답, `STICKER-001` 실패 예시를 실제 DTO 인스턴스로 정의합니다 |
 | `presentation/dto/` | Swagger-described sticker and recap request and response schemas |
+| `presentation/StickerNotFoundApiResponse.kt` | 네 개 스티커 엔드포인트가 공유하는 404 `STICKER-001` 합성 어노테이션 |
 
 ## Rules
 

@@ -1,16 +1,21 @@
 package com.github.nexters.ppotto.global.config
 
+import com.github.nexters.ppotto.global.openapi.ApiExampleFactory
+import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import com.github.nexters.ppotto.global.security.CurrentUser
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Contact
 import io.swagger.v3.oas.models.info.Info
+import io.swagger.v3.oas.models.media.Content
+import io.swagger.v3.oas.models.media.MediaType
+import io.swagger.v3.oas.models.media.Schema
 import io.swagger.v3.oas.models.media.StringSchema
-import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
+import org.springdoc.core.customizers.OpenApiCustomizer
 import org.springdoc.core.customizers.OperationCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -32,8 +37,8 @@ class OpenApiConfig {
 
                         모든 응답은 공통 envelope로 내려갑니다.
 
-                        - 성공: `{"success": true, "data": { ... }}`
-                        - 실패: `{"success": false, "error": {"code": "COMMON-001", "message": "잘못된 입력입니다.", "fieldErrors": []}}`
+                        - 성공: `{"success": true, "data": { ... }, "error": null}`
+                        - 실패: `{"success": false, "data": null, "error": {"code": "COMMON-001", "message": "잘못된 입력입니다.", "fieldErrors": [], "timestamp": "2026-07-27T05:02:11Z"}}`
 
                         ### 공통 에러 코드
 
@@ -64,48 +69,78 @@ class OpenApiConfig {
             )
 
     @Bean
-    fun operationCustomizer(): OperationCustomizer =
-        OperationCustomizer { operation, handlerMethod ->
-            operation
-                .also {
-                    it.addParametersItem(
-                        Parameter()
-                            .name(API_VERSION_HEADER)
-                            .`in`("header")
-                            .required(false)
-                            .description("API 버전. 생략하면 1")
-                            .schema(StringSchema()._default("1"))
-                            .example("1"),
-                    )
-                }.also { customizedOperation ->
-                    handlerMethod.methodParameters.let { parameters ->
-                        when {
-                            parameters.any { it.hasParameterAnnotation(AuthenticatedUser::class.java) } -> {
-                                customizedOperation.addSecurityItem(SecurityRequirement().addList(BEARER_AUTH_SCHEME))
-                                customizedOperation.responses.addApiResponse(
-                                    "401",
-                                    ApiResponse().description("access token이 없거나 유효하지 않음"),
-                                )
-                            }
+    fun apiVersionHeaderCustomizer(): OpenApiCustomizer =
+        OpenApiCustomizer { openApi ->
+            openApi.paths
+                ?.values
+                ?.flatMap { it.readOperations() }
+                ?.mapNotNull { it.parameters }
+                ?.flatten()
+                ?.filter { it.name == API_VERSION_HEADER }
+                ?.forEach {
+                    it
+                        .description(API_VERSION_DESCRIPTION)
+                        .required(false)
+                        .example(DEFAULT_API_VERSION)
+                        .schema(
+                            StringSchema()
+                                ._default(DEFAULT_API_VERSION)
+                                ._enum(listOf(DEFAULT_API_VERSION)),
+                        )
+                }
+        }
 
-                            parameters.any { it.hasParameterAnnotation(CurrentUser::class.java) } -> {
-                                customizedOperation.security =
-                                    listOf(
-                                        SecurityRequirement(),
-                                        SecurityRequirement().addList(BEARER_AUTH_SCHEME),
-                                    )
-                                customizedOperation.responses.addApiResponse(
-                                    "401",
-                                    ApiResponse().description("전달한 access token이 유효하지 않음"),
+    @Bean
+    fun operationCustomizer(exampleFactory: ApiExampleFactory): OperationCustomizer =
+        OperationCustomizer { operation, handlerMethod ->
+            operation.also { customizedOperation ->
+                handlerMethod.methodParameters.let { parameters ->
+                    when {
+                        parameters.any { it.hasParameterAnnotation(AuthenticatedUser::class.java) } -> {
+                            customizedOperation.addSecurityItem(SecurityRequirement().addList(BEARER_AUTH_SCHEME))
+                            customizedOperation.responses.addApiResponse(
+                                "401",
+                                unauthorizedApiResponse(exampleFactory, "access token이 없거나 유효하지 않음 (COMMON-004)"),
+                            )
+                        }
+
+                        parameters.any { it.hasParameterAnnotation(CurrentUser::class.java) } -> {
+                            customizedOperation.security =
+                                listOf(
+                                    SecurityRequirement(),
+                                    SecurityRequirement().addList(BEARER_AUTH_SCHEME),
                                 )
-                            }
+                            customizedOperation.responses.addApiResponse(
+                                "401",
+                                unauthorizedApiResponse(exampleFactory, "전달한 access token이 유효하지 않음 (COMMON-004)"),
+                            )
                         }
                     }
                 }
+            }
         }
+
+    private fun unauthorizedApiResponse(
+        exampleFactory: ApiExampleFactory,
+        description: String,
+    ): ApiResponse =
+        ApiResponse()
+            .description(description)
+            .content(
+                Content().addMediaType(
+                    APPLICATION_JSON,
+                    MediaType()
+                        .schema(Schema<Any>().`$ref`(API_ERROR_RESPONSE_REF))
+                        .addExamples("COMMON-004", exampleFactory.createUnnamed(ApiExamples.UNAUTHORIZED)),
+                ),
+            )
 
     private companion object {
         const val BEARER_AUTH_SCHEME = "bearerAuth"
         const val API_VERSION_HEADER = "X-API-Version"
+        const val DEFAULT_API_VERSION = "1"
+        const val API_VERSION_DESCRIPTION = "API 버전. 생략하면 서버 기본값 1로 처리합니다"
+        const val APPLICATION_JSON = "application/json"
+        const val API_ERROR_RESPONSE_REF = "#/components/schemas/ApiErrorResponse"
     }
 }

@@ -23,7 +23,8 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, idempotent agreement, and schema-valid user fixture tests |
 | `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration with schema-valid users |
 | `global/security/CurrentUserArgumentResolverTest.kt` | Required and optional UUID principal resolution contract tests |
-| `global/openapi/OpenApiDocumentationTest.kt` | Generated OpenAPI metadata, interface-defined endpoint contracts, version header, schema description, error response, and authentication mode tests |
+| `global/openapi/OpenApiDocumentationTest.kt` | `/v3/api-docs` 실제 출력 검증: 메타데이터, 인터페이스에 선언한 엔드포인트 계약, operation마다 `X-API-Version` 파라미터가 정확히 1개인지, 성공 응답의 봉투 스키마와 상황별 예시가 함께 노출되는지, 도메인 에러 코드 실패 예시, 예시 값이 운영 `ObjectMapper` 설정(null 생략, `Instant` UTC 표기, `Double` 표기) 그대로인지, 스키마 필드 이름·예시, 인증 모드 |
+| `global/openapi/OpenApiExampleWiringTest.kt` | 예시 배선 누락 회귀 테스트. `RequestMappingHandlerMapping`이 노출하는 모든 애플리케이션 핸들러 메서드가 `ApiExampleRegistry`에 등록되어 있는지, 등록 수와 매칭 수가 같은지(고아 항목 없음), 모든 핸들러가 응답 예시를 가지는지, 그리고 `/v3/api-docs`에서 본문이 있는 모든 응답에 예시가 하나 이상 실려 나가는지 확인합니다. 예시가 실제 DTO 인스턴스라서 필드 계약은 컴파일러가 잡고, 이 테스트는 컴파일러가 볼 수 없는 배선만 봅니다 |
 | `terms/presentation/TermsControllerTest.kt` | Public anonymous current-term lookup, authenticated agreement state, protected agreement submission, and schema-valid user fixture integration tests |
 | `terms/support/TermsTestSecurityConfig.kt` | Test-only UUID authentication principal filter for MockMvc |
 | `board/BoardAnalysisDependencyTest.kt` | Source-level cross-domain contract: board never imports analysis types, analysis only imports the board application boundary and port |
