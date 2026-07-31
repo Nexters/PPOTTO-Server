@@ -8,6 +8,8 @@ package com.github.nexters.ppotto.jooq.indexes
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Photos
+import com.github.nexters.ppotto.jooq.tables.TermAgreements
+import com.github.nexters.ppotto.jooq.tables.Terms
 import com.github.nexters.ppotto.jooq.tables.Users
 
 import org.jooq.Index
@@ -25,4 +27,7 @@ val IDX_ANALYSIS_USER_CREATED: Index = Internal.createIndex(DSL.name("idx_analys
 val IDX_BOARDS_USER_ID: Index = Internal.createIndex(DSL.name("idx_boards_user_id"), Boards.BOARDS, arrayOf(Boards.BOARDS.USER_ID), false)
 val IDX_PHOTOS_ANALYSIS_ID: Index = Internal.createIndex(DSL.name("idx_photos_analysis_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.ANALYSIS_ID), false)
 val IDX_PHOTOS_BOARD_ID: Index = Internal.createIndex(DSL.name("idx_photos_board_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.BOARD_ID), false)
+val IX_TERM_AGREEMENT_TERM: Index = Internal.createIndex(DSL.name("ix_term_agreement_term"), TermAgreements.TERM_AGREEMENTS, arrayOf(TermAgreements.TERM_AGREEMENTS.TERM_ID), false)
+val IX_TERMS_CODE_EFFECTIVE: Index = Internal.createIndex(DSL.name("ix_terms_code_effective"), Terms.TERMS, arrayOf(Terms.TERMS.CODE, Terms.TERMS.EFFECTIVE_AT), false)
+val UK_ANALYSIS_ACTIVE: Index = Internal.createIndex(DSL.name("uk_analysis_active"), Analysis.ANALYSIS, arrayOf(Analysis.ANALYSIS.USER_ID), true)
 val UK_USERS_PROVIDER_UID: Index = Internal.createIndex(DSL.name("uk_users_provider_uid"), Users.USERS, arrayOf(Users.USERS.PROVIDER, Users.USERS.PROVIDER_USER_ID), true)

@@ -8,15 +8,21 @@ package com.github.nexters.ppotto.jooq.keys
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Photos
+import com.github.nexters.ppotto.jooq.tables.TermAgreements
+import com.github.nexters.ppotto.jooq.tables.Terms
 import com.github.nexters.ppotto.jooq.tables.Users
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
+import com.github.nexters.ppotto.jooq.tables.records.TermAgreementsRecord
+import com.github.nexters.ppotto.jooq.tables.records.TermsRecord
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 
+import org.jooq.ForeignKey
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
 import org.jooq.impl.Internal
+import org.jooq.impl.QOM.ForeignKeyRule
 
 
 
@@ -27,4 +33,15 @@ import org.jooq.impl.Internal
 val ANALYSIS_PKEY: UniqueKey<AnalysisRecord> = Internal.createUniqueKey(Analysis.ANALYSIS, DSL.name("analysis_pkey"), arrayOf(Analysis.ANALYSIS.ID), true)
 val BOARDS_PKEY: UniqueKey<BoardsRecord> = Internal.createUniqueKey(Boards.BOARDS, DSL.name("boards_pkey"), arrayOf(Boards.BOARDS.ID), true)
 val PHOTOS_PKEY: UniqueKey<PhotosRecord> = Internal.createUniqueKey(Photos.PHOTOS, DSL.name("photos_pkey"), arrayOf(Photos.PHOTOS.ID), true)
+val TERM_AGREEMENTS_PKEY: UniqueKey<TermAgreementsRecord> = Internal.createUniqueKey(TermAgreements.TERM_AGREEMENTS, DSL.name("term_agreements_pkey"), arrayOf(TermAgreements.TERM_AGREEMENTS.ID), true)
+val UK_TERM_AGREEMENT: UniqueKey<TermAgreementsRecord> = Internal.createUniqueKey(TermAgreements.TERM_AGREEMENTS, DSL.name("uk_term_agreement"), arrayOf(TermAgreements.TERM_AGREEMENTS.USER_ID, TermAgreements.TERM_AGREEMENTS.TERM_ID), true)
+val TERMS_PKEY: UniqueKey<TermsRecord> = Internal.createUniqueKey(Terms.TERMS, DSL.name("terms_pkey"), arrayOf(Terms.TERMS.ID), true)
+val UK_TERMS_CODE_VERSION: UniqueKey<TermsRecord> = Internal.createUniqueKey(Terms.TERMS, DSL.name("uk_terms_code_version"), arrayOf(Terms.TERMS.CODE, Terms.TERMS.VERSION), true)
 val USERS_PKEY: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, DSL.name("users_pkey"), arrayOf(Users.USERS.ID), true)
+
+// -------------------------------------------------------------------------
+// FOREIGN KEY definitions
+// -------------------------------------------------------------------------
+
+val TERM_AGREEMENTS__FK_TERM_AGREEMENTS_TERM: ForeignKey<TermAgreementsRecord, TermsRecord> = Internal.createForeignKey(TermAgreements.TERM_AGREEMENTS, DSL.name("fk_term_agreements_term"), arrayOf(TermAgreements.TERM_AGREEMENTS.TERM_ID), com.github.nexters.ppotto.jooq.keys.TERMS_PKEY, arrayOf(Terms.TERMS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
+val TERM_AGREEMENTS__FK_TERM_AGREEMENTS_USER: ForeignKey<TermAgreementsRecord, UsersRecord> = Internal.createForeignKey(TermAgreements.TERM_AGREEMENTS, DSL.name("fk_term_agreements_user"), arrayOf(TermAgreements.TERM_AGREEMENTS.USER_ID), com.github.nexters.ppotto.jooq.keys.USERS_PKEY, arrayOf(Users.USERS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)

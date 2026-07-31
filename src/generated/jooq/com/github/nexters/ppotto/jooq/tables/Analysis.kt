@@ -8,6 +8,7 @@ import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_BOARD_ID
 import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_USER_CREATED
+import com.github.nexters.ppotto.jooq.indexes.UK_ANALYSIS_ACTIVE
 import com.github.nexters.ppotto.jooq.keys.ANALYSIS_PKEY
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 
@@ -147,7 +148,7 @@ open class Analysis(
      */
     constructor(): this(DSL.name("analysis"), null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_ANALYSIS_BOARD_ID, IDX_ANALYSIS_USER_CREATED)
+    override fun getIndexes(): List<Index> = listOf(IDX_ANALYSIS_BOARD_ID, IDX_ANALYSIS_USER_CREATED, UK_ANALYSIS_ACTIVE)
     override fun getPrimaryKey(): UniqueKey<AnalysisRecord> = ANALYSIS_PKEY
     override fun getChecks(): List<Check<AnalysisRecord>> = listOf(
         Internal.createCheck(this, DSL.name("analysis_progress_check"), "(((progress >= 0) AND (progress <= 100)))", true)

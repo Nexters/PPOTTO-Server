@@ -21,7 +21,7 @@ Configuration and database migrations.
 | `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` from `${GCS_*}` |
 | `config/redis.yml` | Redis host, port, password, and timeouts from `${REDIS_*}` for refresh token storage |
 | `config/auth.yml` | Boot HTTP Service Client group timeouts, Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
-| `db/migration/` | Flyway migrations: `V{yyyyMMddHHmmss}__{description}.sql` (timestamp version). The user-account migration preserves legacy minimal `users` rows with nullable social columns while a `NOT VALID` completeness check enforces every new or updated row; it also enables `citext` and active social identity uniqueness |
+| `db/migration/` | Flyway migrations: `V{yyyyMMddHHmmss}__{description}.sql` (timestamp version). Migrations enable pgvector, create core tables, preserve legacy minimal `users` rows during social-account migration, then add `terms`/`term_agreements` |
 
 ## Rules
 

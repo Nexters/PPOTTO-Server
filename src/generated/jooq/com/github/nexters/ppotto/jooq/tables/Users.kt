@@ -8,7 +8,10 @@ import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.indexes.UK_USERS_PROVIDER_UID
+import com.github.nexters.ppotto.jooq.keys.TERM_AGREEMENTS__FK_TERM_AGREEMENTS_USER
 import com.github.nexters.ppotto.jooq.keys.USERS_PKEY
+import com.github.nexters.ppotto.jooq.tables.TermAgreements.TermAgreementsPath
+import com.github.nexters.ppotto.jooq.tables.Terms.TermsPath
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 
 import java.time.Instant
@@ -24,6 +27,7 @@ import org.jooq.ForeignKey
 import org.jooq.Index
 import org.jooq.InverseForeignKey
 import org.jooq.Name
+import org.jooq.Path
 import org.jooq.PlainSQL
 import org.jooq.QueryPart
 import org.jooq.Record
@@ -136,9 +140,45 @@ open class Users(
      * Create a <code>public.users</code> table reference
      */
     constructor(): this(DSL.name("users"), null)
+
+    constructor(path: Table<out Record>, childPath: ForeignKey<out Record, UsersRecord>?, parentPath: InverseForeignKey<out Record, UsersRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, USERS, null, null)
+
+    /**
+     * A subtype implementing {@link Path} for simplified path-based joins.
+     */
+    open class UsersPath : Users, Path<UsersRecord> {
+        constructor(path: Table<out Record>, childPath: ForeignKey<out Record, UsersRecord>?, parentPath: InverseForeignKey<out Record, UsersRecord>?): super(path, childPath, parentPath)
+        private constructor(alias: Name, aliased: Table<UsersRecord>): super(alias, aliased)
+        override fun `as`(alias: String): UsersPath = UsersPath(DSL.name(alias), this)
+        override fun `as`(alias: Name): UsersPath = UsersPath(alias, this)
+        override fun `as`(alias: Table<*>): UsersPath = UsersPath(alias.qualifiedName, this)
+    }
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
     override fun getIndexes(): List<Index> = listOf(UK_USERS_PROVIDER_UID)
     override fun getPrimaryKey(): UniqueKey<UsersRecord> = USERS_PKEY
+
+    private lateinit var _termAgreements: TermAgreementsPath
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.term_agreements</code> table
+     */
+    fun termAgreements(): TermAgreementsPath {
+        if (!this::_termAgreements.isInitialized)
+            _termAgreements = TermAgreementsPath(this, null, TERM_AGREEMENTS__FK_TERM_AGREEMENTS_USER.inverseKey)
+
+        return _termAgreements;
+    }
+
+    val termAgreements: TermAgreementsPath
+        get(): TermAgreementsPath = termAgreements()
+
+    /**
+     * Get the implicit many-to-many join path to the <code>public.terms</code>
+     * table
+     */
+    val terms: TermsPath
+        get(): TermsPath = termAgreements().terms()
     override fun getChecks(): List<Check<UsersRecord>> = listOf(
         Internal.createCheck(this, DSL.name("ck_users_social_identity_complete"), "(((provider IS NOT NULL) AND (provider_user_id IS NOT NULL) AND (email IS NOT NULL))) NOT VALID", true)
     )
