@@ -9,7 +9,7 @@ Project ppotto {
   - CHECK 제약 (LLM 파이프라인이 직접 쓰는 경로라 API 검증이 닿지 않음):
     stickers: (type='IMAGE' AND image_key IS NOT NULL) OR (type='TEXT' AND text_content IS NOT NULL)
     drawings: (scope='STICKER') = (sticker_id IS NOT NULL)
-    recap_comments: NOT is_float OR (pos_x IS NOT NULL AND pos_y IS NOT NULL)
+    recap_comments: (pos_x IS NULL) = (pos_y IS NULL)
     analysis_sessions: progress BETWEEN 0 AND 100
     photos: upload_status <> 'UPLOADED' OR uploaded_at IS NOT NULL
   '''
@@ -254,6 +254,7 @@ Table stickers {
   type       sticker_type [not null]
 
   title     text        [not null, note: '최대 15자. 제목 뱃지 문구이자 리캡 제목. LLM 생성도 이 제한을 따른다']
+  summary   text        [not null, note: '최대 100자. 리캡 "한 줄 요약" 강조 문장. 스티커당 정확히 1개다. 제목 뱃지(title)와는 별개 개념이며 사용자가 수정할 수 없다. LLM 생성도 이 제한을 따른다']
   viewed_at timestamptz [null, note: 'NULL이면 신규 = 빨간 점 표시. 리캡 진입 시 채운다']
 
   source_photo_id uuid [null, ref: > photos.id, note: '이미지형일 때 원본 사진']
@@ -301,9 +302,12 @@ Table sticker_photos {
   photo_id   uuid [not null, ref: > photos.id]
 
   Note: '''
-  리캡의 "사진 그리드". 열람용 사진까지 포함한다.
+  리캡의 "테마 속 사진" 그리드. 열람용 사진까지 포함한다.
   표시 순서는 photos.taken_at 을 따르므로 별도 seq 를 두지 않는다.
   사용자 재정렬 기능이 생기면 그때 추가한다.
+
+  화면 상단의 사진 개수는 클라가 응답 배열 길이로 계산한다.
+  페이지네이션이 없으므로 개수를 따로 저장하거나 응답에 담지 않는다.
   '''
 
   indexes {
@@ -340,19 +344,24 @@ Table drawings {
 // ── 리캡 ──────────────────────────────────
 Table recap_comments {
   ~base_id
-  sticker_id uuid    [not null, ref: > stickers.id]
-  content    text    [not null]
-  is_float   boolean [not null, default: false, note: 'true면 스티커 주변 말풍선, false면 하단 순차 노출']
+  sticker_id uuid [not null, ref: > stickers.id]
+  content    text [not null]
 
-  pos_x double [null, note: 'is_float 일 때 스티커 기준 상대 좌표']
-  pos_y double [null]
+  pos_x double [null, note: '스티커 기준 상대 좌표. 채워져 있으면 스티커 주변 말풍선, NULL이면 하단 "테마 분석" 키워드 칩']
+  pos_y double [null, note: 'pos_x 와 항상 함께 NULL이거나 함께 채워진다']
 
   ~timestamps
 
   Note: '''
-  LLM 생성 코멘트. 리캡 화면의 말풍선들.
+  LLM 생성 코멘트. 종류는 두 가지이고 좌표 유무로만 구분한다.
+  - pos_x, pos_y 가 있으면 스티커 주변 말풍선 (디자인 기준 3개)
+  - pos_x, pos_y 가 NULL 이면 하단 "테마 분석" 키워드 칩 (디자인 기준 9개)
+
+  종류를 나타내던 is_float 컬럼은 제거했다. pos_x 가 이미 is_float 와 1:1로
+  대응해 중복이었고, is_float=false 가 가리키던 "하단 순차 노출 문장형" UI 자체가
+  사라졌기 때문이다. 그 문장형이 담던 한 줄 요약은 stickers.summary 로 옮겼다.
+
   노출 순서는 id(uuidv7) 오름차순. 한 번에 생성하고 재정렬이 없다.
-  명세 TODO 상태라 확정 시 재검토 필요.
   '''
 
   indexes {

@@ -1277,7 +1277,7 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 #### Success Spec
 | Status | Description | Data |
 | --- | --- | --- |
-| 200 | 리캡 상세 | `sticker`, `comments`, `photos` |
+| 200 | 리캡 상세 | `sticker`, `summary`, `comments`, `photos` |
 
 200 example:
 ```json
@@ -1300,34 +1300,61 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
       "badgeOffsetY": 96,
       "badgeRotation": 0
     },
+    "summary": "웃기고 귀여우면 일단 주워요",
     "comments": [
       {
         "id": "01983f2d-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
-        "content": "웃기고 귀여우면 일단 주워요",
-        "isFloat": true,
-        "posX": 0,
-        "posY": -140
+        "content": "야옹~",
+        "posX": -96,
+        "posY": -150
       },
       {
         "id": "01983f2d-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
-        "content": "또 주웠네",
-        "isFloat": true,
-        "posX": -120,
-        "posY": -40
+        "content": "또 주웠네!",
+        "posX": -104,
+        "posY": 62
       },
       {
         "id": "01983f2d-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
-        "content": "또 고양이가 주워왔네요",
-        "isFloat": false,
-        "posX": null,
-        "posY": null
+        "content": "복슬복슬",
+        "posX": 98,
+        "posY": 18
       },
       {
         "id": "01983f2d-4d5e-7f6a-b7c8-9d0e1f2a3b4c",
-        "content": "저장한 동물 짤 중 62%가 고양이였어요 야옹!",
-        "isFloat": false,
-        "posX": null,
-        "posY": null
+        "content": "냥집사"
+      },
+      {
+        "id": "01983f2d-5e6f-7a7b-c8d9-0e1f2a3b4c5d",
+        "content": "웃긴 동물들"
+      },
+      {
+        "id": "01983f2d-6f7a-7b8c-d9e0-1f2a3b4c5d6e",
+        "content": "당신은 밈 수집가!"
+      },
+      {
+        "id": "01983f2d-7a8b-7c9d-e0f1-2a3b4c5d6e7f",
+        "content": "복슬복슬"
+      },
+      {
+        "id": "01983f2d-8b9c-7d0e-f1a2-3b4c5d6e7f8a",
+        "content": "저장한 동물 짤 중 62%가 고양이다냥!"
+      },
+      {
+        "id": "01983f2d-9c0d-7e1f-a2b3-4c5d6e7f8a9b",
+        "content": "감도 높은 취향"
+      },
+      {
+        "id": "01983f2d-a0d1-7f2a-b3c4-5d6e7f8a9b0c",
+        "content": "밈잘알"
+      },
+      {
+        "id": "01983f2d-b1e2-7a3b-c4d5-6e7f8a9b0c1d",
+        "content": "밈 고르는 안목 보소"
+      },
+      {
+        "id": "01983f2d-c2f3-7b4c-d5e6-7f8a9b0c1d2e",
+        "content": "근데 소랑 돌고래가 같이 나는 사진은 뭐임? 🤔"
       }
     ],
     "photos": [
@@ -1383,6 +1410,16 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 
 #### Notes
 - 리캡 화면에 필요한 데이터를 모두 반환합니다. 스티커 1개 = 리캡 1개입니다. photos는 takenAt, id 오름차순이며 기간 표시는 클라이언트가 계산합니다. 빨간 점 제거는 별도로 /view를 호출합니다.
+- `summary`는 `한 줄 요약` 라벨 아래의 강조 문장입니다. 스티커당 정확히 1개이고 항상 채워져 있습니다. 제목 뱃지인 `sticker.title`과는 다른 값이므로 둘을 섞어 쓰면 안 됩니다.
+- `comments`는 두 종류가 한 배열에 섞여 옵니다. **구분 기준은 `posX`(와 `posY`)의 존재 여부 하나뿐입니다.**
+
+| 구분 | 화면 위치 | `posX` / `posY` |
+| --- | --- | --- |
+| 말풍선 | 스티커 주변에 떠 있는 말풍선 | 값이 있음. 스티커 기준 상대 좌표 |
+| 키워드 칩 | 하단 `테마 분석` 영역의 칩 | 없음 (null) |
+
+  `posX`와 `posY`는 항상 함께 있거나 함께 없습니다. 한쪽만 오는 응답은 없습니다. 서버 응답은 null 필드를 직렬화하지 않으므로 키워드 칩에는 `posX` / `posY` 키 자체가 나타나지 않습니다. 따라서 클라이언트는 `posX` 키가 없으면 키워드 칩으로 처리하면 됩니다. 이전 명세의 `isFloat` 필드는 제거되었습니다.
+- `테마 속 사진`의 개수는 클라이언트가 `photos` 배열 길이로 계산합니다. 페이지네이션이 없으므로 서버는 개수를 따로 내려주지 않고 언제나 전체 사진을 반환합니다.
 
 ### PATCH /stickers/{stickerId}
 
@@ -2326,17 +2363,17 @@ Request example:
 | Field | Required | Type | Enum | Description |
 | --- | --- | --- | --- | --- |
 | sticker | Y | `object` | - | - |
-| comments | Y | `object`[] | - | id(uuidv7) 오름차순 |
-| photos | Y | `object`[] | - | takenAt, id 오름차순. 열람용 사진 포함 |
+| summary | Y | `string` | - | `한 줄 요약` 강조 문장. 스티커당 1개, 최대 100자. `sticker.title`(제목 뱃지)과 다른 값 |
+| comments | Y | `object`[] | - | id(uuidv7) 오름차순. 말풍선과 키워드 칩이 섞여 있음 |
+| photos | Y | `object`[] | - | takenAt, id 오름차순. 열람용 사진 포함. 개수는 배열 길이로 계산 (페이지네이션 없음) |
 
 ### RecapComment
 | Field | Required | Type | Enum | Description |
 | --- | --- | --- | --- | --- |
 | id | Y | `string` | - | - |
 | content | Y | `string` | - | - |
-| isFloat | Y | `boolean` | - | true 면 스티커 주변 말풍선, false 면 하단 순차 노출 |
-| posX | N | `number \| null` | - | isFloat 일 때 스티커 기준 상대 좌표 |
-| posY | N | `number \| null` | - | - |
+| posX | N | `number` | - | 스티커 기준 상대 좌표. **있으면 말풍선, 없으면 하단 `테마 분석` 키워드 칩** |
+| posY | N | `number` | - | posX 와 항상 함께 있거나 함께 없음 |
 
 ### RecapPhoto
 | Field | Required | Type | Enum | Description |

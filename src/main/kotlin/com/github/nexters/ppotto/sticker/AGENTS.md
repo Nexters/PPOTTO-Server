@@ -7,6 +7,8 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | Directory | Description |
 |-----------|---------|
 | `domain/` | Pure Kotlin `Sticker` aggregate with fluent state transitions and validation, creation values, `StickerPhoto`, `RecapComment`, type, and error code |
+| `domain/Sticker.kt` | Aggregate root. `title` (제목 뱃지, max 15) and `summary` (리캡 한 줄 요약, max 100) are separate concepts validated by `validateTitle` / `validateSummary` |
+| `domain/RecapComment.kt` | Recap comment model and creation value. `posX`/`posY` must both be null or both set; that pair is the only thing distinguishing a floating speech bubble from a bottom keyword chip |
 | `infrastructure/StickerRepository.kt` | Fluent jOOQ persistence for sticker roots, analysis-result locking, ownership validation, root lookups, and board-scoped deletion targets including soft-deleted rows |
 | `infrastructure/StickerCommandRepository.kt` | Field-specific atomic updates that never overwrite `deleted_at` from stale aggregate state, plus withdrawal hard deletion by id |
 | `infrastructure/StickerRecapRepository.kt` | Fluent jOOQ batch persistence and deletion for recap photo links and comments |
@@ -17,13 +19,16 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | `application/port/` | Cross-domain contracts for analysis/photo ownership plus recap photo metadata and signed URLs |
 | `presentation/StickerApi.kt` | Version 1 sticker and recap mapping and Swagger contract |
 | `presentation/StickerController.kt` | Fluent Sticker API implementation with request binding and required UUID user injection |
-| `presentation/StickerApiExamples.kt` | `ApiExampleProvider` 구현. 리캡 상세, 제목 수정 요청/응답, `STICKER-001` 실패 예시를 실제 DTO 인스턴스로 정의합니다 |
+| `presentation/StickerApiExamples.kt` | `ApiExampleProvider` 구현. 리캡 상세(한 줄 요약, 말풍선 3개, 키워드 칩 9개), 제목 수정 요청/응답, `STICKER-001` 실패 예시를 실제 DTO 인스턴스로 정의합니다 |
 | `presentation/dto/` | Swagger-described sticker and recap request and response schemas |
 | `presentation/StickerNotFoundApiResponse.kt` | 네 개 스티커 엔드포인트가 공유하는 404 `STICKER-001` 합성 어노테이션 |
 
 ## Rules
 
 - `Sticker` is soft-deleted through `stickers.deleted_at`.
+- A recap has exactly one one-line summary and it lives on `stickers.summary`, not in `recap_comments`. It is LLM-written only — no API updates it, so `Sticker.summary` is a read-only `val` while `title` stays mutable through `rename`. `GET /stickers/{id}` returns it as the top-level `summary` field, outside the `sticker` object, because the board sticker list has no use for it.
+- `recap_comments` has no type column. The two kinds are told apart by coordinates alone: `pos_x`/`pos_y` set means a speech bubble floating around the sticker, both null means a bottom `테마 분석` keyword chip. `chk_recap_comment_position` enforces that the pair is all-or-nothing and `RecapCommentCreation` rejects a half-filled pair before any write. Never reintroduce a boolean flag for this — it duplicates the coordinates and lets the two disagree.
+- Recap responses carry every photo with no pagination. Clients derive the displayed photo count from the array length, so no count field is stored or returned.
 - `sticker_photos` and `recap_comments` intentionally have no `deleted_at` in the final ERD. Deleting a sticker hard-deletes these child rows in the same transaction so recap content is no longer retained as active application data.
 - Deleting stickers also removes `STICKER`-scoped drawings through exactly one `StickerDrawingCommandPort` adapter in the same transaction. Absence or duplication fails before any sticker mutation; the drawing owner provides the production adapter.
 - Sticker code never accesses the analysis, photo, or board repositories directly. Board ownership is checked through the port-free `BoardAccessService`; analysis/photo ownership and recap photo metadata come through the application ports, whose adapters call the `analysis` application services.
