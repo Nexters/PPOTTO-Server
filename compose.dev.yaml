@@ -16,3 +16,7 @@ services:
     env_file:
       - .env.dev
     mem_limit: 2g
+
+  valkey:
+    env_file:
+      - .env.dev

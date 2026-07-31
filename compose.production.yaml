@@ -16,3 +16,7 @@ services:
     env_file:
       - .env.production
     mem_limit: 3g
+
+  valkey:
+    env_file:
+      - .env.production
