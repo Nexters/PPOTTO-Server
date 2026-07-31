@@ -7,10 +7,10 @@ import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Contact
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.StringSchema
-import io.swagger.v3.oas.models.parameters.Parameter
 import io.swagger.v3.oas.models.responses.ApiResponse
 import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
+import org.springdoc.core.customizers.OpenApiCustomizer
 import org.springdoc.core.customizers.OperationCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -64,20 +64,32 @@ class OpenApiConfig {
             )
 
     @Bean
+    fun apiVersionHeaderCustomizer(): OpenApiCustomizer =
+        OpenApiCustomizer { openApi ->
+            openApi.paths
+                ?.values
+                ?.flatMap { it.readOperations() }
+                ?.mapNotNull { it.parameters }
+                ?.flatten()
+                ?.filter { it.name == API_VERSION_HEADER }
+                ?.forEach {
+                    it
+                        .description(API_VERSION_DESCRIPTION)
+                        .required(false)
+                        .example(DEFAULT_API_VERSION)
+                        .schema(
+                            StringSchema()
+                                ._default(DEFAULT_API_VERSION)
+                                ._enum(listOf(DEFAULT_API_VERSION)),
+                        )
+                }
+        }
+
+    @Bean
     fun operationCustomizer(): OperationCustomizer =
         OperationCustomizer { operation, handlerMethod ->
             operation
-                .also {
-                    it.addParametersItem(
-                        Parameter()
-                            .name(API_VERSION_HEADER)
-                            .`in`("header")
-                            .required(false)
-                            .description("API 버전. 생략하면 1")
-                            .schema(StringSchema()._default("1"))
-                            .example("1"),
-                    )
-                }.also { customizedOperation ->
+                .also { customizedOperation ->
                     handlerMethod.methodParameters.let { parameters ->
                         when {
                             parameters.any { it.hasParameterAnnotation(AuthenticatedUser::class.java) } -> {
@@ -107,5 +119,7 @@ class OpenApiConfig {
     private companion object {
         const val BEARER_AUTH_SCHEME = "bearerAuth"
         const val API_VERSION_HEADER = "X-API-Version"
+        const val DEFAULT_API_VERSION = "1"
+        const val API_VERSION_DESCRIPTION = "API 버전. 생략하면 서버 기본값 1로 처리합니다"
     }
 }

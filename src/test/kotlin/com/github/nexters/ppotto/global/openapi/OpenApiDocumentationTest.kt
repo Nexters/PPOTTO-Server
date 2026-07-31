@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.global.openapi
 
 import com.github.nexters.ppotto.support.IntegrationTest
 import org.hamcrest.Matchers.hasItem
+import org.hamcrest.Matchers.hasSize
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -23,7 +24,7 @@ class OpenApiDocumentationTest(
                     .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
             }
 
-            Then("엔드포인트 설명과 API 버전 헤더를 제공한다") {
+            Then("엔드포인트 설명을 제공한다") {
                 result
                     .andExpect(jsonPath("$['paths']['/analysis']['post']['summary']").value("분석 생성"))
                     .andExpect(jsonPath("$['paths']['/analysis/active']['get']['summary']").value("진행 중 분석 조회"))
@@ -39,17 +40,44 @@ class OpenApiDocumentationTest(
                         jsonPath("$['paths']['/stickers/{stickerId}']['get']['summary']")
                             .value("리캡 상세 조회"),
                     ).andExpect(
-                        jsonPath("$['paths']['/analysis']['post']['parameters'][*].name")
-                            .value(hasItem("X-API-Version")),
-                    ).andExpect(
-                        jsonPath("$['paths']['/analysis/active']['get']['parameters'][*].name")
-                            .value(hasItem("X-API-Version")),
-                    ).andExpect(
                         jsonPath("$['components']['schemas']['CreateAnalysisRequest']['description']")
                             .value("분석 생성과 사진 업로드 URL 발급 요청"),
                     ).andExpect(
                         jsonPath("$['components']['schemas']['AnalysisStatusResponse']['description']")
                             .value("분석 상태"),
+                    )
+            }
+
+            Then("API 버전 헤더를 operation마다 하나만 노출한다") {
+                result
+                    .andExpect(
+                        jsonPath("$['paths']['/analysis']['post']['parameters'][?(@.name == 'X-API-Version')]")
+                            .value(hasSize<Any>(1)),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/boards/{boardId}']['get']['parameters'][?(@.name == 'X-API-Version')]",
+                        ).value(hasSize<Any>(1)),
+                    ).andExpect(
+                        jsonPath("$['paths']['/terms']['get']['parameters'][?(@.name == 'X-API-Version')]")
+                            .value(hasSize<Any>(1)),
+                    )
+            }
+
+            Then("API 버전 헤더 기본값과 설명을 명세와 맞춘다") {
+                result
+                    .andExpect(
+                        jsonPath(
+                            "$['paths']['/analysis']['post']['parameters'][?(@.name == 'X-API-Version')].description",
+                        ).value(hasItem("API 버전. 생략하면 서버 기본값 1로 처리합니다")),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/analysis']['post']['parameters'][?(@.name == 'X-API-Version')].schema.default",
+                        ).value(hasItem("1")),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/boards/{boardId}']['get']" +
+                                "['parameters'][?(@.name == 'X-API-Version')].schema.enum",
+                        ).value(hasItem(listOf("1"))),
                     )
             }
 
