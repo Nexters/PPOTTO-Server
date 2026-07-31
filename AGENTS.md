@@ -76,10 +76,12 @@ photo/
 |-----------|---------|
 | `src/` | Sources (see `src/AGENTS.md`) |
 | `docs/` | Spec-driven development documents, including API contracts and ERD design (see `docs/AGENTS.md`) |
+| `e2e/` | Python E2E test suite for the photo analysis pipeline, including design notes and generated reports (see `e2e/AGENTS.md`) |
 | `gradle/` | Version catalog + wrapper (see `gradle/AGENTS.md`) |
 | `buildSrc/` | DB build convention plugin (see `buildSrc/AGENTS.md`) |
 | `.github/` | CI workflow + templates (see `.github/AGENTS.md`) |
 | `.gitattributes` | Marks `src/generated/**` as `linguist-generated` so PR diffs collapse generated files |
+| `.gitignore` | Ignores local build/tooling files, secrets, `.env`, and generated E2E report artifacts |
 | `compose.yaml` | Local PostgreSQL 18 + pgvector |
 | `compose.deploy.yaml` | Shared server deployment stack: Caddy + API + PostgreSQL |
 | `compose.dev.yaml` | Dev deployment overrides; mounts GCS credentials from `../secrets` |

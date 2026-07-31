@@ -31,7 +31,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/support/BoardTestConfig.kt` | Primary fake analysis/sticker application ports for board integration tests |
 | `board/support/BoardTestFixtures.kt` | UUIDv7 and sticker response fixtures |
 | `sticker/` | Sticker aggregate unit tests plus repository, service, and API integration tests |
-| `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including local-only auth keys, provider-token keys, OAuth HTTP timeouts, Redis, and JWT settings, in tests (tests do not read `.env`) |
+| `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including local-only auth keys, provider-token keys, OAuth HTTP timeouts, Redis, JWT, and Vertex AI settings, in tests (tests do not read `.env`) |
 
 ## Rules
 
