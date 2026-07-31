@@ -12,8 +12,9 @@ Domain-agnostic GCS object key naming and read-URL signing. No business knowledg
 ## Rules
 
 - `ObjectKeyGenerator` is a pure, stateless `@Component` — no I/O, no domain imports, no content-type/extension mapping knowledge. It only joins path segments; resolving which extension a given content type maps to is a domain concern (e.g. `analysis`'s `PhotoContentType` enum), not this class's.
-- Any domain that needs a GCS object key (currently `analysis`'s `PhotoObjectKeys`) wraps this class with its own namespace/segment convention and passes the already-resolved `extension` string.
-- `GcsReadUrlIssuer` is the single place read/GET signed URLs are produced. Every consumer (`analysis`'s `GcsPhotoStorage`, `sticker`'s `GcsStickerImageStorage`) delegates here so the 1-hour read expiration stays in one place. Write/PUT signing stays with the owning adapter because it also signs domain-specific headers (content type, size range).
+- Any domain that needs a GCS object key (currently `analysis`'s `PhotoObjectKeys` and `StickerObjectKeys`) wraps this class with its own namespace/segment convention and passes the already-resolved `extension` string.
+- `GcsReadUrlIssuer` is the single place read/GET signed URLs are produced. Every consumer (`analysis`'s `GcsPhotoStorage`, `sticker`'s `GcsStickerImageStorage`) delegates here so the 1-hour read expiration stays in one place. Writes stay with the owning adapter: `GcsPhotoStorage` signs PUT URLs with domain-specific headers (content type, size range) and `GcsStickerStorage` uploads bytes through the SDK, neither of which this class can express.
+- `issue` signs whatever string it is given as a `BlobId` object name, so callers must pass a bare object key. A `gs://{bucket}/...` URI would be signed as part of the object name and produce a URL that 404s.
 - V4 signing is a local RSA operation against the service-account key, so it works in tests with `src/test/resources/dummy-gcs-key.json` without any network call.
 
 Update this file when the key-generation or read-URL signing rules change.

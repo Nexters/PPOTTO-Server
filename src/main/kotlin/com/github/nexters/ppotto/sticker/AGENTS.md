@@ -11,7 +11,7 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | `infrastructure/StickerCommandRepository.kt` | Field-specific atomic updates that never overwrite `deleted_at` from stale aggregate state |
 | `infrastructure/StickerRecapRepository.kt` | Fluent jOOQ batch persistence and deletion for recap photo links and comments |
 | `infrastructure/BoardStickerAdapter.kt` | Expression-bodied board query/command port mappings backed by sticker application services |
-| `infrastructure/GcsStickerImageStorage.kt` | Production `StickerImageQueryPort` adapter delegating sticker `image_key` read URLs to the shared `global/storage/GcsReadUrlIssuer` |
+| `infrastructure/GcsStickerImageStorage.kt` | Read side of generated sticker images: production `StickerImageQueryPort` adapter delegating `stickers.image_key` read URL signing to the shared `global/storage/GcsReadUrlIssuer`. It does not upload — `analysis`'s `GcsStickerStorage` writes the object, this only signs GET URLs for it |
 | `application/` | Fluent transactional analysis-result save plus sticker query and command pipelines |
 | `application/port/` | Cross-domain contracts for analysis/photo ownership plus recap photo metadata and signed URLs |
 | `presentation/StickerApi.kt` | Version 1 sticker and recap mapping and Swagger contract |
@@ -29,6 +29,7 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 - `RecapPhotoQueryPort` and `StickerImageQueryPort` are integration contracts with exactly one adapter each: `analysis`'s `StickerRecapPhotoAdapter` (through `PhotoQueryService`) and this domain's `GcsStickerImageStorage` (through `global/storage/GcsReadUrlIssuer`). The sticker application still fails fast if an adapter omits requested media, so a partial photo or image-URL result is a 500, never a silently short response.
 - Every port here is collected as `List<Port>` and resolved with `singleOrNull()`, so tests must not register additional `@Primary` fakes for them — an extra bean is a duplicate, not an override, and it breaks the context instead of replacing the adapter. Integration tests exercise the production adapters directly.
 - All recap media URLs are read-only V4 signed URLs that expire after `gcs.read-signed-url-expiration-minutes` (1 hour per the client contract), so clients re-fetch instead of caching them.
+- Sticker image objects are written by `analysis` and read here; the two never overlap. `analysis`'s `GcsStickerStorage` uploads the PNG and `analysis`'s `StickerObjectKeys` owns the key convention (`stickers/{analysisId}/{themeIndex}-{sourcePhotoId}.png`); this domain only signs GET URLs for that key. `stickers.image_key` must therefore hold the bare object key, never the `gs://{bucket}/...` URI that `GcsStickerStorage.upload` returns — `GcsReadUrlIssuer` passes the stored value straight to `BlobId.of(bucket, key)`, so a `gs://` prefix would be signed as part of the object name and yield a URL that 404s.
 - Controllers receive the authenticated UUID through `@AuthenticatedUser`; the shared resolver returns `COMMON-004` before controller execution when it is absent.
 - `getByBoardId`, `validateOwnedByBoard`, `updateLayouts`, and `deleteAllByBoardId` are the board-domain integration surface. The board domain validates board ownership before calling these board-scoped operations.
 
