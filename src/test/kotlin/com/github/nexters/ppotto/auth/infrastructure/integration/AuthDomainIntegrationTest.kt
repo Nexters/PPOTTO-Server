@@ -1,12 +1,15 @@
 package com.github.nexters.ppotto.auth.infrastructure.integration
 
 import com.github.nexters.ppotto.auth.application.AuthService
+import com.github.nexters.ppotto.auth.application.AuthService.Companion.SIGNUP_TRANSACTION
 import com.github.nexters.ppotto.auth.application.port.AuthActiveUserPort
 import com.github.nexters.ppotto.auth.application.port.AuthTermsPort
 import com.github.nexters.ppotto.auth.application.port.AuthUserPort
 import com.github.nexters.ppotto.auth.application.port.OAuthClient
 import com.github.nexters.ppotto.auth.application.port.RefreshTokenStore
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
+import com.github.nexters.ppotto.auth.config.AuthTransactionConfig.Companion.SIGNUP_TRANSACTION_TIMEOUT_SECONDS
+import com.github.nexters.ppotto.auth.domain.AuthErrorCode
 import com.github.nexters.ppotto.auth.domain.LoginCommand
 import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.PendingTerm
@@ -18,6 +21,7 @@ import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPor
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -25,13 +29,17 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 import org.jooq.DSLContext
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.context.ApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.transaction.support.TransactionOperations
 import org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.Callable
@@ -47,11 +55,19 @@ class AuthDomainIntegrationTest(
     userRepository: UserRepository,
     boardRepository: BoardRepository,
     dslContext: DSLContext,
+    applicationContext: ApplicationContext,
 ) : IntegrationTest({
         Given("production auth 도메인 adapter가 연결된 상태에서") {
             Then("AuthService bean을 생성한다") {
                 authService.javaClass.simpleName
                     .isNotBlank() shouldBe true
+            }
+
+            Then("가입 구간은 공유 template과 분리된 전용 트랜잭션 bean으로 timeout을 제한한다") {
+                applicationContext
+                    .getBean(SIGNUP_TRANSACTION, TransactionTemplate::class.java)
+                    .also { it.timeout shouldBe SIGNUP_TRANSACTION_TIMEOUT_SECONDS }
+                    .shouldNotBeSameInstanceAs(applicationContext.getBean("transactionTemplate", TransactionTemplate::class.java))
             }
         }
 
@@ -146,7 +162,7 @@ class AuthDomainIntegrationTest(
         }
     })
 
-@Import(FailingTermsAuthTestConfig::class)
+@Import(SignupRollbackAuthTestConfig::class)
 class AuthSignupRollbackIntegrationTest(
     authService: AuthService,
     loginEffects: LoginEffects,
@@ -167,6 +183,36 @@ class AuthSignupRollbackIntegrationTest(
                     exception.message shouldBe "약관 조회 실패"
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
+                        .shouldBeNull()
+                    boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 0
+                    loginEffects.tokenIssueCount shouldBe 0
+                    loginEffects.tokenSaveCount shouldBe 0
+                }
+            }
+        }
+
+        Given("애플 최초 가입에서 authorization code 교환이 실패할 때") {
+            loginEffects.reset()
+            loginEffects.failTerms = false
+            val providerUserId = "apple-rollback-${UUID.randomUUID()}"
+
+            When("로그인하면") {
+                val exception =
+                    shouldThrow<UnauthorizedException> {
+                        authService.login(
+                            LoginCommand.Apple(
+                                identityToken = providerUserId,
+                                authorizationCode = "authorization-code",
+                                rawNonce = "raw-nonce",
+                            ),
+                        )
+                    }
+
+                Then("트랜잭션 안에서 만든 사용자와 기본 보드를 함께 롤백해 유령 애플 계정을 남기지 않는다") {
+                    exception.errorCode shouldBe AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED
+                    loginEffects.boardCountInTransaction shouldBe 1
+                    userRepository
+                        .findBySocialAccount(UserOAuthProvider.APPLE, providerUserId)
                         .shouldBeNull()
                     boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 0
                     loginEffects.tokenIssueCount shouldBe 0
@@ -272,21 +318,22 @@ open class FailingBoardCommandService(
 }
 
 @TestConfiguration(proxyBeanMethods = false)
-class FailingTermsAuthTestConfig {
+class SignupRollbackAuthTestConfig {
     @Bean
     fun loginEffects(): LoginEffects = LoginEffects()
 
     @Bean
     @Primary
-    fun failingTermsAuthService(
+    fun signupRollbackAuthService(
         authActiveUserPort: AuthActiveUserPort,
         authUserPort: AuthUserPort,
         authTermsPort: AuthTermsPort,
+        boardRepository: BoardRepository,
         loginEffects: LoginEffects,
-        signupTransaction: TransactionOperations,
+        @Qualifier(SIGNUP_TRANSACTION) signupTransaction: TransactionOperations,
     ): AuthService =
         AuthService(
-            oauthClients = listOf(TrackingOAuthClient(loginEffects)),
+            oauthClients = listOf(TrackingOAuthClient(loginEffects), ExchangeFailureAppleOAuthClient()),
             signupTransaction = signupTransaction,
             tokenProvider = TrackingTokenProvider(loginEffects),
             refreshTokenStore = TrackingRefreshTokenStore(loginEffects),
@@ -294,6 +341,7 @@ class FailingTermsAuthTestConfig {
                 AuthUserPort { profile ->
                     authUserPort.findOrCreate(profile).also {
                         loginEffects.userId = it.userId
+                        loginEffects.boardCountInTransaction = boardRepository.findByUserId(it.userId).size
                     }
                 },
             authTermsPort = TrackingTermsPort(loginEffects, authTermsPort),
@@ -310,6 +358,7 @@ class LoginEffects {
     var tokenSaveInTransaction: Boolean = false
     var tokenIssueCount: Int = 0
     var tokenSaveCount: Int = 0
+    var boardCountInTransaction: Int = 0
 
     fun reset() {
         userId = null
@@ -320,6 +369,7 @@ class LoginEffects {
         tokenSaveInTransaction = false
         tokenIssueCount = 0
         tokenSaveCount = 0
+        boardCountInTransaction = 0
     }
 }
 
@@ -336,6 +386,20 @@ private class TrackingOAuthClient(
             email = "rollback@example.com",
         )
     }
+
+    override fun revoke(providerRefreshToken: String) = Unit
+}
+
+private class ExchangeFailureAppleOAuthClient : OAuthClient {
+    override val provider = OAuthProvider.APPLE
+
+    override fun authenticate(command: LoginCommand): SocialProfile =
+        SocialProfile(
+            provider = provider,
+            providerUserId = (command as LoginCommand.Apple).identityToken,
+            email = "apple-rollback@example.com",
+            authorizationCodeExchangeFailed = true,
+        )
 
     override fun revoke(providerRefreshToken: String) = Unit
 }
