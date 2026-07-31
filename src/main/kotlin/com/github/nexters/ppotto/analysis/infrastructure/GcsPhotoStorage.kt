@@ -22,6 +22,18 @@ class GcsPhotoStorage(
 
     override fun issueUploadUrls(targets: List<PhotoUploadTarget>): List<String> = targets.map { signUrl(it.objectKey, it.contentType) }
 
+    override fun issueReadUrls(objectKeys: List<String>): List<String> =
+        objectKeys.map { objectKey ->
+            storage
+                .signUrl(
+                    BlobInfo.newBuilder(BlobId.of(gcsProperties.bucket, objectKey)).build(),
+                    gcsProperties.readSignedUrlExpirationMinutes,
+                    TimeUnit.MINUTES,
+                    Storage.SignUrlOption.httpMethod(HttpMethod.GET),
+                    Storage.SignUrlOption.withV4Signature(),
+                ).toString()
+        }
+
     override fun existingObjects(prefix: String): Map<String, BlobMeta> =
         storage
             .list(gcsProperties.bucket, Storage.BlobListOption.prefix(prefix))

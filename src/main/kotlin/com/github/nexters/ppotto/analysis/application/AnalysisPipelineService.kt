@@ -52,7 +52,7 @@ class AnalysisPipelineService(
                     text = classification.recap.text,
                     stickerTargetSubject = classification.stickerTargetSubject,
                     stickerSourcePhotoId = sourcePhoto.photoId,
-                    stickerUrl = stickerUrl,
+                    stickerImageKey = stickerUrl,
                 )
             }
 

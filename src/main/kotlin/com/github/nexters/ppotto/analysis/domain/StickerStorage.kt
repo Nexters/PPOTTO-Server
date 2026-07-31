@@ -5,4 +5,6 @@ interface StickerStorage {
         objectKey: String,
         bytes: ByteArray,
     ): String
+
+    fun issueReadUrls(objectKeys: List<String>): List<String>
 }

@@ -22,6 +22,16 @@ class GcsStickerStorage(
                 .setContentType("image/png")
                 .build()
         storage.create(blobInfo, bytes)
-        return "gs://${gcsProperties.bucket}/$objectKey"
+        return objectKey
     }
+
+    override fun issueReadUrls(objectKeys: List<String>): List<String> =
+        objectKeys.map { objectKey ->
+            storage
+                .signUrl(
+                    BlobInfo.newBuilder(BlobId.of(gcsProperties.bucket, objectKey)).build(),
+                    gcsProperties.readSignedUrlExpirationMinutes,
+                    java.util.concurrent.TimeUnit.MINUTES,
+                ).toString()
+        }
 }
