@@ -11,6 +11,7 @@ Application root package. One top-level subpackage = one domain.
 | `user/` | User account domain: social identity, encrypted provider token, withdrawal, and cleanup lifecycle (see `user/AGENTS.md`) |
 | `board/` | Board domain, 1:N with User: `domain`/`infrastructure` only so far (see `board/AGENTS.md`) |
 | `analysis/` | Analysis domain, owns `Analysis` and `Photo` (1:N with Board): full DDD-lite layout (see `analysis/AGENTS.md`) |
+| `auth/` | Social OAuth, service token, refresh rotation, and Bearer authentication domain (see `auth/AGENTS.md`) |
 
 ## Adding a new domain
 

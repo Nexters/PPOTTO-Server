@@ -40,11 +40,13 @@ dependencies {
     implementation(libs.jooq.kotlin)
     implementation(libs.kotlin.reflect)
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.data.redis)
     implementation(libs.spring.boot.starter.flyway)
     implementation(libs.spring.boot.starter.jooq)
     implementation(libs.spring.boot.starter.security)
     implementation(libs.spring.boot.starter.validation)
     implementation(libs.spring.boot.starter.webmvc)
+    implementation(libs.spring.security.oauth2.jose)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
 
     runtimeOnly(libs.postgresql)
