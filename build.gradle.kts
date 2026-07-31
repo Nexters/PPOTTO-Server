@@ -57,6 +57,7 @@ dependencies {
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.spring.boot.starter.flyway.test)
     testImplementation(libs.spring.boot.starter.webmvc.test)
+    testImplementation(libs.spring.security.test)
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)

@@ -6,7 +6,7 @@ Precompiled convention plugin for database tooling.
 
 | File | Description |
 |------|-------------|
-| `src/main/kotlin/ppotto.database.gradle.kts` | Applies Flyway + jOOQ codegen plugins. Loads DB credentials from OS env, then `.env`, then defaults. Configures KotlinGenerator (output: `src/generated/jooq`, package `com.github.nexters.ppotto.jooq`) |
+| `src/main/kotlin/ppotto.database.gradle.kts` | Applies Flyway + jOOQ codegen plugins. Loads DB credentials from OS env, then `.env`, then defaults. Configures KotlinGenerator (output: `src/generated/jooq`, package `com.github.nexters.ppotto.jooq`), maps `citext` to Kotlin `String`, and excludes migration/extension routines |
 | `build.gradle.kts` | Plugin dependencies, all versions resolved from the shared version catalog |
 | `settings.gradle.kts` | Imports `../gradle/libs.versions.toml` as `libs` |
 

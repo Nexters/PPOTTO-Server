@@ -86,6 +86,8 @@ photo/
 | `compose.production.yaml` | Production deployment overrides; mounts GCS credentials from `../secrets` |
 | `Caddyfile` | Shared automatic HTTPS and reverse proxy configuration |
 | `Dockerfile` | Layered JDK 25 image with a build-only mounted dummy GCS credential for AOT cache training |
+| `.env.template` | Local environment template, including a non-production provider-token encryption key |
+| `build.gradle.kts` | Single-module build, including Spring Security's authenticated MockMvc test support |
 
 ## Maintenance
 

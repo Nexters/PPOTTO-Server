@@ -6,6 +6,8 @@ package com.github.nexters.ppotto.jooq.tables
 
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
 import com.github.nexters.ppotto.jooq.Public
+import com.github.nexters.ppotto.jooq.enums.OauthProvider
+import com.github.nexters.ppotto.jooq.indexes.UK_USERS_PROVIDER_UID
 import com.github.nexters.ppotto.jooq.keys.USERS_PKEY
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 
@@ -13,10 +15,13 @@ import java.time.Instant
 import java.util.UUID
 
 import kotlin.collections.Collection
+import kotlin.collections.List
 
+import org.jooq.Check
 import org.jooq.Condition
 import org.jooq.Field
 import org.jooq.ForeignKey
+import org.jooq.Index
 import org.jooq.InverseForeignKey
 import org.jooq.Name
 import org.jooq.PlainSQL
@@ -88,6 +93,31 @@ open class Users(
      */
     val UPDATED_AT: TableField<UsersRecord, Instant?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
+    /**
+     * The column <code>public.users.provider</code>.
+     */
+    val PROVIDER: TableField<UsersRecord, OauthProvider?> = createField(DSL.name("provider"), SQLDataType.VARCHAR.asEnumDataType(OauthProvider::class.java), this, "")
+
+    /**
+     * The column <code>public.users.provider_user_id</code>.
+     */
+    val PROVIDER_USER_ID: TableField<UsersRecord, String?> = createField(DSL.name("provider_user_id"), SQLDataType.CLOB, this, "")
+
+    /**
+     * The column <code>public.users.provider_refresh_token</code>.
+     */
+    val PROVIDER_REFRESH_TOKEN: TableField<UsersRecord, String?> = createField(DSL.name("provider_refresh_token"), SQLDataType.CLOB, this, "")
+
+    /**
+     * The column <code>public.users.email</code>.
+     */
+    val EMAIL: TableField<UsersRecord, String?> = createField(DSL.name("email"), SQLDataType.VARCHAR, this, "")
+
+    /**
+     * The column <code>public.users.deleted_at</code>.
+     */
+    val DELETED_AT: TableField<UsersRecord, Instant?> = createField(DSL.name("deleted_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
+
     private constructor(alias: Name, aliased: Table<UsersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<UsersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<UsersRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
@@ -107,7 +137,11 @@ open class Users(
      */
     constructor(): this(DSL.name("users"), null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    override fun getIndexes(): List<Index> = listOf(UK_USERS_PROVIDER_UID)
     override fun getPrimaryKey(): UniqueKey<UsersRecord> = USERS_PKEY
+    override fun getChecks(): List<Check<UsersRecord>> = listOf(
+        Internal.createCheck(this, DSL.name("ck_users_social_identity_complete"), "(((provider IS NOT NULL) AND (provider_user_id IS NOT NULL) AND (email IS NOT NULL))) NOT VALID", true)
+    )
     override fun `as`(alias: String): Users = Users(DSL.name(alias), this)
     override fun `as`(alias: Name): Users = Users(alias, this)
     override fun `as`(alias: Table<*>): Users = Users(alias.qualifiedName, this)

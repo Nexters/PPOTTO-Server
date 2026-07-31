@@ -6,7 +6,7 @@ Version catalog and Gradle wrapper.
 
 | File | Description |
 |------|-------------|
-| `libs.versions.toml` | Single source of truth for all dependency and plugin versions. buildSrc imports the same catalog |
+| `libs.versions.toml` | Single source of truth for all dependency and plugin versions. buildSrc imports the same catalog; Spring Security's test helpers support authenticated MockMvc requests |
 | `wrapper/` | Gradle wrapper 9.6.1. Do not edit manually; use `gradle wrapper --gradle-version <v>` |
 
 ## Rules

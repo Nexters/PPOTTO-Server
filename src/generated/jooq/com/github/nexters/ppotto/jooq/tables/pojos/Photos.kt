@@ -20,7 +20,7 @@ data class Photos(
     val contentType: String,
     val uploadStatus: String? = null,
     val uploadedAt: Instant? = null,
-    val takenAt: Instant? = null,
+    val takenAt: Instant,
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null
 ): Serializable {
@@ -57,11 +57,7 @@ data class Photos(
         }
         else if (this.uploadedAt != o.uploadedAt)
             return false
-        if (this.takenAt == null) {
-            if (o.takenAt != null)
-                return false
-        }
-        else if (this.takenAt != o.takenAt)
+        if (this.takenAt != o.takenAt)
             return false
         if (this.createdAt == null) {
             if (o.createdAt != null)
@@ -87,7 +83,7 @@ data class Photos(
         result = prime * result + this.contentType.hashCode()
         result = prime * result + (if (this.uploadStatus == null) 0 else this.uploadStatus.hashCode())
         result = prime * result + (if (this.uploadedAt == null) 0 else this.uploadedAt.hashCode())
-        result = prime * result + (if (this.takenAt == null) 0 else this.takenAt.hashCode())
+        result = prime * result + this.takenAt.hashCode()
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         return result

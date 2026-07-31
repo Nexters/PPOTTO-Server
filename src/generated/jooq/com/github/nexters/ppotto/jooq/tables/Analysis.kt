@@ -7,7 +7,7 @@ package com.github.nexters.ppotto.jooq.tables
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_BOARD_ID
-import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_USER_ID
+import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_USER_CREATED
 import com.github.nexters.ppotto.jooq.keys.ANALYSIS_PKEY
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 
@@ -17,6 +17,7 @@ import java.util.UUID
 import kotlin.collections.Collection
 import kotlin.collections.List
 
+import org.jooq.Check
 import org.jooq.Condition
 import org.jooq.Field
 import org.jooq.ForeignKey
@@ -146,8 +147,11 @@ open class Analysis(
      */
     constructor(): this(DSL.name("analysis"), null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_ANALYSIS_BOARD_ID, IDX_ANALYSIS_USER_ID)
+    override fun getIndexes(): List<Index> = listOf(IDX_ANALYSIS_BOARD_ID, IDX_ANALYSIS_USER_CREATED)
     override fun getPrimaryKey(): UniqueKey<AnalysisRecord> = ANALYSIS_PKEY
+    override fun getChecks(): List<Check<AnalysisRecord>> = listOf(
+        Internal.createCheck(this, DSL.name("analysis_progress_check"), "(((progress >= 0) AND (progress <= 100)))", true)
+    )
     override fun `as`(alias: String): Analysis = Analysis(DSL.name(alias), this)
     override fun `as`(alias: Name): Analysis = Analysis(alias, this)
     override fun `as`(alias: Table<*>): Analysis = Analysis(alias.qualifiedName, this)
