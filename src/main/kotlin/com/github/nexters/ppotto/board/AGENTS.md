@@ -20,7 +20,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardAccessService.kt` | Port-free board existence, ownership, and `MANDATORY`-propagation row-locking ownership lookup boundary for cross-domain services |
 | `application/BoardDrawingCommandService.kt` | Board-owned drawing soft-deletion transaction surface |
 | `application/BoardWithdrawalService.kt` | Withdrawn-user board id lookup and atomic drawing/board hard deletion, including already soft-deleted rows |
-| `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port. Cross-domain ownership lookups belong to `BoardAccessService`, not here |
+| `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port. Cross-domain ownership lookups belong to `BoardAccessService`, not here. `getDetail` is intentionally non-transactional so the sticker port's signed-URL issuing never holds a DB connection |
 | `application/BoardLayoutService.kt` | Expression-bodied user-serialized sticker/drawing guard chain and atomic changed-layout persistence |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
 | `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
@@ -49,5 +49,6 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 - Cross-domain board ownership checks use `BoardAccessService`, which must stay independent of external ports.
 - Board code never reads analysis or sticker repositories directly.
 - Withdrawal hard deletion is the only path that ignores `deleted_at`; every other query stays soft-delete aware. It runs after the sticker domain has removed its rows, because `stickers.board_id` is a real FK.
+- `getDetail` must not be wrapped in `@Transactional`: the sticker query port signs V4 read URLs (local RSA, CPU-bound) and a surrounding transaction would pin a pooled connection through that work on the board-entry hot path. Ownership still resolves first through `BoardAccessService.getOwnedById` in its own read-only transaction, and READ_COMMITTED per-statement snapshots make a wrapping transaction add no consistency.
 
 Update this file when layers are added to this domain.

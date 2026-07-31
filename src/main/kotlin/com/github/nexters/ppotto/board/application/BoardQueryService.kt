@@ -20,7 +20,6 @@ class BoardQueryService(
     @Transactional(readOnly = true)
     fun list(userId: UUID): List<BoardSummary> = boardRepository.findByUserId(userId).map(BoardSummary::from)
 
-    @Transactional(readOnly = true)
     fun getDetail(
         boardId: UUID,
         userId: UUID,
