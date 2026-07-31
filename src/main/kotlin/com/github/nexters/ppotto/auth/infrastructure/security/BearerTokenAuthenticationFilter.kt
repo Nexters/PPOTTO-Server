@@ -17,7 +17,10 @@ class BearerTokenAuthenticationFilter(
     private val tokenProvider: TokenProvider,
     private val authenticationEntryPoint: AuthAuthenticationEntryPoint,
 ) : OncePerRequestFilter() {
-    override fun shouldNotFilter(request: HttpServletRequest): Boolean = request.servletPath in PUBLIC_PATHS
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean =
+        request.servletPath.let { path ->
+            path in PUBLIC_PATHS || DOCUMENT_PATH_PREFIXES.any(path::startsWith)
+        }
 
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -75,6 +78,11 @@ class BearerTokenAuthenticationFilter(
                 "/actuator/health",
                 "/actuator/health/liveness",
                 "/actuator/health/readiness",
+            )
+        val DOCUMENT_PATH_PREFIXES =
+            setOf(
+                "/swagger-ui",
+                "/v3/api-docs",
             )
     }
 }
