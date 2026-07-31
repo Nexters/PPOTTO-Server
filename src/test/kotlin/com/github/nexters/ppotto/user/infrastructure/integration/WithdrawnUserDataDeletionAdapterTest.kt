@@ -109,6 +109,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                                     AnalysisStickerResult(
                                         type = StickerType.IMAGE,
                                         title = "분석 결과",
+                                        summary = "웃기고 귀여우면 일단 주워요",
                                         sourcePhotoId = photo.id,
                                         imageKey = STICKER_IMAGE_KEY,
                                         textContent = null,
@@ -124,7 +125,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                                                 badgeRotation = 0.0,
                                             ),
                                         photoIds = listOf(photo.id),
-                                        comments = listOf(RecapCommentCreation("리캡 코멘트", false, null, null)),
+                                        comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
                                     ),
                                 ),
                         ),

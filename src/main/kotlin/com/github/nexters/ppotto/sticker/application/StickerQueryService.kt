@@ -29,7 +29,7 @@ class StickerQueryService(
         getOwned(userId, stickerId).let { sticker ->
             stickerRecapRepository
                 .findComments(stickerId)
-                .map { RecapCommentResult(it.id, it.content, it.isFloat, it.posX, it.posY) }
+                .map { RecapCommentResult(it.id, it.content, it.posX, it.posY) }
                 .let { comments ->
                     stickerRecapRepository
                         .findPhotoIds(stickerId)
@@ -41,7 +41,7 @@ class StickerQueryService(
                                 .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id })
                                 .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }
                         }.orEmpty()
-                        .let { StickerRecapResult(toResults(listOf(sticker)).single(), comments, it) }
+                        .let { StickerRecapResult(toResults(listOf(sticker)).single(), sticker.summary, comments, it) }
                 }
         }
 

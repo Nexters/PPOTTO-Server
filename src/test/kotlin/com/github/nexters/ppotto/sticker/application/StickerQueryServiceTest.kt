@@ -47,6 +47,7 @@ class StickerQueryServiceTest(
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "리캡",
+                        summary = "웃기고 귀여우면 일단 주워요",
                         sourcePhotoId = photos.first().id,
                         imageKey = "stickers/recap.png",
                         textContent = null,
@@ -56,7 +57,10 @@ class StickerQueryServiceTest(
             stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
             stickerRecapRepository.saveComments(
                 sticker.id,
-                listOf(RecapCommentCreation("코멘트", true, 3.0, 4.0)),
+                listOf(
+                    RecapCommentCreation("말풍선", 3.0, 4.0),
+                    RecapCommentCreation("키워드", null, null),
+                ),
             )
 
             When("보드 스티커를 조회하면") {
@@ -73,9 +77,19 @@ class StickerQueryServiceTest(
             When("리캡 상세를 조회하면") {
                 val result = service.getRecap(board.userId, sticker.id)
 
-                Then("코멘트와 촬영 시각순 사진을 반환한다") {
-                    result.comments.map { it.content } shouldContainExactly listOf("코멘트")
+                Then("한 줄 요약과 코멘트와 촬영 시각순 사진을 반환한다") {
+                    result.summary shouldBe "웃기고 귀여우면 일단 주워요"
+                    result.comments.map { it.content } shouldContainExactly listOf("말풍선", "키워드")
                     result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
+                }
+
+                Then("말풍선은 좌표를 갖고 키워드 칩은 좌표가 null이다") {
+                    val (bubble, chip) = result.comments
+
+                    bubble.posX shouldBe 3.0
+                    bubble.posY shouldBe 4.0
+                    chip.posX shouldBe null
+                    chip.posY shouldBe null
                 }
             }
 

@@ -19,6 +19,38 @@ import kotlin.reflect.KFunction
 
 private val STICKER_ID = UUID.fromString("01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
 
+private fun floatingComment(
+    id: String,
+    content: String,
+    posX: Double,
+    posY: Double,
+) = RecapCommentResponse(UUID.fromString(id), content, posX, posY)
+
+private fun keywordComment(
+    id: String,
+    content: String,
+) = RecapCommentResponse(UUID.fromString(id), content, null, null)
+
+private val FLOATING_COMMENTS =
+    listOf(
+        floatingComment("01983f2d-1a2b-7c3d-8e4f-5a6b7c8d9e0f", "야옹~", -96.0, -150.0),
+        floatingComment("01983f2d-2b3c-7d4e-9f5a-6b7c8d9e0f1a", "또 주웠네!", -104.0, 62.0),
+        floatingComment("01983f2d-3c4d-7e5f-a6b7-8c9d0e1f2a3b", "복슬복슬", 98.0, 18.0),
+    )
+
+private val KEYWORD_COMMENTS =
+    listOf(
+        keywordComment("01983f2d-4d5e-7f6a-b7c8-9d0e1f2a3b4c", "냥집사"),
+        keywordComment("01983f2d-5e6f-7a7b-c8d9-0e1f2a3b4c5d", "웃긴 동물들"),
+        keywordComment("01983f2d-6f7a-7b8c-d9e0-1f2a3b4c5d6e", "당신은 밈 수집가!"),
+        keywordComment("01983f2d-7a8b-7c9d-e0f1-2a3b4c5d6e7f", "복슬복슬"),
+        keywordComment("01983f2d-8b9c-7d0e-f1a2-3b4c5d6e7f8a", "저장한 동물 짤 중 62%가 고양이다냥!"),
+        keywordComment("01983f2d-9c0d-7e1f-a2b3-4c5d6e7f8a9b", "감도 높은 취향"),
+        keywordComment("01983f2d-a0d1-7f2a-b3c4-5d6e7f8a9b0c", "밈잘알"),
+        keywordComment("01983f2d-b1e2-7a3b-c4d5-6e7f8a9b0c1d", "밈 고르는 안목 보소"),
+        keywordComment("01983f2d-c2f3-7b4c-d5e6-7f8a9b0c1d2e", "근데 소랑 돌고래가 같이 나는 사진은 뭐임? 🤔"),
+    )
+
 private val RECAP_DETAIL_RESPONSE =
     ApiExample(
         name = "이미지 스티커 리캡",
@@ -42,23 +74,8 @@ private val RECAP_DETAIL_RESPONSE =
                             badgeOffsetY = 96.0,
                             badgeRotation = 0.0,
                         ),
-                    comments =
-                        listOf(
-                            RecapCommentResponse(
-                                id = UUID.fromString("01983f2d-1a2b-7c3d-8e4f-5a6b7c8d9e0f"),
-                                content = "웃기고 귀여우면 일단 주워요",
-                                isFloat = true,
-                                posX = 0.0,
-                                posY = -140.0,
-                            ),
-                            RecapCommentResponse(
-                                id = UUID.fromString("01983f2d-3c4d-7e5f-a6b7-8c9d0e1f2a3b"),
-                                content = "또 고양이가 주워왔네요",
-                                isFloat = false,
-                                posX = null,
-                                posY = null,
-                            ),
-                        ),
+                    summary = "웃기고 귀여우면 일단 주워요",
+                    comments = FLOATING_COMMENTS + KEYWORD_COMMENTS,
                     photos =
                         listOf(
                             RecapPhotoResponse(

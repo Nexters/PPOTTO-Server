@@ -37,6 +37,7 @@ class AnalysisResultSaveService(
                             StickerCreation(
                                 type = result.type,
                                 title = result.title,
+                                summary = result.summary,
                                 sourcePhotoId = result.sourcePhotoId,
                                 imageKey = result.imageKey,
                                 textContent = result.textContent,

@@ -10,6 +10,7 @@ class Sticker(
     val boardId: UUID,
     val type: StickerType,
     title: String,
+    val summary: String,
     viewedAt: Instant?,
     val sourcePhotoId: UUID?,
     val imageKey: String?,
@@ -52,6 +53,7 @@ class Sticker(
     init {
         title
             .also(::validateTitle)
+            .also { validateSummary(summary) }
             .let { validateContent(type, sourcePhotoId, imageKey, textContent) }
     }
 
@@ -87,10 +89,17 @@ class Sticker(
 
     companion object {
         const val MAX_TITLE_LENGTH = 15
+        const val MAX_SUMMARY_LENGTH = 100
 
         fun validateTitle(title: String) {
             title
                 .takeUnless { it.isBlank() || it.length > MAX_TITLE_LENGTH }
+                ?: throw InvalidInputException()
+        }
+
+        fun validateSummary(summary: String) {
+            summary
+                .takeUnless { it.isBlank() || it.length > MAX_SUMMARY_LENGTH }
                 ?: throw InvalidInputException()
         }
 
@@ -112,6 +121,7 @@ class Sticker(
 data class StickerCreation(
     val type: StickerType,
     val title: String,
+    val summary: String,
     val sourcePhotoId: UUID?,
     val imageKey: String?,
     val textContent: String?,
@@ -120,6 +130,7 @@ data class StickerCreation(
     init {
         title
             .also(Sticker::validateTitle)
+            .also { Sticker.validateSummary(summary) }
             .let { Sticker.validateContent(type, sourcePhotoId, imageKey, textContent) }
     }
 }

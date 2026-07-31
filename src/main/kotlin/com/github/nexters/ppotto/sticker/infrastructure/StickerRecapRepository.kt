@@ -42,12 +42,11 @@ class StickerRecapRepository(
                         RECAP_COMMENTS,
                         RECAP_COMMENTS.STICKER_ID,
                         RECAP_COMMENTS.CONTENT,
-                        RECAP_COMMENTS.IS_FLOAT,
                         RECAP_COMMENTS.POS_X,
                         RECAP_COMMENTS.POS_Y,
                     ).valuesOfRows(
                         comments.map {
-                            row(stickerId, it.content, it.isFloat, it.posX, it.posY)
+                            row(stickerId, it.content, it.posX, it.posY)
                         },
                     ).returning()
                     .fetch()
@@ -92,7 +91,6 @@ class StickerRecapRepository(
             id = id!!,
             stickerId = stickerId,
             content = content,
-            isFloat = isFloat!!,
             posX = posX,
             posY = posY,
             createdAt = createdAt!!,

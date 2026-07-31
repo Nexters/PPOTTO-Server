@@ -15,6 +15,7 @@ data class SaveAnalysisResultCommand(
 data class AnalysisStickerResult(
     val type: StickerType,
     val title: String,
+    val summary: String,
     val sourcePhotoId: UUID?,
     val imageKey: String?,
     val textContent: String?,

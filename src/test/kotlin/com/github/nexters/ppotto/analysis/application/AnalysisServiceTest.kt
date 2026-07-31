@@ -325,13 +325,10 @@ class AnalysisServiceTest(
                         sticker.imageKey shouldBe
                             "stickers/${created.analysisId}/0-$sourcePhotoId.png"
 
+                        sticker.summary shouldBe "바다와 산책이 함께 남은 여행 리캡입니다."
+
                         stickerRecapRepository.findPhotoIds(sticker.id) shouldContainExactly themePhotoIds
-                        stickerRecapRepository.findComments(sticker.id).single().let {
-                            it.content shouldBe "바다와 산책이 함께 남은 여행 리캡입니다."
-                            it.isFloat shouldBe false
-                            it.posX shouldBe null
-                            it.posY shouldBe null
-                        }
+                        stickerRecapRepository.findComments(sticker.id).shouldBeEmpty()
                     }
                 }
             }

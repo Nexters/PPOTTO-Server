@@ -135,6 +135,7 @@ private fun textCreation() =
     StickerCreation(
         type = StickerType.TEXT,
         title = "원래 제목",
+        summary = "한 줄 요약",
         sourcePhotoId = null,
         imageKey = null,
         textContent = "텍스트",

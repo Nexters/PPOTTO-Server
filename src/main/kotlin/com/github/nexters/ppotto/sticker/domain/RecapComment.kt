@@ -8,7 +8,6 @@ data class RecapComment(
     val id: UUID,
     val stickerId: UUID,
     val content: String,
-    val isFloat: Boolean,
     val posX: Double?,
     val posY: Double?,
     val createdAt: Instant,
@@ -17,14 +16,13 @@ data class RecapComment(
 
 data class RecapCommentCreation(
     val content: String,
-    val isFloat: Boolean,
     val posX: Double?,
     val posY: Double?,
 ) {
     init {
         content
             .takeUnless(String::isBlank)
-            ?.takeIf { !isFloat || (posX != null && posY != null) }
+            ?.takeIf { (posX == null) == (posY == null) }
             ?: throw InvalidInputException()
     }
 }
