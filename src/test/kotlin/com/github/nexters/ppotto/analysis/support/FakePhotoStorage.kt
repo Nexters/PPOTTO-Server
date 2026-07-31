@@ -14,6 +14,8 @@ class FakePhotoStorage : PhotoStorage {
             "https://fake-signed-url/${it.objectKey}"
         }
 
+    override fun issueReadUrls(objectKeys: List<String>): List<String> = objectKeys.map { "https://fake-read-url/$it" }
+
     override fun existingObjects(prefix: String): Map<String, BlobMeta> = objects.filterKeys { it.startsWith(prefix) }
 
     fun markMissing(objectKey: String) {
