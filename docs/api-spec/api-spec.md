@@ -9,7 +9,8 @@
 
 - API 버전은 `X-API-Version` 요청 헤더로 지정한다. 헤더가 없으면 서버 기본값 `1`로 처리한다.
 - URL 경로에는 `/api` 프리픽스와 버전 세그먼트를 붙이지 않는다.
-- 인증 API를 제외한 보호 API는 `Authorization: Bearer {accessToken}` 헤더가 필요하다.
+- 보호 API는 `Authorization: Bearer {accessToken}` 헤더가 필요하다.
+- `GET /terms`는 인증 없이 호출할 수 있고 유효한 access token을 보내면 사용자 동의 상태를 함께 반환한다.
 - JSON 요청과 응답은 `application/json`을 사용한다.
 - UUID는 스펙 예시 기준 uuidv7 형식을 사용한다.
 
@@ -56,7 +57,7 @@
 | auth | POST | /auth/logout | 로그아웃 | 200 | 401 | Y |
 | users | GET | /users/me | 내 정보 조회 (설정 화면) | 200 | 401 | Y |
 | users | DELETE | /users/me | 회원 탈퇴 | 200 | 401 | Y |
-| terms | GET | /terms | 현재 유효 약관 목록 | 200 | 401 | Y |
+| terms | GET | /terms | 현재 유효 약관 목록 | 200 | 401 | 선택 |
 | terms | POST | /terms/agreements | 약관 동의 제출 | 200 | 400, 401 | Y |
 | boards | GET | /boards | 내 보드 목록 (드롭다운) | 200 | 401 | Y |
 | boards | POST | /boards | 보드 생성 | 200 | 400, 401 | Y |
@@ -462,7 +463,8 @@ Request example:
 - Summary: 현재 유효 약관 목록
 
 #### Request Spec
-- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+- 인증: 불필요
+- 선택 헤더: `Authorization: Bearer {accessToken}`. 유효한 토큰을 보내면 사용자별 동의 상태를 반환합니다.
 
 - Body: 없음
 
@@ -500,7 +502,7 @@ Request example:
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
-| 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
+| 401 | COMMON-004 | 인증이 필요합니다. | 선택적으로 전달한 accessToken이 만료되었거나 유효하지 않음 |
 
 401 COMMON-004 example:
 ```json
@@ -517,7 +519,10 @@ Request example:
 ```
 
 #### Notes
-- code별로 현재 유효한 버전을 1건씩 반환합니다. agreed가 false면 재동의 대상입니다. 설정 화면의 약관 링크에도 contentUrl을 사용합니다.
+- code별로 현재 유효한 버전을 1건씩 반환합니다.
+- 인증하지 않은 요청은 모든 약관의 `agreed`를 `false`로 반환합니다.
+- 인증한 요청에서 `agreed`가 `false`면 재동의 대상입니다.
+- 설정 화면의 약관 링크에도 `contentUrl`을 사용합니다.
 
 ### POST /terms/agreements
 

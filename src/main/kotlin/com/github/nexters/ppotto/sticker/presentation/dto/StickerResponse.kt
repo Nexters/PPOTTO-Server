@@ -2,8 +2,10 @@ package com.github.nexters.ppotto.sticker.presentation.dto
 
 import com.github.nexters.ppotto.sticker.application.StickerItemResult
 import com.github.nexters.ppotto.sticker.domain.StickerType
+import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 
+@Schema(description = "스티커 내용과 보드 배치")
 data class StickerResponse(
     val id: UUID,
     val title: String,

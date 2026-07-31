@@ -21,12 +21,11 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardLayoutService.kt` | User-serialized sticker/drawing ownership validation and atomic changed-layout persistence |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
 | `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
-| `presentation/BoardController.kt` | Authenticated v1 CRUD endpoints at `/boards` |
-| `presentation/BoardLayoutController.kt` | Authenticated v1 `PATCH /boards/{boardId}/layout` endpoint |
-| `presentation/AuthenticatedBoardUser.kt` | Nullable UUID principal guard shared by board controllers |
-| `presentation/dto/BoardRequests.kt` | Create and rename validation DTOs |
-| `presentation/dto/BoardResponses.kt` | Board list/detail, sticker, and drawing response DTOs |
-| `presentation/dto/BoardLayoutRequest.kt` | Nested sticker and drawing layout request DTOs |
+| `presentation/BoardController.kt` | Swagger-documented v1 CRUD endpoints at `/boards` with required UUID user injection |
+| `presentation/BoardLayoutController.kt` | Swagger-documented v1 `PATCH /boards/{boardId}/layout` endpoint with required UUID user injection |
+| `presentation/dto/BoardRequests.kt` | Swagger-described create and rename validation DTOs |
+| `presentation/dto/BoardResponses.kt` | Swagger-described board list/detail, sticker, and drawing response DTOs |
+| `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
 
 ## Rules
 

@@ -13,8 +13,8 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `application/port/WithdrawnUserDataDeletionPort.kt` | Idempotent cross-domain contract for deleting all DB and object-storage data owned by a withdrawn user |
 | `application/UserService.kt` | Transaction boundary for atomic social lookup/create, active account lookup, and session-revoking withdrawal |
 | `application/WithdrawnUserCleanupService.kt` | Bounded cleanup batch; hard-deletes a user only after the cross-domain deletion port succeeds |
-| `presentation/UserController.kt` | Version 1 `GET /users/me` and `DELETE /users/me` endpoints |
-| `presentation/dto/UserResponse.kt` | Public account response without social-provider identifiers or tokens |
+| `presentation/UserController.kt` | Swagger-documented version 1 `GET /users/me` and `DELETE /users/me` endpoints with required UUID user injection |
+| `presentation/dto/UserResponse.kt` | Swagger-described public account response without social-provider identifiers or tokens |
 | `infrastructure/UserRepository.kt` | DSLContext persistence for active account lookup, profile refresh, withdrawal, and hard deletion |
 | `infrastructure/SocialUserRepository.kt` | Atomic active social-account creation using the partial unique index as the conflict target |
 | `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration for provider refresh-token encryption |
@@ -28,7 +28,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 - Active account lookup always includes `deleted_at IS NULL`. Withdrawal anonymizes email and clears the provider refresh token before setting `deleted_at`.
 - Concurrent social signup uses the active-identity partial unique index as the conflict target, then reloads the winner instead of surfacing a unique violation.
 - Pre-social legacy rows remain nullable under the unvalidated completeness check and are excluded from application lookup until a real-identity backfill is completed. New social users always write provider, provider user id, and email together.
-- Controllers consume the auth domain's UUID principal through nullable `@AuthenticationPrincipal`; absence returns `COMMON-004`.
+- Controllers consume the UUID principal through the shared `@AuthenticatedUser` contract; absence returns `COMMON-004` before controller execution.
 - Missing auth adapters fail closed: provider-account or session revoke aborts withdrawal.
 - Withdrawal revokes the service refresh-token session inside the user transaction.
 - The cleanup caller supplies the retention cutoff. A scheduler must not invent a retention period; wire the approved policy and an idempotent cross-domain deletion adapter during integration.

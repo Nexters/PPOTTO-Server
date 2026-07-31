@@ -16,9 +16,10 @@ class TermsService(
     private val termAgreementRepository: TermAgreementRepository,
 ) {
     @Transactional(readOnly = true)
-    fun findCurrentTerms(userId: UUID): List<TermResult> {
+    fun findCurrentTerms(userId: UUID?): List<TermResult> {
         val currentTerms = termRepository.findCurrentEffective(Instant.now())
-        return currentTerms.withAgreementStatus(userId)
+        return userId?.let { currentTerms.withAgreementStatus(it) }
+            ?: currentTerms.map { TermResult.from(it, false) }
     }
 
     @Transactional(readOnly = true)

@@ -12,10 +12,12 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
 | `analysis/` | Authenticated ownership, upload verification, active-analysis integration, persistence, and API contract tests |
 | `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, session-revoking withdrawal, cleanup, and controller tests |
-| `auth/` | OAuth HTTP timeout/config validation, deterministic JWT tamper detection, active-user refresh validation, cross-domain 가입 rollback, and Bearer security tests |
+| `auth/` | OAuth HTTP timeout/config validation, deterministic JWT tamper detection, active-user refresh validation, cross-domain 가입 rollback, and Bearer security tests including optional-auth terms behavior |
 | `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, idempotent agreement, and schema-valid user fixture tests |
 | `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration with schema-valid users |
-| `terms/presentation/TermsControllerTest.kt` | Versioned terms API contract, principal, error response, and schema-valid user fixture integration tests |
+| `global/security/CurrentUserArgumentResolverTest.kt` | Required and optional UUID principal resolution contract tests |
+| `global/openapi/OpenApiDocumentationTest.kt` | Generated OpenAPI metadata, version header, schema description, error response, and authentication mode tests |
+| `terms/presentation/TermsControllerTest.kt` | Public anonymous current-term lookup, authenticated agreement state, protected agreement submission, and schema-valid user fixture integration tests |
 | `terms/support/TermsTestSecurityConfig.kt` | Test-only UUID authentication principal filter for MockMvc |
 | `board/domain/DrawingTest.kt` | Drawing scope and sticker ownership invariant unit tests |
 | `board/application/BoardCommandServiceTest.kt` | Board count, deletion guards, and cascade command integration tests |
@@ -27,7 +29,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/infrastructure/BoardRepositoryTest.kt` | Board persistence and active lookup integration tests |
 | `board/infrastructure/DrawingRepositoryTest.kt` | Drawing JSONB upsert and soft-delete integration tests |
 | `board/infrastructure/BoardExternalPortFallbackConfigurationTest.kt` | Standalone missing-adapter fail-closed contract tests |
-| `board/presentation/BoardControllerTest.kt` | Principal guard and CRUD response integration tests |
+| `board/presentation/BoardControllerTest.kt` | Authenticated CRUD response and ownership integration tests |
 | `board/support/BoardTestConfig.kt` | Primary fake analysis/sticker application ports for board integration tests |
 | `board/support/BoardTestFixtures.kt` | UUIDv7 and sticker response fixtures |
 | `sticker/` | Sticker aggregate unit tests plus repository, service, and API integration tests |

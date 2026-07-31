@@ -28,12 +28,6 @@ class AnalysisService(
     private val photoStorage: PhotoStorage,
     private val transactionTemplate: TransactionTemplate,
 ) {
-    // signed URL 발급 최적화 필요 (트래픽 증가 전에 우선순위)
-    // 현재: analysis/photos를 트랜잭션 내에서 저장하고, 같은 트랜잭션 내에서 signed URL을 발급한다.
-    // 이유: API 응답에 analysisId와 모든 uploads를 함께 반환해야 하며 (원자성), 실패 복구용 reissue API가 아직 없다.
-    // 리스크: signing 지연(credential 방식 의존) 동안 DB 커넥션을 90~100개 photo만큼 점유 → 트래픽 증가 시 병목 가능성
-    // 장기 방향: (1) analysis/photos 커밋 → (2) signed URL 발급 → (3) 실패 시 POST /analysis/{id}/reissue로 복구
-    // (reissue API 구현 및 analysis-status 추가 후 전환 추천)
     @Transactional
     fun createAnalysis(
         userId: UUID,

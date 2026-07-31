@@ -6,8 +6,10 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
+import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 
+@Schema(description = "보드 요약")
 data class BoardResponse(
     val id: UUID,
     val name: String,
@@ -19,6 +21,7 @@ data class BoardResponse(
     }
 }
 
+@Schema(description = "보드와 배치된 스티커 및 그림")
 data class BoardDetailResponse(
     val id: UUID,
     val name: String,
@@ -36,6 +39,7 @@ data class BoardDetailResponse(
     }
 }
 
+@Schema(description = "보드에 배치된 스티커")
 data class StickerResponse(
     val id: UUID,
     val title: String,
@@ -73,6 +77,7 @@ data class StickerResponse(
     }
 }
 
+@Schema(description = "보드 또는 스티커 위의 그림")
 data class DrawingResponse(
     val id: UUID,
     val scope: DrawingScope,

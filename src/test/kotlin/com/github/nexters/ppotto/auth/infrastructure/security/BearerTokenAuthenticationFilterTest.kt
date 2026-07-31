@@ -83,4 +83,38 @@ class BearerTokenAuthenticationFilterTest :
                 }
             }
         }
+
+        Given("access token 없이 공개 약관 경로를 호출할 때") {
+            val request = MockHttpServletRequest("GET", "/terms").apply { servletPath = "/terms" }
+            val response = MockHttpServletResponse()
+            var invoked = false
+
+            When("인증 필터를 통과하면") {
+                filter.doFilter(request, response) { _, _ -> invoked = true }
+
+                Then("익명 요청으로 다음 필터에 진행한다") {
+                    invoked shouldBe true
+                }
+            }
+        }
+
+        Given("유효하지 않은 access token으로 공개 약관 경로를 호출할 때") {
+            val request =
+                MockHttpServletRequest("GET", "/terms").apply {
+                    servletPath = "/terms"
+                    addHeader("Authorization", "Bearer invalid-token")
+                }
+            val response = MockHttpServletResponse()
+            var invoked = false
+
+            When("인증 필터를 통과하면") {
+                filter.doFilter(request, response) { _, _ -> invoked = true }
+
+                Then("COMMON-004 ApiResponse와 401을 반환한다") {
+                    invoked shouldBe false
+                    response.status shouldBe 401
+                    response.contentAsString.contains("\"code\":\"COMMON-004\"") shouldBe true
+                }
+            }
+        }
     })

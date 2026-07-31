@@ -13,7 +13,7 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | `infrastructure/BoardStickerAdapter.kt` | Explicit board query/command port mappings backed by sticker application services |
 | `application/` | Transactional analysis-result save plus sticker query and command services |
 | `application/port/` | Cross-domain contracts for analysis/photo ownership plus recap photo metadata and signed URLs |
-| `presentation/` | Version 1 sticker/recap HTTP API and DTOs |
+| `presentation/` | Swagger-documented version 1 sticker/recap HTTP API and schemas with required UUID user injection |
 
 ## Rules
 
@@ -24,7 +24,7 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 - `AnalysisPhotoOwnershipPort` must have exactly one adapter before analysis-result saving is enabled. The adapter must match `userId`, `boardId`, `analysisId`, and every source/recap photo id; absence, duplication, or mismatch fails before the first sticker write. The analysis/photo owner provides the production adapter after those application services are available.
 - An analysis owns at most six stickers for its lifetime, including soft-deleted stickers. Repeating or concurrently retrying analysis-result saving keeps and returns the first committed result instead of appending another result.
 - `RecapPhotoQueryPort` and `StickerImageQueryPort` are integration contracts. The photo/GCS owners must provide exactly one adapter for media-bearing recap queries; the sticker application fails fast if an adapter omits requested media.
-- Controllers receive the authenticated UUID through `@AuthenticationPrincipal userId: UUID?` and return `COMMON-004` when it is absent.
+- Controllers receive the authenticated UUID through `@AuthenticatedUser`; the shared resolver returns `COMMON-004` before controller execution when it is absent.
 - `getByBoardId`, `validateOwnedByBoard`, `updateLayouts`, and `deleteAllByBoardId` are the board-domain integration surface. The board domain validates board ownership before calling these board-scoped operations.
 
 Update this file when layers or integration contracts change.

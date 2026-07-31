@@ -12,7 +12,7 @@
 | `infrastructure/integration/` | user 가입·활성 상태·기본 보드·약관·세션 연결과 provider 계정 해지 adapter |
 | `infrastructure/token/` | HS256 access JWT와 opaque refresh token 발급, Redis rotation adapter |
 | `infrastructure/security/` | Bearer filter, UUID principal, 401/403 ApiResponse writer |
-| `presentation/` | `/auth/login`, `/auth/refresh`, `/auth/logout` version 1 API |
+| `presentation/` | Documented `/auth/login`, `/auth/refresh`, `/auth/logout` version 1 API; logout receives the shared required UUID user argument |
 | `config/` | Validated Kakao, Apple, OAuth HTTP timeout, JWT properties와 adapter/application bean wiring |
 
 ## Rules

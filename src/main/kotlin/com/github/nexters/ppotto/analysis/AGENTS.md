@@ -21,8 +21,8 @@ Analysis domain. Owns both `Analysis` and `Photo` — a photo only ever exists a
 | `application/AnalysisService.kt` | Authenticated create and upload-verification use cases; enforces board and analysis ownership before persistence or storage access |
 | `application/AnalysisQueryService.kt` | Read-only active-analysis application boundary used by cross-domain adapters |
 | `application/AnalysisResults.kt` | Result types returned by the service (kept separate from the presentation dto): `AnalysisCreationResult`, `PhotoUploadUrlItem`, `PhotoUploadItemRequest` (`contentType: String` — required, validated by service), `UploadVerificationResult` |
-| `presentation/AnalysisController.kt` | Authenticated `POST /analysis` and `POST /analysis/{analysisId}/start` v1 endpoints |
-| `presentation/dto/` | `CreateAnalysisRequest` (`photos` list with spec-mandated photo count validation deferred to service-level check via `AnalysisService.createAnalysis`, returning 400 `ANALYSIS-001` if out of range), `PhotoUploadItem` (`contentType: String` with `@field:NotBlank` — required, non-empty), `CreateAnalysisResponse`, `StartUploadResponse` |
+| `presentation/AnalysisController.kt` | Swagger-documented `POST /analysis` and `POST /analysis/{analysisId}/start` v1 endpoints with required UUID user injection |
+| `presentation/dto/` | Swagger-described request/response schemas. `CreateAnalysisRequest` defers the 90–100 photo count policy to `AnalysisService`; `PhotoUploadItem.contentType` is required and non-empty |
 
 ## Rules
 

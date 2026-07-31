@@ -144,10 +144,27 @@ class TermsControllerTest(
 
         Given("인증 principal이 없는 상태에서") {
             When("약관을 조회하면") {
-                Then("COMMON-004 오류를 반환한다") {
+                val code = "PUBLIC-API-${UUID.randomUUID()}"
+                val term = saveTerm(code, true)
+
+                Then("동의하지 않은 공개 약관 목록을 반환한다") {
                     mockMvc
                         .perform(get("/terms"))
-                        .andExpect(status().isUnauthorized)
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data[?(@.id == '${term.id}')].code").value(hasItem(code)))
+                        .andExpect(jsonPath("$.data[?(@.id == '${term.id}')].agreed").value(hasItem(false)))
+                }
+            }
+
+            When("약관 동의를 제출하면") {
+                Then("COMMON-004 오류를 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/terms/agreements")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""{"termIds":[]}"""),
+                        ).andExpect(status().isUnauthorized)
                         .andExpect(jsonPath("$.error.code").value("COMMON-004"))
                 }
             }

@@ -1,8 +1,10 @@
 package com.github.nexters.ppotto.terms.presentation.dto
 
 import com.github.nexters.ppotto.terms.application.TermResult
+import io.swagger.v3.oas.annotations.media.Schema
 import java.util.UUID
 
+@Schema(description = "현재 유효한 약관과 사용자 동의 상태")
 data class TermResponse(
     val id: UUID,
     val code: String,

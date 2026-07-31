@@ -5,7 +5,6 @@ import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
 import com.github.nexters.ppotto.board.support.BoardTestConfig
 import com.github.nexters.ppotto.global.error.NotFoundException
-import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -36,16 +35,6 @@ class BoardControllerTest(
                         .get(user.id, created.id)
                         .data!!
                         .name shouldBe "여름 휴가"
-                }
-            }
-        }
-
-        Given("인증 사용자가 없는 요청이") {
-            When("보드 목록을 조회하면") {
-                Then("COMMON-004 오류가 발생한다") {
-                    shouldThrow<UnauthorizedException> {
-                        boardController.list(null)
-                    }
                 }
             }
         }
