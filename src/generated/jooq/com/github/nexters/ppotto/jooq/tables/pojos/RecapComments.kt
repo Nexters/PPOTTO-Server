@@ -17,7 +17,6 @@ data class RecapComments(
     val id: UUID? = null,
     val stickerId: UUID,
     val content: String,
-    val isFloat: Boolean? = null,
     val posX: Double? = null,
     val posY: Double? = null,
     val createdAt: Instant? = null,
@@ -41,12 +40,6 @@ data class RecapComments(
         if (this.stickerId != o.stickerId)
             return false
         if (this.content != o.content)
-            return false
-        if (this.isFloat == null) {
-            if (o.isFloat != null)
-                return false
-        }
-        else if (this.isFloat != o.isFloat)
             return false
         if (this.posX == null) {
             if (o.posX != null)
@@ -81,7 +74,6 @@ data class RecapComments(
         result = prime * result + (if (this.id == null) 0 else this.id.hashCode())
         result = prime * result + this.stickerId.hashCode()
         result = prime * result + this.content.hashCode()
-        result = prime * result + (if (this.isFloat == null) 0 else this.isFloat.hashCode())
         result = prime * result + (if (this.posX == null) 0 else this.posX.hashCode())
         result = prime * result + (if (this.posY == null) 0 else this.posY.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
@@ -95,7 +87,6 @@ data class RecapComments(
         sb.append(id)
         sb.append(", ").append(stickerId)
         sb.append(", ").append(content)
-        sb.append(", ").append(isFloat)
         sb.append(", ").append(posX)
         sb.append(", ").append(posY)
         sb.append(", ").append(createdAt)

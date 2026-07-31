@@ -33,7 +33,8 @@ data class Stickers(
     val badgeRotation: Double? = null,
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null,
-    val deletedAt: Instant? = null
+    val deletedAt: Instant? = null,
+    val summary: String
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -140,6 +141,8 @@ data class Stickers(
         }
         else if (this.deletedAt != o.deletedAt)
             return false
+        if (this.summary != o.summary)
+            return false
         return true
     }
 
@@ -166,6 +169,7 @@ data class Stickers(
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         result = prime * result + (if (this.deletedAt == null) 0 else this.deletedAt.hashCode())
+        result = prime * result + this.summary.hashCode()
         return result
     }
 
@@ -192,6 +196,7 @@ data class Stickers(
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
         sb.append(", ").append(deletedAt)
+        sb.append(", ").append(summary)
 
         sb.append(")")
         return sb.toString()
