@@ -163,8 +163,8 @@ class UserJourneyIntegrationTest(
                     mockMvc
                         .perform(get("/stickers/$stickerId").authorized(accessToken))
                         .andExpect(status().isOk)
-                        .andExpect(jsonPath("$.data.comments.length()").value(1))
-                        .andExpect(jsonPath("$.data.comments[0].content").value("테스트 리캡 문구입니다."))
+                        .andExpect(jsonPath("$.data.summary").value("테스트 리캡 문구입니다."))
+                        .andExpect(jsonPath("$.data.comments.length()").value(0))
                         .andExpect(jsonPath("$.data.photos.length()").value(PHOTO_COUNT))
                         .andReturn()
                         .response

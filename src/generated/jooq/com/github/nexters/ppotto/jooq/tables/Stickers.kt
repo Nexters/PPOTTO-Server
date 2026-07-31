@@ -190,6 +190,11 @@ open class Stickers(
      */
     val DELETED_AT: TableField<StickersRecord, Instant?> = createField(DSL.name("deleted_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
 
+    /**
+     * The column <code>public.stickers.summary</code>.
+     */
+    val SUMMARY: TableField<StickersRecord, String?> = createField(DSL.name("summary"), SQLDataType.CLOB.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<StickersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)

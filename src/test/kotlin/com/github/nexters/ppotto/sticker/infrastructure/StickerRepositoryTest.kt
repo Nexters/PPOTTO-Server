@@ -46,6 +46,7 @@ class StickerRepositoryTest(
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "여름 사진",
+                        summary = "여름 내내 바다만 찍었어요",
                         sourcePhotoId = photos.first().id,
                         imageKey = "stickers/summer.png",
                         textContent = null,
@@ -56,8 +57,8 @@ class StickerRepositoryTest(
             stickerRecapRepository.saveComments(
                 saved.id,
                 listOf(
-                    RecapCommentCreation("첫 코멘트", false, null, null),
-                    RecapCommentCreation("말풍선", true, 1.0, 2.0),
+                    RecapCommentCreation("키워드 칩", null, null),
+                    RecapCommentCreation("말풍선", 1.0, 2.0),
                 ),
             )
 
@@ -68,8 +69,9 @@ class StickerRepositoryTest(
 
                 Then("저장한 aggregate 데이터를 반환한다") {
                     sticker?.title shouldBe "여름 사진"
+                    sticker?.summary shouldBe "여름 내내 바다만 찍었어요"
                     photoIds shouldContainExactly photos.map { it.id }
-                    comments.map { it.content } shouldContainExactly listOf("첫 코멘트", "말풍선")
+                    comments.map { it.content } shouldContainExactly listOf("키워드 칩", "말풍선")
                 }
             }
 
@@ -140,6 +142,7 @@ private fun textCreation(title: String) =
     StickerCreation(
         type = StickerType.TEXT,
         title = title,
+        summary = "한 줄 요약",
         sourcePhotoId = null,
         imageKey = null,
         textContent = "텍스트",

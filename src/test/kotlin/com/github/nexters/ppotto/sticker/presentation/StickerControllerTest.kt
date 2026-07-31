@@ -61,6 +61,7 @@ class StickerControllerTest(
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "원래 제목",
+                        summary = "웃기고 귀여우면 일단 주워요",
                         sourcePhotoId = photo.id,
                         imageKey = "stickers/controller.png",
                         textContent = null,
@@ -70,19 +71,28 @@ class StickerControllerTest(
             stickerRecapRepository.savePhotos(sticker.id, listOf(photo.id))
             stickerRecapRepository.saveComments(
                 sticker.id,
-                listOf(RecapCommentCreation("코멘트", false, null, null)),
+                listOf(
+                    RecapCommentCreation("말풍선", 3.0, 4.0),
+                    RecapCommentCreation("키워드", null, null),
+                ),
             )
 
             When("리캡 상세를 요청하면") {
                 authenticate(board.userId)
 
-                Then("스티커와 코멘트와 사진을 응답한다") {
+                Then("스티커와 한 줄 요약과 코멘트와 사진을 응답한다") {
                     mockMvc
                         .perform(get("/stickers/${sticker.id}"))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
-                        .andExpect(jsonPath("$.data.comments[0].content").value("코멘트"))
+                        .andExpect(jsonPath("$.data.summary").value("웃기고 귀여우면 일단 주워요"))
+                        .andExpect(jsonPath("$.data.comments[0].content").value("말풍선"))
+                        .andExpect(jsonPath("$.data.comments[0].posX").value(3.0))
+                        .andExpect(jsonPath("$.data.comments[0].posY").value(4.0))
+                        .andExpect(jsonPath("$.data.comments[1].content").value("키워드"))
+                        .andExpect(jsonPath("$.data.comments[1].posX").doesNotExist())
+                        .andExpect(jsonPath("$.data.comments[1].posY").doesNotExist())
                         .andExpect(jsonPath("$.data.photos[0].id").value(photo.id.toString()))
                         .andExpect(
                             jsonPath("$.data.photos[0].imageUrl")

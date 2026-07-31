@@ -31,27 +31,21 @@ open class RecapCommentsRecord private constructor() : UpdatableRecordImpl<Recap
         set(value): Unit = set(2, value)
         get(): String = get(2) as String
 
-    @Suppress("INAPPLICABLE_JVM_NAME")
-    @set:JvmName("setIsFloat")
-    open var isFloat: Boolean?
-        set(value): Unit = set(3, value)
-        get(): Boolean? = get(3) as Boolean?
-
     open var posX: Double?
+        set(value): Unit = set(3, value)
+        get(): Double? = get(3) as Double?
+
+    open var posY: Double?
         set(value): Unit = set(4, value)
         get(): Double? = get(4) as Double?
 
-    open var posY: Double?
-        set(value): Unit = set(5, value)
-        get(): Double? = get(5) as Double?
-
     open var createdAt: Instant?
-        set(value): Unit = set(6, value)
-        get(): Instant? = get(6) as Instant?
+        set(value): Unit = set(5, value)
+        get(): Instant? = get(5) as Instant?
 
     open var updatedAt: Instant?
-        set(value): Unit = set(7, value)
-        get(): Instant? = get(7) as Instant?
+        set(value): Unit = set(6, value)
+        get(): Instant? = get(6) as Instant?
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -62,11 +56,10 @@ open class RecapCommentsRecord private constructor() : UpdatableRecordImpl<Recap
     /**
      * Create a detached, initialised RecapCommentsRecord
      */
-    constructor(id: UUID? = null, stickerId: UUID, content: String, isFloat: Boolean? = null, posX: Double? = null, posY: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, stickerId: UUID, content: String, posX: Double? = null, posY: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.stickerId = stickerId
         this.content = content
-        this.isFloat = isFloat
         this.posX = posX
         this.posY = posY
         this.createdAt = createdAt
@@ -82,7 +75,6 @@ open class RecapCommentsRecord private constructor() : UpdatableRecordImpl<Recap
             this.id = value.id
             this.stickerId = value.stickerId
             this.content = value.content
-            this.isFloat = value.isFloat
             this.posX = value.posX
             this.posY = value.posY
             this.createdAt = value.createdAt

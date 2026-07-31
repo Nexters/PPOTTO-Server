@@ -99,6 +99,10 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         set(value): Unit = set(19, value)
         get(): Instant? = get(19) as Instant?
 
+    open var summary: String
+        set(value): Unit = set(20, value)
+        get(): String = get(20) as String
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -108,7 +112,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
     /**
      * Create a detached, initialised StickersRecord
      */
-    constructor(id: UUID? = null, analysisId: UUID, boardId: UUID, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: UUID? = null, imageKey: String? = null, textContent: String? = null, posX: Double, posY: Double, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, analysisId: UUID, boardId: UUID, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: UUID? = null, imageKey: String? = null, textContent: String? = null, posX: Double, posY: Double, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId
@@ -129,6 +133,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         this.deletedAt = deletedAt
+        this.summary = summary
         resetTouchedOnNotNull()
     }
 
@@ -157,6 +162,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
             this.deletedAt = value.deletedAt
+            this.summary = value.summary
             resetTouchedOnNotNull()
         }
     }

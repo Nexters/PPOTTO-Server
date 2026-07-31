@@ -5,7 +5,6 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
-import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.slf4j.LoggerFactory
@@ -77,12 +76,13 @@ class AnalysisPipelineEventListener(
         return AnalysisStickerResult(
             type = StickerType.IMAGE,
             title = badge,
+            summary = text,
             sourcePhotoId = stickerSourcePhotoId,
             imageKey = imageKey,
             textContent = null,
             layout = stickerLayout(themeIndex),
             photoIds = categorizedPhotoIds,
-            comments = recapComments(),
+            comments = emptyList(),
         )
     }
 
@@ -96,16 +96,6 @@ class AnalysisPipelineEventListener(
             badgeOffsetX = 0.0,
             badgeOffsetY = 0.0,
             badgeRotation = 0.0,
-        )
-
-    private fun ThemeAnalysisResult.recapComments() =
-        listOf(
-            RecapCommentCreation(
-                content = text,
-                isFloat = false,
-                posX = null,
-                posY = null,
-            ),
         )
 
     companion object {

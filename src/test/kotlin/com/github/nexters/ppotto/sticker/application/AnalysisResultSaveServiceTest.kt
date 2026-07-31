@@ -66,7 +66,7 @@ class AnalysisResultSaveServiceTest(
                     stickerRepository.findAllByBoardId(board.id).map { it.id } shouldContainExactly result.stickerIds
                     stickerRecapRepository.findPhotoIds(result.stickerIds.first()) shouldContainExactly listOf(photo.id)
                     stickerRecapRepository.findComments(result.stickerIds.first()).map { it.content } shouldContainExactly
-                        listOf("리캡 코멘트")
+                        listOf("말풍선", "키워드 칩")
                 }
             }
         }
@@ -286,18 +286,24 @@ private fun imageResult(photoId: UUID) =
     AnalysisStickerResult(
         type = StickerType.IMAGE,
         title = "이미지 스티커",
+        summary = "웃기고 귀여우면 일단 주워요",
         sourcePhotoId = photoId,
         imageKey = "stickers/image.png",
         textContent = null,
         layout = analysisLayout(),
         photoIds = listOf(photoId),
-        comments = listOf(RecapCommentCreation("리캡 코멘트", false, null, null)),
+        comments =
+            listOf(
+                RecapCommentCreation("말풍선", 3.0, 4.0),
+                RecapCommentCreation("키워드 칩", null, null),
+            ),
     )
 
 private fun textResult() =
     AnalysisStickerResult(
         type = StickerType.TEXT,
         title = "텍스트 스티커",
+        summary = "한 줄 요약",
         sourcePhotoId = null,
         imageKey = null,
         textContent = "텍스트",

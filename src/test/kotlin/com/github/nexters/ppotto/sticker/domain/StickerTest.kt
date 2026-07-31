@@ -56,6 +56,7 @@ class StickerTest :
                         StickerCreation(
                             type = StickerType.IMAGE,
                             title = "이미지",
+                            summary = "한 줄 요약",
                             sourcePhotoId = UUID.randomUUID(),
                             imageKey = null,
                             textContent = null,
@@ -71,6 +72,39 @@ class StickerTest :
                         StickerCreation(
                             type = StickerType.TEXT,
                             title = "가".repeat(16),
+                            summary = "한 줄 요약",
+                            sourcePhotoId = null,
+                            imageKey = null,
+                            textContent = "텍스트",
+                            layout = layout(),
+                        )
+                    }
+                }
+            }
+
+            When("100자를 초과한 한 줄 요약으로 생성하면") {
+                Then("잘못된 입력 예외를 던진다") {
+                    shouldThrow<InvalidInputException> {
+                        StickerCreation(
+                            type = StickerType.TEXT,
+                            title = "텍스트",
+                            summary = "가".repeat(101),
+                            sourcePhotoId = null,
+                            imageKey = null,
+                            textContent = "텍스트",
+                            layout = layout(),
+                        )
+                    }
+                }
+            }
+
+            When("공백뿐인 한 줄 요약으로 생성하면") {
+                Then("잘못된 입력 예외를 던진다") {
+                    shouldThrow<InvalidInputException> {
+                        StickerCreation(
+                            type = StickerType.TEXT,
+                            title = "텍스트",
+                            summary = " ",
                             sourcePhotoId = null,
                             imageKey = null,
                             textContent = "텍스트",
@@ -89,6 +123,7 @@ private fun imageSticker() =
         boardId = UUID.randomUUID(),
         type = StickerType.IMAGE,
         title = "이미지",
+        summary = "웃기고 귀여우면 일단 주워요",
         viewedAt = null,
         sourcePhotoId = UUID.randomUUID(),
         imageKey = "stickers/image.png",

@@ -96,11 +96,6 @@ open class RecapComments(
     val CONTENT: TableField<RecapCommentsRecord, String?> = createField(DSL.name("content"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.recap_comments.is_float</code>.
-     */
-    val IS_FLOAT: TableField<RecapCommentsRecord, Boolean?> = createField(DSL.name("is_float"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "")
-
-    /**
      * The column <code>public.recap_comments.pos_x</code>.
      */
     val POS_X: TableField<RecapCommentsRecord, Double?> = createField(DSL.name("pos_x"), SQLDataType.DOUBLE, this, "")
@@ -162,7 +157,7 @@ open class RecapComments(
     fun stickers(): StickersPath = stickers
     val stickers: StickersPath by lazy { StickersPath(this, RECAP_COMMENTS__FK_RECAP_COMMENTS_STICKER, null) }
     override fun getChecks(): List<Check<RecapCommentsRecord>> = listOf(
-        Internal.createCheck(this, DSL.name("chk_recap_comment_float_position"), "(((NOT is_float) OR ((pos_x IS NOT NULL) AND (pos_y IS NOT NULL))))", true)
+        Internal.createCheck(this, DSL.name("chk_recap_comment_position"), "(((pos_x IS NULL) = (pos_y IS NULL)))", true)
     )
     override fun `as`(alias: String): RecapComments = RecapComments(DSL.name(alias), this)
     override fun `as`(alias: Name): RecapComments = RecapComments(alias, this)

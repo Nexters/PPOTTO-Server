@@ -23,6 +23,7 @@ data class StickerItemResult(
 
 data class StickerRecapResult(
     val sticker: StickerItemResult,
+    val summary: String,
     val comments: List<RecapCommentResult>,
     val photos: List<RecapPhotoResult>,
 )
@@ -30,7 +31,6 @@ data class StickerRecapResult(
 data class RecapCommentResult(
     val id: UUID,
     val content: String,
-    val isFloat: Boolean,
     val posX: Double?,
     val posY: Double?,
 )

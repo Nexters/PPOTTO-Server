@@ -142,7 +142,7 @@ class BoardStickerIntegrationTest(
             drawingRepository.upsertAll(listOf(stickerDrawing, boardDrawing))
             stickerRecapRepository.saveComments(
                 sticker.id,
-                listOf(RecapCommentCreation("리캡", false, null, null)),
+                listOf(RecapCommentCreation("리캡", null, null)),
             )
 
             When("스티커를 삭제하면") {
@@ -170,7 +170,7 @@ class BoardStickerIntegrationTest(
             drawingRepository.upsertAll(listOf(stickerDrawing(board.id, sticker.id), boardDrawing(board.id)))
             stickerRecapRepository.saveComments(
                 sticker.id,
-                listOf(RecapCommentCreation("리캡", false, null, null)),
+                listOf(RecapCommentCreation("리캡", null, null)),
             )
 
             When("보드를 삭제하면") {
@@ -208,6 +208,7 @@ private fun textStickerCreation() =
     StickerCreation(
         type = StickerType.TEXT,
         title = "원래 제목",
+        summary = "한 줄 요약",
         sourcePhotoId = null,
         imageKey = null,
         textContent = "텍스트",

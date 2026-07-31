@@ -175,6 +175,7 @@ private fun stickerResult(
 ) = AnalysisStickerResult(
     type = StickerType.IMAGE,
     title = "분석 결과",
+    summary = "웃기고 귀여우면 일단 주워요",
     sourcePhotoId = sourcePhotoId,
     imageKey = imageKey,
     textContent = null,
@@ -190,5 +191,5 @@ private fun stickerResult(
             badgeRotation = 0.0,
         ),
     photoIds = photoIds,
-    comments = listOf(RecapCommentCreation("리캡 코멘트", false, null, null)),
+    comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
 )
