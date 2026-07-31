@@ -32,6 +32,11 @@ photo/
 - Reads: QueryService may project directly to dto with jOOQ. Writes go through the domain model.
 - Never expose jOOQ-generated POJOs/Records in API responses. Always map to dto.
 
+## Spec-Driven Development
+
+- `docs/api-spec/api-spec.md` (API contracts) and `docs/erd/schema.dbml` (DB design) are the source of truth. Check them before implementing an endpoint or table.
+- If the design changes during implementation, update the relevant `docs/` file in the same change. See `docs/AGENTS.md` for the full rules.
+
 ## Branch & PR Rules
 
 - Branch: off `dev`, named `feat/이슈번호-기능간단설명` (e.g. `feat/1-user-board-image-entity`).
@@ -70,6 +75,7 @@ photo/
 | Directory | Description |
 |-----------|---------|
 | `src/` | Sources (see `src/AGENTS.md`) |
+| `docs/` | Spec-driven development documents, including API contracts and ERD design (see `docs/AGENTS.md`) |
 | `gradle/` | Version catalog + wrapper (see `gradle/AGENTS.md`) |
 | `buildSrc/` | DB build convention plugin (see `buildSrc/AGENTS.md`) |
 | `.github/` | CI workflow + templates (see `.github/AGENTS.md`) |
