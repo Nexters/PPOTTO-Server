@@ -7,7 +7,7 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | Directory | Description |
 |-----------|---------|
 | `domain/` | Pure Kotlin `Sticker` aggregate with fluent state transitions and validation, creation values, `StickerPhoto`, `RecapComment`, type, and error code |
-| `domain/Sticker.kt` | Aggregate root. `title` (제목 뱃지, max 15) and `summary` (리캡 한 줄 요약, max 100) are separate concepts validated by `validateTitle` / `validateSummary` |
+| `domain/Sticker.kt` | Aggregate root. `title` (title badge, max 15) and `summary` (recap one-line summary, max 100) are separate concepts validated by `validateTitle` / `validateSummary` |
 | `domain/RecapComment.kt` | Recap comment model and creation value. `posX`/`posY` must both be null or both set; that pair is the only thing distinguishing a floating speech bubble from a bottom keyword chip |
 | `infrastructure/StickerRepository.kt` | Fluent jOOQ persistence for sticker roots, analysis-result locking, ownership validation, root lookups, and board-scoped deletion targets including soft-deleted rows |
 | `infrastructure/StickerCommandRepository.kt` | Field-specific atomic updates that never overwrite `deleted_at` from stale aggregate state, plus withdrawal hard deletion by id |
@@ -20,9 +20,9 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | `application/port/` | Cross-domain contracts for analysis/photo ownership plus recap photo metadata and signed URLs |
 | `presentation/StickerApi.kt` | Version 1 sticker and recap mapping and Swagger contract |
 | `presentation/StickerController.kt` | Fluent Sticker API implementation with request binding and required UUID user injection |
-| `presentation/StickerApiExamples.kt` | `ApiExampleProvider` 구현. 리캡 상세(한 줄 요약, 말풍선 3개, 키워드 칩 9개), 제목 수정 요청/응답, `STICKER-001` 실패 예시를 실제 DTO 인스턴스로 정의합니다 |
+| `presentation/StickerApiExamples.kt` | `ApiExampleProvider` implementation. Defines the recap detail (one-line summary, 3 speech bubbles, 9 keyword chips), title update request/response, and `STICKER-001` failure examples as real DTO instances |
 | `presentation/dto/` | Swagger-described sticker and recap request and response schemas |
-| `presentation/StickerNotFoundApiResponse.kt` | 네 개 스티커 엔드포인트가 공유하는 404 `STICKER-001` 합성 어노테이션 |
+| `presentation/StickerNotFoundApiResponse.kt` | Composed annotation for the 404 `STICKER-001` response shared by the four sticker endpoints |
 
 ## Rules
 

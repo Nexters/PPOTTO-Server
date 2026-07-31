@@ -17,7 +17,7 @@ Spring configuration beans.
 
 ## Rules
 
-- 새 `TransactionOperations` bean을 추가하면 Boot의 공유 `transactionTemplate` 자동 설정이 back off합니다. `TransactionConfig.transactionTemplate`을 지우지 말고, 도메인 전용 bean은 이름 fallback 대신 `@Qualifier`로 주입해 모호성을 없앱니다.
+- Adding a new `TransactionOperations` bean makes Boot's shared `transactionTemplate` auto-configuration back off. Do not delete `TransactionConfig.transactionTemplate`, and inject domain-specific beans with `@Qualifier` instead of relying on name fallback so there is no ambiguity.
 - New `XxxProperties` classes follow the CorsProperties pattern: data class, constructor binding, `@Validated` + jakarta constraints. Separate annotated constructor property groups with one blank line.
 - The JWT chain stays at `API_CHAIN_ORDER`; keep swagger Basic auth ahead of it and the fallback chain last.
 - The API chain and the permit-all fallback chain both match any request, so their profiles must stay mutually exclusive (`@Profile("!test")` / `@Profile("test")`). If both are ever active, Spring Security aborts context refresh with `UnreachableFilterChainException` — which no test catches, because tests only run the `test` profile.
