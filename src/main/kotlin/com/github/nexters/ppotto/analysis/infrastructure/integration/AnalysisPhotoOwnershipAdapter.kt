@@ -4,9 +4,11 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipPort
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipScope
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
 @Component
+@Profile("!test")
 class AnalysisPhotoOwnershipAdapter(
     private val analysisRepository: AnalysisRepository,
     private val photoRepository: PhotoRepository,
@@ -17,7 +19,11 @@ class AnalysisPhotoOwnershipAdapter(
 
         if (scope.photoIds.isEmpty()) return true
 
-        val photoIds = photoRepository.findAllByAnalysisId(scope.analysisId).map { it.id }.toSet()
+        val photoIds =
+            photoRepository
+                .findAllByAnalysisId(scope.analysisId)
+                .map { it.id }
+                .toSet()
         return scope.photoIds.all { it in photoIds }
     }
 }

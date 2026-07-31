@@ -3,7 +3,7 @@ package com.github.nexters.ppotto.analysis.application
 import java.util.UUID
 
 data class AnalysisPipelineResult(
-    val recapId: UUID,
+    val analysisId: UUID,
     val themes: List<ThemeAnalysisResult>,
 )
 

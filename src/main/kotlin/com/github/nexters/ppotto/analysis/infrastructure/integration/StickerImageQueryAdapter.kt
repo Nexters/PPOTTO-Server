@@ -2,9 +2,11 @@ package com.github.nexters.ppotto.analysis.infrastructure.integration
 
 import com.github.nexters.ppotto.analysis.domain.StickerStorage
 import com.github.nexters.ppotto.sticker.application.port.StickerImageQueryPort
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
 @Component
+@Profile("!test")
 class StickerImageQueryAdapter(
     private val stickerStorage: StickerStorage,
 ) : StickerImageQueryPort {
@@ -17,6 +19,5 @@ class StickerImageQueryAdapter(
                     .let { stickerStorage.issueReadUrls(it) }
                     .zip(keys)
                     .associate { (url, key) -> key to url }
-            }
-            .orEmpty()
+            }.orEmpty()
 }

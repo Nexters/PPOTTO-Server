@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
+import com.github.nexters.ppotto.analysis.support.FakeGeminiClassifier
 import com.github.nexters.ppotto.analysis.support.FakePhotoStorage
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.ConflictException
@@ -35,6 +36,7 @@ class AnalysisServiceTest(
     private val analysisRepository: AnalysisRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorage: FakePhotoStorage,
+    private val geminiClassifier: FakeGeminiClassifier,
     private val dslContext: DSLContext,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
@@ -42,6 +44,11 @@ class AnalysisServiceTest(
         val photoObjectKeys = PhotoObjectKeys
 
         beforeSpec {
+            photoStorage.clear()
+        }
+
+        afterEach {
+            geminiClassifier.failureToThrow = null
             photoStorage.clear()
         }
 
@@ -235,7 +242,34 @@ class AnalysisServiceTest(
                     val analysis = analysisRepository.findById(created.analysisId)
                     analysis.shouldNotBeNull()
                     analysis.status shouldBe AnalysisStatus.COMPLETED
+                    analysis.progress shouldBe 100
                     analysis.startedAt.shouldNotBeNull()
+                }
+            }
+        }
+
+        Given("분석 파이프라인이 실패하는 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+            val photos =
+                (0 until 90).map { i ->
+                    PhotoUploadItemRequest(
+                        Instant.now().plusSeconds(i.toLong()),
+                        "image/jpeg",
+                    )
+                }
+            val created = analysisService.createAnalysis(board.userId, board.id, photos)
+            geminiClassifier.failureToThrow = IllegalStateException("AI 분석 실패")
+
+            When("업로드 완료를 통보하면") {
+                analysisService.startUpload(board.userId, created.analysisId)
+
+                Then("analysis의 status는 FAILED로 바뀌고 시작 진행률을 유지한다") {
+                    val analysis = analysisRepository.findById(created.analysisId)
+
+                    analysis.shouldNotBeNull()
+                    analysis.status shouldBe AnalysisStatus.FAILED
+                    analysis.progress shouldBe 10
+                    analysis.failedReason shouldBe "AI 분석 실패"
                 }
             }
         }

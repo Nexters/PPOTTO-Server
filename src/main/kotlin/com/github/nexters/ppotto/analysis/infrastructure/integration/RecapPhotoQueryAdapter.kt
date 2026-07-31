@@ -1,14 +1,16 @@
 package com.github.nexters.ppotto.analysis.infrastructure.integration
 
+import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
-import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoMetadata
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import java.util.UUID
 
 @Component
+@Profile("!test")
 class RecapPhotoQueryAdapter(
     private val photoRepository: PhotoRepository,
     private val photoStorage: PhotoStorage,
@@ -21,9 +23,10 @@ class RecapPhotoQueryAdapter(
 
         val allUrls = mutableMapOf<UUID, String>()
         photosByAnalysisId.forEach { (analysisId, analysisPhotos) ->
-            val objectKeys = analysisPhotos.map { photo ->
-                PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)
-            }
+            val objectKeys =
+                analysisPhotos.map { photo ->
+                    PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)
+                }
             val urls = photoStorage.issueReadUrls(objectKeys)
             analysisPhotos.zip(urls).forEach { (photo, url) ->
                 allUrls[photo.id] = url

@@ -53,17 +53,15 @@ class PhotoRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun findAllByIds(ids: Collection<UUID>): List<Photo> =
-        ids
-            .takeIf { it.isNotEmpty() }
-            ?.let {
-                dslContext
-                    .selectFrom(PHOTOS)
-                    .where(PHOTOS.ID.`in`(it))
-                    .fetch()
-                    .map { record -> record.toDomain() }
-            }
-            .orEmpty()
+    fun findAllByIds(ids: Collection<UUID>): List<Photo> {
+        if (ids.isEmpty()) return emptyList()
+
+        return dslContext
+            .selectFrom(PHOTOS)
+            .where(PHOTOS.ID.`in`(ids))
+            .fetch()
+            .map { record -> record.toDomain() }
+    }
 
     fun markCompletedBatch(updates: Map<UUID, Instant>): List<Photo> {
         if (updates.isEmpty()) return emptyList()

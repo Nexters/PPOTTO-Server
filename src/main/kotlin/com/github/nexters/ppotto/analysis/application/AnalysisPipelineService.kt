@@ -18,14 +18,16 @@ class AnalysisPipelineService(
     fun run(
         analysisId: UUID,
         photos: List<PhotoRef>,
+        onProgress: (Int) -> Unit = {},
     ): AnalysisPipelineResult {
         val photoRefById = photos.associateBy { it.photoId }
         val classifications = geminiClassifier.classifyAndRecap(photos)
+        onProgress(CLASSIFICATION_COMPLETED_PROGRESS)
 
         val themes =
             classifications.mapIndexed { themeIndex, classification ->
                 val sourcePhoto = photoRefById.getValue(classification.stickerSourcePhotoId)
-                val stickerUrl =
+                val stickerImageKey =
                     runCatching {
                         val bytes =
                             stickerGenerator.generate(
@@ -45,6 +47,8 @@ class AnalysisPipelineService(
                         )
                     }.getOrNull()
 
+                onProgress(stickerProgress(themeIndex + 1, classifications.size))
+
                 ThemeAnalysisResult(
                     theme = classification.theme,
                     categorizedPhotoIds = classification.categorizedPhotoIds,
@@ -52,14 +56,28 @@ class AnalysisPipelineService(
                     text = classification.recap.text,
                     stickerTargetSubject = classification.stickerTargetSubject,
                     stickerSourcePhotoId = sourcePhoto.photoId,
-                    stickerImageKey = stickerUrl,
+                    stickerImageKey = stickerImageKey,
                 )
             }
 
+        onProgress(STICKER_COMPLETED_PROGRESS)
         return AnalysisPipelineResult(analysisId, themes)
     }
 
+    private fun stickerProgress(
+        completedCount: Int,
+        totalCount: Int,
+    ): Int {
+        if (totalCount <= 0) return STICKER_COMPLETED_PROGRESS
+
+        val progressRange = STICKER_COMPLETED_PROGRESS - CLASSIFICATION_COMPLETED_PROGRESS
+        return CLASSIFICATION_COMPLETED_PROGRESS + (progressRange * completedCount / totalCount)
+    }
+
     companion object {
+        const val CLASSIFICATION_COMPLETED_PROGRESS = 45
+        const val STICKER_COMPLETED_PROGRESS = 90
+
         private val log = LoggerFactory.getLogger(AnalysisPipelineService::class.java)
     }
 }
