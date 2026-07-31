@@ -97,6 +97,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                         board.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val stickerId =
                 analysisResultSaveService
                     .save(

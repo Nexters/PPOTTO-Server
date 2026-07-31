@@ -12,9 +12,13 @@ class PhotoQueryService(
     private val photoRepository: PhotoRepository,
     private val photoStorage: PhotoStorage,
 ) {
-    fun getReadablePhotos(photoIds: Collection<UUID>): List<PhotoReadResult> =
+    fun getReadablePhotos(
+        analysisId: UUID,
+        boardId: UUID,
+        photoIds: Collection<UUID>,
+    ): List<PhotoReadResult> =
         photoRepository
-            .findAllByIds(photoIds)
+            .findCompletedByIds(analysisId, boardId, photoIds)
             .map { it to it.objectKey() }
             .let(::signReadUrls)
 

@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -40,6 +41,7 @@ class StickerQueryServiceTest(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
                     ),
                 )
+            photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
             val sticker =
                 stickerRepository.save(
                     analysis.id,
@@ -102,6 +104,41 @@ class StickerQueryServiceTest(
                             "https://storage.googleapis.com/ppotto-test-bucket/photos/${analysis.id}/${it.id}.jpg?",
                         )
                         it.imageUrl.shouldContain("X-Goog-Expires=3600")
+                    }
+                }
+            }
+        }
+
+        Given("업로드가 완료되지 않은 사진이 리캡에 연결된 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val pendingPhoto =
+                photoRepository
+                    .saveAll(
+                        analysis.id,
+                        board.id,
+                        listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
+                    ).single()
+            val sticker =
+                stickerRepository.save(
+                    analysis.id,
+                    board.id,
+                    StickerCreation(
+                        type = StickerType.IMAGE,
+                        title = "리캡",
+                        summary = "웃기고 귀여우면 일단 주워요",
+                        sourcePhotoId = pendingPhoto.id,
+                        imageKey = "stickers/recap.png",
+                        textContent = null,
+                        layout = queryLayout(),
+                    ),
+                )
+            stickerRecapRepository.savePhotos(sticker.id, listOf(pendingPhoto.id))
+
+            When("리캡 상세를 조회하면") {
+                Then("완료되지 않은 사진을 제외하고 계약 불일치로 실패한다") {
+                    shouldThrow<IllegalStateException> {
+                        service.getRecap(board.userId, sticker.id)
                     }
                 }
             }

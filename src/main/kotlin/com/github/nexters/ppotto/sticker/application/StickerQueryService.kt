@@ -36,7 +36,7 @@ class StickerQueryService(
                         .takeIf { it.isNotEmpty() }
                         ?.let { photoIds ->
                             photoQueryPort()
-                                .getByIds(photoIds)
+                                .getByIds(sticker.analysisId, sticker.boardId, photoIds)
                                 .also { checkPhotoContract(photoIds, it) }
                                 .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id })
                                 .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }

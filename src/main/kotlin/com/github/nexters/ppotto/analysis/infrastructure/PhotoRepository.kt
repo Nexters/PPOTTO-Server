@@ -82,14 +82,21 @@ class PhotoRepository(
         }
     }
 
-    fun findAllByIds(ids: Collection<UUID>): List<Photo> =
+    fun findCompletedByIds(
+        analysisId: UUID,
+        boardId: UUID,
+        ids: Collection<UUID>,
+    ): List<Photo> =
         ids
             .toSet()
             .takeIf { it.isNotEmpty() }
             ?.let { uniqueIds ->
                 dslContext
                     .selectFrom(PHOTOS)
-                    .where(PHOTOS.ID.`in`(uniqueIds))
+                    .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
+                    .and(PHOTOS.BOARD_ID.eq(boardId))
+                    .and(PHOTOS.ID.`in`(uniqueIds))
+                    .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
                     .fetch()
                     .map { it.toDomain() }
             } ?: emptyList()
@@ -109,6 +116,7 @@ class PhotoRepository(
                     .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
                     .and(PHOTOS.BOARD_ID.eq(boardId))
                     .and(PHOTOS.ID.`in`(uniqueIds))
+                    .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
                     .fetchSingle(0, Int::class.java)
             } ?: 0
 

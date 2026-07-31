@@ -80,6 +80,7 @@ class AnalysisStickerIntegrationTest(
                         PhotoCreate(PhotoContentType.PNG, Instant.parse("2026-07-01T00:00:00Z")),
                     ),
                 )
+            photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
 
             When("분석 결과를 저장하고 리캡을 조회하면") {
                 val stickerKey = StickerObjectKeys.keyFor(analysis.id, 0, photos.first().id)
@@ -130,6 +131,9 @@ class AnalysisStickerIntegrationTest(
                         otherBoard.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z"))),
                     ).single()
+            photoRepository.markCompletedBatch(
+                mapOf(ownerPhoto.id to Instant.now(), otherPhoto.id to Instant.now()),
+            )
 
             When("다른 사용자의 photoId를 섞어 저장하면") {
                 Then("실제 소유권 어댑터가 저장 전에 거부한다") {
@@ -163,6 +167,42 @@ class AnalysisStickerIntegrationTest(
                         )
                     }
                     stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("업로드가 완료되지 않은 사진이 남아 있는 분석에서") {
+            val board = boardRepository.save(userRepository.save().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photos =
+                photoRepository.saveAll(
+                    analysis.id,
+                    board.id,
+                    listOf(
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
+                    ),
+                )
+            val completedPhoto = photos.first()
+            val pendingPhoto = photos.last()
+            photoRepository.markCompletedBatch(mapOf(completedPhoto.id to Instant.now()))
+
+            When("PENDING 사진을 리캡 photoIds에 섞어 저장하면") {
+                Then("실제 소유권 어댑터가 저장 전에 거부한다") {
+                    shouldThrow<NotFoundException> {
+                        analysisResultSaveService.save(
+                            SaveAnalysisResultCommand(
+                                userId = board.userId,
+                                analysisId = analysis.id,
+                                boardId = board.id,
+                                stickers =
+                                    listOf(
+                                        stickerResult(completedPhoto.id, listOf(completedPhoto.id, pendingPhoto.id)),
+                                    ),
+                            ),
+                        )
+                    }
+                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
                 }
             }
         }

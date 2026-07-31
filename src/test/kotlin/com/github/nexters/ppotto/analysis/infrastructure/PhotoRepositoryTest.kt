@@ -102,4 +102,65 @@ class PhotoRepositoryTest(
                 }
             }
         }
+
+        Given("서로 다른 분석에 완료 사진과 대기 사진이 저장된 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photos =
+                photoRepository.saveAll(
+                    analysis.id,
+                    board.id,
+                    listOf(
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
+                    ),
+                )
+            val completedPhoto = photos.first()
+            val pendingPhoto = photos.last()
+            photoRepository.markCompletedBatch(mapOf(completedPhoto.id to Instant.now()))
+            val otherBoard = boardRepository.save(userRepository.save().id)
+            val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
+            val otherPhoto =
+                photoRepository
+                    .saveAll(
+                        otherAnalysis.id,
+                        otherBoard.id,
+                        listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-03T00:00:00Z"))),
+                    ).single()
+            photoRepository.markCompletedBatch(mapOf(otherPhoto.id to Instant.now()))
+
+            When("분석 스코프로 완료 사진을 조회하면") {
+                val found =
+                    photoRepository.findCompletedByIds(
+                        analysis.id,
+                        board.id,
+                        listOf(completedPhoto.id, pendingPhoto.id, otherPhoto.id),
+                    )
+
+                Then("해당 분석의 완료 사진만 반환하고 대기 사진과 다른 분석 사진은 제외한다") {
+                    found.map { it.id } shouldContainExactlyInAnyOrder listOf(completedPhoto.id)
+                }
+            }
+
+            When("대기 사진이 섞인 목록으로 소유 수를 세면") {
+                val count =
+                    photoRepository.countOwnedByAnalysis(
+                        analysis.id,
+                        board.id,
+                        listOf(completedPhoto.id, pendingPhoto.id),
+                    )
+
+                Then("완료 사진만 소유로 인정한다") {
+                    count shouldBe 1
+                }
+            }
+
+            When("다른 분석의 완료 사진 id로 소유 수를 세면") {
+                val count = photoRepository.countOwnedByAnalysis(analysis.id, board.id, listOf(otherPhoto.id))
+
+                Then("분석 스코프 밖 사진은 세지 않는다") {
+                    count shouldBe 0
+                }
+            }
+        }
     })

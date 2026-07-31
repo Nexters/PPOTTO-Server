@@ -10,8 +10,12 @@ import java.util.UUID
 class StickerRecapPhotoAdapter(
     private val photoQueryService: PhotoQueryService,
 ) : RecapPhotoQueryPort {
-    override fun getByIds(photoIds: Collection<UUID>): List<RecapPhotoMetadata> =
+    override fun getByIds(
+        analysisId: UUID,
+        boardId: UUID,
+        photoIds: Collection<UUID>,
+    ): List<RecapPhotoMetadata> =
         photoQueryService
-            .getReadablePhotos(photoIds)
+            .getReadablePhotos(analysisId, boardId, photoIds)
             .map { RecapPhotoMetadata(it.id, it.imageUrl, it.takenAt) }
 }

@@ -46,6 +46,7 @@ class AnalysisResultSaveServiceTest(
                         board.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val command =
                 SaveAnalysisResultCommand(
                     userId = board.userId,
@@ -102,6 +103,7 @@ class AnalysisResultSaveServiceTest(
                         board.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val invalidResult = imageResult(photo.id).copy(photoIds = listOf(photo.id, photo.id))
 
             When("자식 저장 중 DB 제약 위반이 발생하면") {
@@ -199,6 +201,9 @@ class AnalysisResultSaveServiceTest(
                         otherBoard.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z"))),
                     ).single()
+            photoRepository.markCompletedBatch(
+                mapOf(ownerPhoto.id to Instant.now(), otherPhoto.id to Instant.now()),
+            )
 
             When("소유한 보드에 다른 사용자의 analysisId로 저장하면") {
                 Then("저장 전에 거부한다") {

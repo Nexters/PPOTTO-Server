@@ -4,7 +4,11 @@ import java.time.Instant
 import java.util.UUID
 
 interface RecapPhotoQueryPort {
-    fun getByIds(photoIds: Collection<UUID>): List<RecapPhotoMetadata>
+    fun getByIds(
+        analysisId: UUID,
+        boardId: UUID,
+        photoIds: Collection<UUID>,
+    ): List<RecapPhotoMetadata>
 }
 
 data class RecapPhotoMetadata(
