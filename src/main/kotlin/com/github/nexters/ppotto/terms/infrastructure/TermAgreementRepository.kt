@@ -47,6 +47,12 @@ class TermAgreementRepository(
                     .map { record -> record.toDomain() }
             } ?: emptyList()
 
+    fun deleteAllByUserId(userId: UUID): Int =
+        dslContext
+            .deleteFrom(TERM_AGREEMENTS)
+            .where(TERM_AGREEMENTS.USER_ID.eq(userId))
+            .execute()
+
     private fun TermAgreementsRecord.toDomain() =
         TermAgreement(
             id = id!!,

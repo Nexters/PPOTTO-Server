@@ -7,12 +7,18 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | File | Description |
 |------|-------------|
 | `ProjectConfig.kt` | Kotest global config; registers `SpringExtension` (required — base-class registration does not work in Kotest 6) |
-| `support/IntegrationTest.kt` | Base class: `@SpringBootTest` + `@ActiveProfiles("test")` + Testcontainers import. Extend this for integration tests |
+| `support/IntegrationTest.kt` | Base class: `@SpringBootTest` + `@ActiveProfiles("test")` + Testcontainers and object-storage test imports. Extend this for integration tests |
 | `support/TestcontainersConfiguration.kt` | `@ServiceConnection` PostgreSQLContainer (pgvector/pgvector:pg18, matches compose image) |
+| `support/ObjectStorageTestConfiguration.kt` | `@Primary` `RecordingObjectStorageCleaner` imported by every integration test so no test can ever delete a real GCS object; records deleted prefixes and keys for assertions |
+| `support/DatabaseCleaner.kt` | Truncates every application table in foreign-key-safe order (recap, sticker photo, drawing, sticker, photo, analysis, board, term agreement, term, user) before each spec |
+| `support/UserJourneyTestConfig.kt` | `@Primary` stub Kakao `OAuthClient` and in-memory `RefreshTokenStore` wired into a `@Primary` `AuthService`, so `/auth/login` runs end to end with real JWTs and no provider HTTP or Redis |
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
+| `UserJourneyIntegrationTest.kt` | Issue #50 whole-journey integration test. Drives login, terms agreement, board creation, analysis-result save, recap read, sticker edit/delete, withdrawal, and the cleanup batch through MockMvc in one run |
 | `analysis/` | Authenticated ownership, upload verification, active-analysis/status lookup, progress/result persistence, Gemini-shaped classification save mapping, and API contract tests |
 | `analysis/infrastructure/integration/AnalysisStickerIntegrationTest.kt` | Production analysis/sticker port wiring, analysis-result save to recap read round trip with real signed URLs, and photo-ownership rejection tests |
 | `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, session-revoking withdrawal, cleanup, and controller tests |
+| `user/infrastructure/integration/WithdrawnUserDataDeletionAdapterTest.kt` | Production `WithdrawnUserDataDeletionPort` wiring (real composite adapter, not the fail-closed fallback), full cross-domain hard deletion with object-storage prefixes and keys, and batch idempotency |
+| `user/infrastructure/WithdrawnUserCleanupSchedulerTest.kt` | Disabled-by-default scheduler registration, retention/cron default validity, and retention cutoff behaviour for a just-withdrawn user |
 | `auth/` | OAuth HTTP timeout/config validation, deterministic JWT tamper detection, active-user refresh validation, Bearer security tests including optional-auth terms behavior, and cross-domain 가입 tests: 기본 보드 실패 rollback, 약관 조회 실패 rollback, Apple authorization code 교환 실패 rollback, 로그인 트랜잭션 경계, 가입 전용 트랜잭션 bean timeout 배선, 동시 가입 중복 방지 |
 | `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, idempotent agreement, and schema-valid user fixture tests |
 | `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration with schema-valid users |
@@ -62,5 +68,7 @@ class PhotoServiceTest(
 - `IntegrationTest` uses `IsolationMode.InstancePerLeaf` while the Spring context stays cached, so stateful test doubles (latches, counters) must be resettable and reset per test. One-shot singleton fields silently stop blocking once a spec gains a second leaf.
 - `@Primary` only overrides single-bean injection. For a port injected as `List<Port>` and resolved with `singleOrNull()` (all `sticker/application/port` contracts), registering a fake adds a second bean and breaks the service — test the production adapter instead.
 - GCS signing needs no network: `src/test/resources/dummy-gcs-key.json` is a real RSA key, so read/upload V4 signed URLs are asserted against `https://storage.googleapis.com/ppotto-test-bucket/...` with real signatures. Only object listing/upload verification needs `analysis/support/AnalysisTestConfig`.
+- Object deletion never reaches GCS either: `IntegrationTest` always imports `support/ObjectStorageTestConfiguration`, whose `@Primary` `RecordingObjectStorageCleaner` replaces `GcsObjectStorageCleaner` for every context. Do not remove that import when adding a test that triggers withdrawal cleanup.
+- `UserJourneyIntegrationTest` authenticates through the real `BearerTokenAuthenticationFilter` with the JWT returned by `POST /auth/login`, so it exercises the HTTP layer instead of injecting a principal. Analysis-result saving has no endpoint yet (the Vertex AI pipeline is issue #9), so that one step calls `AnalysisResultSaveService` directly and every other step goes through MockMvc.
 
 Update this file when test infrastructure changes.

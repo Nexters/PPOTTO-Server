@@ -11,12 +11,15 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `domain/DrawingScope.kt` | Drawing ownership scope: `STICKER` or `BOARD` |
 | `domain/BoardErrorCode.kt` | `BOARD-001` through `BOARD-005` API errors |
 | `infrastructure/BoardRepository.kt` | Active-board CRUD, ownership filtering, row locking, user-scoped command advisory locking, and soft deletion |
-| `infrastructure/DrawingRepository.kt` | Fluent JSONB drawing upsert, guarded lookup, ownership filtering, and board/sticker-scoped soft deletion |
+| `infrastructure/DrawingRepository.kt` | Fluent JSONB drawing upsert, guarded lookup, ownership filtering, board/sticker-scoped soft deletion, and board-scoped hard deletion |
+| `infrastructure/BoardWithdrawalRepository.kt` | Withdrawn-user board id lookup and hard deletion, kept out of `BoardRepository` so the active-board repository stays soft-delete only |
 | `infrastructure/StickerDrawingCommandAdapter.kt` | Sticker-domain drawing deletion port adapter backed by the board application service |
+| `infrastructure/integration/WithdrawnUserBoardDeletionAdapter.kt` | User-domain `WithdrawnUserBoardDeletionPort` adapter through `BoardWithdrawalService` |
 | `infrastructure/BoardExternalPortFallbackConfiguration.kt` | Fail-closed standalone fallbacks that back off when integration adapters are registered |
 | `application/BoardCommandService.kt` | Fluent default/create/rename/delete transaction pipelines and board policies |
 | `application/BoardAccessService.kt` | Port-free board existence, ownership, and `MANDATORY`-propagation row-locking ownership lookup boundary for cross-domain services |
 | `application/BoardDrawingCommandService.kt` | Board-owned drawing soft-deletion transaction surface |
+| `application/BoardWithdrawalService.kt` | Withdrawn-user board id lookup and atomic drawing/board hard deletion, including already soft-deleted rows |
 | `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port. Cross-domain ownership lookups belong to `BoardAccessService`, not here |
 | `application/BoardLayoutService.kt` | Expression-bodied user-serialized sticker/drawing guard chain and atomic changed-layout persistence |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
@@ -43,5 +46,6 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 - Drawing `scope=STICKER` requires `stickerId`; `scope=BOARD` forbids it.
 - Cross-domain board ownership checks use `BoardAccessService`, which must stay independent of external ports.
 - Board code never reads analysis or sticker repositories directly.
+- Withdrawal hard deletion is the only path that ignores `deleted_at`; every other query stays soft-delete aware. It runs after the sticker domain has removed its rows, because `stickers.board_id` is a real FK.
 
 Update this file when layers are added to this domain.

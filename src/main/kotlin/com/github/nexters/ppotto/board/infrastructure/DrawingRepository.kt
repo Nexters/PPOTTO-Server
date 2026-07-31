@@ -98,6 +98,17 @@ class DrawingRepository(
             .and(DRAWINGS.DELETED_AT.isNull)
             .execute()
 
+    fun hardDeleteAllByBoardIds(boardIds: Collection<UUID>): Int =
+        boardIds
+            .toSet()
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                dslContext
+                    .deleteFrom(DRAWINGS)
+                    .where(DRAWINGS.BOARD_ID.`in`(it))
+                    .execute()
+            } ?: 0
+
     private fun upsert(drawing: NewDrawing): Drawing =
         dslContext
             .insertInto(

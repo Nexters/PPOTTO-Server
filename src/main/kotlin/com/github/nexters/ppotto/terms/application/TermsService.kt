@@ -46,6 +46,11 @@ class TermsService(
             }
         }.let { termAgreementRepository.saveAll(userId, it) }
 
+    @Transactional
+    fun deleteAgreements(userId: UUID) {
+        termAgreementRepository.deleteAllByUserId(userId)
+    }
+
     private fun List<Term>.withAgreementStatus(userId: UUID): List<TermResult> =
         termAgreementRepository
             .findAgreedTermIds(userId, map { it.id })

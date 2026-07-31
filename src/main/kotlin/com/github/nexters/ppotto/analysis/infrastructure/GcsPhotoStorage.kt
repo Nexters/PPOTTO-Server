@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.PhotoUploadTarget
 import com.github.nexters.ppotto.global.config.GcsProperties
 import com.github.nexters.ppotto.global.storage.GcsReadUrlIssuer
+import com.github.nexters.ppotto.global.storage.ObjectStorageCleaner
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.HttpMethod
@@ -17,6 +18,7 @@ class GcsPhotoStorage(
     private val storage: Storage,
     private val gcsProperties: GcsProperties,
     private val gcsReadUrlIssuer: GcsReadUrlIssuer,
+    private val objectStorageCleaner: ObjectStorageCleaner,
 ) : PhotoStorage {
     companion object {
         private const val MAX_PHOTO_SIZE_BYTES = 15_728_640
@@ -31,6 +33,8 @@ class GcsPhotoStorage(
             .list(gcsProperties.bucket, Storage.BlobListOption.prefix(prefix))
             .iterateAll()
             .associate { it.name to BlobMeta(it.size, it.createTimeOffsetDateTime.toInstant()) }
+
+    override fun deleteByPrefix(prefix: String): Int = objectStorageCleaner.deleteByPrefix(prefix)
 
     private fun signUrl(
         objectKey: String,

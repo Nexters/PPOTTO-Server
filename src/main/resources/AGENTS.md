@@ -17,7 +17,7 @@ Configuration and database migrations.
 | `config/springdoc.yml` | Swagger UI options |
 | `config/cors.yml` | `cors.allowed-origins` from `${CORS_ALLOWED_ORIGINS}` |
 | `config/security.yml` | Basic auth user for swagger from `${SWAGGER_USER}` / `${SWAGGER_PASSWORD}` |
-| `config/user.yml` | User-account provider refresh-token encryption key from `${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}` |
+| `config/user.yml` | User-account provider refresh-token encryption key from `${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}` plus the `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron from `${USER_WITHDRAWN_CLEANUP_*}` |
 | `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` / `gcs.read-signed-url-expiration-minutes` / `gcs.timeout-millis` from `${GCS_*}` |
 | `config/redis.yml` | Redis host, port, password, and timeouts from `${REDIS_*}` for refresh token storage |
 | `config/auth.yml` | OAuth HTTP timeouts, Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
@@ -29,6 +29,7 @@ Configuration and database migrations.
 - Profile differences live inside each concern file as a `---` document with `spring.config.activate.on-profile`. Profiles: `local` (default), `prod`, `test` (test resources only).
 - Placeholders never carry defaults (`${VAR}`, not `${VAR:value}`). Add every new variable to **all three** of `.env.template`, `src/test/resources/application-test.yml`, and the AOT cache training `RUN` step in the root `Dockerfile`, in the same change. Forgetting the `Dockerfile` still passes `./gradlew build`, so the failure only surfaces in CD — see the root `AGENTS.md` Conventions section for the dummy-value rules.
 - `USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64` must decode to a 256-bit AES key. The committed template/test value is local-only and must be replaced in deployed environments.
+- `USER_WITHDRAWN_CLEANUP_ENABLED` defaults to `false` everywhere, including tests. Turning it on schedules irreversible hard deletion, so only enable it in an environment where the retention policy is agreed. `USER_WITHDRAWN_CLEANUP_RETENTION_DAYS` is a conservative placeholder until the privacy policy fixes a number.
 - After legacy users are backfilled with real provider identity and email, validate `ck_users_social_identity_complete` and only then consider converting the three columns to physical `NOT NULL`.
 
 Update this file when config files or migration conventions change.

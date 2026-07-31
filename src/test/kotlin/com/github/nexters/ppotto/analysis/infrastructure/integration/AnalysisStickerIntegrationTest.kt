@@ -13,7 +13,7 @@ import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipPort
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
-import com.github.nexters.ppotto.sticker.application.port.StickerImageQueryPort
+import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
@@ -58,7 +58,7 @@ class AnalysisStickerIntegrationTest(
                             .single()
                             .shouldBeInstanceOf<StickerRecapPhotoAdapter>()
                     }
-                    applicationContext.getBeansOfType(StickerImageQueryPort::class.java).let {
+                    applicationContext.getBeansOfType(StickerImageStoragePort::class.java).let {
                         it shouldHaveSize 1
                         it.values
                             .single()

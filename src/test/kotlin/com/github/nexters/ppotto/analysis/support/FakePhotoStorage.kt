@@ -7,6 +7,7 @@ import java.time.Instant
 
 class FakePhotoStorage : PhotoStorage {
     private val objects = mutableMapOf<String, BlobMeta>()
+    val deletedPrefixes = mutableListOf<String>()
 
     override fun issueUploadUrls(targets: List<PhotoUploadTarget>): List<String> =
         targets.map {
@@ -18,6 +19,13 @@ class FakePhotoStorage : PhotoStorage {
         objectKeys.toSet().associateWith { "https://fake-read-url/$it" }
 
     override fun existingObjects(prefix: String): Map<String, BlobMeta> = objects.filterKeys { it.startsWith(prefix) }
+
+    override fun deleteByPrefix(prefix: String): Int =
+        prefix
+            .also(deletedPrefixes::add)
+            .let { objects.keys.filter { key -> key.startsWith(it) } }
+            .onEach { objects -= it }
+            .size
 
     fun markMissing(objectKey: String) {
         objects -= objectKey
@@ -33,9 +41,11 @@ class FakePhotoStorage : PhotoStorage {
 
     fun reset() {
         objects.clear()
+        deletedPrefixes.clear()
     }
 
     fun clear() {
         objects.clear()
+        deletedPrefixes.clear()
     }
 }
