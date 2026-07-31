@@ -35,6 +35,7 @@ class BoardAnalysisDependencyTest :
                 Then("application 경계와 port 계약만 참조한다") {
                     boardReferences
                         .map { it.second }
+                        .distinct()
                         .shouldContainExactlyInAnyOrder(
                             "com.github.nexters.ppotto.board.application.BoardAccessService",
                             "com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort",

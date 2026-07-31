@@ -11,9 +11,11 @@ import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.assertions.assertSoftly
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jooq.DSLContext
 import org.springframework.context.ApplicationContext
@@ -47,6 +49,13 @@ class BoardAnalysisContractTest(
             val indexDefinition = activeAnalysisIndexDefinition(dslContext)
 
             When("uk_analysis_active 부분 유니크 인덱스 정의를 읽으면") {
+                Then("보드와 무관하게 유저 단위로 유일성을 강제한다") {
+                    assertSoftly {
+                        indexDefinition shouldContain "UNIQUE INDEX"
+                        indexDefinition shouldContain "(user_id)"
+                    }
+                }
+
                 Then("AnalysisStatus.ACTIVE와 같은 상태 집합을 사용한다") {
                     AnalysisStatus.entries
                         .filter { "'${it.name}'" in indexDefinition }

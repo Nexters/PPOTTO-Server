@@ -15,7 +15,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `infrastructure/StickerDrawingCommandAdapter.kt` | Sticker-domain drawing deletion port adapter backed by the board application service |
 | `infrastructure/BoardExternalPortFallbackConfiguration.kt` | Fail-closed standalone fallbacks that back off when integration adapters are registered |
 | `application/BoardCommandService.kt` | Fluent default/create/rename/delete transaction pipelines and board policies |
-| `application/BoardAccessService.kt` | Port-free board existence, ownership, and row-locking ownership lookup boundary for cross-domain services |
+| `application/BoardAccessService.kt` | Port-free board existence, ownership, and `MANDATORY`-propagation row-locking ownership lookup boundary for cross-domain services |
 | `application/BoardDrawingCommandService.kt` | Board-owned drawing soft-deletion transaction surface |
 | `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port. Cross-domain ownership lookups belong to `BoardAccessService`, not here |
 | `application/BoardLayoutService.kt` | Expression-bodied user-serialized sticker/drawing guard chain and atomic changed-layout persistence |
@@ -37,7 +37,8 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 - `user_id` has no FK constraint. Application services validate ownership.
 - Board create, layout update, and delete acquire the same user-scoped transaction advisory lock before validation and mutation.
 - Board deletion checks the last-board rule first, then the active-analysis rule, so a single board reports `BOARD-004` even while an analysis is running. Ownership is resolved before both, so a non-owner always gets `BOARD-002`.
-- Deletion and analysis creation serialize on the target board row (`findOwnedByIdForUpdate`), so an active analysis can never be attached to a board that is being deleted.
+- Deletion and analysis creation serialize on the target board row (`findOwnedByIdForUpdate`), so an active analysis can never be attached to a board that is being deleted. Board deletion takes that row lock before the active-analysis rule, so an analysis that commits first is always observed.
+- `BoardAccessService.getOwnedByIdForUpdate` is `@Transactional(propagation = MANDATORY)`: a caller without an open transaction fails fast instead of committing away the row lock right after taking it. It must never be `readOnly = true` because Postgres rejects `SELECT ... FOR UPDATE` in a read-only transaction.
 - Missing analysis or sticker integration adapters always fail closed, including empty sticker query and command requests. The production context must resolve `BoardAnalysisActivityPort` to `BoardAnalysisActivityAdapter`, never to the fallback.
 - Drawing `scope=STICKER` requires `stickerId`; `scope=BOARD` forbids it.
 - Cross-domain board ownership checks use `BoardAccessService`, which must stay independent of external ports.
