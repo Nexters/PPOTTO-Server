@@ -2,10 +2,14 @@ package com.github.nexters.ppotto.analysis.presentation
 
 import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
+import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
@@ -14,6 +18,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -26,7 +31,9 @@ class AnalysisControllerTest(
     @Autowired val mockMvc: MockMvc,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    analysisRepository: AnalysisRepository,
     analysisService: AnalysisService,
+    dslContext: DSLContext,
 ) : IntegrationTest({
         fun createPhotosJson(count: Int): String {
             val photos =
@@ -41,6 +48,17 @@ class AnalysisControllerTest(
             userId: UUID,
         ): MockHttpServletRequestBuilder =
             post(url)
+                .with(
+                    authentication(
+                        UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList()),
+                    ),
+                )
+
+        fun authenticatedGet(
+            url: String,
+            userId: UUID,
+        ): MockHttpServletRequestBuilder =
+            get(url)
                 .with(
                     authentication(
                         UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList()),
@@ -198,6 +216,129 @@ class AnalysisControllerTest(
                     mockMvc
                         .perform(authenticatedPost("/analysis/${UUID.randomUUID()}/start", userId))
                         .andExpect(status().isNotFound)
+                }
+            }
+        }
+
+        Given("활성 분석이 없는 사용자로") {
+            val userId = userRepository.save().id
+
+            When("진행 중 분석을 조회하면") {
+                Then("200 응답과 null data를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedGet("/analysis/active", userId))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data").doesNotExist())
+                }
+            }
+        }
+
+        Given("UPLOADING 상태의 분석이 있으면") {
+            val board = boardRepository.save(userRepository.save().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+
+            When("진행 중 분석을 조회하면") {
+                Then("분석 상태를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedGet("/analysis/active", board.userId))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.id").value(analysis.id.toString()))
+                        .andExpect(jsonPath("$.data.boardId").value(board.id.toString()))
+                        .andExpect(jsonPath("$.data.status").value("UPLOADING"))
+                        .andExpect(jsonPath("$.data.progress").value(0))
+                        .andExpect(jsonPath("$.data.failedReason").doesNotExist())
+                        .andExpect(jsonPath("$.data.startedAt").doesNotExist())
+                        .andExpect(jsonPath("$.data.completedAt").doesNotExist())
+                }
+            }
+        }
+
+        Given("ANALYZING 상태의 분석이 있으면") {
+            val board = boardRepository.save(userRepository.save().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
+                .set(ANALYSIS.PROGRESS, 10)
+                .set(ANALYSIS.STARTED_AT, Instant.parse("2026-07-27T05:02:11Z"))
+                .where(ANALYSIS.ID.eq(analysis.id))
+                .execute()
+
+            When("분석 상태를 조회하면") {
+                Then("로딩 화면 폴링용 상태를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedGet("/analysis/${analysis.id}", board.userId))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.id").value(analysis.id.toString()))
+                        .andExpect(jsonPath("$.data.boardId").value(board.id.toString()))
+                        .andExpect(jsonPath("$.data.status").value("ANALYZING"))
+                        .andExpect(jsonPath("$.data.progress").value(10))
+                        .andExpect(jsonPath("$.data.startedAt").exists())
+                        .andExpect(jsonPath("$.data.completedAt").doesNotExist())
+                }
+            }
+        }
+
+        Given("COMPLETED 상태의 분석이 있으면") {
+            val board = boardRepository.save(userRepository.save().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
+                .set(ANALYSIS.PROGRESS, 100)
+                .set(ANALYSIS.COMPLETED_AT, Instant.parse("2026-07-27T05:03:38Z"))
+                .where(ANALYSIS.ID.eq(analysis.id))
+                .execute()
+
+            When("진행 중 분석을 조회하면") {
+                Then("active에는 포함하지 않는다") {
+                    mockMvc
+                        .perform(authenticatedGet("/analysis/active", board.userId))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data").doesNotExist())
+                }
+            }
+
+            When("분석 상태를 조회하면") {
+                Then("완료 상태를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedGet("/analysis/${analysis.id}", board.userId))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                        .andExpect(jsonPath("$.data.progress").value(100))
+                        .andExpect(jsonPath("$.data.completedAt").exists())
+                }
+            }
+        }
+
+        Given("다른 사용자의 analysisId로") {
+            val ownerBoard = boardRepository.save(userRepository.save().id)
+            val analysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
+            val otherUserId = userRepository.save().id
+
+            When("분석 상태를 조회하면") {
+                Then("404 응답과 ANALYSIS-005를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedGet("/analysis/${analysis.id}", otherUserId))
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
+                }
+            }
+        }
+
+        Given("인증되지 않은 요청으로") {
+            When("진행 중 분석을 조회하면") {
+                Then("401 응답과 COMMON-004를 반환한다") {
+                    mockMvc
+                        .perform(get("/analysis/active"))
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
                 }
             }
         }

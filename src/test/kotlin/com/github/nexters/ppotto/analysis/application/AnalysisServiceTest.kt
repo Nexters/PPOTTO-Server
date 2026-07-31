@@ -235,6 +235,7 @@ class AnalysisServiceTest(
                     val analysis = analysisRepository.findById(created.analysisId)
                     analysis.shouldNotBeNull()
                     analysis.status shouldBe AnalysisStatus.COMPLETED
+                    analysis.progress shouldBe 100
                     analysis.startedAt.shouldNotBeNull()
                 }
             }

@@ -60,6 +60,7 @@ class AnalysisRepositoryTest(
 
             Then("UPLOADING 상태에서는 활성 분석이 있다") {
                 analysisRepository.existsActiveByUserId(user.id) shouldBe true
+                analysisRepository.findActiveByUserId(user.id)?.id shouldBe analysis.id
             }
 
             dslContext
@@ -70,6 +71,7 @@ class AnalysisRepositoryTest(
 
             Then("ANALYZING 상태에서도 활성 분석이 있다") {
                 analysisRepository.existsActiveByUserId(user.id) shouldBe true
+                analysisRepository.findActiveByUserId(user.id)?.id shouldBe analysis.id
             }
 
             dslContext
@@ -80,6 +82,7 @@ class AnalysisRepositoryTest(
 
             Then("COMPLETED 상태에서는 활성 분석이 없다") {
                 analysisRepository.existsActiveByUserId(user.id) shouldBe false
+                analysisRepository.findActiveByUserId(user.id).shouldBeNull()
             }
 
             dslContext
@@ -90,6 +93,30 @@ class AnalysisRepositoryTest(
 
             Then("FAILED 상태에서도 활성 분석이 없다") {
                 analysisRepository.existsActiveByUserId(user.id) shouldBe false
+                analysisRepository.findActiveByUserId(user.id).shouldBeNull()
+            }
+        }
+
+        Given("사용자 소유 분석을 조회할 때") {
+            val owner = userRepository.save()
+            val board = boardRepository.save(owner.id)
+            val analysis = analysisRepository.save(owner.id, board.id)
+            val otherUser = userRepository.save()
+
+            When("소유자 아이디로 조회하면") {
+                val found = analysisRepository.findByIdAndUserId(analysis.id, owner.id)
+
+                Then("분석을 반환한다") {
+                    found?.id shouldBe analysis.id
+                }
+            }
+
+            When("다른 사용자 아이디로 조회하면") {
+                val found = analysisRepository.findByIdAndUserId(analysis.id, otherUser.id)
+
+                Then("null을 반환한다") {
+                    found.shouldBeNull()
+                }
             }
         }
 

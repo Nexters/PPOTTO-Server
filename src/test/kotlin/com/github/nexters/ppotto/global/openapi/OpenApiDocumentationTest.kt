@@ -26,6 +26,8 @@ class OpenApiDocumentationTest(
             Then("엔드포인트 설명과 API 버전 헤더를 제공한다") {
                 result
                     .andExpect(jsonPath("$['paths']['/analysis']['post']['summary']").value("분석 생성"))
+                    .andExpect(jsonPath("$['paths']['/analysis/active']['get']['summary']").value("진행 중 분석 조회"))
+                    .andExpect(jsonPath("$['paths']['/analysis/{analysisId}']['get']['summary']").value("분석 상태 조회"))
                     .andExpect(jsonPath("$['paths']['/analysis']['post']['tags']").value(hasItem("분석")))
                     .andExpect(jsonPath("$['paths']['/auth/login']['post']['summary']").value("소셜 로그인"))
                     .andExpect(jsonPath("$['paths']['/users/me']['get']['summary']").value("내 정보 조회"))
@@ -40,8 +42,14 @@ class OpenApiDocumentationTest(
                         jsonPath("$['paths']['/analysis']['post']['parameters'][*].name")
                             .value(hasItem("X-API-Version")),
                     ).andExpect(
+                        jsonPath("$['paths']['/analysis/active']['get']['parameters'][*].name")
+                            .value(hasItem("X-API-Version")),
+                    ).andExpect(
                         jsonPath("$['components']['schemas']['CreateAnalysisRequest']['description']")
                             .value("분석 생성과 사진 업로드 URL 발급 요청"),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['AnalysisStatusResponse']['description']")
+                            .value("분석 상태"),
                     )
             }
 
@@ -49,6 +57,10 @@ class OpenApiDocumentationTest(
                 result
                     .andExpect(
                         jsonPath("$['paths']['/analysis']['post']['security'][0]['bearerAuth']").isArray,
+                    ).andExpect(
+                        jsonPath("$['paths']['/analysis/active']['get']['security'][0]['bearerAuth']").isArray,
+                    ).andExpect(
+                        jsonPath("$['paths']['/analysis/{analysisId}']['get']['security'][0]['bearerAuth']").isArray,
                     ).andExpect(
                         jsonPath("$['paths']['/terms']['get']['security'][1]['bearerAuth']").isArray,
                     ).andExpect(
@@ -71,6 +83,9 @@ class OpenApiDocumentationTest(
                     ).andExpect(
                         jsonPath("$['paths']['/analysis']['post']['responses']['409']['description']")
                             .value("현재 상태와 요청이 충돌함"),
+                    ).andExpect(
+                        jsonPath("$['paths']['/analysis/{analysisId}']['get']['responses']['404']['description']")
+                            .value("요청한 리소스를 찾을 수 없음"),
                     )
             }
         }
