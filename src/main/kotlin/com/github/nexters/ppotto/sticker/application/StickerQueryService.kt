@@ -20,73 +20,70 @@ class StickerQueryService(
     private val recapPhotoQueryPorts: List<RecapPhotoQueryPort>,
     private val stickerImageQueryPorts: List<StickerImageQueryPort>,
 ) {
-    fun getByBoardId(boardId: UUID): List<StickerItemResult> {
-        val stickers = stickerRepository.findAllByBoardId(boardId)
-        return toResults(stickers)
-    }
+    fun getByBoardId(boardId: UUID): List<StickerItemResult> = stickerRepository.findAllByBoardId(boardId).let(::toResults)
 
     fun getRecap(
         userId: UUID,
         stickerId: UUID,
-    ): StickerRecapResult {
-        val sticker = getOwned(userId, stickerId)
-        val comments =
+    ): StickerRecapResult =
+        getOwned(userId, stickerId).let { sticker ->
             stickerRecapRepository
                 .findComments(stickerId)
                 .map { RecapCommentResult(it.id, it.content, it.isFloat, it.posX, it.posY) }
-        val photoIds = stickerRecapRepository.findPhotoIds(stickerId)
-        val photos =
-            if (photoIds.isEmpty()) {
-                emptyList()
-            } else {
-                photoQueryPort()
-                    .getByIds(photoIds)
-                    .also { checkPhotoContract(photoIds, it) }
-                    .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id })
-                    .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }
-            }
-        return StickerRecapResult(toResults(listOf(sticker)).single(), comments, photos)
-    }
+                .let { comments ->
+                    stickerRecapRepository
+                        .findPhotoIds(stickerId)
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { photoIds ->
+                            photoQueryPort()
+                                .getByIds(photoIds)
+                                .also { checkPhotoContract(photoIds, it) }
+                                .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id })
+                                .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }
+                        }.orEmpty()
+                        .let { StickerRecapResult(toResults(listOf(sticker)).single(), comments, it) }
+                }
+        }
 
     private fun getOwned(
         userId: UUID,
         stickerId: UUID,
-    ): Sticker {
-        val sticker = stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-        val board = boardAccessService.getById(sticker.boardId)
-        if (board.userId != userId) {
-            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-        }
-        return sticker
-    }
-
-    private fun toResults(stickers: List<Sticker>): List<StickerItemResult> {
-        val imageKeys = stickers.mapNotNull { it.imageKey }.toSet()
-        val imageUrls =
-            if (imageKeys.isEmpty()) {
-                emptyMap()
-            } else {
-                imageQueryPort().issueReadUrls(imageKeys)
+    ): Sticker =
+        (stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND))
+            .also { sticker ->
+                boardAccessService
+                    .getById(sticker.boardId)
+                    .takeIf { it.userId == userId }
+                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
             }
-        return stickers.map { sticker ->
-            StickerItemResult(
-                id = sticker.id,
-                title = sticker.title,
-                isNew = sticker.viewedAt == null,
-                type = sticker.type,
-                imageUrl = sticker.imageKey?.let { imageUrls[it] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
-                textContent = sticker.textContent,
-                posX = sticker.posX,
-                posY = sticker.posY,
-                scale = sticker.scale,
-                rotation = sticker.rotation,
-                zIndex = sticker.zIndex,
-                badgeOffsetX = sticker.badgeOffsetX,
-                badgeOffsetY = sticker.badgeOffsetY,
-                badgeRotation = sticker.badgeRotation,
-            )
-        }
-    }
+
+    private fun toResults(stickers: List<Sticker>): List<StickerItemResult> =
+        stickers
+            .mapNotNull { it.imageKey }
+            .toSet()
+            .takeIf { it.isNotEmpty() }
+            ?.let { imageQueryPort().issueReadUrls(it) }
+            .orEmpty()
+            .let { imageUrls ->
+                stickers.map { sticker ->
+                    StickerItemResult(
+                        id = sticker.id,
+                        title = sticker.title,
+                        isNew = sticker.viewedAt == null,
+                        type = sticker.type,
+                        imageUrl = sticker.imageKey?.let { imageUrls[it] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
+                        textContent = sticker.textContent,
+                        posX = sticker.posX,
+                        posY = sticker.posY,
+                        scale = sticker.scale,
+                        rotation = sticker.rotation,
+                        zIndex = sticker.zIndex,
+                        badgeOffsetX = sticker.badgeOffsetX,
+                        badgeOffsetY = sticker.badgeOffsetY,
+                        badgeRotation = sticker.badgeRotation,
+                    )
+                }
+            }
 
     private fun photoQueryPort(): RecapPhotoQueryPort = recapPhotoQueryPorts.singleOrNull() ?: error("리캡 사진 조회 application port 구현이 필요합니다.")
 

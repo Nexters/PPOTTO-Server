@@ -6,7 +6,7 @@ Terms domain. Owns effective term versions and append-only user agreement histor
 
 | Directory | Description |
 |-----------|-------------|
-| `application/` | `TermsService` anonymous/authenticated current terms, pending terms, required validation, and idempotent agreement use cases |
+| `application/` | `TermsService` fluent anonymous/authenticated current terms, pending terms, required validation, and idempotent agreement pipelines |
 | `domain/` | Pure term and agreement models plus `TERM-*` error codes |
 | `infrastructure/` | jOOQ repositories for effective term lookup and idempotent agreement persistence |
 | `presentation/TermsApi.kt` | Version 1 terms HTTP mapping and Swagger contract |

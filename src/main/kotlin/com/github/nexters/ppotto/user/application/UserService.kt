@@ -22,30 +22,28 @@ class UserService(
     private val userSessionRevoker: UserSessionRevoker,
 ) {
     @Transactional
-    fun findOrCreate(command: SocialUserCommand): UserRegistrationResult {
-        val encryptedToken = command.providerRefreshToken?.let(tokenCipher::encrypt)
-        val created =
-            socialUserRepository.saveIfAbsent(
-                provider = command.provider,
-                providerUserId = command.providerUserId,
-                email = command.email,
-                providerRefreshToken = encryptedToken,
-            )
-        if (created != null) {
-            return UserRegistrationResult(created, true)
-        }
-
-        val existing =
-            userRepository.findBySocialAccount(command.provider, command.providerUserId)
-                ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
-        val updated =
-            userRepository.updateSocialProfile(
-                id = existing.id,
-                email = command.email,
-                providerRefreshToken = encryptedToken,
-            ) ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
-        return UserRegistrationResult(updated, false)
-    }
+    fun findOrCreate(command: SocialUserCommand): UserRegistrationResult =
+        command.providerRefreshToken
+            ?.let(tokenCipher::encrypt)
+            .let { encryptedToken ->
+                socialUserRepository
+                    .saveIfAbsent(
+                        provider = command.provider,
+                        providerUserId = command.providerUserId,
+                        email = command.email,
+                        providerRefreshToken = encryptedToken,
+                    )?.let { UserRegistrationResult(it, true) }
+                    ?: userRepository
+                        .findBySocialAccount(command.provider, command.providerUserId)
+                        ?.let {
+                            userRepository.updateSocialProfile(
+                                id = it.id,
+                                email = command.email,
+                                providerRefreshToken = encryptedToken,
+                            )
+                        }?.let { UserRegistrationResult(it, false) }
+                    ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
+            }
 
     @Transactional(readOnly = true)
     fun getById(id: UUID): User = userRepository.findById(id) ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
@@ -58,12 +56,13 @@ class UserService(
         id: UUID,
         withdrawnAt: Instant = Instant.now(),
     ) {
-        val user = getById(id)
-        user.providerRefreshToken?.let {
-            socialAccountRevoker.revoke(user.provider, tokenCipher.decrypt(it))
-        }
-        userRepository.withdraw(user.withdraw(withdrawnAt))
+        getById(id)
+            .also { user ->
+                user.providerRefreshToken?.let {
+                    socialAccountRevoker.revoke(user.provider, tokenCipher.decrypt(it))
+                }
+            }.let { userRepository.withdraw(it.withdraw(withdrawnAt)) }
+            ?.also { userSessionRevoker.revoke(id) }
             ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
-        userSessionRevoker.revoke(id)
     }
 }

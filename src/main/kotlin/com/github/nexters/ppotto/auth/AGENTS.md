@@ -7,7 +7,7 @@
 | Directory | Description |
 |-----------|-------------|
 | `domain/` | provider, 로그인 command/result, 토큰 모델, AUTH error code |
-| `application/` | 로그인/활성 사용자 재검증/재발급/로그아웃 orchestration과 user/terms 연결 port |
+| `application/` | 체이닝된 로그인/활성 사용자 재검증/재발급/로그아웃 orchestration과 user/terms 연결 port |
 | `infrastructure/oauth/` | Kakao API, Apple identity token/JWKS/code exchange/revoke adapter |
 | `infrastructure/integration/` | user 가입·활성 상태·기본 보드·약관·세션 연결과 provider 계정 해지 adapter |
 | `infrastructure/token/` | HS256 access JWT와 opaque refresh token 발급, Redis rotation adapter |

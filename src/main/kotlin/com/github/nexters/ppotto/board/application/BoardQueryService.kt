@@ -31,15 +31,15 @@ class BoardQueryService(
     fun getDetail(
         boardId: UUID,
         userId: UUID,
-    ): BoardDetail {
-        val board = boardAccessService.getOwnedById(boardId, userId)
-        return BoardDetail(
-            id = board.id,
-            name = board.name,
-            stickers = stickerQueryPort.getByBoardId(boardId),
-            drawings = drawingRepository.findByBoardId(boardId),
-        )
-    }
+    ): BoardDetail =
+        boardAccessService.getOwnedById(boardId, userId).let {
+            BoardDetail(
+                id = it.id,
+                name = it.name,
+                stickers = stickerQueryPort.getByBoardId(boardId),
+                drawings = drawingRepository.findByBoardId(boardId),
+            )
+        }
 }
 
 data class BoardSummary(

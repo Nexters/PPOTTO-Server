@@ -16,11 +16,11 @@ class TermsService(
     private val termAgreementRepository: TermAgreementRepository,
 ) {
     @Transactional(readOnly = true)
-    fun findCurrentTerms(userId: UUID?): List<TermResult> {
-        val currentTerms = termRepository.findCurrentEffective(Instant.now())
-        return userId?.let { currentTerms.withAgreementStatus(it) }
-            ?: currentTerms.map { TermResult.from(it, false) }
-    }
+    fun findCurrentTerms(userId: UUID?): List<TermResult> =
+        termRepository.findCurrentEffective(Instant.now()).let { currentTerms ->
+            userId?.let { currentTerms.withAgreementStatus(it) }
+                ?: currentTerms.map { TermResult.from(it, false) }
+        }
 
     @Transactional(readOnly = true)
     fun findPendingTerms(userId: UUID): List<TermResult> = findCurrentTerms(userId).filterNot { it.agreed }
@@ -29,24 +29,27 @@ class TermsService(
     fun agree(
         userId: UUID,
         termIds: Collection<UUID>,
-    ) {
-        val requestedTermIds = termIds.toSet()
-        val currentTerms = termRepository.findCurrentEffective(Instant.now())
-        val currentTermIds = currentTerms.mapTo(mutableSetOf()) { it.id }
-        val agreedTermIds = termAgreementRepository.findAgreedTermIds(userId, currentTermIds)
+    ) = termIds
+        .toSet()
+        .also { requestedTermIds ->
+            termRepository.findCurrentEffective(Instant.now()).let { currentTerms ->
+                currentTerms.mapTo(mutableSetOf()) { it.id }.let { currentTermIds ->
+                    termAgreementRepository.findAgreedTermIds(userId, currentTermIds).also { agreedTermIds ->
+                        validateRequiredTerms(currentTerms, agreedTermIds + requestedTermIds)
+                        if (!currentTermIds.containsAll(requestedTermIds)) {
+                            throw InvalidInputException()
+                        }
+                    }
+                }
+            }
+        }.let { termAgreementRepository.saveAll(userId, it) }
 
-        validateRequiredTerms(currentTerms, agreedTermIds + requestedTermIds)
-        if (!currentTermIds.containsAll(requestedTermIds)) {
-            throw InvalidInputException()
-        }
-
-        termAgreementRepository.saveAll(userId, requestedTermIds)
-    }
-
-    private fun List<Term>.withAgreementStatus(userId: UUID): List<TermResult> {
-        val agreedTermIds = termAgreementRepository.findAgreedTermIds(userId, map { it.id })
-        return map { term -> TermResult.from(term, term.id in agreedTermIds) }
-    }
+    private fun List<Term>.withAgreementStatus(userId: UUID): List<TermResult> =
+        termAgreementRepository
+            .findAgreedTermIds(userId, map { it.id })
+            .let { agreedTermIds ->
+                map { term -> TermResult.from(term, term.id in agreedTermIds) }
+            }
 
     private fun validateRequiredTerms(
         currentTerms: List<Term>,

@@ -20,37 +20,35 @@ class AnalysisResultSaveService(
     private val ownershipPorts: List<AnalysisPhotoOwnershipPort>,
 ) {
     @Transactional
-    fun save(command: SaveAnalysisResultCommand): SavedAnalysisResult {
-        validateStickerCount(command.stickers.size)
-        val ownershipPort = ownershipPort()
-        validateOwnership(command, ownershipPort)
-        stickerRepository.lockAnalysisResult(command.analysisId)
-        val existingStickers = stickerRepository.findAllByAnalysisId(command.analysisId)
-        if (existingStickers.isNotEmpty()) {
-            return SavedAnalysisResult(existingStickers.map { it.id })
-        }
-
-        val creations =
-            command.stickers.map { result ->
-                result to
-                    StickerCreation(
-                        type = result.type,
-                        title = result.title,
-                        sourcePhotoId = result.sourcePhotoId,
-                        imageKey = result.imageKey,
-                        textContent = result.textContent,
-                        layout = result.layout,
-                    )
+    fun save(command: SaveAnalysisResultCommand): SavedAnalysisResult =
+        command
+            .also {
+                validateStickerCount(it.stickers.size)
+                validateOwnership(it, ownershipPort())
+                stickerRepository.lockAnalysisResult(it.analysisId)
+            }.let {
+                stickerRepository
+                    .findAllByAnalysisId(it.analysisId)
+                    .takeIf { stickers -> stickers.isNotEmpty() }
+                    ?.map { sticker -> sticker.id }
+                    ?.let(::SavedAnalysisResult)
+                    ?: it.stickers
+                        .map { result ->
+                            StickerCreation(
+                                type = result.type,
+                                title = result.title,
+                                sourcePhotoId = result.sourcePhotoId,
+                                imageKey = result.imageKey,
+                                textContent = result.textContent,
+                                layout = result.layout,
+                            ).let { creation ->
+                                stickerRepository.save(it.analysisId, it.boardId, creation)
+                            }.also { sticker ->
+                                stickerRecapRepository.savePhotos(sticker.id, result.photoIds)
+                                stickerRecapRepository.saveComments(sticker.id, result.comments)
+                            }.id
+                        }.let(::SavedAnalysisResult)
             }
-        val stickerIds =
-            creations.map { (result, creation) ->
-                val sticker = stickerRepository.save(command.analysisId, command.boardId, creation)
-                stickerRecapRepository.savePhotos(sticker.id, result.photoIds)
-                stickerRecapRepository.saveComments(sticker.id, result.comments)
-                sticker.id
-            }
-        return SavedAnalysisResult(stickerIds)
-    }
 
     private fun validateStickerCount(stickerCount: Int) {
         if (stickerCount > MAX_STICKER_COUNT) {
@@ -66,26 +64,23 @@ class AnalysisResultSaveService(
         command: SaveAnalysisResultCommand,
         ownershipPort: AnalysisPhotoOwnershipPort,
     ) {
-        val board = boardAccessService.getById(command.boardId)
-        if (board.userId != command.userId) {
-            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-        }
-        val photoIds =
-            command.stickers
-                .flatMap { result -> result.photoIds + listOfNotNull(result.sourcePhotoId) }
-                .toSet()
-        val matchesOwnership =
-            ownershipPort.matches(
+        boardAccessService
+            .getById(command.boardId)
+            .takeIf { it.userId == command.userId }
+            ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+
+        command.stickers
+            .flatMap { it.photoIds + listOfNotNull(it.sourcePhotoId) }
+            .toSet()
+            .let {
                 AnalysisPhotoOwnershipScope(
                     userId = command.userId,
                     boardId = command.boardId,
                     analysisId = command.analysisId,
-                    photoIds = photoIds,
-                ),
-            )
-        if (!matchesOwnership) {
-            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-        }
+                    photoIds = it,
+                )
+            }.takeIf(ownershipPort::matches)
+            ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
     }
 
     companion object {

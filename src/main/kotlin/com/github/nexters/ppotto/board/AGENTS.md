@@ -14,11 +14,11 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `infrastructure/DrawingRepository.kt` | JSONB drawing upsert, lookup, ownership filtering, and board/sticker-scoped soft deletion |
 | `infrastructure/StickerDrawingCommandAdapter.kt` | Sticker-domain drawing deletion port adapter backed by the board application service |
 | `infrastructure/BoardExternalPortFallbackConfiguration.kt` | Fail-closed standalone fallbacks that back off when integration adapters are registered |
-| `application/BoardCommandService.kt` | Default/create/rename/delete transaction boundaries and board policies |
+| `application/BoardCommandService.kt` | Fluent default/create/rename/delete transaction pipelines and board policies |
 | `application/BoardAccessService.kt` | Port-free board existence and ownership lookup boundary for cross-domain services |
 | `application/BoardDrawingCommandService.kt` | Board-owned drawing soft-deletion transaction surface |
-| `application/BoardQueryService.kt` | Board list/detail composition through the sticker query port |
-| `application/BoardLayoutService.kt` | User-serialized sticker/drawing ownership validation and atomic changed-layout persistence |
+| `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port |
+| `application/BoardLayoutService.kt` | Fluent user-serialized sticker/drawing ownership validation and atomic changed-layout persistence |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
 | `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
 | `presentation/BoardApi.kt` | `/boards` v1 CRUD mapping and Swagger contract |

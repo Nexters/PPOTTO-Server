@@ -27,28 +27,28 @@ class BoardCommandService(
     fun create(
         userId: UUID,
         name: String?,
-    ): Board {
-        boardRepository.lockCommandsByUserId(userId)
-        val boardCount = boardRepository.countByUserId(userId)
-        if (boardCount >= Board.MAX_COUNT) {
-            throw InvalidInputException(BoardErrorCode.COUNT_LIMIT_EXCEEDED)
-        }
-
-        val resolvedName = name ?: Board.defaultName(boardCount + 1)
-        validateName(resolvedName)
-        return boardRepository.save(userId, resolvedName)
-    }
+    ): Board =
+        boardRepository
+            .lockCommandsByUserId(userId)
+            .let { boardRepository.countByUserId(userId) }
+            .also {
+                if (it >= Board.MAX_COUNT) {
+                    throw InvalidInputException(BoardErrorCode.COUNT_LIMIT_EXCEEDED)
+                }
+            }.let { name ?: Board.defaultName(it + 1) }
+            .also(::validateName)
+            .let { boardRepository.save(userId, it) }
 
     @Transactional
     fun rename(
         boardId: UUID,
         userId: UUID,
         name: String,
-    ): Board {
-        validateName(name)
-        return boardRepository.updateName(boardId, userId, name)
+    ): Board =
+        name
+            .also(::validateName)
+            .let { boardRepository.updateName(boardId, userId, it) }
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
-    }
 
     @Transactional
     fun delete(
@@ -57,11 +57,11 @@ class BoardCommandService(
     ) {
         boardRepository.lockCommandsByUserId(userId)
         getOwnedByIdForUpdate(boardId, userId)
-        validateDeletable(boardId, userId)
-
-        drawingCommandService.deleteAllByBoardId(boardId)
-        stickerCommandPort.deleteAllByBoardId(boardId)
-        check(boardRepository.softDelete(boardId, userId))
+        boardId
+            .also { validateDeletable(it, userId) }
+            .also(drawingCommandService::deleteAllByBoardId)
+            .also(stickerCommandPort::deleteAllByBoardId)
+            .also { check(boardRepository.softDelete(it, userId)) }
     }
 
     private fun getOwnedByIdForUpdate(

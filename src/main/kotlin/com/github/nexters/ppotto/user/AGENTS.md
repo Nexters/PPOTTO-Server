@@ -11,8 +11,8 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain must provide the real adapter |
 | `application/port/UserSessionRevoker.kt` | 탈퇴 시 서비스 refresh token을 폐기하는 auth 연동 경계 |
 | `application/port/WithdrawnUserDataDeletionPort.kt` | Idempotent cross-domain contract for deleting all DB and object-storage data owned by a withdrawn user |
-| `application/UserService.kt` | Transaction boundary for atomic social lookup/create, active account lookup, and session-revoking withdrawal |
-| `application/WithdrawnUserCleanupService.kt` | Bounded cleanup batch; hard-deletes a user only after the cross-domain deletion port succeeds |
+| `application/UserService.kt` | Fluent transaction pipeline for atomic social lookup/create, active account lookup, and session-revoking withdrawal |
+| `application/WithdrawnUserCleanupService.kt` | Fluent bounded cleanup pipeline; hard-deletes a user only after the cross-domain deletion port succeeds |
 | `presentation/UserApi.kt` | Version 1 `GET /users/me` and `DELETE /users/me` mapping and Swagger contract |
 | `presentation/UserController.kt` | User API implementation with required UUID user injection |
 | `presentation/dto/UserResponse.kt` | Swagger-described public account response without social-provider identifiers or tokens |

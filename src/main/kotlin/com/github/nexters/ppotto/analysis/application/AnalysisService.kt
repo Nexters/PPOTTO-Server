@@ -33,70 +33,85 @@ class AnalysisService(
         userId: UUID,
         boardId: UUID,
         photos: List<PhotoUploadItemRequest>,
-    ): AnalysisCreationResult {
-        validatePhotoCount(photos.size)
-        boardQueryService.getOwnedById(boardId, userId)
-        validateNoActiveAnalysis(userId)
-        val analysis = saveAnalysisWithConstraintFallback(userId, boardId)
-
-        val savedPhotos =
-            photoRepository.saveAll(
-                analysisId = analysis.id,
-                boardId = boardId,
-                items =
-                    photos.map {
-                        val contentType = PhotoContentType.fromMimeType(it.contentType)
-                        PhotoCreate(contentType, it.takenAt)
-                    },
-            )
-
-        val targets =
-            savedPhotos.map {
-                PhotoUploadTarget(PhotoObjectKeys.keyFor(analysis.id, it.id, it.contentType), it.contentType.mimeType)
+    ): AnalysisCreationResult =
+        photos
+            .also {
+                validatePhotoCount(it.size)
+                boardQueryService.getOwnedById(boardId, userId)
+                validateNoActiveAnalysis(userId)
+            }.let { requests ->
+                saveAnalysisWithConstraintFallback(userId, boardId).let { analysis ->
+                    requests
+                        .map {
+                            PhotoContentType
+                                .fromMimeType(it.contentType)
+                                .let { contentType -> PhotoCreate(contentType, it.takenAt) }
+                        }.let {
+                            photoRepository.saveAll(
+                                analysisId = analysis.id,
+                                boardId = boardId,
+                                items = it,
+                            )
+                        }.let { savedPhotos ->
+                            savedPhotos
+                                .map {
+                                    PhotoUploadTarget(
+                                        PhotoObjectKeys.keyFor(analysis.id, it.id, it.contentType),
+                                        it.contentType.mimeType,
+                                    )
+                                }.let(photoStorage::issueUploadUrls)
+                                .also {
+                                    check(it.size == savedPhotos.size) {
+                                        "issueUploadUrls가 요청한 개수(${savedPhotos.size})와 다른 개수(${it.size})의 URL을 반환했습니다."
+                                    }
+                                }.let { uploadUrls ->
+                                    savedPhotos.zip(uploadUrls) { photo, url -> PhotoUploadUrlItem(photo.id, url) }
+                                }.let { AnalysisCreationResult(analysis.id, it) }
+                        }
+                }
             }
-        val uploadUrls = photoStorage.issueUploadUrls(targets)
-        check(uploadUrls.size == savedPhotos.size) {
-            "issueUploadUrls가 요청한 개수(${savedPhotos.size})와 다른 개수(${uploadUrls.size})의 URL을 반환했습니다."
-        }
-
-        val uploads = savedPhotos.zip(uploadUrls) { photo, url -> PhotoUploadUrlItem(photo.id, url) }
-        return AnalysisCreationResult(analysis.id, uploads)
-    }
 
     fun startUpload(
         userId: UUID,
         analysisId: UUID,
-    ): UploadVerificationResult {
-        val analysis = analysisRepository.findById(analysisId) ?: throw NotFoundException()
-        validateAnalysisOwner(analysis.userId, userId)
-        validateUploading(analysis.status)
-
-        val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
-        if (pendingPhotos.isEmpty()) return UploadVerificationResult(0, 0, emptyList())
-
-        val existingObjects = photoStorage.existingObjects(PhotoObjectKeys.prefixFor(analysisId))
-        val completedUpdates =
-            pendingPhotos
-                .mapNotNull { photo ->
-                    val meta = existingObjects[PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)]
-                    if (meta != null && meta.size > 0) photo.id to meta.createdAt else null
-                }.toMap()
-
-        return transactionTemplate.execute {
-            analysisRepository.findByIdForUpdate(analysisId)
-
-            if (completedUpdates.isNotEmpty()) {
-                photoRepository.updateStatusBatch(completedUpdates, UploadStatus.PENDING, UploadStatus.COMPLETED)
-            }
-
-            val (completed, pending) =
-                photoRepository
-                    .findAllByAnalysisId(analysisId)
-                    .partition { it.uploadStatus == UploadStatus.COMPLETED }
-
-            UploadVerificationResult(completed.size, pending.size, pending.map { it.id })
-        }
-    }
+    ): UploadVerificationResult =
+        (analysisRepository.findById(analysisId) ?: throw NotFoundException())
+            .also {
+                validateAnalysisOwner(it.userId, userId)
+                validateUploading(it.status)
+            }.let { photoRepository.findPendingByAnalysisId(analysisId) }
+            .takeIf { it.isNotEmpty() }
+            ?.let { pendingPhotos ->
+                photoStorage
+                    .existingObjects(PhotoObjectKeys.prefixFor(analysisId))
+                    .let { existingObjects ->
+                        pendingPhotos
+                            .mapNotNull { photo ->
+                                existingObjects[PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)]
+                                    ?.takeIf { it.size > 0 }
+                                    ?.let { photo.id to it.createdAt }
+                            }.toMap()
+                    }.let { completedUpdates ->
+                        transactionTemplate.execute {
+                            analysisRepository.findByIdForUpdate(analysisId)
+                            completedUpdates
+                                .takeIf { it.isNotEmpty() }
+                                ?.let {
+                                    photoRepository.updateStatusBatch(
+                                        it,
+                                        UploadStatus.PENDING,
+                                        UploadStatus.COMPLETED,
+                                    )
+                                }
+                            photoRepository
+                                .findAllByAnalysisId(analysisId)
+                                .partition { it.uploadStatus == UploadStatus.COMPLETED }
+                                .let { (completed, pending) ->
+                                    UploadVerificationResult(completed.size, pending.size, pending.map { it.id })
+                                }
+                        }
+                    }
+            } ?: UploadVerificationResult(0, 0, emptyList())
 
     private fun validateAnalysisOwner(
         analysisUserId: UUID,

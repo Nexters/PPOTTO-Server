@@ -34,40 +34,41 @@ class AuthService(
         }
 
     @Transactional
-    fun login(command: LoginCommand): LoginResult {
-        val client = oauthClients[command.provider] ?: throw InvalidInputException()
-        val profile = client.authenticate(command)
-        val user = authUserPort.findOrCreate(profile)
-        if (profile.authorizationCodeExchangeFailed && user.isNewUser) {
-            throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
-        }
-        val pendingTerms = authTermsPort.findPendingTerms(user.userId)
-        val tokenPair = tokenProvider.issue(user.userId)
-        refreshTokenStore.save(user.userId, tokenPair.refreshToken)
-        return LoginResult(tokenPair, user.isNewUser, pendingTerms)
-    }
+    fun login(command: LoginCommand): LoginResult =
+        (oauthClients[command.provider] ?: throw InvalidInputException())
+            .authenticate(command)
+            .let { profile ->
+                authUserPort
+                    .findOrCreate(profile)
+                    .also { user ->
+                        if (profile.authorizationCodeExchangeFailed && user.isNewUser) {
+                            throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
+                        }
+                    }
+            }.let { user ->
+                authTermsPort.findPendingTerms(user.userId).let { pendingTerms ->
+                    tokenProvider
+                        .issue(user.userId)
+                        .also { refreshTokenStore.save(user.userId, it.refreshToken) }
+                        .let { LoginResult(it, user.isNewUser, pendingTerms) }
+                }
+            }
 
-    fun refresh(refreshToken: String): TokenPair {
-        val userId = refreshTokenStore.findUserId(refreshToken)
-        if (userId == null || !authActiveUserPort.isActive(userId)) {
-            throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
-        }
-        val newTokenPair = tokenProvider.issue(userId)
-        if (!refreshTokenStore.rotate(userId, refreshToken, newTokenPair.refreshToken)) {
-            throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
-        }
-        return newTokenPair
-    }
+    fun refresh(refreshToken: String): TokenPair =
+        refreshTokenStore
+            .findUserId(refreshToken)
+            ?.takeIf(authActiveUserPort::isActive)
+            ?.let { userId ->
+                tokenProvider
+                    .issue(userId)
+                    .takeIf { refreshTokenStore.rotate(userId, refreshToken, it.refreshToken) }
+            } ?: throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
-    fun logout(userId: UUID) {
-        refreshTokenStore.delete(userId)
-    }
+    fun logout(userId: UUID) = refreshTokenStore.delete(userId)
 
     fun revokeProviderToken(
         provider: OAuthProvider,
         providerRefreshToken: String,
-    ) {
-        val client = oauthClients[provider] ?: throw InvalidInputException()
-        client.revoke(providerRefreshToken)
-    }
+    ) = (oauthClients[provider] ?: throw InvalidInputException())
+        .revoke(providerRefreshToken)
 }
