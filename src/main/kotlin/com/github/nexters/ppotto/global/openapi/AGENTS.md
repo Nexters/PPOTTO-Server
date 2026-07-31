@@ -10,7 +10,7 @@ Swagger 문서의 반복 응답 계약과, 타입 안전한 예시를 코드로 
 | `ApiErrorResponse.kt` | 문서 전용 실패 응답 봉투 스키마(`success`, `data`, `error`). 실제 실패 응답은 `GlobalExceptionHandler`가 `ApiResponse.error`로 만듭니다 |
 | `ApiExample.kt` | 예시 한 건(`ApiExample`: 이름, summary, 실제 DTO 인스턴스)과 operation 단위 묶음(`OperationExamples`: 요청 예시, 응답 코드별 예시) |
 | `ApiExampleProvider.kt` | 도메인이 구현하는 기여 인터페이스. `KFunction`(API 인터페이스 메서드 참조) → `OperationExamples` 맵을 노출합니다 |
-| `ApiExampleRegistry.kt` | 모든 `ApiExampleProvider`를 모아 `KFunction.javaMethod` 기준 맵으로 만들고, `HandlerMethod`를 `ClassUtils.getInterfaceMethodIfPossible`로 API 인터페이스 메서드까지 되짚어 조회합니다 |
+| `ApiExampleRegistry.kt` | 모든 `ApiExampleProvider`를 모아 `KFunction.javaMethod` 기준 맵으로 만들고, `HandlerMethod`를 `ClassUtils.getInterfaceMethodIfPossible`로 API 인터페이스 메서드까지 되짚어 조회합니다. 같은 함수에 예시가 중복 등록되면 조용히 덮어쓰지 않고 기동 시점에 즉시 실패합니다 |
 | `ApiExampleFactory.kt` | 애플리케이션 `ObjectMapper` 빈으로 예시 객체를 직렬화한 뒤 swagger 모델의 `Example`로 감쌉니다. 이름을 준 예시는 swagger-core와 같은 방식으로 `description`에도 이름을 채웁니다 |
 | `ApiExampleOperationCustomizer.kt` | springdoc `OperationCustomizer`. 레지스트리에서 찾은 예시를 requestBody와 응답 코드별 media type에 주입합니다 |
 | `ApiExamples.kt` | 도메인에 종속되지 않는 예시: 빈 성공 응답, `COMMON-001`(필드 오류 포함), `COMMON-004`, `COMMON-006`. 실패 예시를 짧게 만드는 `error`/`errorExample` 헬퍼도 여기 있습니다 |

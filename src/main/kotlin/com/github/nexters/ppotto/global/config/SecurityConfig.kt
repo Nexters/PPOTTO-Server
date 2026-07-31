@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.global.config
 import com.github.nexters.ppotto.auth.infrastructure.security.AuthAccessDeniedHandler
 import com.github.nexters.ppotto.auth.infrastructure.security.AuthAuthenticationEntryPoint
 import com.github.nexters.ppotto.auth.infrastructure.security.BearerTokenAuthenticationFilter
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
@@ -23,8 +24,6 @@ class SecurityConfig {
     companion object {
         const val SWAGGER_CHAIN_ORDER = 0
         const val API_CHAIN_ORDER = 100
-        val SWAGGER_PATHS = arrayOf("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
-        val PUBLIC_API_PATHS = arrayOf("/auth/login", "/auth/refresh", "/actuator/health/**")
     }
 
     @Bean
@@ -32,7 +31,7 @@ class SecurityConfig {
     @Profile("prod")
     fun swaggerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain =
         http
-            .securityMatcher(*SWAGGER_PATHS)
+            .securityMatcher(*PublicPaths.DOCUMENT_PATTERNS)
             .csrf { it.disable() }
             .cors(Customizer.withDefaults())
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
@@ -58,7 +57,7 @@ class SecurityConfig {
                 it.accessDeniedHandler(accessDeniedHandler)
             }.authorizeHttpRequests {
                 it
-                    .requestMatchers(*PUBLIC_API_PATHS, *SWAGGER_PATHS)
+                    .requestMatchers(*PublicPaths.PUBLIC_API_PATTERNS, *PublicPaths.DOCUMENT_PATTERNS)
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/terms")
                     .permitAll()
@@ -70,13 +69,23 @@ class SecurityConfig {
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
     @Profile("test")
-    fun defaultSecurityFilterChain(http: HttpSecurity): SecurityFilterChain =
+    fun defaultSecurityFilterChain(
+        http: HttpSecurity,
+        bearerTokenAuthenticationFilter: BearerTokenAuthenticationFilter,
+    ): SecurityFilterChain =
         http
             .csrf { it.disable() }
             .cors(Customizer.withDefaults())
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { it.anyRequest().permitAll() }
+            .addFilterBefore(bearerTokenAuthenticationFilter, AnonymousAuthenticationFilter::class.java)
             .build()
+
+    @Bean
+    fun bearerTokenAuthenticationFilterRegistration(
+        bearerTokenAuthenticationFilter: BearerTokenAuthenticationFilter,
+    ): FilterRegistrationBean<BearerTokenAuthenticationFilter> =
+        FilterRegistrationBean(bearerTokenAuthenticationFilter).apply { isEnabled = false }
 
     @Bean
     fun corsConfigurationSource(corsProperties: CorsProperties): CorsConfigurationSource =

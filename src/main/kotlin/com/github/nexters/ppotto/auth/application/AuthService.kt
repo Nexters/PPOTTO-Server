@@ -15,13 +15,11 @@ import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionOperations
 import java.util.UUID
 
 @Service
-@ConditionalOnBean(AuthUserPort::class, AuthTermsPort::class, AuthActiveUserPort::class)
 class AuthService(
     oauthClients: List<OAuthClient>,
     @Qualifier(SIGNUP_TRANSACTION)

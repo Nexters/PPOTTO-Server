@@ -13,8 +13,11 @@ class ApiExampleRegistry(
     private val examplesByMethod: Map<Method, OperationExamples> =
         providers
             .flatMap { provider -> provider.examples.entries }
-            .associate { (function, examples) ->
-                (function.javaMethod ?: error("예시를 붙일 수 없는 함수입니다: $function")) to examples
+            .groupBy(
+                { (function, _) -> function.javaMethod ?: error("예시를 붙일 수 없는 함수입니다: $function") },
+                { (_, examples) -> examples },
+            ).mapValues { (method, examples) ->
+                examples.singleOrNull() ?: error("같은 함수에 예시가 중복 등록되었습니다: $method")
             }
 
     val size: Int get() = examplesByMethod.size

@@ -51,6 +51,8 @@ class OpenApiConfig {
                         | COMMON-004 | 401 | 인증 필요 |
                         | COMMON-005 | 403 | 권한 없음 |
                         | COMMON-006 | 409 | 충돌 |
+                        | COMMON-007 | 415 | 지원하지 않는 Content-Type |
+                        | COMMON-008 | 406 | 지원하지 않는 Accept 형식 |
                         """.trimIndent(),
                     ).contact(
                         Contact()

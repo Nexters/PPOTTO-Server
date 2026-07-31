@@ -14,4 +14,6 @@ enum class CommonErrorCode(
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "COMMON-004", "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "COMMON-005", "접근 권한이 없습니다."),
     CONFLICT(HttpStatus.CONFLICT, "COMMON-006", "이미 처리된 요청이거나 충돌이 발생했습니다."),
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "COMMON-007", "지원하지 않는 Content-Type입니다."),
+    NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "COMMON-008", "지원하지 않는 Accept 형식입니다."),
 }
