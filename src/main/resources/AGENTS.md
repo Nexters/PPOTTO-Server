@@ -27,7 +27,7 @@ Configuration and database migrations.
 
 - One concern per config file. New concerns get a new `config/<concern>.yml` plus an entry in `application.yml` imports. No duplicate keys across files (later imports override earlier ones).
 - Profile differences live inside each concern file as a `---` document with `spring.config.activate.on-profile`. Profiles: `local` (default), `prod`, `test` (test resources only).
-- Placeholders never carry defaults (`${VAR}`, not `${VAR:value}`). Add every new variable to `.env.template` and to `src/test/resources/application-test.yml`.
+- Placeholders never carry defaults (`${VAR}`, not `${VAR:value}`). Add every new variable to **all three** of `.env.template`, `src/test/resources/application-test.yml`, and the AOT cache training `RUN` step in the root `Dockerfile`, in the same change. Forgetting the `Dockerfile` still passes `./gradlew build`, so the failure only surfaces in CD — see the root `AGENTS.md` Conventions section for the dummy-value rules.
 - `USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64` must decode to a 256-bit AES key. The committed template/test value is local-only and must be replaced in deployed environments.
 - After legacy users are backfilled with real provider identity and email, validate `ck_users_social_identity_complete` and only then consider converting the three columns to physical `NOT NULL`.
 
