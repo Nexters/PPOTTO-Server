@@ -108,7 +108,8 @@ class AnalysisService(
                 throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
             }
 
-            photoRepository.updateStatusBatch(completedUpdates, UploadStatus.PENDING, UploadStatus.COMPLETED)
+            photoRepository.markCompletedBatch(completedUpdates)
+            if (failedIds.isNotEmpty()) photoRepository.markFailedBatch(failedIds)
             analysisRepository.markAnalyzing(analysisId, Instant.now())
 
             val photosToPublish =

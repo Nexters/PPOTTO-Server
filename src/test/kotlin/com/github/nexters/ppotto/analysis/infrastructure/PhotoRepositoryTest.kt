@@ -70,10 +70,8 @@ class PhotoRepositoryTest(
                     photoRepository.saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
                 val microsecondPrecisionUploadedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
                 val updated =
-                    photoRepository.updateStatusBatch(
+                    photoRepository.markCompletedBatch(
                         saved.associate { it.id to microsecondPrecisionUploadedAt },
-                        UploadStatus.PENDING,
-                        UploadStatus.COMPLETED,
                     )
 
                 Then("갱신된 Photo를 반환한다") {
@@ -86,17 +84,16 @@ class PhotoRepositoryTest(
             When("이미 다른 상태로 바뀐 뒤 다시 기대 상태(PENDING)를 걸고 갱신하면") {
                 val saved =
                     photoRepository.saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
-                photoRepository.updateStatusBatch(saved.associate { it.id to Instant.now() }, UploadStatus.PENDING, UploadStatus.COMPLETED)
-                val updated =
-                    photoRepository.updateStatusBatch(saved.associate { it.id to Instant.now() }, UploadStatus.PENDING, UploadStatus.FAILED)
+                photoRepository.markCompletedBatch(saved.associate { it.id to Instant.now() })
+                photoRepository.markFailedBatch(saved.map { it.id })
 
-                Then("빈 목록을 반환한다") {
-                    updated.shouldBeEmpty()
+                Then("기존 COMPLETED를 FAILED로 갱신하지 않는다 (PENDING이 아니므로)") {
+                    photoRepository.findAllByAnalysisId(analysis.id).first().uploadStatus shouldBe UploadStatus.COMPLETED
                 }
             }
 
             When("빈 id 목록으로 갱신하면") {
-                val updated = photoRepository.updateStatusBatch(emptyMap<UUID, Instant>(), UploadStatus.PENDING, UploadStatus.COMPLETED)
+                val updated = photoRepository.markCompletedBatch(emptyMap())
 
                 Then("빈 목록을 반환한다") {
                     updated.shouldBeEmpty()
