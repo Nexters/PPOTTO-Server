@@ -9,6 +9,11 @@ import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
+data class StickerDeletionTarget(
+    val id: UUID,
+    val imageKey: String?,
+)
+
 @Repository
 class StickerRepository(
     private val dslContext: DSLContext,
@@ -102,6 +107,19 @@ class StickerRepository(
                     .and(STICKERS.DELETED_AT.isNull)
                     .fetchSingle(0, Int::class.java) == uniqueIds.size
         }
+
+    fun findDeletionTargetsByBoardIds(boardIds: Collection<UUID>): List<StickerDeletionTarget> =
+        boardIds
+            .toSet()
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                dslContext
+                    .select(STICKERS.ID, STICKERS.IMAGE_KEY)
+                    .from(STICKERS)
+                    .where(STICKERS.BOARD_ID.`in`(it))
+                    .fetch()
+                    .map { record -> StickerDeletionTarget(record.value1()!!, record.value2()) }
+            } ?: emptyList()
 
     private fun StickersRecord.toDomain() =
         Sticker(

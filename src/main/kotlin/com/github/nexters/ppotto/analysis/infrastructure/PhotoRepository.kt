@@ -112,6 +112,17 @@ class PhotoRepository(
                     .fetchSingle(0, Int::class.java)
             } ?: 0
 
+    fun hardDeleteAllByAnalysisIds(analysisIds: Collection<UUID>): Int =
+        analysisIds
+            .toSet()
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                dslContext
+                    .deleteFrom(PHOTOS)
+                    .where(PHOTOS.ANALYSIS_ID.`in`(it))
+                    .execute()
+            } ?: 0
+
     private fun PhotosRecord.toDomain() =
         Photo(
             id = id!!,

@@ -454,6 +454,8 @@ Request example:
 
 #### Notes
 - 애플 계정은 보관 중인 refresh token으로 revoke를 호출합니다 (앱스토어 심사 필수). email과 provider refresh token은 즉시 파기(익명화)하고, 나머지 데이터는 soft delete 후 유예기간이 지나면 GCS 사진 원본까지 배치로 하드 삭제합니다. 같은 계정으로 다시 로그인하면 신규 가입이 됩니다.
+- 탈퇴 즉시 서비스 refresh token 세션이 폐기되므로 `POST /auth/refresh`는 `AUTH-002`로 실패하고, 남아 있는 accessToken으로 `GET /users/me`를 호출하면 `USER-001`을 반환합니다.
+- 유예기간이 지난 뒤 정리 배치가 보드, 드로잉, 스티커, 리캡, 분석, 사진, 약관 동의 이력을 하드 삭제하고 GCS 사진 원본과 스티커 생성 이미지를 함께 파기합니다. 유예기간 일수와 배치 활성화 여부는 서버 설정(`user.withdrawn-cleanup.*`)으로 관리하며 배치는 기본 비활성입니다. 이 배치는 클라이언트가 호출하는 API가 아니며 본 문서의 엔드포인트를 추가하지 않습니다.
 
 ## 6. terms API
 

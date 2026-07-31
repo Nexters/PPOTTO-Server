@@ -1,3 +1,8 @@
 user:
   provider-refresh-token-encryption:
     key-base64: ${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}
+  withdrawn-cleanup:
+    enabled: ${USER_WITHDRAWN_CLEANUP_ENABLED}
+    retention-days: ${USER_WITHDRAWN_CLEANUP_RETENTION_DAYS}
+    batch-size: ${USER_WITHDRAWN_CLEANUP_BATCH_SIZE}
+    cron: ${USER_WITHDRAWN_CLEANUP_CRON}

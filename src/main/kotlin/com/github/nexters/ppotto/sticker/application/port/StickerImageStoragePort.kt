@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.sticker.application.port
 
-interface StickerImageQueryPort {
+interface StickerImageStoragePort {
     fun issueReadUrls(imageKeys: Collection<String>): Map<String, String>
+
+    fun deleteAll(imageKeys: Collection<String>): Int
 }
