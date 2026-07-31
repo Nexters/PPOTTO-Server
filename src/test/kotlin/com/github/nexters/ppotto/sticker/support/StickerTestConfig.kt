@@ -14,10 +14,6 @@ class StickerTestConfig {
 
     @Bean
     @Primary
-    fun fakeStickerDrawingCommandPort(): FakeStickerDrawingCommandPort = FakeStickerDrawingCommandPort()
-
-    @Bean
-    @Primary
     fun fakeRecapPhotoQueryPort(): RecapPhotoQueryPort = FakeRecapPhotoQueryPort()
 
     @Bean

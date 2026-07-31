@@ -9,9 +9,12 @@ import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
+import com.sun.net.httpserver.HttpServer
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
+import org.springframework.web.client.RestClient
+import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.security.KeyPairGenerator
@@ -21,63 +24,51 @@ import java.security.interfaces.RSAPublicKey
 import java.time.Instant
 import java.util.Base64
 import java.util.Date
+import java.util.concurrent.atomic.AtomicReference
 
 class AppleOAuthClientTest :
     BehaviorSpec({
         val keyPair =
             KeyPairGenerator
                 .getInstance("RSA")
-                .also { it.initialize(2048) }
+                .apply { initialize(2048) }
                 .generateKeyPair()
         val publicKey = keyPair.public as RSAPublicKey
         val privateKey = keyPair.private as RSAPrivateKey
         val keyId = "apple-test-key"
         val encoder = Base64.getUrlEncoder().withoutPadding()
-        val jwks =
-            AppleJwksResponse(
-                listOf(
-                    AppleJwk(
-                        keyType = "RSA",
-                        keyId = keyId,
-                        algorithm = "RS256",
-                        modulus =
-                            encoder.encodeToString(
-                                publicKey.modulus
-                                    .toByteArray()
-                                    .dropLeadingZero(),
-                            ),
-                        exponent =
-                            encoder.encodeToString(
-                                publicKey.publicExponent
-                                    .toByteArray()
-                                    .dropLeadingZero(),
-                            ),
-                    ),
-                ),
+        val modulus =
+            encoder.encodeToString(
+                publicKey.modulus
+                    .toByteArray()
+                    .dropLeadingZero(),
             )
-        var revokedToken = ""
-        val httpService =
-            object : AppleOAuthHttpService {
-                override fun getJwks(uri: URI): AppleJwksResponse = jwks
+        val exponent =
+            encoder.encodeToString(
+                publicKey.publicExponent
+                    .toByteArray()
+                    .dropLeadingZero(),
+            )
+        val jwks = """{"keys":[{"kty":"RSA","kid":"$keyId","alg":"RS256","n":"$modulus","e":"$exponent"}]}"""
+        val revokeBody = AtomicReference("")
+        val server = HttpServer.create(InetSocketAddress(0), 0)
+        server.createContext("/keys") { exchange ->
+            exchange.respond(200, jwks)
+        }
+        server.createContext("/token") { exchange ->
+            exchange.respond(200, """{"refresh_token":"apple-refresh-token"}""")
+        }
+        server.createContext("/revoke") { exchange ->
+            revokeBody.set(
+                exchange.requestBody
+                    .bufferedReader()
+                    .readText(),
+            )
+            exchange.respond(200, "")
+        }
+        server.start()
 
-                override fun exchangeAuthorizationCode(
-                    uri: URI,
-                    clientId: String,
-                    clientSecret: String,
-                    authorizationCode: String,
-                    grantType: String,
-                ): AppleTokenResponse = AppleTokenResponse("apple-refresh-token")
-
-                override fun revoke(
-                    uri: URI,
-                    clientId: String,
-                    clientSecret: String,
-                    token: String,
-                    tokenTypeHint: String,
-                ) {
-                    revokedToken = token
-                }
-            }
+        val baseUri = "http://localhost:${server.address.port}"
         val properties =
             AppleAuthProperties(
                 clientId = "com.nexters.ppotto",
@@ -85,15 +76,15 @@ class AppleOAuthClientTest :
                 keyId = "TESTKEY001",
                 privateKeyPath = "./src/test/resources/dummy-apple-key.p8",
                 issuer = "https://appleid.apple.com",
-                jwksUri = URI("https://appleid.apple.com/auth/keys"),
-                tokenUri = URI("https://appleid.apple.com/auth/token"),
-                revokeUri = URI("https://appleid.apple.com/auth/revoke"),
+                jwksUri = URI("$baseUri/keys"),
+                tokenUri = URI("$baseUri/token"),
+                revokeUri = URI("$baseUri/revoke"),
                 clientSecretExpirationDays = 180,
                 jwksCacheSeconds = 3600,
             )
         val client =
             AppleOAuthClient(
-                httpService,
+                RestClient.builder(),
                 properties,
                 AppleClientSecretGenerator(properties),
             )
@@ -117,8 +108,12 @@ class AppleOAuthClientTest :
                     .keyID(keyId)
                     .build(),
                 claims,
-            ).also { it.sign(RSASSASigner(privateKey)) }
+            ).apply { sign(RSASSASigner(privateKey)) }
                 .serialize()
+        }
+
+        afterSpec {
+            server.stop(0)
         }
 
         Given("유효한 애플 identity token과 authorization code가 주어졌을 때") {
@@ -142,7 +137,7 @@ class AppleOAuthClientTest :
                 Then("애플 revoke API에 refresh token을 전달한다") {
                     client.revoke("apple-refresh-token")
 
-                    revokedToken shouldBe "apple-refresh-token"
+                    revokeBody.get().contains("token=apple-refresh-token") shouldBe true
                 }
             }
         }
@@ -150,11 +145,13 @@ class AppleOAuthClientTest :
         Given("raw nonce가 identity token의 nonce와 다를 때") {
             When("애플 로그인을 검증하면") {
                 Then("AUTH-001 예외가 발생한다") {
-                    shouldThrow<UnauthorizedException> {
-                        client.authenticate(
-                            LoginCommand.Apple(identityToken("original"), "authorization-code", "different"),
-                        )
-                    }.errorCode shouldBe AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED
+                    val exception =
+                        shouldThrow<UnauthorizedException> {
+                            client.authenticate(
+                                LoginCommand.Apple(identityToken("original"), "authorization-code", "different"),
+                            )
+                        }
+                    exception.errorCode shouldBe AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED
                 }
             }
         }
@@ -167,5 +164,15 @@ class AppleOAuthClientTest :
                 .getInstance("SHA-256")
                 .digest(value.toByteArray(StandardCharsets.UTF_8))
                 .joinToString("") { "%02x".format(it) }
+
+        private fun com.sun.net.httpserver.HttpExchange.respond(
+            status: Int,
+            body: String,
+        ) {
+            responseHeaders.add("Content-Type", "application/json")
+            val bytes = body.toByteArray()
+            sendResponseHeaders(status, bytes.size.toLong())
+            responseBody.use { it.write(bytes) }
+        }
     }
 }

@@ -36,13 +36,14 @@ class AnalysisService(
     // (reissue API 구현 및 analysis-status 추가 후 전환 추천)
     @Transactional
     fun createAnalysis(
+        userId: UUID,
         boardId: UUID,
         photos: List<PhotoUploadItemRequest>,
     ): AnalysisCreationResult {
         validatePhotoCount(photos.size)
-        val board = boardQueryService.getById(boardId)
-        validateNoActiveAnalysis(board.userId)
-        val analysis = saveAnalysisWithConstraintFallback(board.userId, boardId)
+        boardQueryService.getOwnedById(boardId, userId)
+        validateNoActiveAnalysis(userId)
+        val analysis = saveAnalysisWithConstraintFallback(userId, boardId)
 
         val savedPhotos =
             photoRepository.saveAll(
@@ -68,11 +69,13 @@ class AnalysisService(
         return AnalysisCreationResult(analysis.id, uploads)
     }
 
-    fun startUpload(analysisId: UUID): UploadVerificationResult {
+    fun startUpload(
+        userId: UUID,
+        analysisId: UUID,
+    ): UploadVerificationResult {
         val analysis = analysisRepository.findById(analysisId) ?: throw NotFoundException()
-        if (analysis.status != AnalysisStatus.UPLOADING) {
-            throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
-        }
+        validateAnalysisOwner(analysis.userId, userId)
+        validateUploading(analysis.status)
 
         val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
         if (pendingPhotos.isEmpty()) return UploadVerificationResult(0, 0, emptyList())
@@ -98,6 +101,19 @@ class AnalysisService(
                     .partition { it.uploadStatus == UploadStatus.COMPLETED }
 
             UploadVerificationResult(completed.size, pending.size, pending.map { it.id })
+        }
+    }
+
+    private fun validateAnalysisOwner(
+        analysisUserId: UUID,
+        userId: UUID,
+    ) {
+        if (analysisUserId != userId) throw NotFoundException()
+    }
+
+    private fun validateUploading(status: AnalysisStatus) {
+        if (status != AnalysisStatus.UPLOADING) {
+            throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
         }
     }
 

@@ -13,6 +13,4 @@ Terms domain. Owns effective term versions and append-only user agreement histor
 
 Current versions are selected by the latest `effective_at` at or before the lookup time for each code. Agreement writes never access the user repository and rely on the database foreign key for user integrity. Controllers receive a UUID authentication principal and pass it explicitly to the service.
 
-Application, presentation, and repository flows prefer scope-function chains and collection transforms over mutable accumulators.
-
 Update this file when the terms package layout changes.

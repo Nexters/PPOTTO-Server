@@ -1,8 +1,12 @@
 package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
-import com.github.nexters.ppotto.board.application.BoardQueryService
+import com.github.nexters.ppotto.board.application.BoardAccessService
+import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
+import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
@@ -10,16 +14,15 @@ import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
-import com.github.nexters.ppotto.sticker.support.FakeStickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.support.StickerTestConfig
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.context.annotation.Import
+import java.util.UUID
 
 @Import(StickerTestConfig::class)
 class StickerCommandServiceTest(
@@ -27,10 +30,10 @@ class StickerCommandServiceTest(
     stickerRepository: StickerRepository,
     stickerCommandRepository: StickerCommandRepository,
     stickerRecapRepository: StickerRecapRepository,
-    boardQueryService: BoardQueryService,
-    fakeDrawingPort: FakeStickerDrawingCommandPort,
+    boardAccessService: BoardAccessService,
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
+    drawingRepository: DrawingRepository,
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("사용자 보드에 스티커가 등록된 상태에서") {
@@ -90,11 +93,19 @@ class StickerCommandServiceTest(
             }
 
             When("스티커를 삭제하면") {
+                val stickerDrawingId = uuidV7()
+                val boardDrawingId = uuidV7()
+                drawingRepository.upsertAll(
+                    listOf(
+                        drawing(stickerDrawingId, board.id, sticker.id, DrawingScope.STICKER),
+                        drawing(boardDrawingId, board.id, null, DrawingScope.BOARD),
+                    ),
+                )
                 service.delete(board.userId, sticker.id)
 
                 Then("활성 스티커에서 제외하고 연결 드로잉을 삭제한다") {
                     stickerRepository.findById(sticker.id).shouldBeNull()
-                    fakeDrawingPort.deletedStickerIds shouldContain sticker.id
+                    drawingRepository.findByBoardId(board.id).map { it.id } shouldBe listOf(boardDrawingId)
                 }
             }
         }
@@ -108,7 +119,7 @@ class StickerCommandServiceTest(
                     stickerRepository,
                     stickerCommandRepository,
                     stickerRecapRepository,
-                    boardQueryService,
+                    boardAccessService,
                     emptyList(),
                 )
 
@@ -142,3 +153,18 @@ private fun textCreation() =
                 badgeRotation = 0.0,
             ),
     )
+
+private fun drawing(
+    id: UUID,
+    boardId: UUID,
+    stickerId: UUID?,
+    scope: DrawingScope,
+) = NewDrawing(
+    id = id,
+    boardId = boardId,
+    stickerId = stickerId,
+    scope = scope,
+    stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
+    color = "#FFFFFF",
+    strokeWidth = 2.0,
+)

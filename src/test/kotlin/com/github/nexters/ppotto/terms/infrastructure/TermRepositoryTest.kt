@@ -17,6 +17,22 @@ class TermRepositoryTest(
     termAgreementRepository: TermAgreementRepository,
     dslContext: DSLContext,
 ) : IntegrationTest({
+        fun saveUser(): UUID {
+            val suffix = UUID.randomUUID()
+            return dslContext
+                .insertInto(
+                    USERS,
+                    USERS.PROVIDER,
+                    USERS.PROVIDER_USER_ID,
+                    USERS.EMAIL,
+                ).values(
+                    OauthProvider.KAKAO,
+                    "term-repository-$suffix",
+                    "term-repository-$suffix@example.com",
+                ).returning(USERS.ID)
+                .fetchOne(USERS.ID)!!
+        }
+
         fun saveTerm(
             code: String,
             version: String,
@@ -57,15 +73,7 @@ class TermRepositoryTest(
         }
 
         Given("사용자와 약관이 등록된 상태에서") {
-            val userId =
-                dslContext
-                    .insertInto(USERS, USERS.PROVIDER, USERS.PROVIDER_USER_ID, USERS.EMAIL)
-                    .values(
-                        OauthProvider.KAKAO,
-                        "term-repository-${UUID.randomUUID()}",
-                        "term-repository-${UUID.randomUUID()}@example.com",
-                    ).returning(USERS.ID)
-                    .fetchOne(USERS.ID)!!
+            val userId = saveUser()
             val term =
                 saveTerm(
                     code = "AGREEMENT-${UUID.randomUUID()}",

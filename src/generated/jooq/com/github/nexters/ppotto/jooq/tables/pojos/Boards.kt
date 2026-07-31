@@ -17,7 +17,9 @@ data class Boards(
     val id: UUID? = null,
     val userId: UUID,
     val createdAt: Instant? = null,
-    val updatedAt: Instant? = null
+    val updatedAt: Instant? = null,
+    val name: String,
+    val deletedAt: Instant? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -48,6 +50,14 @@ data class Boards(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
+        if (this.name != o.name)
+            return false
+        if (this.deletedAt == null) {
+            if (o.deletedAt != null)
+                return false
+        }
+        else if (this.deletedAt != o.deletedAt)
+            return false
         return true
     }
 
@@ -58,6 +68,8 @@ data class Boards(
         result = prime * result + this.userId.hashCode()
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
+        result = prime * result + this.name.hashCode()
+        result = prime * result + (if (this.deletedAt == null) 0 else this.deletedAt.hashCode())
         return result
     }
 
@@ -68,6 +80,8 @@ data class Boards(
         sb.append(", ").append(userId)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
+        sb.append(", ").append(name)
+        sb.append(", ").append(deletedAt)
 
         sb.append(")")
         return sb.toString()

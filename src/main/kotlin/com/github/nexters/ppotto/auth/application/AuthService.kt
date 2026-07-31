@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.auth.application
 
+import com.github.nexters.ppotto.auth.application.port.AuthActiveUserPort
 import com.github.nexters.ppotto.auth.application.port.AuthTermsPort
 import com.github.nexters.ppotto.auth.application.port.AuthUserPort
 import com.github.nexters.ppotto.auth.application.port.OAuthClient
@@ -18,13 +19,14 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
-@ConditionalOnBean(AuthUserPort::class, AuthTermsPort::class)
+@ConditionalOnBean(AuthUserPort::class, AuthTermsPort::class, AuthActiveUserPort::class)
 class AuthService(
     oauthClients: List<OAuthClient>,
     private val tokenProvider: TokenProvider,
     private val refreshTokenStore: RefreshTokenStore,
     private val authUserPort: AuthUserPort,
     private val authTermsPort: AuthTermsPort,
+    private val authActiveUserPort: AuthActiveUserPort,
 ) {
     private val oauthClients =
         oauthClients.associateBy(OAuthClient::provider).also {
@@ -32,49 +34,40 @@ class AuthService(
         }
 
     @Transactional
-    fun login(command: LoginCommand): LoginResult =
-        oauthClient(command.provider)
-            .authenticate(command)
-            .let { profile ->
-                authUserPort
-                    .findOrCreate(profile)
-                    .also {
-                        if (profile.authorizationCodeExchangeFailed && it.isNewUser) {
-                            throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
-                        }
-                    }
-            }.let { user ->
-                tokenProvider
-                    .issue(user.userId)
-                    .also { refreshTokenStore.save(user.userId, it.refreshToken) }
-                    .let {
-                        LoginResult(
-                            tokenPair = it,
-                            isNewUser = user.isNewUser,
-                            pendingTerms = authTermsPort.findPendingTerms(user.userId),
-                        )
-                    }
-            }
+    fun login(command: LoginCommand): LoginResult {
+        val client = oauthClients[command.provider] ?: throw InvalidInputException()
+        val profile = client.authenticate(command)
+        val user = authUserPort.findOrCreate(profile)
+        if (profile.authorizationCodeExchangeFailed && user.isNewUser) {
+            throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
+        }
+        val pendingTerms = authTermsPort.findPendingTerms(user.userId)
+        val tokenPair = tokenProvider.issue(user.userId)
+        refreshTokenStore.save(user.userId, tokenPair.refreshToken)
+        return LoginResult(tokenPair, user.isNewUser, pendingTerms)
+    }
 
-    fun refresh(refreshToken: String): TokenPair =
-        refreshTokenStore
-            .findUserId(refreshToken)
-            ?.let { userId ->
-                tokenProvider
-                    .issue(userId)
-                    .also {
-                        if (!refreshTokenStore.rotate(userId, refreshToken, it.refreshToken)) {
-                            throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
-                        }
-                    }
-            } ?: throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
+    fun refresh(refreshToken: String): TokenPair {
+        val userId = refreshTokenStore.findUserId(refreshToken)
+        if (userId == null || !authActiveUserPort.isActive(userId)) {
+            throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
+        }
+        val newTokenPair = tokenProvider.issue(userId)
+        if (!refreshTokenStore.rotate(userId, refreshToken, newTokenPair.refreshToken)) {
+            throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
+        }
+        return newTokenPair
+    }
 
-    fun logout(userId: UUID) = refreshTokenStore.delete(userId)
+    fun logout(userId: UUID) {
+        refreshTokenStore.delete(userId)
+    }
 
     fun revokeProviderToken(
         provider: OAuthProvider,
         providerRefreshToken: String,
-    ) = oauthClient(provider).revoke(providerRefreshToken)
-
-    private fun oauthClient(provider: OAuthProvider): OAuthClient = oauthClients[provider] ?: throw InvalidInputException()
+    ) {
+        val client = oauthClients[provider] ?: throw InvalidInputException()
+        client.revoke(providerRefreshToken)
+    }
 }

@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.user.infrastructure
 
 import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
+import com.github.nexters.ppotto.user.application.port.UserSessionRevoker
 import com.github.nexters.ppotto.user.application.port.WithdrawnUserDataDeletionPort
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
@@ -13,6 +14,13 @@ class UserPortFallbackConfig {
     fun unavailableSocialAccountRevoker(): SocialAccountRevoker =
         SocialAccountRevoker { _, _ ->
             error("소셜 계정 해지 어댑터가 연결되지 않았습니다.")
+        }
+
+    @Bean
+    @ConditionalOnMissingBean(UserSessionRevoker::class)
+    fun unavailableUserSessionRevoker(): UserSessionRevoker =
+        UserSessionRevoker {
+            error("사용자 세션 해지 어댑터가 연결되지 않았습니다.")
         }
 
     @Bean

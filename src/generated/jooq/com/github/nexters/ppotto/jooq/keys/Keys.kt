@@ -7,6 +7,7 @@ package com.github.nexters.ppotto.jooq.keys
 
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
+import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
 import com.github.nexters.ppotto.jooq.tables.RecapComments
 import com.github.nexters.ppotto.jooq.tables.StickerPhotos
@@ -16,6 +17,7 @@ import com.github.nexters.ppotto.jooq.tables.Terms
 import com.github.nexters.ppotto.jooq.tables.Users
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
+import com.github.nexters.ppotto.jooq.tables.records.DrawingsRecord
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
 import com.github.nexters.ppotto.jooq.tables.records.RecapCommentsRecord
 import com.github.nexters.ppotto.jooq.tables.records.StickerPhotosRecord
@@ -38,6 +40,7 @@ import org.jooq.impl.QOM.ForeignKeyRule
 
 val ANALYSIS_PKEY: UniqueKey<AnalysisRecord> = Internal.createUniqueKey(Analysis.ANALYSIS, DSL.name("analysis_pkey"), arrayOf(Analysis.ANALYSIS.ID), true)
 val BOARDS_PKEY: UniqueKey<BoardsRecord> = Internal.createUniqueKey(Boards.BOARDS, DSL.name("boards_pkey"), arrayOf(Boards.BOARDS.ID), true)
+val DRAWINGS_PKEY: UniqueKey<DrawingsRecord> = Internal.createUniqueKey(Drawings.DRAWINGS, DSL.name("drawings_pkey"), arrayOf(Drawings.DRAWINGS.ID), true)
 val PHOTOS_PKEY: UniqueKey<PhotosRecord> = Internal.createUniqueKey(Photos.PHOTOS, DSL.name("photos_pkey"), arrayOf(Photos.PHOTOS.ID), true)
 val RECAP_COMMENTS_PKEY: UniqueKey<RecapCommentsRecord> = Internal.createUniqueKey(RecapComments.RECAP_COMMENTS, DSL.name("recap_comments_pkey"), arrayOf(RecapComments.RECAP_COMMENTS.ID), true)
 val STICKER_PHOTOS_PKEY: UniqueKey<StickerPhotosRecord> = Internal.createUniqueKey(StickerPhotos.STICKER_PHOTOS, DSL.name("sticker_photos_pkey"), arrayOf(StickerPhotos.STICKER_PHOTOS.ID), true)

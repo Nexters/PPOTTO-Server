@@ -8,7 +8,7 @@ Source root.
 |-----------|---------|
 | `main/kotlin/com/github/nexters/ppotto/` | Application code (see `main/kotlin/com/github/nexters/ppotto/AGENTS.md`) |
 | `main/resources/` | Configuration and migrations (see `main/resources/AGENTS.md`) |
-| `generated/jooq/` | jOOQ generated code. Never edit by hand; regenerate with `./gradlew flywayMigrate jooqCodegen` and commit |
+| `generated/jooq/` | jOOQ generated code for the current Flyway schema, including boards and drawings. Never edit by hand; regenerate with `./gradlew flywayMigrate jooqCodegen` and commit |
 | `test/kotlin/com/github/nexters/ppotto/` | Tests (see `test/kotlin/com/github/nexters/ppotto/AGENTS.md`) |
 | `test/resources/` | Test profile environment values, including OAuth HTTP timeouts, and parseable dummy provider credential fixtures |
 

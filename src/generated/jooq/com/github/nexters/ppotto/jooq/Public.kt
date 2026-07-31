@@ -6,6 +6,7 @@ package com.github.nexters.ppotto.jooq
 
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
+import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
 import com.github.nexters.ppotto.jooq.tables.RecapComments
 import com.github.nexters.ppotto.jooq.tables.StickerPhotos
@@ -44,6 +45,11 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
      * The table <code>public.boards</code>.
      */
     val BOARDS: Boards get() = Boards.BOARDS
+
+    /**
+     * The table <code>public.drawings</code>.
+     */
+    val DRAWINGS: Drawings get() = Drawings.DRAWINGS
 
     /**
      * The table <code>public.photos</code>.
@@ -85,6 +91,7 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
     override fun getTables(): List<Table<*>> = listOf(
         Analysis.ANALYSIS,
         Boards.BOARDS,
+        Drawings.DRAWINGS,
         Photos.PHOTOS,
         RecapComments.RECAP_COMMENTS,
         StickerPhotos.STICKER_PHOTOS,

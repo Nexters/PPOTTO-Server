@@ -48,6 +48,20 @@ class AnalysisRepository(
                 ),
         )
 
+    fun existsActiveByBoardIdAndUserId(
+        boardId: UUID,
+        userId: UUID,
+    ): Boolean =
+        dslContext.fetchExists(
+            dslContext
+                .selectFrom(ANALYSIS)
+                .where(ANALYSIS.BOARD_ID.eq(boardId))
+                .and(ANALYSIS.USER_ID.eq(userId))
+                .and(
+                    ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }),
+                ),
+        )
+
     private fun AnalysisRecord.toDomain() =
         Analysis(
             id = id!!,

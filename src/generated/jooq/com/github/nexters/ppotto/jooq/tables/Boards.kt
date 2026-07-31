@@ -6,7 +6,7 @@ package com.github.nexters.ppotto.jooq.tables
 
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
 import com.github.nexters.ppotto.jooq.Public
-import com.github.nexters.ppotto.jooq.indexes.IDX_BOARDS_USER_ID
+import com.github.nexters.ppotto.jooq.indexes.IX_BOARD_USER_CREATED
 import com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY
 import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_BOARD
 import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
@@ -18,6 +18,7 @@ import java.util.UUID
 import kotlin.collections.Collection
 import kotlin.collections.List
 
+import org.jooq.Check
 import org.jooq.Condition
 import org.jooq.Field
 import org.jooq.ForeignKey
@@ -99,6 +100,16 @@ open class Boards(
      */
     val UPDATED_AT: TableField<BoardsRecord, Instant?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
+    /**
+     * The column <code>public.boards.name</code>.
+     */
+    val NAME: TableField<BoardsRecord, String?> = createField(DSL.name("name"), SQLDataType.CLOB.nullable(false), this, "")
+
+    /**
+     * The column <code>public.boards.deleted_at</code>.
+     */
+    val DELETED_AT: TableField<BoardsRecord, Instant?> = createField(DSL.name("deleted_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
+
     private constructor(alias: Name, aliased: Table<BoardsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<BoardsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<BoardsRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
@@ -131,7 +142,7 @@ open class Boards(
         override fun `as`(alias: Table<*>): BoardsPath = BoardsPath(alias.qualifiedName, this)
     }
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_BOARDS_USER_ID)
+    override fun getIndexes(): List<Index> = listOf(IX_BOARD_USER_CREATED)
     override fun getPrimaryKey(): UniqueKey<BoardsRecord> = BOARDS_PKEY
 
     private lateinit var _stickers: StickersPath
@@ -149,6 +160,9 @@ open class Boards(
 
     val stickers: StickersPath
         get(): StickersPath = stickers()
+    override fun getChecks(): List<Check<BoardsRecord>> = listOf(
+        Internal.createCheck(this, DSL.name("chk_boards_name_length"), "(((char_length(name) >= 1) AND (char_length(name) <= 10)))", true)
+    )
     override fun `as`(alias: String): Boards = Boards(DSL.name(alias), this)
     override fun `as`(alias: Name): Boards = Boards(alias, this)
     override fun `as`(alias: Table<*>): Boards = Boards(alias.qualifiedName, this)
