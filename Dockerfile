@@ -40,6 +40,8 @@ RUN --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-gcs-
     APPLE_CLIENT_SECRET_EXPIRATION_DAYS=180 APPLE_JWKS_CACHE_SECONDS=3600 \
     JWT_ISSUER=aot JWT_SECRET=aot-dummy-jwt-secret-not-a-real-key \
     JWT_ACCESS_TOKEN_EXPIRATION_SECONDS=3600 JWT_REFRESH_TOKEN_EXPIRATION_DAYS=30 \
+    VERTEX_AI_PROJECT=aot VERTEX_AI_LOCATION=us-central1 \
+    VERTEX_AI_CLASSIFY_TIMEOUT_MS=60000 VERTEX_AI_STICKER_TIMEOUT_MS=90000 \
     java -XX:AOTCacheOutput=application.aot -Dspring.context.exit=onRefresh -jar application.jar
 USER spring:spring
 EXPOSE 8080
