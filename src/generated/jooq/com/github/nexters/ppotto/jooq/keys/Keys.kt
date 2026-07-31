@@ -8,12 +8,18 @@ package com.github.nexters.ppotto.jooq.keys
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Photos
+import com.github.nexters.ppotto.jooq.tables.RecapComments
+import com.github.nexters.ppotto.jooq.tables.StickerPhotos
+import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
 import com.github.nexters.ppotto.jooq.tables.Users
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
+import com.github.nexters.ppotto.jooq.tables.records.RecapCommentsRecord
+import com.github.nexters.ppotto.jooq.tables.records.StickerPhotosRecord
+import com.github.nexters.ppotto.jooq.tables.records.StickersRecord
 import com.github.nexters.ppotto.jooq.tables.records.TermAgreementsRecord
 import com.github.nexters.ppotto.jooq.tables.records.TermsRecord
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
@@ -33,6 +39,10 @@ import org.jooq.impl.QOM.ForeignKeyRule
 val ANALYSIS_PKEY: UniqueKey<AnalysisRecord> = Internal.createUniqueKey(Analysis.ANALYSIS, DSL.name("analysis_pkey"), arrayOf(Analysis.ANALYSIS.ID), true)
 val BOARDS_PKEY: UniqueKey<BoardsRecord> = Internal.createUniqueKey(Boards.BOARDS, DSL.name("boards_pkey"), arrayOf(Boards.BOARDS.ID), true)
 val PHOTOS_PKEY: UniqueKey<PhotosRecord> = Internal.createUniqueKey(Photos.PHOTOS, DSL.name("photos_pkey"), arrayOf(Photos.PHOTOS.ID), true)
+val RECAP_COMMENTS_PKEY: UniqueKey<RecapCommentsRecord> = Internal.createUniqueKey(RecapComments.RECAP_COMMENTS, DSL.name("recap_comments_pkey"), arrayOf(RecapComments.RECAP_COMMENTS.ID), true)
+val STICKER_PHOTOS_PKEY: UniqueKey<StickerPhotosRecord> = Internal.createUniqueKey(StickerPhotos.STICKER_PHOTOS, DSL.name("sticker_photos_pkey"), arrayOf(StickerPhotos.STICKER_PHOTOS.ID), true)
+val UK_STICKER_PHOTO: UniqueKey<StickerPhotosRecord> = Internal.createUniqueKey(StickerPhotos.STICKER_PHOTOS, DSL.name("uk_sticker_photo"), arrayOf(StickerPhotos.STICKER_PHOTOS.STICKER_ID, StickerPhotos.STICKER_PHOTOS.PHOTO_ID), true)
+val STICKERS_PKEY: UniqueKey<StickersRecord> = Internal.createUniqueKey(Stickers.STICKERS, DSL.name("stickers_pkey"), arrayOf(Stickers.STICKERS.ID), true)
 val TERM_AGREEMENTS_PKEY: UniqueKey<TermAgreementsRecord> = Internal.createUniqueKey(TermAgreements.TERM_AGREEMENTS, DSL.name("term_agreements_pkey"), arrayOf(TermAgreements.TERM_AGREEMENTS.ID), true)
 val UK_TERM_AGREEMENT: UniqueKey<TermAgreementsRecord> = Internal.createUniqueKey(TermAgreements.TERM_AGREEMENTS, DSL.name("uk_term_agreement"), arrayOf(TermAgreements.TERM_AGREEMENTS.USER_ID, TermAgreements.TERM_AGREEMENTS.TERM_ID), true)
 val TERMS_PKEY: UniqueKey<TermsRecord> = Internal.createUniqueKey(Terms.TERMS, DSL.name("terms_pkey"), arrayOf(Terms.TERMS.ID), true)
@@ -43,5 +53,11 @@ val USERS_PKEY: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, D
 // FOREIGN KEY definitions
 // -------------------------------------------------------------------------
 
+val RECAP_COMMENTS__FK_RECAP_COMMENTS_STICKER: ForeignKey<RecapCommentsRecord, StickersRecord> = Internal.createForeignKey(RecapComments.RECAP_COMMENTS, DSL.name("fk_recap_comments_sticker"), arrayOf(RecapComments.RECAP_COMMENTS.STICKER_ID), com.github.nexters.ppotto.jooq.keys.STICKERS_PKEY, arrayOf(Stickers.STICKERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val STICKER_PHOTOS__FK_STICKER_PHOTOS_PHOTO: ForeignKey<StickerPhotosRecord, PhotosRecord> = Internal.createForeignKey(StickerPhotos.STICKER_PHOTOS, DSL.name("fk_sticker_photos_photo"), arrayOf(StickerPhotos.STICKER_PHOTOS.PHOTO_ID), com.github.nexters.ppotto.jooq.keys.PHOTOS_PKEY, arrayOf(Photos.PHOTOS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
+val STICKER_PHOTOS__FK_STICKER_PHOTOS_STICKER: ForeignKey<StickerPhotosRecord, StickersRecord> = Internal.createForeignKey(StickerPhotos.STICKER_PHOTOS, DSL.name("fk_sticker_photos_sticker"), arrayOf(StickerPhotos.STICKER_PHOTOS.STICKER_ID), com.github.nexters.ppotto.jooq.keys.STICKERS_PKEY, arrayOf(Stickers.STICKERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val STICKERS__FK_STICKERS_ANALYSIS: ForeignKey<StickersRecord, AnalysisRecord> = Internal.createForeignKey(Stickers.STICKERS, DSL.name("fk_stickers_analysis"), arrayOf(Stickers.STICKERS.ANALYSIS_ID), com.github.nexters.ppotto.jooq.keys.ANALYSIS_PKEY, arrayOf(Analysis.ANALYSIS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
+val STICKERS__FK_STICKERS_BOARD: ForeignKey<StickersRecord, BoardsRecord> = Internal.createForeignKey(Stickers.STICKERS, DSL.name("fk_stickers_board"), arrayOf(Stickers.STICKERS.BOARD_ID), com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY, arrayOf(Boards.BOARDS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
+val STICKERS__FK_STICKERS_SOURCE_PHOTO: ForeignKey<StickersRecord, PhotosRecord> = Internal.createForeignKey(Stickers.STICKERS, DSL.name("fk_stickers_source_photo"), arrayOf(Stickers.STICKERS.SOURCE_PHOTO_ID), com.github.nexters.ppotto.jooq.keys.PHOTOS_PKEY, arrayOf(Photos.PHOTOS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
 val TERM_AGREEMENTS__FK_TERM_AGREEMENTS_TERM: ForeignKey<TermAgreementsRecord, TermsRecord> = Internal.createForeignKey(TermAgreements.TERM_AGREEMENTS, DSL.name("fk_term_agreements_term"), arrayOf(TermAgreements.TERM_AGREEMENTS.TERM_ID), com.github.nexters.ppotto.jooq.keys.TERMS_PKEY, arrayOf(Terms.TERMS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
 val TERM_AGREEMENTS__FK_TERM_AGREEMENTS_USER: ForeignKey<TermAgreementsRecord, UsersRecord> = Internal.createForeignKey(TermAgreements.TERM_AGREEMENTS, DSL.name("fk_term_agreements_user"), arrayOf(TermAgreements.TERM_AGREEMENTS.USER_ID), com.github.nexters.ppotto.jooq.keys.USERS_PKEY, arrayOf(Users.USERS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)

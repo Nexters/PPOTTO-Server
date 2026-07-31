@@ -7,6 +7,9 @@ package com.github.nexters.ppotto.jooq
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Photos
+import com.github.nexters.ppotto.jooq.tables.RecapComments
+import com.github.nexters.ppotto.jooq.tables.StickerPhotos
+import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
 import com.github.nexters.ppotto.jooq.tables.Users
@@ -48,6 +51,21 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
     val PHOTOS: Photos get() = Photos.PHOTOS
 
     /**
+     * The table <code>public.recap_comments</code>.
+     */
+    val RECAP_COMMENTS: RecapComments get() = RecapComments.RECAP_COMMENTS
+
+    /**
+     * The table <code>public.sticker_photos</code>.
+     */
+    val STICKER_PHOTOS: StickerPhotos get() = StickerPhotos.STICKER_PHOTOS
+
+    /**
+     * The table <code>public.stickers</code>.
+     */
+    val STICKERS: Stickers get() = Stickers.STICKERS
+
+    /**
      * The table <code>public.term_agreements</code>.
      */
     val TERM_AGREEMENTS: TermAgreements get() = TermAgreements.TERM_AGREEMENTS
@@ -68,6 +86,9 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
         Analysis.ANALYSIS,
         Boards.BOARDS,
         Photos.PHOTOS,
+        RecapComments.RECAP_COMMENTS,
+        StickerPhotos.STICKER_PHOTOS,
+        Stickers.STICKERS,
         TermAgreements.TERM_AGREEMENTS,
         Terms.TERMS,
         Users.USERS

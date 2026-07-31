@@ -9,6 +9,10 @@ import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_PHOTOS_ANALYSIS_ID
 import com.github.nexters.ppotto.jooq.indexes.IDX_PHOTOS_BOARD_ID
 import com.github.nexters.ppotto.jooq.keys.PHOTOS_PKEY
+import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_SOURCE_PHOTO
+import com.github.nexters.ppotto.jooq.keys.STICKER_PHOTOS__FK_STICKER_PHOTOS_PHOTO
+import com.github.nexters.ppotto.jooq.tables.StickerPhotos.StickerPhotosPath
+import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
 
 import java.time.Instant
@@ -23,6 +27,7 @@ import org.jooq.ForeignKey
 import org.jooq.Index
 import org.jooq.InverseForeignKey
 import org.jooq.Name
+import org.jooq.Path
 import org.jooq.PlainSQL
 import org.jooq.QueryPart
 import org.jooq.Record
@@ -140,9 +145,54 @@ open class Photos(
      * Create a <code>public.photos</code> table reference
      */
     constructor(): this(DSL.name("photos"), null)
+
+    constructor(path: Table<out Record>, childPath: ForeignKey<out Record, PhotosRecord>?, parentPath: InverseForeignKey<out Record, PhotosRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, PHOTOS, null, null)
+
+    /**
+     * A subtype implementing {@link Path} for simplified path-based joins.
+     */
+    open class PhotosPath : Photos, Path<PhotosRecord> {
+        constructor(path: Table<out Record>, childPath: ForeignKey<out Record, PhotosRecord>?, parentPath: InverseForeignKey<out Record, PhotosRecord>?): super(path, childPath, parentPath)
+        private constructor(alias: Name, aliased: Table<PhotosRecord>): super(alias, aliased)
+        override fun `as`(alias: String): PhotosPath = PhotosPath(DSL.name(alias), this)
+        override fun `as`(alias: Name): PhotosPath = PhotosPath(alias, this)
+        override fun `as`(alias: Table<*>): PhotosPath = PhotosPath(alias.qualifiedName, this)
+    }
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
     override fun getIndexes(): List<Index> = listOf(IDX_PHOTOS_ANALYSIS_ID, IDX_PHOTOS_BOARD_ID)
     override fun getPrimaryKey(): UniqueKey<PhotosRecord> = PHOTOS_PKEY
+
+    private lateinit var _stickerPhotos: StickerPhotosPath
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.sticker_photos</code> table
+     */
+    fun stickerPhotos(): StickerPhotosPath {
+        if (!this::_stickerPhotos.isInitialized)
+            _stickerPhotos = StickerPhotosPath(this, null, STICKER_PHOTOS__FK_STICKER_PHOTOS_PHOTO.inverseKey)
+
+        return _stickerPhotos;
+    }
+
+    val stickerPhotos: StickerPhotosPath
+        get(): StickerPhotosPath = stickerPhotos()
+
+    private lateinit var _stickers: StickersPath
+
+    /**
+     * Get the implicit to-many join path to the <code>public.stickers</code>
+     * table
+     */
+    fun stickers(): StickersPath {
+        if (!this::_stickers.isInitialized)
+            _stickers = StickersPath(this, null, STICKERS__FK_STICKERS_SOURCE_PHOTO.inverseKey)
+
+        return _stickers;
+    }
+
+    val stickers: StickersPath
+        get(): StickersPath = stickers()
     override fun `as`(alias: String): Photos = Photos(DSL.name(alias), this)
     override fun `as`(alias: Name): Photos = Photos(alias, this)
     override fun `as`(alias: Table<*>): Photos = Photos(alias.qualifiedName, this)
