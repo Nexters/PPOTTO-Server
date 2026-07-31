@@ -12,5 +12,9 @@ class UserTestConfig {
 
     @Bean
     @Primary
+    fun fakeUserSessionRevoker(): FakeUserSessionRevoker = FakeUserSessionRevoker()
+
+    @Bean
+    @Primary
     fun fakeWithdrawnUserDataDeletionPort(): FakeWithdrawnUserDataDeletionPort = FakeWithdrawnUserDataDeletionPort()
 }

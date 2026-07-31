@@ -4,7 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
-import com.github.nexters.ppotto.board.application.BoardQueryService
+import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -36,7 +36,7 @@ class AnalysisResultSaveServiceTest(
     stickerRecapRepository: StickerRecapRepository,
     photoRepository: PhotoRepository,
     analysisRepository: AnalysisRepository,
-    boardQueryService: BoardQueryService,
+    boardAccessService: BoardAccessService,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
     fakeOwnershipPort: FakeAnalysisPhotoOwnershipPort,
@@ -271,7 +271,7 @@ class AnalysisResultSaveServiceTest(
                 AnalysisResultSaveService(
                     stickerRepository,
                     stickerRecapRepository,
-                    boardQueryService,
+                    boardAccessService,
                     emptyList(),
                 )
 

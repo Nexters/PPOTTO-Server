@@ -29,15 +29,21 @@ class TermsControllerTest(
     termsService: TermsService,
     dslContext: DSLContext,
 ) : IntegrationTest({
-        fun saveUser(): UUID =
-            dslContext
-                .insertInto(USERS, USERS.PROVIDER, USERS.PROVIDER_USER_ID, USERS.EMAIL)
-                .values(
+        fun saveUser(): UUID {
+            val suffix = UUID.randomUUID()
+            return dslContext
+                .insertInto(
+                    USERS,
+                    USERS.PROVIDER,
+                    USERS.PROVIDER_USER_ID,
+                    USERS.EMAIL,
+                ).values(
                     OauthProvider.KAKAO,
-                    "terms-controller-${UUID.randomUUID()}",
-                    "terms-controller-${UUID.randomUUID()}@example.com",
+                    "terms-controller-$suffix",
+                    "terms-controller-$suffix@example.com",
                 ).returning(USERS.ID)
                 .fetchOne(USERS.ID)!!
+        }
 
         fun saveTerm(
             code: String,

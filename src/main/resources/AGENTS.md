@@ -20,8 +20,8 @@ Configuration and database migrations.
 | `config/user.yml` | User-account provider refresh-token encryption key from `${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}` |
 | `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` from `${GCS_*}` |
 | `config/redis.yml` | Redis host, port, password, and timeouts from `${REDIS_*}` for refresh token storage |
-| `config/auth.yml` | Boot HTTP Service Client group timeouts, Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
-| `db/migration/` | Flyway migrations: `V{yyyyMMddHHmmss}__{description}.sql` (timestamp version). Migrations enable pgvector, create core tables, preserve legacy minimal `users` rows during social-account migration, add `terms`/`term_agreements`, then add `stickers`/`sticker_photos`/`recap_comments` with recap integrity constraints plus an advisory-lock trigger enforcing six lifetime stickers per analysis |
+| `config/auth.yml` | OAuth HTTP timeouts, Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
+| `db/migration/` | Flyway timestamp migrations. The base schema creates core tables; later migrations add legacy-compatible social accounts, terms, drawings, stickers, recap data, and the six-stickers-per-analysis guard |
 
 ## Rules
 

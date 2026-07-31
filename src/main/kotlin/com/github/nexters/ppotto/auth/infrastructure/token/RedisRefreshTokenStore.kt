@@ -44,26 +44,28 @@ class RedisRefreshTokenStore(
         userId: UUID,
         currentRefreshToken: String,
         newRefreshToken: String,
-    ): Boolean =
-        (hash(currentRefreshToken) to hash(newRefreshToken))
-            .let { (currentHash, newHash) ->
-                redisTemplate.execute(
-                    ROTATE_SCRIPT,
-                    listOf(userKey(userId), tokenKey(currentHash), tokenKey(newHash)),
-                    currentHash,
-                    newHash,
-                    userId.toString(),
-                    expirationSeconds.toString(),
-                )
-            } == SUCCESS
+    ): Boolean {
+        val currentHash = hash(currentRefreshToken)
+        val newHash = hash(newRefreshToken)
+        val result =
+            redisTemplate.execute(
+                ROTATE_SCRIPT,
+                listOf(userKey(userId), tokenKey(currentHash), tokenKey(newHash)),
+                currentHash,
+                newHash,
+                userId.toString(),
+                expirationSeconds.toString(),
+            )
+        return result == SUCCESS
+    }
 
-    override fun delete(userId: UUID): Unit =
-        redisTemplate
-            .execute(
-                DELETE_SCRIPT,
-                listOf(userKey(userId)),
-                TOKEN_KEY_PREFIX,
-            ).let { Unit }
+    override fun delete(userId: UUID) {
+        redisTemplate.execute(
+            DELETE_SCRIPT,
+            listOf(userKey(userId)),
+            TOKEN_KEY_PREFIX,
+        )
+    }
 
     private fun userKey(userId: UUID) = "$USER_KEY_PREFIX$userId"
 

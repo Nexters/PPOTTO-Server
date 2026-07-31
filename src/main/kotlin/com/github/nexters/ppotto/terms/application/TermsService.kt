@@ -16,10 +16,10 @@ class TermsService(
     private val termAgreementRepository: TermAgreementRepository,
 ) {
     @Transactional(readOnly = true)
-    fun findCurrentTerms(userId: UUID): List<TermResult> =
-        termRepository
-            .findCurrentEffective(Instant.now())
-            .withAgreementStatus(userId)
+    fun findCurrentTerms(userId: UUID): List<TermResult> {
+        val currentTerms = termRepository.findCurrentEffective(Instant.now())
+        return currentTerms.withAgreementStatus(userId)
+    }
 
     @Transactional(readOnly = true)
     fun findPendingTerms(userId: UUID): List<TermResult> = findCurrentTerms(userId).filterNot { it.agreed }
@@ -31,22 +31,21 @@ class TermsService(
     ) {
         val requestedTermIds = termIds.toSet()
         val currentTerms = termRepository.findCurrentEffective(Instant.now())
-        val currentTermIds = currentTerms.map(Term::id).toSet()
+        val currentTermIds = currentTerms.mapTo(mutableSetOf()) { it.id }
         val agreedTermIds = termAgreementRepository.findAgreedTermIds(userId, currentTermIds)
 
         validateRequiredTerms(currentTerms, agreedTermIds + requestedTermIds)
-        requestedTermIds
-            .takeIf(currentTermIds::containsAll)
-            ?.let { termAgreementRepository.saveAll(userId, it) }
-            ?: throw InvalidInputException()
+        if (!currentTermIds.containsAll(requestedTermIds)) {
+            throw InvalidInputException()
+        }
+
+        termAgreementRepository.saveAll(userId, requestedTermIds)
     }
 
-    private fun List<Term>.withAgreementStatus(userId: UUID): List<TermResult> =
-        termAgreementRepository
-            .findAgreedTermIds(userId, map(Term::id))
-            .let { agreedTermIds ->
-                map { term -> TermResult.from(term, term.id in agreedTermIds) }
-            }
+    private fun List<Term>.withAgreementStatus(userId: UUID): List<TermResult> {
+        val agreedTermIds = termAgreementRepository.findAgreedTermIds(userId, map { it.id })
+        return map { term -> TermResult.from(term, term.id in agreedTermIds) }
+    }
 
     private fun validateRequiredTerms(
         currentTerms: List<Term>,

@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.sticker.application
 
-import com.github.nexters.ppotto.board.application.BoardQueryService
+import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
@@ -19,7 +19,7 @@ class StickerCommandService(
     private val stickerRepository: StickerRepository,
     private val stickerCommandRepository: StickerCommandRepository,
     private val stickerRecapRepository: StickerRecapRepository,
-    private val boardQueryService: BoardQueryService,
+    private val boardAccessService: BoardAccessService,
     private val drawingCommandPorts: List<StickerDrawingCommandPort>,
 ) {
     @Transactional
@@ -27,28 +27,27 @@ class StickerCommandService(
         userId: UUID,
         stickerId: UUID,
         title: String,
-    ): StickerTitleResult =
-        getOwned(userId, stickerId)
-            .also { it.rename(title) }
-            .also {
-                if (!stickerCommandRepository.updateTitle(it.id, it.title)) {
-                    throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-                }
-            }.let { StickerTitleResult(it.id, it.title) }
+    ): StickerTitleResult {
+        val sticker = getOwned(userId, stickerId)
+        sticker.rename(title)
+        if (!stickerCommandRepository.updateTitle(sticker.id, sticker.title)) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
+        return StickerTitleResult(sticker.id, sticker.title)
+    }
 
     @Transactional
     fun markViewed(
         userId: UUID,
         stickerId: UUID,
     ) {
-        getOwned(userId, stickerId)
-            .takeIf { it.viewedAt == null }
-            ?.also { it.markViewed(Instant.now()) }
-            ?.also {
-                if (!stickerCommandRepository.markViewed(it.id, checkNotNull(it.viewedAt))) {
-                    throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-                }
+        val sticker = getOwned(userId, stickerId)
+        if (sticker.viewedAt == null) {
+            sticker.markViewed(Instant.now())
+            if (!stickerCommandRepository.markViewed(sticker.id, checkNotNull(sticker.viewedAt))) {
+                throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
             }
+        }
     }
 
     @Transactional
@@ -56,15 +55,14 @@ class StickerCommandService(
         userId: UUID,
         stickerId: UUID,
     ) {
+        val sticker = getOwned(userId, stickerId)
         val drawingCommandPort = drawingCommandPort()
-        getOwned(userId, stickerId)
-            .also { it.delete(Instant.now()) }
-            .also {
-                if (!stickerCommandRepository.softDelete(it.id, checkNotNull(it.deletedAt))) {
-                    throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-                }
-            }.also { drawingCommandPort.deleteByStickerIds(it.boardId, listOf(it.id)) }
-            .also { stickerRecapRepository.deleteByStickerIds(listOf(it.id)) }
+        sticker.delete(Instant.now())
+        if (!stickerCommandRepository.softDelete(sticker.id, checkNotNull(sticker.deletedAt))) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
+        drawingCommandPort.deleteByStickerIds(sticker.boardId, listOf(stickerId))
+        stickerRecapRepository.deleteByStickerIds(listOf(stickerId))
     }
 
     fun validateOwnedByBoard(
@@ -82,53 +80,43 @@ class StickerCommandService(
             throw InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
         }
         val stickersById = stickerRepository.findAllByBoardId(boardId).associateBy { it.id }
-        layouts
-            .asSequence()
-            .map { command ->
-                stickersById
-                    .getValue(command.id)
-                    .also { it.updateLayout(command.toDomain()) }
-            }.firstOrNull { !stickerCommandRepository.updateLayout(it) }
-            ?.let {
+        layouts.forEach { command ->
+            val sticker = stickersById.getValue(command.id)
+            sticker.updateLayout(command.toDomain())
+            if (!stickerCommandRepository.updateLayout(sticker)) {
                 throw InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
             }
+        }
     }
 
     @Transactional
     fun deleteAllByBoardId(boardId: UUID) {
-        stickerRepository
-            .findAllByBoardId(boardId)
-            .takeIf { it.isNotEmpty() }
-            ?.let { stickers ->
-                val drawingCommandPort = drawingCommandPort()
-                val deletedAt = Instant.now()
-                val stickerIds =
-                    stickers
-                        .asSequence()
-                        .onEach { it.delete(deletedAt) }
-                        .onEach {
-                            if (!stickerCommandRepository.softDelete(it.id, deletedAt)) {
-                                throw InvalidInputException(message = "삭제할 수 없는 스티커가 포함되어 있습니다.")
-                            }
-                        }.map(Sticker::id)
-                        .toList()
-                drawingCommandPort.deleteByStickerIds(boardId, stickerIds)
-                stickerRecapRepository.deleteByStickerIds(stickerIds)
+        val stickers = stickerRepository.findAllByBoardId(boardId)
+        if (stickers.isEmpty()) return
+        val drawingCommandPort = drawingCommandPort()
+        val deletedAt = Instant.now()
+        stickers.forEach { sticker ->
+            sticker.delete(deletedAt)
+            if (!stickerCommandRepository.softDelete(sticker.id, deletedAt)) {
+                throw InvalidInputException(message = "삭제할 수 없는 스티커가 포함되어 있습니다.")
             }
+        }
+        val stickerIds = stickers.map { it.id }
+        drawingCommandPort.deleteByStickerIds(boardId, stickerIds)
+        stickerRecapRepository.deleteByStickerIds(stickerIds)
     }
 
     private fun getOwned(
         userId: UUID,
         stickerId: UUID,
-    ): Sticker =
-        stickerRepository
-            .findById(stickerId)
-            ?.also { sticker ->
-                boardQueryService
-                    .getById(sticker.boardId)
-                    .takeIf { it.userId == userId }
-                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-            } ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+    ): Sticker {
+        val sticker = stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        val board = boardAccessService.getById(sticker.boardId)
+        if (board.userId != userId) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
+        return sticker
+    }
 
     private fun drawingCommandPort(): StickerDrawingCommandPort =
         drawingCommandPorts.singleOrNull()

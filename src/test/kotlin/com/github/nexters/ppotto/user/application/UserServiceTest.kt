@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.domain.OAuthProvider
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import com.github.nexters.ppotto.user.support.FakeSocialAccountRevoker
+import com.github.nexters.ppotto.user.support.FakeUserSessionRevoker
 import com.github.nexters.ppotto.user.support.Revocation
 import com.github.nexters.ppotto.user.support.UserTestConfig
 import io.kotest.matchers.collections.shouldContainExactly
@@ -24,6 +25,7 @@ class UserServiceTest(
     userService: UserService,
     userRepository: UserRepository,
     revoker: FakeSocialAccountRevoker,
+    sessionRevoker: FakeUserSessionRevoker,
     dslContext: DSLContext,
 ) : IntegrationTest({
         Given("처음 로그인한 Apple 소셜 계정이 있을 때") {
@@ -117,6 +119,7 @@ class UserServiceTest(
 
         Given("제공자 refresh token을 가진 사용자가 있을 때") {
             revoker.clear()
+            sessionRevoker.clear()
             val result =
                 userService.findOrCreate(
                     SocialUserCommand(
@@ -133,6 +136,7 @@ class UserServiceTest(
 
                 Then("제공자 계정을 해지하고 활성 사용자 조회에서 제외한다") {
                     revoker.revocations shouldContainExactly listOf(Revocation(OAuthProvider.APPLE, "revoke-me"))
+                    sessionRevoker.revokedUserIds shouldContainExactly listOf(result.user.id)
                     userRepository.findById(result.user.id).shouldBeNull()
                 }
             }

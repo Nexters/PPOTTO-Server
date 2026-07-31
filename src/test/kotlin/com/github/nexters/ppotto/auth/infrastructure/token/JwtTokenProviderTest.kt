@@ -37,9 +37,10 @@ class JwtTokenProviderTest :
 
         Given("서명이 변경된 access token이 주어졌을 때") {
             val token = provider.issue(UUID.randomUUID()).accessToken
-            val signature = token.substringAfterLast(".")
-            val tamperedSignature = signature.replaceRange(0, 1, if (signature.first() == 'a') "b" else "a")
-            val tampered = "${token.substringBeforeLast(".")}.$tamperedSignature"
+            val tokenParts = token.split(".")
+            val signature = tokenParts.last()
+            val tamperedSignature = (if (signature.first() == 'a') "b" else "a") + signature.drop(1)
+            val tampered = (tokenParts.dropLast(1) + tamperedSignature).joinToString(".")
 
             When("access token을 검증하면") {
                 Then("인증 예외가 발생한다") {

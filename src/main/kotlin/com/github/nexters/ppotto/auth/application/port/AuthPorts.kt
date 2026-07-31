@@ -46,3 +46,7 @@ fun interface AuthUserPort {
 fun interface AuthTermsPort {
     fun findPendingTerms(userId: UUID): List<PendingTerm>
 }
+
+fun interface AuthActiveUserPort {
+    fun isActive(userId: UUID): Boolean
+}

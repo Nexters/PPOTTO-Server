@@ -22,18 +22,22 @@ class TermsController(
     @GetMapping
     fun findCurrentTerms(
         @AuthenticationPrincipal userId: UUID?,
-    ): ApiResponse<List<TermResponse>> =
-        termsService
-            .findCurrentTerms(userId ?: throw UnauthorizedException())
-            .map(TermResponse::from)
-            .let { ApiResponse.success(it) }
+    ): ApiResponse<List<TermResponse>> {
+        val authenticatedUserId = userId ?: throw UnauthorizedException()
+        return ApiResponse.success(
+            termsService
+                .findCurrentTerms(authenticatedUserId)
+                .map { TermResponse.from(it) },
+        )
+    }
 
     @PostMapping("/agreements")
     fun agree(
         @AuthenticationPrincipal userId: UUID?,
         @Valid @RequestBody request: AgreeTermsRequest,
-    ): ApiResponse<Unit> =
-        termsService
-            .agree(userId ?: throw UnauthorizedException(), request.termIds)
-            .let { ApiResponse.success() }
+    ): ApiResponse<Unit> {
+        val authenticatedUserId = userId ?: throw UnauthorizedException()
+        termsService.agree(authenticatedUserId, request.termIds)
+        return ApiResponse.success()
+    }
 }

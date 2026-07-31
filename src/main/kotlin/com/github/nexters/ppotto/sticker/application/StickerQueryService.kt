@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.sticker.application
 
-import com.github.nexters.ppotto.board.application.BoardQueryService
+import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoMetadata
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
@@ -16,14 +16,14 @@ import java.util.UUID
 class StickerQueryService(
     private val stickerRepository: StickerRepository,
     private val stickerRecapRepository: StickerRecapRepository,
-    private val boardQueryService: BoardQueryService,
+    private val boardAccessService: BoardAccessService,
     private val recapPhotoQueryPorts: List<RecapPhotoQueryPort>,
     private val stickerImageQueryPorts: List<StickerImageQueryPort>,
 ) {
-    fun getByBoardId(boardId: UUID): List<StickerItemResult> =
-        stickerRepository
-            .findAllByBoardId(boardId)
-            .let(::toResults)
+    fun getByBoardId(boardId: UUID): List<StickerItemResult> {
+        val stickers = stickerRepository.findAllByBoardId(boardId)
+        return toResults(stickers)
+    }
 
     fun getRecap(
         userId: UUID,
@@ -36,39 +36,38 @@ class StickerQueryService(
                 .map { RecapCommentResult(it.id, it.content, it.isFloat, it.posX, it.posY) }
         val photoIds = stickerRecapRepository.findPhotoIds(stickerId)
         val photos =
-            photoIds
-                .takeIf { it.isNotEmpty() }
-                ?.let {
-                    photoQueryPort()
-                        .getByIds(it)
-                        .also { photos -> checkPhotoContract(it, photos) }
-                        .sortedWith(compareBy<RecapPhotoMetadata> { photo -> photo.takenAt }.thenBy { photo -> photo.id })
-                        .map { photo -> RecapPhotoResult(photo.id, photo.imageUrl, photo.takenAt) }
-                } ?: emptyList()
+            if (photoIds.isEmpty()) {
+                emptyList()
+            } else {
+                photoQueryPort()
+                    .getByIds(photoIds)
+                    .also { checkPhotoContract(photoIds, it) }
+                    .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id })
+                    .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }
+            }
         return StickerRecapResult(toResults(listOf(sticker)).single(), comments, photos)
     }
 
     private fun getOwned(
         userId: UUID,
         stickerId: UUID,
-    ): Sticker =
-        stickerRepository
-            .findById(stickerId)
-            ?.also { sticker ->
-                boardQueryService
-                    .getById(sticker.boardId)
-                    .takeIf { it.userId == userId }
-                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-            } ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+    ): Sticker {
+        val sticker = stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        val board = boardAccessService.getById(sticker.boardId)
+        if (board.userId != userId) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
+        return sticker
+    }
 
     private fun toResults(stickers: List<Sticker>): List<StickerItemResult> {
+        val imageKeys = stickers.mapNotNull { it.imageKey }.toSet()
         val imageUrls =
-            stickers
-                .mapNotNull(Sticker::imageKey)
-                .toSet()
-                .takeIf { it.isNotEmpty() }
-                ?.let { imageQueryPort().issueReadUrls(it) }
-                ?: emptyMap()
+            if (imageKeys.isEmpty()) {
+                emptyMap()
+            } else {
+                imageQueryPort().issueReadUrls(imageKeys)
+            }
         return stickers.map { sticker ->
             StickerItemResult(
                 id = sticker.id,

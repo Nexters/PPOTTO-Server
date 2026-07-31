@@ -1,14 +1,7 @@
-spring:
-  http:
-    serviceclient:
-      kakao-oauth:
-        connect-timeout: ${OAUTH_CONNECT_TIMEOUT_MILLIS}ms
-        read-timeout: ${OAUTH_READ_TIMEOUT_MILLIS}ms
-      apple-oauth:
-        connect-timeout: ${OAUTH_CONNECT_TIMEOUT_MILLIS}ms
-        read-timeout: ${OAUTH_READ_TIMEOUT_MILLIS}ms
-
 auth:
+  oauth:
+    connect-timeout-millis: ${OAUTH_CONNECT_TIMEOUT_MILLIS}
+    read-timeout-millis: ${OAUTH_READ_TIMEOUT_MILLIS}
   kakao:
     app-id: ${KAKAO_APP_ID}
     access-token-info-uri: ${KAKAO_ACCESS_TOKEN_INFO_URI}

@@ -29,28 +29,26 @@ class JwtTokenProvider(
     private val random = SecureRandom()
     private val secret = properties.secret.toByteArray(StandardCharsets.UTF_8)
 
-    override fun issue(userId: UUID): TokenPair =
-        clock
-            .instant()
-            .let { now ->
-                JWTClaimsSet
-                    .Builder()
-                    .issuer(properties.issuer)
-                    .subject(userId.toString())
-                    .issueTime(Date.from(now))
-                    .expirationTime(Date.from(now.plusSeconds(properties.accessTokenExpirationSeconds)))
-                    .jwtID(UUID.randomUUID().toString())
-                    .claim(TOKEN_USE, ACCESS)
-                    .build()
-            }.let { SignedJWT(JWSHeader.Builder(JWSAlgorithm.HS256).build(), it) }
-            .also { it.sign(MACSigner(secret)) }
-            .let {
-                TokenPair(
-                    accessToken = it.serialize(),
-                    refreshToken = randomRefreshToken(),
-                    accessTokenExpiresIn = properties.accessTokenExpirationSeconds,
-                )
-            }
+    override fun issue(userId: UUID): TokenPair {
+        val now = clock.instant()
+        val claims =
+            JWTClaimsSet
+                .Builder()
+                .issuer(properties.issuer)
+                .subject(userId.toString())
+                .issueTime(Date.from(now))
+                .expirationTime(Date.from(now.plusSeconds(properties.accessTokenExpirationSeconds)))
+                .jwtID(UUID.randomUUID().toString())
+                .claim(TOKEN_USE, ACCESS)
+                .build()
+        val jwt = SignedJWT(JWSHeader.Builder(JWSAlgorithm.HS256).build(), claims)
+        jwt.sign(MACSigner(secret))
+        return TokenPair(
+            accessToken = jwt.serialize(),
+            refreshToken = randomRefreshToken(),
+            accessTokenExpiresIn = properties.accessTokenExpirationSeconds,
+        )
+    }
 
     override fun verifyAccessToken(accessToken: String): UUID =
         try {
@@ -76,15 +74,14 @@ class JwtTokenProvider(
             unauthorized(e)
         }
 
-    private fun randomRefreshToken(): String =
-        ByteArray(REFRESH_TOKEN_BYTES)
-            .also(random::nextBytes)
-            .let {
-                Base64
-                    .getUrlEncoder()
-                    .withoutPadding()
-                    .encodeToString(it)
-            }
+    private fun randomRefreshToken(): String {
+        val bytes = ByteArray(REFRESH_TOKEN_BYTES)
+        random.nextBytes(bytes)
+        return Base64
+            .getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(bytes)
+    }
 
     private fun unauthorized(cause: Exception? = null): Nothing {
         val exception = UnauthorizedException(CommonErrorCode.UNAUTHORIZED)

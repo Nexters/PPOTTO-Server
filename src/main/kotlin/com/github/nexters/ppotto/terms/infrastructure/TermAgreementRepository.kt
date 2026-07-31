@@ -15,37 +15,35 @@ class TermAgreementRepository(
     fun findAgreedTermIds(
         userId: UUID,
         termIds: Collection<UUID>,
-    ): Set<UUID> =
-        termIds
-            .takeIf { it.isNotEmpty() }
-            ?.let {
-                dslContext
-                    .select(TERM_AGREEMENTS.TERM_ID)
-                    .from(TERM_AGREEMENTS)
-                    .where(TERM_AGREEMENTS.USER_ID.eq(userId))
-                    .and(TERM_AGREEMENTS.TERM_ID.`in`(it))
-                    .fetch(TERM_AGREEMENTS.TERM_ID)
-                    .filterNotNull()
-                    .toSet()
-            } ?: emptySet()
+    ): Set<UUID> {
+        if (termIds.isEmpty()) return emptySet()
+
+        return dslContext
+            .select(TERM_AGREEMENTS.TERM_ID)
+            .from(TERM_AGREEMENTS)
+            .where(TERM_AGREEMENTS.USER_ID.eq(userId))
+            .and(TERM_AGREEMENTS.TERM_ID.`in`(termIds))
+            .fetch(TERM_AGREEMENTS.TERM_ID)
+            .filterNotNull()
+            .toSet()
+    }
 
     fun saveAll(
         userId: UUID,
         termIds: Collection<UUID>,
-    ): List<TermAgreement> =
-        termIds
-            .distinct()
-            .takeIf { it.isNotEmpty() }
-            ?.let {
-                dslContext
-                    .insertInto(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
-                    .valuesOfRows(it.map { termId -> row(userId, termId) })
-                    .onConflict(TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
-                    .doNothing()
-                    .returning()
-                    .fetch()
-                    .map { it.toDomain() }
-            } ?: emptyList()
+    ): List<TermAgreement> {
+        val distinctTermIds = termIds.distinct()
+        if (distinctTermIds.isEmpty()) return emptyList()
+
+        return dslContext
+            .insertInto(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
+            .valuesOfRows(distinctTermIds.map { termId -> row(userId, termId) })
+            .onConflict(TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
+            .doNothing()
+            .returning()
+            .fetch()
+            .map { it.toDomain() }
+    }
 
     private fun TermAgreementsRecord.toDomain() =
         TermAgreement(

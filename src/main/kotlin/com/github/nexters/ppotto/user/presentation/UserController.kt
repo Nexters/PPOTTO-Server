@@ -19,17 +19,16 @@ class UserController(
     @GetMapping("/me")
     fun getMe(
         @AuthenticationPrincipal userId: UUID?,
-    ): ApiResponse<UserResponse> =
-        userService
-            .getById(userId ?: throw UnauthorizedException())
-            .let(UserResponse::from)
-            .let { ApiResponse.success(it) }
+    ): ApiResponse<UserResponse> {
+        val user = userService.getById(userId ?: throw UnauthorizedException())
+        return ApiResponse.success(UserResponse.from(user))
+    }
 
     @DeleteMapping("/me")
     fun deleteMe(
         @AuthenticationPrincipal userId: UUID?,
-    ): ApiResponse<Unit> =
-        userService
-            .withdraw(userId ?: throw UnauthorizedException())
-            .let { ApiResponse.success() }
+    ): ApiResponse<Unit> {
+        userService.withdraw(userId ?: throw UnauthorizedException())
+        return ApiResponse.success()
+    }
 }

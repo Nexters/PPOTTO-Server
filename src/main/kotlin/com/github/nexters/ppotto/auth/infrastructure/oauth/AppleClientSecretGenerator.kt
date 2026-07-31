@@ -24,38 +24,39 @@ class AppleClientSecretGenerator(
     private val clock = Clock.systemUTC()
     private val privateKey = loadPrivateKey(properties.privateKeyPath)
 
-    fun generate(): String =
-        clock
-            .instant()
-            .let { issuedAt ->
-                JWTClaimsSet
-                    .Builder()
-                    .issuer(properties.teamId)
-                    .subject(properties.clientId)
-                    .audience(properties.issuer)
-                    .issueTime(Date.from(issuedAt))
-                    .expirationTime(Date.from(issuedAt.plus(Duration.ofDays(properties.clientSecretExpirationDays))))
-                    .build()
-            }.let { claims ->
-                SignedJWT(
-                    JWSHeader
-                        .Builder(JWSAlgorithm.ES256)
-                        .keyID(properties.keyId)
-                        .build(),
-                    claims,
-                )
-            }.also { it.sign(ECDSASigner(privateKey)) }
-            .serialize()
+    fun generate(): String {
+        val issuedAt = clock.instant()
+        val claims =
+            JWTClaimsSet
+                .Builder()
+                .issuer(properties.teamId)
+                .subject(properties.clientId)
+                .audience(properties.issuer)
+                .issueTime(Date.from(issuedAt))
+                .expirationTime(Date.from(issuedAt.plus(Duration.ofDays(properties.clientSecretExpirationDays))))
+                .build()
+        val jwt =
+            SignedJWT(
+                JWSHeader
+                    .Builder(JWSAlgorithm.ES256)
+                    .keyID(properties.keyId)
+                    .build(),
+                claims,
+            )
+        jwt.sign(ECDSASigner(privateKey))
+        return jwt.serialize()
+    }
 
-    private fun loadPrivateKey(path: String): ECPrivateKey =
-        Files
-            .readString(Path.of(path))
-            .replace(BEGIN_PRIVATE_KEY, "")
-            .replace(END_PRIVATE_KEY, "")
-            .replace("\\s".toRegex(), "")
-            .let(Base64.getDecoder()::decode)
-            .let(::PKCS8EncodedKeySpec)
-            .let { KeyFactory.getInstance("EC").generatePrivate(it) as ECPrivateKey }
+    private fun loadPrivateKey(path: String): ECPrivateKey {
+        val pem =
+            Files
+                .readString(Path.of(path))
+                .replace(BEGIN_PRIVATE_KEY, "")
+                .replace(END_PRIVATE_KEY, "")
+                .replace("\\s".toRegex(), "")
+        val keySpec = PKCS8EncodedKeySpec(Base64.getDecoder().decode(pem))
+        return KeyFactory.getInstance("EC").generatePrivate(keySpec) as ECPrivateKey
+    }
 
     private companion object {
         const val BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----"

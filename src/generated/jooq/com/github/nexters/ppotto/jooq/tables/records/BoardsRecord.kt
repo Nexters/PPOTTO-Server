@@ -35,6 +35,14 @@ open class BoardsRecord private constructor() : UpdatableRecordImpl<BoardsRecord
         set(value): Unit = set(3, value)
         get(): Instant? = get(3) as Instant?
 
+    open var name: String
+        set(value): Unit = set(4, value)
+        get(): String = get(4) as String
+
+    open var deletedAt: Instant?
+        set(value): Unit = set(5, value)
+        get(): Instant? = get(5) as Instant?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -44,11 +52,13 @@ open class BoardsRecord private constructor() : UpdatableRecordImpl<BoardsRecord
     /**
      * Create a detached, initialised BoardsRecord
      */
-    constructor(id: UUID? = null, userId: UUID, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, userId: UUID, createdAt: Instant? = null, updatedAt: Instant? = null, name: String, deletedAt: Instant? = null): this() {
         this.id = id
         this.userId = userId
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.name = name
+        this.deletedAt = deletedAt
         resetTouchedOnNotNull()
     }
 
@@ -61,6 +71,8 @@ open class BoardsRecord private constructor() : UpdatableRecordImpl<BoardsRecord
             this.userId = value.userId
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.name = value.name
+            this.deletedAt = value.deletedAt
             resetTouchedOnNotNull()
         }
     }

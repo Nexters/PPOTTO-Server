@@ -30,10 +30,9 @@ class StickerController(
         @AuthenticationPrincipal userId: UUID?,
         @PathVariable stickerId: UUID,
     ): ApiResponse<RecapDetailResponse> =
-        stickerQueryService
-            .getRecap(userId.orThrow(), stickerId)
-            .let(RecapDetailResponse::from)
-            .let { ApiResponse.success(it) }
+        ApiResponse.success(
+            RecapDetailResponse.from(stickerQueryService.getRecap(userId.orThrow(), stickerId)),
+        )
 
     @PatchMapping("/{stickerId}")
     fun updateTitle(
@@ -41,28 +40,27 @@ class StickerController(
         @PathVariable stickerId: UUID,
         @Valid @RequestBody request: UpdateStickerTitleRequest,
     ): ApiResponse<UpdateStickerTitleResponse> =
-        stickerCommandService
-            .rename(userId.orThrow(), stickerId, request.title)
-            .let(UpdateStickerTitleResponse::from)
-            .let { ApiResponse.success(it) }
+        ApiResponse.success(
+            UpdateStickerTitleResponse.from(stickerCommandService.rename(userId.orThrow(), stickerId, request.title)),
+        )
 
     @DeleteMapping("/{stickerId}")
     fun delete(
         @AuthenticationPrincipal userId: UUID?,
         @PathVariable stickerId: UUID,
-    ): ApiResponse<Unit> =
-        stickerCommandService
-            .delete(userId.orThrow(), stickerId)
-            .let { ApiResponse.success() }
+    ): ApiResponse<Unit> {
+        stickerCommandService.delete(userId.orThrow(), stickerId)
+        return ApiResponse.success()
+    }
 
     @PostMapping("/{stickerId}/view")
     fun markViewed(
         @AuthenticationPrincipal userId: UUID?,
         @PathVariable stickerId: UUID,
-    ): ApiResponse<Unit> =
-        stickerCommandService
-            .markViewed(userId.orThrow(), stickerId)
-            .let { ApiResponse.success() }
+    ): ApiResponse<Unit> {
+        stickerCommandService.markViewed(userId.orThrow(), stickerId)
+        return ApiResponse.success()
+    }
 
     private fun UUID?.orThrow(): UUID = this ?: throw UnauthorizedException()
 }

@@ -10,14 +10,28 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `support/IntegrationTest.kt` | Base class: `@SpringBootTest` + `@ActiveProfiles("test")` + Testcontainers import. Extend this for integration tests |
 | `support/TestcontainersConfiguration.kt` | `@ServiceConnection` PostgreSQLContainer (pgvector/pgvector:pg18, matches compose image) |
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
-| `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, cleanup, and controller tests |
-| `auth/` | Boot HTTP Service Client group/config, provider, token, refresh rotation, application flow, and Bearer security focused tests |
-| `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, and idempotent agreement service tests |
-| `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration tests |
-| `terms/presentation/TermsControllerTest.kt` | Versioned terms API contract, principal, and error response integration tests |
+| `analysis/` | Authenticated ownership, upload verification, active-analysis integration, persistence, and API contract tests |
+| `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, session-revoking withdrawal, cleanup, and controller tests |
+| `auth/` | OAuth HTTP timeout/config validation, deterministic JWT tamper detection, active-user refresh validation, cross-domain 가입 rollback, and Bearer security tests |
+| `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, idempotent agreement, and schema-valid user fixture tests |
+| `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration with schema-valid users |
+| `terms/presentation/TermsControllerTest.kt` | Versioned terms API contract, principal, error response, and schema-valid user fixture integration tests |
 | `terms/support/TermsTestSecurityConfig.kt` | Test-only UUID authentication principal filter for MockMvc |
+| `board/domain/DrawingTest.kt` | Drawing scope and sticker ownership invariant unit tests |
+| `board/application/BoardCommandServiceTest.kt` | Board count, deletion guards, and cascade command integration tests |
+| `board/application/BoardCommandConcurrencyTest.kt` | User-scoped create/delete serialization and max/last-board concurrency regression tests |
+| `board/application/BoardQueryServiceTest.kt` | Owned board detail composition integration tests |
+| `board/application/BoardLayoutServiceTest.kt` | Idempotent layout and atomic ownership validation integration tests |
+| `board/application/BoardLayoutConcurrencyTest.kt` | Layout/delete serialization regression test preventing drawing reinsertion after board deletion |
+| `board/application/BoardStickerIntegrationTest.kt` | Production analysis/sticker port wiring, active-analysis deletion guard, detail/layout mapping, and cascade integration tests |
+| `board/infrastructure/BoardRepositoryTest.kt` | Board persistence and active lookup integration tests |
+| `board/infrastructure/DrawingRepositoryTest.kt` | Drawing JSONB upsert and soft-delete integration tests |
+| `board/infrastructure/BoardExternalPortFallbackConfigurationTest.kt` | Standalone missing-adapter fail-closed contract tests |
+| `board/presentation/BoardControllerTest.kt` | Principal guard and CRUD response integration tests |
+| `board/support/BoardTestConfig.kt` | Primary fake analysis/sticker application ports for board integration tests |
+| `board/support/BoardTestFixtures.kt` | UUIDv7 and sticker response fixtures |
 | `sticker/` | Sticker aggregate unit tests plus repository, service, and API integration tests |
-| `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including provider-token encryption, OAuth HTTP timeouts, Redis, and JWT settings, in tests (tests do not read `.env`) |
+| `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including local-only auth keys, provider-token keys, OAuth HTTP timeouts, Redis, and JWT settings, in tests (tests do not read `.env`) |
 
 ## Rules
 

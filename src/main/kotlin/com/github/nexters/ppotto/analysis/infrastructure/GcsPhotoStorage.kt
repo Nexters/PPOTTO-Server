@@ -20,10 +20,7 @@ class GcsPhotoStorage(
         private const val MAX_PHOTO_SIZE_BYTES = 15_728_640
     }
 
-    override fun issueUploadUrls(targets: List<PhotoUploadTarget>): List<String> =
-        // GCS V4 서명은 로컬 크립토 연산으로, 배치 서명 API가 없다.
-        // 반복은 이 구현 내부로 캡슐화하고 서비스 레이어는 이 메서드를 한 번만 호출한다.
-        targets.map { signUrl(it.objectKey, it.contentType) }
+    override fun issueUploadUrls(targets: List<PhotoUploadTarget>): List<String> = targets.map { signUrl(it.objectKey, it.contentType) }
 
     override fun existingObjects(prefix: String): Map<String, BlobMeta> =
         storage

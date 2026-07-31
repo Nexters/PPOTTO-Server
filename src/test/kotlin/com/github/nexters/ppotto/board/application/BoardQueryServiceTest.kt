@@ -1,34 +1,64 @@
 package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
+import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
+import com.github.nexters.ppotto.board.support.BoardTestConfig
+import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
+import com.github.nexters.ppotto.board.support.boardStickerItem
+import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import java.util.UUID
+import org.springframework.context.annotation.Import
 
+@Import(BoardTestConfig::class)
 class BoardQueryServiceTest(
-    private val boardQueryService: BoardQueryService,
+    boardQueryService: BoardQueryService,
     boardRepository: BoardRepository,
+    drawingRepository: DrawingRepository,
     userRepository: UserRepository,
+    stickerPort: FakeBoardStickerPort,
 ) : IntegrationTest({
-        Given("Board가 등록된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
+        Given("스티커와 드로잉이 있는 보드를 소유한 사용자가") {
+            stickerPort.reset()
+            val user = userRepository.save()
+            val board = boardRepository.save(user.id, "여름 휴가")
+            val sticker = boardStickerItem()
+            val drawing =
+                NewDrawing(
+                    id = uuidV7(),
+                    boardId = board.id,
+                    stickerId = sticker.id,
+                    scope = DrawingScope.STICKER,
+                    stroke = mapOf("points" to listOf(listOf(10.5, 22.0))),
+                    color = "#FFD400",
+                    strokeWidth = 4.0,
+                )
+            stickerPort.stickersByBoardId[board.id] = listOf(sticker)
+            drawingRepository.upsertAll(listOf(drawing))
 
-            When("저장된 아이디로 조회하면") {
-                Then("해당 Board를 반환한다") {
-                    boardQueryService.getById(board.id).id shouldBe board.id
+            When("보드 상세를 조회하면") {
+                val detail = boardQueryService.getDetail(board.id, user.id)
+
+                Then("보드와 스티커와 드로잉을 함께 반환한다") {
+                    detail.name shouldBe "여름 휴가"
+                    detail.stickers.map { it.id } shouldContainExactly listOf(sticker.id)
+                    detail.drawings.map { it.id } shouldContainExactly listOf(drawing.id)
                 }
             }
-        }
 
-        Given("존재하지 않는 boardId로") {
-            When("조회하면") {
-                Then("NotFoundException(BOARD-002)이 발생한다") {
-                    val exception = shouldThrow<NotFoundException> { boardQueryService.getById(UUID.randomUUID()) }
-                    exception.errorCode.code shouldBe "BOARD-002"
+            When("다른 사용자가 조회하면") {
+                Then("BOARD-002 오류가 발생한다") {
+                    val exception =
+                        shouldThrow<NotFoundException> {
+                            boardQueryService.getDetail(board.id, userRepository.save().id)
+                        }
                     exception.errorCode shouldBe BoardErrorCode.NOT_FOUND
                 }
             }
