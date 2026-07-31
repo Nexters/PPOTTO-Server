@@ -66,6 +66,7 @@ class SecurityConfig {
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
+    @Profile("test")
     fun defaultSecurityFilterChain(http: HttpSecurity): SecurityFilterChain =
         http
             .csrf { it.disable() }
