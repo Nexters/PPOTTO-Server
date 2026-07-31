@@ -30,7 +30,6 @@ class RedisRefreshTokenStore(
                 expirationSeconds.toString(),
                 userId.toString(),
             )
-            Unit
         }
 
     override fun findUserId(refreshToken: String): UUID? =

@@ -25,7 +25,7 @@ class AuthUserAdapter(
                 it
                     .takeIf(UserRegistrationResult::isNewUser)
                     ?.let { newUser -> boardCommandService.createDefault(newUser.user.id) }
-            }.let { it.toAuthUser() }
+            }.toAuthUser()
 
     private fun SocialProfile.toCommand() =
         SocialUserCommand(

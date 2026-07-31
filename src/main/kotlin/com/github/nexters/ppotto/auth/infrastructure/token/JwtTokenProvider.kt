@@ -58,7 +58,7 @@ class JwtTokenProvider(
                 .parse(accessToken)
                 .takeIf { it.header.algorithm == JWSAlgorithm.HS256 }
                 ?.takeIf { it.verify(MACVerifier(secret)) }
-                ?.let { it.jwtClaimsSet }
+                ?.jwtClaimsSet
                 ?.takeIf { it.issuer == properties.issuer }
                 ?.takeIf {
                     it.expirationTime

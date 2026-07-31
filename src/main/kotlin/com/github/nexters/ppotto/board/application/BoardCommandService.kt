@@ -16,6 +16,7 @@ import java.util.UUID
 @Service
 class BoardCommandService(
     private val boardRepository: BoardRepository,
+    private val boardAccessService: BoardAccessService,
     private val drawingCommandService: BoardDrawingCommandService,
     private val analysisActivityPort: BoardAnalysisActivityPort,
     private val stickerCommandPort: BoardStickerCommandPort,
@@ -56,19 +57,12 @@ class BoardCommandService(
     ): Unit =
         boardRepository
             .lockCommandsByUserId(userId)
-            .let { getOwnedByIdForUpdate(boardId, userId) }
+            .let { boardAccessService.getOwnedByIdForUpdate(boardId, userId) }
             .let { boardId }
             .also { validateDeletable(it, userId) }
             .also(drawingCommandService::deleteAllByBoardId)
             .also(stickerCommandPort::deleteAllByBoardId)
             .let { check(boardRepository.softDelete(it, userId)) }
-
-    private fun getOwnedByIdForUpdate(
-        boardId: UUID,
-        userId: UUID,
-    ): Board =
-        boardRepository.findOwnedByIdForUpdate(boardId, userId)
-            ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
     private fun validateDeletable(
         boardId: UUID,
@@ -77,12 +71,10 @@ class BoardCommandService(
         boardRepository
             .countByUserId(userId)
             .takeIf { it > 1 }
-            ?.let {
-                analysisActivityPort
-                    .hasActiveAnalysis(boardId, userId)
-                    .takeUnless { it }
-                    ?: throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
-            } ?: throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
+            ?: throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
+        boardId
+            .takeUnless { analysisActivityPort.hasActiveAnalysis(it, userId) }
+            ?: throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
     }
 
     private fun validateName(name: String) {

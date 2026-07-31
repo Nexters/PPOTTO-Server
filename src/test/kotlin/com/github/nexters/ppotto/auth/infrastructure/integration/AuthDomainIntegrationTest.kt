@@ -15,6 +15,7 @@ import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.PendingTerm
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
+import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.application.BoardCommandService
 import com.github.nexters.ppotto.board.application.BoardDrawingCommandService
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
@@ -302,18 +303,27 @@ class FailingBoardAuthTestConfig {
     @Primary
     fun failingBoardCommandService(
         boardRepository: BoardRepository,
+        boardAccessService: BoardAccessService,
         drawingCommandService: BoardDrawingCommandService,
         analysisActivityPort: BoardAnalysisActivityPort,
         stickerCommandPort: BoardStickerCommandPort,
-    ): BoardCommandService = FailingBoardCommandService(boardRepository, drawingCommandService, analysisActivityPort, stickerCommandPort)
+    ): BoardCommandService =
+        FailingBoardCommandService(
+            boardRepository,
+            boardAccessService,
+            drawingCommandService,
+            analysisActivityPort,
+            stickerCommandPort,
+        )
 }
 
 open class FailingBoardCommandService(
     boardRepository: BoardRepository,
+    boardAccessService: BoardAccessService,
     drawingCommandService: BoardDrawingCommandService,
     analysisActivityPort: BoardAnalysisActivityPort,
     stickerCommandPort: BoardStickerCommandPort,
-) : BoardCommandService(boardRepository, drawingCommandService, analysisActivityPort, stickerCommandPort) {
+) : BoardCommandService(boardRepository, boardAccessService, drawingCommandService, analysisActivityPort, stickerCommandPort) {
     override fun createDefault(userId: UUID): Board = error("기본 보드 생성 실패")
 }
 

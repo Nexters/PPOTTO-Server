@@ -25,7 +25,6 @@ data class NewDrawing(
     val strokeWidth: Double,
 ) {
     init {
-        ((scope == DrawingScope.STICKER) == (stickerId != null))
-            .let { require(it) }
+        require((scope == DrawingScope.STICKER) == (stickerId != null))
     }
 }
