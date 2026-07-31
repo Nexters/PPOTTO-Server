@@ -9,8 +9,14 @@ import com.github.nexters.ppotto.auth.application.port.RefreshTokenStore
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
 import com.github.nexters.ppotto.auth.domain.LoginCommand
 import com.github.nexters.ppotto.auth.domain.OAuthProvider
+import com.github.nexters.ppotto.auth.domain.PendingTerm
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
+import com.github.nexters.ppotto.board.application.BoardCommandService
+import com.github.nexters.ppotto.board.application.BoardDrawingCommandService
+import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
+import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
+import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -24,8 +30,14 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
+import org.springframework.transaction.support.TransactionOperations
+import org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import com.github.nexters.ppotto.user.domain.OAuthProvider as UserOAuthProvider
 
 class AuthDomainIntegrationTest(
@@ -65,6 +77,29 @@ class AuthDomainIntegrationTest(
                         .findBySocialAccount(UserOAuthProvider.APPLE, providerUserId)
                         ?.id shouldBe first.userId
                     boardRepository.findByUserId(first.userId) shouldHaveSize 1
+                }
+            }
+        }
+
+        Given("같은 소셜 계정으로 신규 로그인이 동시에 들어올 때") {
+            val providerUserId = "concurrent-${UUID.randomUUID()}"
+            val profile =
+                SocialProfile(
+                    provider = OAuthProvider.KAKAO,
+                    providerUserId = providerUserId,
+                    email = "concurrent@example.com",
+                )
+
+            When("가입 port를 동시에 호출하면") {
+                val users = runConcurrently(6) { authUserPort.findOrCreate(profile) }
+
+                Then("계정과 기본 보드를 각각 한 번만 생성한다") {
+                    users.map { it.userId }.distinct() shouldHaveSize 1
+                    users.count { it.isNewUser } shouldBe 1
+                    boardRepository.findByUserId(users.first().userId) shouldHaveSize 1
+                    userRepository
+                        .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
+                        ?.id shouldBe users.first().userId
                 }
             }
         }
@@ -139,7 +174,102 @@ class AuthSignupRollbackIntegrationTest(
                 }
             }
         }
+
+        Given("약관 조회까지 성공하는 신규 로그인에서") {
+            loginEffects.reset()
+            loginEffects.failTerms = false
+            val providerUserId = "boundary-${UUID.randomUUID()}"
+
+            When("로그인하면") {
+                val result = authService.login(LoginCommand.Kakao(providerUserId))
+
+                Then("가입과 약관 조회만 트랜잭션 안에서 실행하고 provider 호출과 token 발급은 밖에서 실행한다") {
+                    result.isNewUser shouldBe true
+                    loginEffects.providerCallInTransaction shouldBe false
+                    loginEffects.termsLookupInTransaction shouldBe true
+                    loginEffects.tokenIssueInTransaction shouldBe false
+                    loginEffects.tokenSaveInTransaction shouldBe false
+                    boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 1
+                }
+            }
+        }
     })
+
+private fun <T> runConcurrently(
+    taskCount: Int,
+    task: () -> T,
+): List<T> {
+    val ready = CountDownLatch(taskCount)
+    val start = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(taskCount)
+    return try {
+        List(taskCount) {
+            executor.submit(
+                Callable {
+                    ready.countDown()
+                    start.await()
+                    task()
+                },
+            )
+        }.also { check(ready.await(10, TimeUnit.SECONDS)) }
+            .also { start.countDown() }
+            .map { it.get(30, TimeUnit.SECONDS) }
+    } finally {
+        start.countDown()
+        executor.shutdownNow()
+    }
+}
+
+@Import(FailingBoardAuthTestConfig::class)
+class AuthSignupBoardRollbackIntegrationTest(
+    authUserPort: AuthUserPort,
+    userRepository: UserRepository,
+) : IntegrationTest({
+        Given("신규 가입 중 기본 보드 생성이 실패할 때") {
+            val providerUserId = "board-rollback-${UUID.randomUUID()}"
+
+            When("로그인 트랜잭션 없이 가입 port를 직접 호출하면") {
+                val exception =
+                    shouldThrow<IllegalStateException> {
+                        authUserPort.findOrCreate(
+                            SocialProfile(
+                                provider = OAuthProvider.KAKAO,
+                                providerUserId = providerUserId,
+                                email = "board-rollback@example.com",
+                            ),
+                        )
+                    }
+
+                Then("사용자 생성까지 함께 롤백해 유령 계정을 남기지 않는다") {
+                    exception.message shouldBe "기본 보드 생성 실패"
+                    userRepository
+                        .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
+                        .shouldBeNull()
+                }
+            }
+        }
+    })
+
+@TestConfiguration(proxyBeanMethods = false)
+class FailingBoardAuthTestConfig {
+    @Bean
+    @Primary
+    fun failingBoardCommandService(
+        boardRepository: BoardRepository,
+        drawingCommandService: BoardDrawingCommandService,
+        analysisActivityPort: BoardAnalysisActivityPort,
+        stickerCommandPort: BoardStickerCommandPort,
+    ): BoardCommandService = FailingBoardCommandService(boardRepository, drawingCommandService, analysisActivityPort, stickerCommandPort)
+}
+
+open class FailingBoardCommandService(
+    boardRepository: BoardRepository,
+    drawingCommandService: BoardDrawingCommandService,
+    analysisActivityPort: BoardAnalysisActivityPort,
+    stickerCommandPort: BoardStickerCommandPort,
+) : BoardCommandService(boardRepository, drawingCommandService, analysisActivityPort, stickerCommandPort) {
+    override fun createDefault(userId: UUID): Board = error("기본 보드 생성 실패")
+}
 
 @TestConfiguration(proxyBeanMethods = false)
 class FailingTermsAuthTestConfig {
@@ -151,10 +281,13 @@ class FailingTermsAuthTestConfig {
     fun failingTermsAuthService(
         authActiveUserPort: AuthActiveUserPort,
         authUserPort: AuthUserPort,
+        authTermsPort: AuthTermsPort,
         loginEffects: LoginEffects,
+        signupTransaction: TransactionOperations,
     ): AuthService =
         AuthService(
-            oauthClients = listOf(FailingTermsOAuthClient()),
+            oauthClients = listOf(TrackingOAuthClient(loginEffects)),
+            signupTransaction = signupTransaction,
             tokenProvider = TrackingTokenProvider(loginEffects),
             refreshTokenStore = TrackingRefreshTokenStore(loginEffects),
             authUserPort =
@@ -163,31 +296,43 @@ class FailingTermsAuthTestConfig {
                         loginEffects.userId = it.userId
                     }
                 },
-            authTermsPort = AuthTermsPort { error("약관 조회 실패") },
+            authTermsPort = TrackingTermsPort(loginEffects, authTermsPort),
             authActiveUserPort = authActiveUserPort,
         )
 }
 
 class LoginEffects {
     var userId: UUID? = null
+    var failTerms: Boolean = true
+    var providerCallInTransaction: Boolean = false
+    var termsLookupInTransaction: Boolean = false
+    var tokenIssueInTransaction: Boolean = false
+    var tokenSaveInTransaction: Boolean = false
     var tokenIssueCount: Int = 0
     var tokenSaveCount: Int = 0
 
     fun reset() {
         userId = null
+        failTerms = true
+        providerCallInTransaction = false
+        termsLookupInTransaction = false
+        tokenIssueInTransaction = false
+        tokenSaveInTransaction = false
         tokenIssueCount = 0
         tokenSaveCount = 0
     }
 }
 
-private class FailingTermsOAuthClient : OAuthClient {
+private class TrackingOAuthClient(
+    private val loginEffects: LoginEffects,
+) : OAuthClient {
     override val provider = OAuthProvider.KAKAO
 
     override fun authenticate(command: LoginCommand): SocialProfile {
-        val kakao = command as LoginCommand.Kakao
+        loginEffects.providerCallInTransaction = isActualTransactionActive()
         return SocialProfile(
             provider = provider,
-            providerUserId = kakao.accessToken,
+            providerUserId = (command as LoginCommand.Kakao).accessToken,
             email = "rollback@example.com",
         )
     }
@@ -195,10 +340,22 @@ private class FailingTermsOAuthClient : OAuthClient {
     override fun revoke(providerRefreshToken: String) = Unit
 }
 
+private class TrackingTermsPort(
+    private val loginEffects: LoginEffects,
+    private val delegate: AuthTermsPort,
+) : AuthTermsPort {
+    override fun findPendingTerms(userId: UUID): List<PendingTerm> {
+        loginEffects.termsLookupInTransaction = isActualTransactionActive()
+        check(!loginEffects.failTerms) { "약관 조회 실패" }
+        return delegate.findPendingTerms(userId)
+    }
+}
+
 private class TrackingTokenProvider(
     private val loginEffects: LoginEffects,
 ) : TokenProvider {
     override fun issue(userId: UUID): TokenPair {
+        loginEffects.tokenIssueInTransaction = isActualTransactionActive()
         loginEffects.tokenIssueCount += 1
         return TokenPair("access-$userId", "refresh-$userId", 3_600)
     }
@@ -213,6 +370,7 @@ private class TrackingRefreshTokenStore(
         userId: UUID,
         refreshToken: String,
     ) {
+        loginEffects.tokenSaveInTransaction = isActualTransactionActive()
         loginEffects.tokenSaveCount += 1
     }
 

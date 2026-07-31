@@ -20,6 +20,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
+import org.springframework.transaction.support.TransactionOperations
 import java.util.UUID
 
 @Import(AuthSessionTestConfig::class)
@@ -83,9 +84,11 @@ class AuthSessionTestConfig {
         authUserPort: AuthUserPort,
         refreshTokenStore: SessionRefreshTokenStore,
         tokenProvider: SessionTokenProvider,
+        signupTransaction: TransactionOperations,
     ): AuthService =
         AuthService(
             oauthClients = emptyList(),
+            signupTransaction = signupTransaction,
             tokenProvider = tokenProvider,
             refreshTokenStore = refreshTokenStore,
             authUserPort = authUserPort,
