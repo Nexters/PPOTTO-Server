@@ -1,23 +1,27 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
+import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
+import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.PhotoUploadTarget
-import com.github.nexters.ppotto.analysis.domain.UploadStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardQueryService
+import com.github.nexters.ppotto.global.config.GcsProperties
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
+import java.time.Instant
 import java.util.UUID
 
 @Service
@@ -27,118 +31,125 @@ class AnalysisService(
     private val boardQueryService: BoardQueryService,
     private val photoStorage: PhotoStorage,
     private val transactionTemplate: TransactionTemplate,
+    private val gcsProperties: GcsProperties,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @Transactional
     fun createAnalysis(
         userId: UUID,
         boardId: UUID,
         photos: List<PhotoUploadItemRequest>,
-    ): AnalysisCreationResult =
-        photos
-            .also {
-                validatePhotoCount(it.size)
-                boardQueryService.getOwnedById(boardId, userId)
-                validateNoActiveAnalysis(userId)
-            }.let { requests ->
-                saveAnalysisWithConstraintFallback(userId, boardId).let { analysis ->
-                    requests
-                        .map {
-                            PhotoContentType
-                                .fromMimeType(it.contentType)
-                                .let { contentType -> PhotoCreate(contentType, it.takenAt) }
-                        }.let {
-                            photoRepository.saveAll(
-                                analysisId = analysis.id,
-                                boardId = boardId,
-                                items = it,
-                            )
-                        }.let { savedPhotos ->
-                            savedPhotos
-                                .map {
-                                    PhotoUploadTarget(
-                                        PhotoObjectKeys.keyFor(analysis.id, it.id, it.contentType),
-                                        it.contentType.mimeType,
-                                    )
-                                }.let(photoStorage::issueUploadUrls)
-                                .also {
-                                    check(it.size == savedPhotos.size) {
-                                        "issueUploadUrls가 요청한 개수(${savedPhotos.size})와 다른 개수(${it.size})의 URL을 반환했습니다."
-                                    }
-                                }.let { uploadUrls ->
-                                    savedPhotos.zip(uploadUrls) { photo, url -> PhotoUploadUrlItem(photo.id, url) }
-                                }.let { AnalysisCreationResult(analysis.id, it) }
-                        }
-                }
+    ): AnalysisCreationResult {
+        validatePhotoCount(photos.size)
+        boardQueryService.getOwnedById(boardId, userId)
+        validateNoActiveAnalysis(userId)
+        val analysis = saveAnalysisWithConstraintFallback(userId, boardId)
+
+        val savedPhotos =
+            photoRepository.saveAll(
+                analysisId = analysis.id,
+                boardId = boardId,
+                items =
+                    photos.map {
+                        val contentType = PhotoContentType.fromMimeType(it.contentType)
+                        PhotoCreate(contentType, it.takenAt)
+                    },
+            )
+
+        val targets =
+            savedPhotos.map {
+                PhotoUploadTarget(PhotoObjectKeys.keyFor(analysis.id, it.id, it.contentType), it.contentType.mimeType)
             }
+        val uploadUrls = photoStorage.issueUploadUrls(targets)
+        check(uploadUrls.size == savedPhotos.size) {
+            "issueUploadUrls가 요청한 개수(${savedPhotos.size})와 다른 개수(${uploadUrls.size})의 URL을 반환했습니다."
+        }
+
+        val uploads = savedPhotos.zip(uploadUrls) { photo, url -> PhotoUploadUrlItem(photo.id, url) }
+        return AnalysisCreationResult(analysis.id, uploads)
+    }
 
     fun startUpload(
         userId: UUID,
         analysisId: UUID,
-    ): UploadVerificationResult =
-        (analysisRepository.findById(analysisId) ?: throw NotFoundException())
-            .also {
-                validateAnalysisOwner(it.userId, userId)
-                validateUploading(it.status)
-            }.let { photoRepository.findPendingByAnalysisId(analysisId) }
-            .takeIf { it.isNotEmpty() }
-            ?.let { pendingPhotos ->
-                photoStorage
-                    .existingObjects(PhotoObjectKeys.prefixFor(analysisId))
-                    .let { existingObjects ->
-                        pendingPhotos
-                            .mapNotNull { photo ->
-                                existingObjects[PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)]
-                                    ?.takeIf { it.size > 0 }
-                                    ?.let { photo.id to it.createdAt }
-                            }.toMap()
-                    }.let { completedUpdates ->
-                        transactionTemplate.execute {
-                            analysisRepository.findByIdForUpdate(analysisId)
-                            completedUpdates
-                                .takeIf { it.isNotEmpty() }
-                                ?.let {
-                                    photoRepository.updateStatusBatch(
-                                        it,
-                                        UploadStatus.PENDING,
-                                        UploadStatus.COMPLETED,
-                                    )
-                                }
-                            photoRepository
-                                .findAllByAnalysisId(analysisId)
-                                .partition { it.uploadStatus == UploadStatus.COMPLETED }
-                                .let { (completed, pending) ->
-                                    UploadVerificationResult(completed.size, pending.size, pending.map { it.id })
-                                }
-                        }
+    ): UploadVerificationResult {
+        val analysis = analysisRepository.findById(analysisId) ?: throw NotFoundException(AnalysisErrorCode.ANALYSIS_NOT_FOUND)
+        validateAnalysisOwner(analysis.userId, userId)
+        validateUploading(analysis.status)
+        return performUploadVerification(analysisId)
+    }
+
+    private fun performUploadVerification(analysisId: UUID): UploadVerificationResult {
+        val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
+        val existingObjects =
+            if (pendingPhotos.isEmpty()) {
+                emptyMap()
+            } else {
+                photoStorage.existingObjects(PhotoObjectKeys.prefixFor(analysisId))
+            }
+
+        val completedUpdates =
+            pendingPhotos
+                .mapNotNull { photo ->
+                    val meta = existingObjects[PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)]
+                    if (meta != null && meta.size > 0) photo.id to meta.createdAt else null
+                }.toMap()
+
+        if (completedUpdates.isEmpty()) {
+            throw ConflictException(AnalysisErrorCode.NO_UPLOADED_PHOTOS)
+        }
+
+        val failedIds = pendingPhotos.map { it.id } - completedUpdates.keys
+
+        transactionTemplate.execute {
+            val locked = analysisRepository.findByIdForUpdate(analysisId)!!
+            if (locked.status != AnalysisStatus.UPLOADING) {
+                throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
+            }
+
+            photoRepository.markCompletedBatch(completedUpdates)
+            if (failedIds.isNotEmpty()) photoRepository.markFailedBatch(failedIds)
+            analysisRepository.markAnalyzing(analysisId, Instant.now())
+
+            val photosToPublish =
+                pendingPhotos
+                    .filter { it.id in completedUpdates.keys }
+                    .map { photo ->
+                        PhotoRef(
+                            photoId = photo.id,
+                            gcsUri = "gs://${gcsProperties.bucket}/${PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)}",
+                            mimeType = photo.contentType.mimeType,
+                        )
                     }
-            } ?: UploadVerificationResult(0, 0, emptyList())
+            eventPublisher.publishEvent(AnalysisStartRequestedEvent(analysisId, photosToPublish))
+        }
+
+        return UploadVerificationResult(completedUpdates.size, failedIds.size, failedIds)
+    }
 
     private fun validateAnalysisOwner(
         analysisUserId: UUID,
         userId: UUID,
     ) {
-        analysisUserId
-            .takeIf { it == userId }
-            ?: throw NotFoundException()
+        if (analysisUserId != userId) throw NotFoundException()
     }
 
     private fun validateUploading(status: AnalysisStatus) {
-        status
-            .takeIf { it == AnalysisStatus.UPLOADING }
-            ?: throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
+        if (status != AnalysisStatus.UPLOADING) {
+            throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
+        }
     }
 
     private fun validatePhotoCount(size: Int) {
-        size
-            .takeIf { it in 90..100 }
-            ?: throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
+        if (size !in 90..100) {
+            throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
+        }
     }
 
     private fun validateNoActiveAnalysis(userId: UUID) {
-        analysisRepository
-            .existsActiveByUserId(userId)
-            .takeUnless { it }
-            ?: throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
+        if (analysisRepository.existsActiveByUserId(userId)) {
+            throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
+        }
     }
 
     private fun saveAnalysisWithConstraintFallback(

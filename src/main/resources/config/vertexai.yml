@@ -1,0 +1,5 @@
+vertexai:
+  project: ${VERTEX_AI_PROJECT}
+  location: ${VERTEX_AI_LOCATION}
+  classify-timeout-ms: ${VERTEX_AI_CLASSIFY_TIMEOUT_MS}
+  sticker-generation-timeout-ms: ${VERTEX_AI_STICKER_TIMEOUT_MS}

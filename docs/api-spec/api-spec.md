@@ -1942,6 +1942,7 @@ Request example:
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | ANALYSIS-005 | 분석을 찾을 수 없습니다. | 분석 없음 또는 소유자 불일치 |
 | 409 | ANALYSIS-003 | 이미 분석이 시작되었습니다. | 이미 시작되었거나 종료된 분석 |
+| 409 | ANALYSIS-008 | 업로드된 사진이 없습니다. | 업로드 완료된 사진 0장 |
 
 401 COMMON-004 example:
 ```json
@@ -1979,6 +1980,20 @@ Request example:
   "error": {
     "code": "ANALYSIS-003",
     "message": "이미 분석이 시작되었습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+409 ANALYSIS-008 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "ANALYSIS-008",
+    "message": "업로드된 사진이 없습니다.",
     "fieldErrors": [],
     "timestamp": "2026-07-27T05:02:11Z"
   }

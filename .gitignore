@@ -11,3 +11,5 @@ out/
 .env.*
 !.env.template
 /secrets/
+e2e/reports/
+e2e/__pycache__/
