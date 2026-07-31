@@ -18,14 +18,12 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
 import java.time.Instant
-import java.time.temporal.ChronoUnit
 import java.util.Collections
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -223,57 +221,61 @@ class AnalysisServiceTest(
             When("업로드 완료를 통보하면") {
                 val result = analysisService.startUpload(board.userId, created.analysisId)
 
-                Then("업로드된 사진들은 COMPLETED로 바뀌고, 누락된 사진은 PENDING을 유지한 채 failedPhotoIds로만 보고된다") {
+                Then("업로드된 사진들은 COMPLETED로 바뀌고, 누락된 사진은 FAILED로 제외된다") {
                     result.uploadedCount shouldBe 89
                     result.failedCount shouldBe 1
                     result.failedPhotoIds shouldContainExactly listOf(missingPhotoId)
 
-                    val missing = photoRepository.findPendingByAnalysisId(created.analysisId)
-                    missing shouldHaveSize 1
-                    missing.first().id shouldBe missingPhotoId
-                    missing.first().uploadStatus shouldBe UploadStatus.PENDING
+                    photoRepository.findPendingByAnalysisId(created.analysisId).shouldBeEmpty()
+                    val failedPhoto = photoRepository.findAllByAnalysisId(created.analysisId).first { it.id == missingPhotoId }
+                    failedPhoto.uploadStatus shouldBe UploadStatus.FAILED
                 }
 
-                Then("analysis의 status/startedAt은 그대로 UPLOADING/null이다") {
+                Then("analysis의 status는 COMPLETED로 바뀌고 startedAt이 기록된다") {
                     val analysis = analysisRepository.findById(created.analysisId)
                     analysis.shouldNotBeNull()
-                    analysis.status shouldBe AnalysisStatus.UPLOADING
-                    analysis.startedAt.shouldBeNull()
+                    analysis.status shouldBe AnalysisStatus.COMPLETED
+                    analysis.startedAt.shouldNotBeNull()
                 }
             }
+        }
 
-            When("누락됐던 사진이 이후 업로드를 마치고 다시 통보하면") {
-                analysisService.startUpload(board.userId, created.analysisId)
-                val uploadedAt = Instant.parse("2026-06-15T10:00:00Z").truncatedTo(ChronoUnit.MICROS)
-                photoStorage.markUploaded(
-                    photoObjectKeys.keyFor(created.analysisId, missingPhotoId, missingPhoto.contentType),
-                    createdAt = uploadedAt,
-                )
-                val result = analysisService.startUpload(board.userId, created.analysisId)
-
-                Then("뒤늦게 업로드된 사진도 COMPLETED로 바뀌고, 응답은 analysis 전체의 최종 집계다") {
-                    result.uploadedCount shouldBe 90
-                    result.failedCount shouldBe 0
-                    result.failedPhotoIds.shouldBeEmpty()
-                    photoRepository.findPendingByAnalysisId(created.analysisId).shouldBeEmpty()
+        Given("부분 업로드된 분석이 이미 시작된 뒤 누락됐던 사진이 이후 업로드된 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+            val photos =
+                (0 until 90).map { i ->
+                    PhotoUploadItemRequest(
+                        Instant.now().plusSeconds(i.toLong()),
+                        if (i % 2 == 0) "image/jpeg" else "image/png",
+                    )
                 }
+            val created = analysisService.createAnalysis(board.userId, board.id, photos)
+            val missingPhotoId = created.uploads[1].photoId
+            val missingPhoto = photoRepository.findPendingByAnalysisId(created.analysisId).first { it.id == missingPhotoId }
+            photoStorage.markMissing(photoObjectKeys.keyFor(created.analysisId, missingPhotoId, missingPhoto.contentType))
+            analysisService.startUpload(board.userId, created.analysisId)
+            photoStorage.markUploaded(photoObjectKeys.keyFor(created.analysisId, missingPhotoId, missingPhoto.contentType))
 
-                Then("uploadedAt은 확인 시각이 아닌 실제 업로드(GCS 객체 생성) 시각으로 저장된다") {
-                    val completedPhoto = photoRepository.findAllByAnalysisId(created.analysisId).first { it.id == missingPhotoId }
-                    completedPhoto.uploadedAt shouldBe uploadedAt
+            When("다시 업로드 완료를 통보하면") {
+                Then("이미 시작된 분석이므로 ConflictException(ANALYSIS-003)이 발생한다") {
+                    val exception = shouldThrow<ConflictException> { analysisService.startUpload(board.userId, created.analysisId) }
+                    exception.errorCode.code shouldBe "ANALYSIS-003"
                 }
             }
+        }
 
-            When("모든 사진이 COMPLETED로 확정된 뒤 다시 통보하면") {
-                analysisService.startUpload(board.userId, created.analysisId)
-                photoStorage.markUploaded(photoObjectKeys.keyFor(created.analysisId, missingPhotoId, missingPhoto.contentType))
-                analysisService.startUpload(board.userId, created.analysisId)
-                val result = analysisService.startUpload(board.userId, created.analysisId)
+        Given("모든 사진이 업로드되어 분석이 시작된 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+            val photos =
+                (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
+            val created = analysisService.createAnalysis(board.userId, board.id, photos)
 
-                Then("이미 처리된 사진은 다시 건드리지 않는다") {
-                    result.uploadedCount shouldBe 0
-                    result.failedCount shouldBe 0
-                    result.failedPhotoIds.shouldBeEmpty()
+            When("다시 업로드 완료를 통보하면") {
+                analysisService.startUpload(board.userId, created.analysisId)
+
+                Then("이미 시작된 분석이므로 ConflictException(ANALYSIS-003)이 발생한다") {
+                    val exception = shouldThrow<ConflictException> { analysisService.startUpload(board.userId, created.analysisId) }
+                    exception.errorCode.code shouldBe "ANALYSIS-003"
                 }
             }
         }
@@ -289,15 +291,14 @@ class AnalysisServiceTest(
             When("업로드 완료를 통보하면") {
                 val result = analysisService.startUpload(board.userId, created.analysisId)
 
-                Then("COMPLETED로 확정하지 않고 PENDING을 유지한 채 failedPhotoIds로 보고한다") {
+                Then("COMPLETED로 확정하지 않고 FAILED로 제외한다") {
                     result.uploadedCount shouldBe 89
                     result.failedCount shouldBe 1
                     result.failedPhotoIds shouldContainExactly listOf(photo.id)
 
-                    val pending = photoRepository.findPendingByAnalysisId(created.analysisId)
-                    pending shouldHaveSize 1
-                    pending.first().id shouldBe photo.id
-                    pending.first().uploadStatus shouldBe UploadStatus.PENDING
+                    photoRepository.findPendingByAnalysisId(created.analysisId).shouldBeEmpty()
+                    val failedPhoto = photoRepository.findAllByAnalysisId(created.analysisId).first { it.id == photo.id }
+                    failedPhoto.uploadStatus shouldBe UploadStatus.FAILED
                 }
             }
         }
