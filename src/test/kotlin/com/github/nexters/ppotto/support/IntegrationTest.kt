@@ -8,7 +8,7 @@ import org.springframework.test.context.ActiveProfiles
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Import(TestcontainersConfiguration::class)
+@Import(TestcontainersConfiguration::class, ObjectStorageTestConfiguration::class)
 abstract class IntegrationTest(
     body: BehaviorSpec.() -> Unit = {},
 ) : BehaviorSpec({

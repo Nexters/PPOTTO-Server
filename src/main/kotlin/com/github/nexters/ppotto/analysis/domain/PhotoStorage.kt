@@ -8,6 +8,8 @@ interface PhotoStorage {
     fun issueReadUrls(objectKeys: Collection<String>): Map<String, String>
 
     fun existingObjects(prefix: String): Map<String, BlobMeta>
+
+    fun deleteByPrefix(prefix: String): Int
 }
 
 data class PhotoUploadTarget(

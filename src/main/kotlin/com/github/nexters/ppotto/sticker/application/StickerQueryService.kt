@@ -4,7 +4,7 @@ import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoMetadata
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
-import com.github.nexters.ppotto.sticker.application.port.StickerImageQueryPort
+import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
@@ -18,7 +18,7 @@ class StickerQueryService(
     private val stickerRecapRepository: StickerRecapRepository,
     private val boardAccessService: BoardAccessService,
     private val recapPhotoQueryPorts: List<RecapPhotoQueryPort>,
-    private val stickerImageQueryPorts: List<StickerImageQueryPort>,
+    private val stickerImageStoragePorts: List<StickerImageStoragePort>,
 ) {
     fun getByBoardId(boardId: UUID): List<StickerItemResult> = stickerRepository.findAllByBoardId(boardId).let(::toResults)
 
@@ -62,7 +62,7 @@ class StickerQueryService(
             .mapNotNull { it.imageKey }
             .toSet()
             .takeIf { it.isNotEmpty() }
-            ?.let { imageQueryPort().issueReadUrls(it) }
+            ?.let { imageStoragePort().issueReadUrls(it) }
             .orEmpty()
             .let { imageUrls ->
                 stickers.map { sticker ->
@@ -87,8 +87,8 @@ class StickerQueryService(
 
     private fun photoQueryPort(): RecapPhotoQueryPort = recapPhotoQueryPorts.singleOrNull() ?: error("리캡 사진 조회 application port 구현이 필요합니다.")
 
-    private fun imageQueryPort(): StickerImageQueryPort =
-        stickerImageQueryPorts.singleOrNull() ?: error("스티커 이미지 조회 application port 구현이 필요합니다.")
+    private fun imageStoragePort(): StickerImageStoragePort =
+        stickerImageStoragePorts.singleOrNull() ?: error("스티커 이미지 저장소 application port 구현이 필요합니다.")
 
     private fun checkPhotoContract(
         requestedIds: Collection<UUID>,

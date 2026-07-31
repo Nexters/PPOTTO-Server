@@ -11,6 +11,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain must provide the real adapter |
 | `application/port/UserSessionRevoker.kt` | 탈퇴 시 서비스 refresh token을 폐기하는 auth 연동 경계 |
 | `application/port/WithdrawnUserDataDeletionPort.kt` | Idempotent cross-domain contract for deleting all DB and object-storage data owned by a withdrawn user |
+| `application/port/WithdrawnUserDataPorts.kt` | Per-provider deletion contracts the composite adapter fans out to: board(+drawing), sticker(+recap, sticker image objects), analysis(+photo, GCS 원본), term agreement |
 | `application/UserService.kt` | Expression-bodied transaction pipeline for atomic social lookup/create, active account lookup, and session-revoking withdrawal |
 | `application/WithdrawnUserCleanupService.kt` | Fluent bounded cleanup pipeline; hard-deletes a user only after the cross-domain deletion port succeeds |
 | `presentation/UserApi.kt` | Version 1 `GET /users/me` and `DELETE /users/me` mapping and Swagger contract |
@@ -20,7 +21,8 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `infrastructure/SocialUserRepository.kt` | Atomic active social-account creation using the partial unique index as the conflict target |
 | `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration following the shared constructor property spacing convention |
 | `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Fluent versioned AES-256-GCM provider refresh-token encryption adapter |
-| `infrastructure/UserPortFallbackConfig.kt` | Fail-closed fallback beans used until provider, session, and deletion adapters are integrated |
+| `infrastructure/UserPortFallbackConfig.kt` | Fail-closed fallback beans used until provider and session adapters are integrated; the deletion fallback now backs off for the production composite adapter |
+| `infrastructure/integration/WithdrawnUserDataDeletionAdapter.kt` | Production `WithdrawnUserDataDeletionPort` composite that only orders the per-provider deletion ports and owns no persistence itself |
 
 ## Rules
 
@@ -32,6 +34,9 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 - Controllers consume the UUID principal through the shared `@AuthenticatedUser` contract; absence returns `COMMON-004` before controller execution.
 - Missing auth adapters fail closed: provider-account or session revoke aborts withdrawal.
 - Withdrawal revokes the service refresh-token session inside the user transaction.
-- The cleanup caller supplies the retention cutoff. A scheduler must not invent a retention period; wire the approved policy and an idempotent cross-domain deletion adapter during integration.
+- The cleanup caller supplies the retention cutoff. A scheduler must not invent a retention period; wire the approved policy when the batch entry point is added.
+- `WithdrawnUserDataDeletionAdapter` never touches another domain's repository. It only sequences the ports in `WithdrawnUserDataPorts.kt`, whose adapters live in the providing domain's `infrastructure/integration/` and call that domain's application service.
+- Deletion order is fixed by foreign keys: stickers (with `sticker_photos`/`recap_comments`) → analysis and photos → drawings and boards → term agreements → the user row. `term_agreements.user_id` has a real FK, so skipping it makes `hardDelete` fail.
+- Every provider deletes its object-storage objects before its own rows, and each provider commits its own transaction. A partial failure therefore leaves the user soft-deleted with the port's work partly done; the port is idempotent, so the next batch run re-runs the whole sequence and converges. `WithdrawnUserCleanupService` still hard-deletes the user only after the port returns.
 
 Update this file when layers are added to this domain.
