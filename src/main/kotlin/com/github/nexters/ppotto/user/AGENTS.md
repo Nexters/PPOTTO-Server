@@ -23,6 +23,8 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Fluent versioned AES-256-GCM provider refresh-token encryption adapter |
 | `infrastructure/UserPortFallbackConfig.kt` | Fail-closed fallback beans used until provider and session adapters are integrated; the deletion fallback now backs off for the production composite adapter |
 | `infrastructure/integration/WithdrawnUserDataDeletionAdapter.kt` | Production `WithdrawnUserDataDeletionPort` composite that only orders the per-provider deletion ports and owns no persistence itself |
+| `infrastructure/WithdrawnUserCleanupProperties.kt` | Validated `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron |
+| `infrastructure/WithdrawnUserCleanupScheduler.kt` | Property-gated `@EnableScheduling` entry point that turns the retention policy into a `deletedBefore` cutoff |
 
 ## Rules
 
@@ -34,9 +36,10 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 - Controllers consume the UUID principal through the shared `@AuthenticatedUser` contract; absence returns `COMMON-004` before controller execution.
 - Missing auth adapters fail closed: provider-account or session revoke aborts withdrawal.
 - Withdrawal revokes the service refresh-token session inside the user transaction.
-- The cleanup caller supplies the retention cutoff. A scheduler must not invent a retention period; wire the approved policy when the batch entry point is added.
+- The cleanup caller supplies the retention cutoff. `docs/` defines a retention grace period but no number, so `user.withdrawn-cleanup.retention-days` carries it as configuration; replace the conservative default once the privacy policy fixes a value.
 - `WithdrawnUserDataDeletionAdapter` never touches another domain's repository. It only sequences the ports in `WithdrawnUserDataPorts.kt`, whose adapters live in the providing domain's `infrastructure/integration/` and call that domain's application service.
 - Deletion order is fixed by foreign keys: stickers (with `sticker_photos`/`recap_comments`) → analysis and photos → drawings and boards → term agreements → the user row. `term_agreements.user_id` has a real FK, so skipping it makes `hardDelete` fail.
 - Every provider deletes its object-storage objects before its own rows, and each provider commits its own transaction. A partial failure therefore leaves the user soft-deleted with the port's work partly done; the port is idempotent, so the next batch run re-runs the whole sequence and converges. `WithdrawnUserCleanupService` still hard-deletes the user only after the port returns.
+- The scheduler is disabled by default (`user.withdrawn-cleanup.enabled=false`) so a misconfigured environment can never mass-delete. Scheduling itself is only enabled together with the flag.
 
 Update this file when layers are added to this domain.
