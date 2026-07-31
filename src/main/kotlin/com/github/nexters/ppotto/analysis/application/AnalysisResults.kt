@@ -15,7 +15,7 @@ data class PhotoUploadUrlItem(
 
 data class PhotoUploadItemRequest(
     val takenAt: Instant,
-    val contentType: String?,
+    val contentType: String,
 )
 
 data class UploadVerificationResult(

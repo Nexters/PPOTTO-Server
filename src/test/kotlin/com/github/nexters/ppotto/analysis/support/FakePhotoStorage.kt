@@ -27,4 +27,12 @@ class FakePhotoStorage : PhotoStorage {
     ) {
         objects[objectKey] = BlobMeta(size, createdAt)
     }
+
+    fun reset() {
+        objects.clear()
+    }
+
+    fun clear() {
+        objects.clear()
+    }
 }
