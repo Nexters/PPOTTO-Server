@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
@@ -23,5 +24,13 @@ class BoardAccessService(
         userId: UUID,
     ): Board =
         boardRepository.findOwnedById(boardId, userId)
+            ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    fun getOwnedByIdForUpdate(
+        boardId: UUID,
+        userId: UUID,
+    ): Board =
+        boardRepository.findOwnedByIdForUpdate(boardId, userId)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 }

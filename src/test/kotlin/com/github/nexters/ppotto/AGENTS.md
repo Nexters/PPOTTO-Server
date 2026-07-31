@@ -19,13 +19,17 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `global/openapi/OpenApiDocumentationTest.kt` | Generated OpenAPI metadata, interface-defined endpoint contracts, version header, schema description, error response, and authentication mode tests |
 | `terms/presentation/TermsControllerTest.kt` | Public anonymous current-term lookup, authenticated agreement state, protected agreement submission, and schema-valid user fixture integration tests |
 | `terms/support/TermsTestSecurityConfig.kt` | Test-only UUID authentication principal filter for MockMvc |
+| `board/BoardAnalysisDependencyTest.kt` | Source-level cross-domain contract: board never imports analysis types, analysis only imports the board application boundary and port |
 | `board/domain/DrawingTest.kt` | Drawing scope and sticker ownership invariant unit tests |
+| `board/application/BoardAccessServiceTest.kt` | `MANDATORY` row-locking lookup contract: fails outside a transaction, joins the caller transaction, and hides other users' boards |
 | `board/application/BoardCommandServiceTest.kt` | Board count, deletion guards, and cascade command integration tests |
 | `board/application/BoardCommandConcurrencyTest.kt` | User-scoped create/delete serialization and max/last-board concurrency regression tests |
 | `board/application/BoardQueryServiceTest.kt` | Owned board detail composition integration tests |
 | `board/application/BoardLayoutServiceTest.kt` | Idempotent layout and atomic ownership validation integration tests |
 | `board/application/BoardLayoutConcurrencyTest.kt` | Layout/delete serialization regression test preventing drawing reinsertion after board deletion |
 | `board/application/BoardStickerIntegrationTest.kt` | Production analysis/sticker port wiring, active-analysis deletion guard, detail/layout mapping, and cascade integration tests |
+| `board/application/BoardAnalysisContractTest.kt` | Real `BoardAnalysisActivityAdapter` injection, per-status deletion guard, `uk_analysis_active` uniqueness/key-column/status alignment, and last-board/ownership precedence integration tests |
+| `board/application/BoardAnalysisDeletionConcurrencyTest.kt` | Both delete/analysis-create interleavings: create after delete yields `BOARD-002`, delete after create yields `BOARD-005`. The blocking sticker port resets its latches in `beforeTest` so every leaf gets fresh ones |
 | `board/infrastructure/BoardRepositoryTest.kt` | Board persistence and active lookup integration tests |
 | `board/infrastructure/DrawingRepositoryTest.kt` | Drawing JSONB upsert and soft-delete integration tests |
 | `board/infrastructure/BoardExternalPortFallbackConfigurationTest.kt` | Standalone missing-adapter fail-closed contract tests |
@@ -54,5 +58,6 @@ class PhotoServiceTest(
 - Test names in Korean. Use capitalized `Given`/`When`/`Then` (lowercase `when` needs backticks).
 - Pure unit tests extend any Kotest spec directly without Spring.
 - One Spring context (and one Postgres container) is shared across all integration tests via context caching; avoid `@MockkBean`-style context mutations unless necessary.
+- `IntegrationTest` uses `IsolationMode.InstancePerLeaf` while the Spring context stays cached, so stateful test doubles (latches, counters) must be resettable and reset per test. One-shot singleton fields silently stop blocking once a spec gains a second leaf.
 
 Update this file when test infrastructure changes.
