@@ -26,9 +26,13 @@ services:
       SERVER_PORT: 8080
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
+      REDIS_HOST: valkey
+      REDIS_PORT: 6379
       GCS_CREDENTIALS_PATH: /run/secrets/gcs-service-account.json
     depends_on:
       postgres:
+        condition: service_healthy
+      valkey:
         condition: service_healthy
     expose:
       - "8080"
@@ -57,7 +61,29 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  valkey:
+    image: valkey/valkey:8-alpine
+    command:
+      - sh
+      - -c
+      - exec valkey-server --requirepass "$$REDIS_PASSWORD" --appendonly yes
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a $${REDIS_PASSWORD} ping 2>/dev/null | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+    stop_grace_period: 30s
+    mem_limit: 512m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+
 volumes:
   caddy-data:
   caddy-config:
   postgres-data:
+  valkey-data:

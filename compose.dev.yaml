@@ -11,8 +11,13 @@ services:
       - .env.dev
     volumes:
       - ../secrets/gcs-dev-service-account.json:/run/secrets/gcs-service-account.json:ro,z
+      - ../secrets/apple-auth-key.p8:/run/secrets/apple-auth-key.p8:ro,z
 
   postgres:
     env_file:
       - .env.dev
     mem_limit: 2g
+
+  valkey:
+    env_file:
+      - .env.dev

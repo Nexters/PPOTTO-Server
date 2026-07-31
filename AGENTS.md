@@ -54,7 +54,9 @@ photo/
 - Dependency versions live only in `gradle/libs.versions.toml`. No version strings in build scripts.
 - Error codes: `PREFIX-NNN` (`COMMON-001`, `PHOTO-001`). Each domain defines an enum implementing `ErrorCode`.
 - API responses use the `ApiResponse` envelope. Throw `BusinessException` subclasses; `GlobalExceptionHandler` converts them.
-- No default values in yml placeholders (`${VAR}` only). Defaults live only in `.env.template`. New env vars must be added there.
+- No default values in yml placeholders (`${VAR}` only). Defaults live only in `.env.template`.
+- Adding a `${VAR}` placeholder to any `src/main/resources/config/*.yml` means updating three files in the same change: `.env.template`, `src/test/resources/application-test.yml`, and the AOT cache training `RUN` step in `Dockerfile`. The `Dockerfile` step refreshes a real `prod`-profile Spring context, so an unresolved placeholder fails `docker build` and breaks CD even though `./gradlew build` still passes — this is the only one of the three that no test catches.
+- Values in the `Dockerfile` AOT step are throwaway and must be obviously fake (`aot`, `http://localhost`, `dummy-*`). Never a real secret, key, or credential: this repository is public and secret-scanned. They only need to satisfy format validation (`@NotBlank`, `@Positive`, `@Size`, URI parsing). When a property must point at a parseable file, bind-mount the committed dummy fixture from `src/test/resources/` (`dummy-gcs-key.json`, `dummy-apple-key.p8`) instead of inventing a value.
 - `@ConfigurationProperties` data classes get `@Validated` + jakarta validation annotations.
 - Put each primary-constructor property on its own line. Property annotations go on separate lines immediately above the property, never on the same line as `val` or `var`. Separate each annotated property group from the next with one blank line.
 - Validation annotations on data class constructor properties always use the `@field:` use-site; without it Hibernate Validator may not see them. Controllers take `@Valid @RequestBody`.
@@ -84,11 +86,11 @@ photo/
 | `.gitattributes` | Marks `src/generated/**` as `linguist-generated` so PR diffs collapse generated files |
 | `.gitignore` | Ignores local build/tooling files, secrets, `.env`, and generated E2E report artifacts |
 | `compose.yaml` | Local PostgreSQL 18 + pgvector |
-| `compose.deploy.yaml` | Shared server deployment stack: Caddy + API + PostgreSQL |
+| `compose.deploy.yaml` | Shared server deployment stack: Caddy + API + PostgreSQL + Valkey (Redis-compatible, backs refresh token storage) |
 | `compose.dev.yaml` | Dev deployment overrides; mounts GCS credentials from `../secrets` |
 | `compose.production.yaml` | Production deployment overrides; mounts GCS credentials from `../secrets` |
 | `Caddyfile` | Shared automatic HTTPS and reverse proxy configuration |
-| `Dockerfile` | Layered JDK 25 image with a build-only mounted dummy GCS credential for AOT cache training |
+| `Dockerfile` | Layered JDK 25 image. The AOT cache training step refreshes a full `prod`-profile context, so it must carry every config env var plus build-only mounted dummy GCS and Apple credentials |
 | `.env.template` | Local environment defaults, including a non-production provider-token encryption key and external-service timeouts |
 | `build.gradle.kts` | Single-module build, including Spring Security, Redis, JWT, OAuth, and authenticated MockMvc test support |
 
