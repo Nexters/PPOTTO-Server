@@ -13,7 +13,9 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | `infrastructure/BoardStickerAdapter.kt` | Explicit board query/command port mappings backed by sticker application services |
 | `application/` | Transactional analysis-result save plus sticker query and command services |
 | `application/port/` | Cross-domain contracts for analysis/photo ownership plus recap photo metadata and signed URLs |
-| `presentation/` | Swagger-documented version 1 sticker/recap HTTP API and schemas with required UUID user injection |
+| `presentation/StickerApi.kt` | Version 1 sticker and recap mapping and Swagger contract |
+| `presentation/StickerController.kt` | Sticker API implementation with request binding and required UUID user injection |
+| `presentation/dto/` | Swagger-described sticker and recap request and response schemas |
 
 ## Rules
 

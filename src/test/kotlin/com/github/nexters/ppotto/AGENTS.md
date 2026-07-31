@@ -16,7 +16,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, idempotent agreement, and schema-valid user fixture tests |
 | `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration with schema-valid users |
 | `global/security/CurrentUserArgumentResolverTest.kt` | Required and optional UUID principal resolution contract tests |
-| `global/openapi/OpenApiDocumentationTest.kt` | Generated OpenAPI metadata, version header, schema description, error response, and authentication mode tests |
+| `global/openapi/OpenApiDocumentationTest.kt` | Generated OpenAPI metadata, interface-defined endpoint contracts, version header, schema description, error response, and authentication mode tests |
 | `terms/presentation/TermsControllerTest.kt` | Public anonymous current-term lookup, authenticated agreement state, protected agreement submission, and schema-valid user fixture integration tests |
 | `terms/support/TermsTestSecurityConfig.kt` | Test-only UUID authentication principal filter for MockMvc |
 | `board/domain/DrawingTest.kt` | Drawing scope and sticker ownership invariant unit tests |

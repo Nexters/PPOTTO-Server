@@ -27,7 +27,16 @@ class OpenApiDocumentationTest(
                 result
                     .andExpect(jsonPath("$['paths']['/analysis']['post']['summary']").value("분석 생성"))
                     .andExpect(jsonPath("$['paths']['/analysis']['post']['tags']").value(hasItem("분석")))
+                    .andExpect(jsonPath("$['paths']['/auth/login']['post']['summary']").value("소셜 로그인"))
+                    .andExpect(jsonPath("$['paths']['/users/me']['get']['summary']").value("내 정보 조회"))
+                    .andExpect(jsonPath("$['paths']['/boards']['get']['summary']").value("내 보드 목록 조회"))
                     .andExpect(
+                        jsonPath("$['paths']['/boards/{boardId}/layout']['patch']['summary']")
+                            .value("보드 편집 결과 저장"),
+                    ).andExpect(
+                        jsonPath("$['paths']['/stickers/{stickerId}']['get']['summary']")
+                            .value("리캡 상세 조회"),
+                    ).andExpect(
                         jsonPath("$['paths']['/analysis']['post']['parameters'][*].name")
                             .value(hasItem("X-API-Version")),
                     ).andExpect(

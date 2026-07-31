@@ -21,8 +21,10 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardLayoutService.kt` | User-serialized sticker/drawing ownership validation and atomic changed-layout persistence |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
 | `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
-| `presentation/BoardController.kt` | Swagger-documented v1 CRUD endpoints at `/boards` with required UUID user injection |
-| `presentation/BoardLayoutController.kt` | Swagger-documented v1 `PATCH /boards/{boardId}/layout` endpoint with required UUID user injection |
+| `presentation/BoardApi.kt` | `/boards` v1 CRUD mapping and Swagger contract |
+| `presentation/BoardController.kt` | Board CRUD API implementation with request binding and required UUID user injection |
+| `presentation/BoardLayoutApi.kt` | `PATCH /boards/{boardId}/layout` v1 mapping and Swagger contract |
+| `presentation/BoardLayoutController.kt` | Board layout API implementation with request binding and required UUID user injection |
 | `presentation/dto/BoardRequests.kt` | Swagger-described create and rename validation DTOs |
 | `presentation/dto/BoardResponses.kt` | Swagger-described board list/detail, sticker, and drawing response DTOs |
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
