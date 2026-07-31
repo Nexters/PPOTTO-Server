@@ -11,7 +11,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `domain/DrawingScope.kt` | Drawing ownership scope: `STICKER` or `BOARD` |
 | `domain/BoardErrorCode.kt` | `BOARD-001` through `BOARD-005` API errors |
 | `infrastructure/BoardRepository.kt` | Active-board CRUD, ownership filtering, row locking, user-scoped command advisory locking, and soft deletion |
-| `infrastructure/DrawingRepository.kt` | Fluent JSONB drawing upsert, guarded lookup, ownership filtering, board/sticker-scoped soft deletion, and board-scoped hard deletion |
+| `infrastructure/DrawingRepository.kt` | Single-statement multi-row JSONB drawing upsert (`excluded`-based `ON CONFLICT` update guarded per row by `board_id`, one stroke serialization per drawing, results re-ordered to input order), guarded lookup, ownership filtering, board/sticker-scoped soft deletion, and board-scoped hard deletion |
 | `infrastructure/BoardWithdrawalRepository.kt` | Withdrawn-user board id lookup and hard deletion, kept out of `BoardRepository` so the active-board repository stays soft-delete only |
 | `infrastructure/StickerDrawingCommandAdapter.kt` | Sticker-domain drawing deletion port adapter backed by the board application service |
 | `infrastructure/integration/WithdrawnUserBoardDeletionAdapter.kt` | User-domain `WithdrawnUserBoardDeletionPort` adapter through `BoardWithdrawalService` |

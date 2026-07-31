@@ -9,10 +9,10 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -295,7 +295,7 @@ private fun imageResult(photoId: UUID) =
         sourcePhotoId = photoId,
         imageKey = "stickers/image.png",
         textContent = null,
-        layout = analysisLayout(),
+        layout = defaultStickerLayout(),
         photoIds = listOf(photoId),
         comments =
             listOf(
@@ -312,19 +312,7 @@ private fun textResult() =
         sourcePhotoId = null,
         imageKey = null,
         textContent = "텍스트",
-        layout = analysisLayout(),
+        layout = defaultStickerLayout(),
         photoIds = emptyList(),
         comments = emptyList(),
-    )
-
-private fun analysisLayout() =
-    StickerLayout(
-        posX = 1.0,
-        posY = 2.0,
-        scale = 1.0,
-        rotation = 0.0,
-        zIndex = 0,
-        badgeOffsetX = 0.0,
-        badgeOffsetY = 0.0,
-        badgeRotation = 0.0,
     )

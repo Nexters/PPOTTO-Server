@@ -7,10 +7,10 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.hamcrest.Matchers.containsString
@@ -66,7 +66,7 @@ class StickerControllerTest(
                         sourcePhotoId = photo.id,
                         imageKey = "stickers/controller.png",
                         textContent = null,
-                        layout = controllerLayout(),
+                        layout = defaultStickerLayout(),
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(photo.id))
@@ -174,15 +174,3 @@ class StickerControllerTest(
             }
         }
     })
-
-private fun controllerLayout() =
-    StickerLayout(
-        posX = 1.0,
-        posY = 2.0,
-        scale = 1.0,
-        rotation = 0.0,
-        zIndex = 0,
-        badgeOffsetX = 0.0,
-        badgeOffsetY = 0.0,
-        badgeRotation = 0.0,
-    )

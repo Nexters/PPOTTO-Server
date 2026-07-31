@@ -43,7 +43,8 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/infrastructure/BoardExternalPortFallbackConfigurationTest.kt` | Standalone missing-adapter fail-closed contract tests |
 | `board/presentation/BoardControllerTest.kt` | Authenticated CRUD response and ownership integration tests |
 | `board/support/BoardTestConfig.kt` | Primary fake analysis/sticker application ports for board integration tests |
-| `board/support/BoardTestFixtures.kt` | UUIDv7 and sticker response fixtures |
+| `board/support/BoardTestFixtures.kt` | UUIDv7, `NewDrawing` builder, and sticker response fixtures |
+| `sticker/support/StickerTestFixtures.kt` | Shared `StickerCreation`/`StickerLayout` fixtures (`textStickerCreation`, `defaultStickerLayout`) reused across sticker, board, and analysis integration tests |
 | `sticker/` | Sticker aggregate unit tests plus repository, service, and API integration tests. Covers the recap one-line summary and the coordinate-only split between floating speech bubbles and bottom keyword chips. No port fakes live here: the analysis/photo ownership, recap photo, and sticker image ports are `List<Port>` + `singleOrNull()` contracts, so a fake bean would duplicate the production adapter instead of overriding it |
 | `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including local-only auth keys, provider-token keys, OAuth HTTP timeouts, Redis, JWT, GCS signed URL expirations, and Vertex AI settings, in tests (tests do not read `.env`) |
 

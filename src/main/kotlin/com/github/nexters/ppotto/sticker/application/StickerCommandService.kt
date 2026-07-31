@@ -1,10 +1,8 @@
 package com.github.nexters.ppotto.sticker.application
 
-import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
-import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
@@ -19,7 +17,7 @@ class StickerCommandService(
     private val stickerRepository: StickerRepository,
     private val stickerCommandRepository: StickerCommandRepository,
     private val stickerRecapRepository: StickerRecapRepository,
-    private val boardAccessService: BoardAccessService,
+    private val stickerAccessService: StickerAccessService,
     private val drawingCommandPorts: List<StickerDrawingCommandPort>,
 ) {
     @Transactional
@@ -28,7 +26,8 @@ class StickerCommandService(
         stickerId: UUID,
         title: String,
     ): StickerTitleResult =
-        getOwned(userId, stickerId)
+        stickerAccessService
+            .getOwned(userId, stickerId)
             .apply { rename(title) }
             .takeIf { stickerCommandRepository.updateTitle(it.id, it.title) }
             ?.let { StickerTitleResult(it.id, it.title) }
@@ -39,7 +38,8 @@ class StickerCommandService(
         userId: UUID,
         stickerId: UUID,
     ) {
-        getOwned(userId, stickerId)
+        stickerAccessService
+            .getOwned(userId, stickerId)
             .takeIf { it.viewedAt == null }
             ?.apply { markViewed(Instant.now()) }
             ?.let {
@@ -54,7 +54,7 @@ class StickerCommandService(
         userId: UUID,
         stickerId: UUID,
     ): Unit =
-        getOwned(userId, stickerId).let { sticker ->
+        stickerAccessService.getOwned(userId, stickerId).let { sticker ->
             drawingCommandPort().let { drawingCommandPort ->
                 sticker
                     .apply { delete(Instant.now()) }
@@ -82,16 +82,15 @@ class StickerCommandService(
         (
             layouts
                 .map { it.id }
-                .takeIf { it.distinct().size == it.size && validateOwnedByBoard(boardId, it) }
-                ?: throw InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
+                .takeIf { it.distinct().size == it.size }
+                ?: throw uneditableSticker()
         ).let { stickerRepository.findAllByBoardId(boardId).associateBy { sticker -> sticker.id } }
             .let { stickersById ->
                 layouts.forEach { command ->
-                    stickersById
-                        .getValue(command.id)
+                    (stickersById[command.id] ?: throw uneditableSticker())
                         .apply { updateLayout(command.toDomain()) }
                         .takeIf(stickerCommandRepository::updateLayout)
-                        ?: throw InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
+                        ?: throw uneditableSticker()
                 }
             }
 
@@ -116,17 +115,7 @@ class StickerCommandService(
                 }
             } ?: Unit
 
-    private fun getOwned(
-        userId: UUID,
-        stickerId: UUID,
-    ): Sticker =
-        (stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND))
-            .also { sticker ->
-                boardAccessService
-                    .getById(sticker.boardId)
-                    .takeIf { it.userId == userId }
-                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-            }
+    private fun uneditableSticker() = InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
 
     private fun drawingCommandPort(): StickerDrawingCommandPort =
         drawingCommandPorts.singleOrNull()

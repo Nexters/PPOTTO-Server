@@ -7,10 +7,10 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -53,7 +53,7 @@ class StickerQueryServiceTest(
                         sourcePhotoId = photos.first().id,
                         imageKey = "stickers/recap.png",
                         textContent = null,
-                        layout = queryLayout(),
+                        layout = defaultStickerLayout(),
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
@@ -130,7 +130,7 @@ class StickerQueryServiceTest(
                         sourcePhotoId = pendingPhoto.id,
                         imageKey = "stickers/recap.png",
                         textContent = null,
-                        layout = queryLayout(),
+                        layout = defaultStickerLayout(),
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(pendingPhoto.id))
@@ -144,15 +144,3 @@ class StickerQueryServiceTest(
             }
         }
     })
-
-private fun queryLayout() =
-    StickerLayout(
-        posX = 1.0,
-        posY = 2.0,
-        scale = 1.0,
-        rotation = 0.0,
-        zIndex = 0,
-        badgeOffsetX = 0.0,
-        badgeOffsetY = 0.0,
-        badgeRotation = 0.0,
-    )

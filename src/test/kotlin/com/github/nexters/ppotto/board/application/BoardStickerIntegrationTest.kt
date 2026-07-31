@@ -7,21 +7,18 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
-import com.github.nexters.ppotto.board.domain.DrawingScope
-import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
-import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -53,7 +50,7 @@ class BoardStickerIntegrationTest(
             val board = boardRepository.save(user.id, "연동 보드")
             val analysis = analysisRepository.save(user.id, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
-            val drawing = stickerDrawing(board.id, sticker.id)
+            val drawing = newDrawing(boardId = board.id, stickerId = sticker.id)
             drawingRepository.upsertAll(listOf(drawing))
 
             When("보드 상세를 조회하면") {
@@ -92,7 +89,7 @@ class BoardStickerIntegrationTest(
             val board = boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
-            val drawing = stickerDrawing(board.id, sticker.id)
+            val drawing = newDrawing(boardId = board.id, stickerId = sticker.id)
 
             When("스티커 배치와 드로잉을 함께 저장하면") {
                 boardLayoutService.update(
@@ -137,8 +134,8 @@ class BoardStickerIntegrationTest(
             val board = boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
-            val stickerDrawing = stickerDrawing(board.id, sticker.id)
-            val boardDrawing = boardDrawing(board.id)
+            val stickerDrawing = newDrawing(boardId = board.id, stickerId = sticker.id)
+            val boardDrawing = newDrawing(boardId = board.id)
             drawingRepository.upsertAll(listOf(stickerDrawing, boardDrawing))
             stickerRecapRepository.saveComments(
                 sticker.id,
@@ -167,7 +164,9 @@ class BoardStickerIntegrationTest(
                 .where(ANALYSIS.ID.eq(analysis.id))
                 .execute()
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
-            drawingRepository.upsertAll(listOf(stickerDrawing(board.id, sticker.id), boardDrawing(board.id)))
+            drawingRepository.upsertAll(
+                listOf(newDrawing(boardId = board.id, stickerId = sticker.id), newDrawing(boardId = board.id)),
+            )
             stickerRecapRepository.saveComments(
                 sticker.id,
                 listOf(RecapCommentCreation("리캡", null, null)),
@@ -204,27 +203,6 @@ class BoardStickerIntegrationTest(
         }
     })
 
-private fun textStickerCreation() =
-    StickerCreation(
-        type = StickerType.TEXT,
-        title = "원래 제목",
-        summary = "한 줄 요약",
-        sourcePhotoId = null,
-        imageKey = null,
-        textContent = "텍스트",
-        layout =
-            StickerLayout(
-                posX = 1.0,
-                posY = 2.0,
-                scale = 1.0,
-                rotation = 0.0,
-                zIndex = 0,
-                badgeOffsetX = 0.0,
-                badgeOffsetY = 0.0,
-                badgeRotation = 0.0,
-            ),
-    )
-
 private fun updatedLayout(stickerId: UUID) =
     BoardStickerLayoutCommand(
         id = stickerId,
@@ -237,28 +215,4 @@ private fun updatedLayout(stickerId: UUID) =
         badgeOffsetX = 4.0,
         badgeOffsetY = 6.0,
         badgeRotation = 8.0,
-    )
-
-private fun stickerDrawing(
-    boardId: UUID,
-    stickerId: UUID,
-) = NewDrawing(
-    id = uuidV7(),
-    boardId = boardId,
-    stickerId = stickerId,
-    scope = DrawingScope.STICKER,
-    stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
-    color = "#FFD400",
-    strokeWidth = 4.0,
-)
-
-private fun boardDrawing(boardId: UUID) =
-    NewDrawing(
-        id = uuidV7(),
-        boardId = boardId,
-        stickerId = null,
-        scope = DrawingScope.BOARD,
-        stroke = mapOf("points" to listOf(listOf(3.0, 4.0))),
-        color = "#FFFFFF",
-        strokeWidth = 2.0,
     )
