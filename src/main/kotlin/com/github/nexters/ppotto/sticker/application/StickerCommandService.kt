@@ -30,11 +30,9 @@ class StickerCommandService(
     ): StickerTitleResult =
         getOwned(userId, stickerId)
             .apply { rename(title) }
-            .also {
-                if (!stickerCommandRepository.updateTitle(it.id, it.title)) {
-                    throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-                }
-            }.let { StickerTitleResult(it.id, it.title) }
+            .takeIf { stickerCommandRepository.updateTitle(it.id, it.title) }
+            ?.let { StickerTitleResult(it.id, it.title) }
+            ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
 
     @Transactional
     fun markViewed(
@@ -44,10 +42,10 @@ class StickerCommandService(
         getOwned(userId, stickerId)
             .takeIf { it.viewedAt == null }
             ?.apply { markViewed(Instant.now()) }
-            ?.also {
-                if (!stickerCommandRepository.markViewed(it.id, checkNotNull(it.viewedAt))) {
-                    throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-                }
+            ?.let {
+                it
+                    .takeIf { sticker -> stickerCommandRepository.markViewed(sticker.id, checkNotNull(sticker.viewedAt)) }
+                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
             }
     }
 
@@ -55,23 +53,21 @@ class StickerCommandService(
     fun delete(
         userId: UUID,
         stickerId: UUID,
-    ) {
+    ): Unit =
         getOwned(userId, stickerId).let { sticker ->
             drawingCommandPort().let { drawingCommandPort ->
                 sticker
                     .apply { delete(Instant.now()) }
-                    .also {
-                        if (!stickerCommandRepository.softDelete(it.id, checkNotNull(it.deletedAt))) {
-                            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-                        }
-                    }.also {
+                    .takeIf { stickerCommandRepository.softDelete(it.id, checkNotNull(it.deletedAt)) }
+                    ?.also {
                         drawingCommandPort.deleteByStickerIds(it.boardId, listOf(it.id))
-                    }.also {
+                    }.let {
+                        it ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+                    }.let {
                         stickerRecapRepository.deleteByStickerIds(listOf(it.id))
                     }
             }
         }
-    }
 
     fun validateOwnedByBoard(
         boardId: UUID,
@@ -82,30 +78,25 @@ class StickerCommandService(
     fun updateLayouts(
         boardId: UUID,
         layouts: List<StickerLayoutCommand>,
-    ) {
-        layouts
-            .map { it.id }
-            .also {
-                if (it.distinct().size != it.size || !validateOwnedByBoard(boardId, it)) {
-                    throw InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
-                }
-            }.let { stickerRepository.findAllByBoardId(boardId).associateBy { sticker -> sticker.id } }
+    ): Unit =
+        (
+            layouts
+                .map { it.id }
+                .takeIf { it.distinct().size == it.size && validateOwnedByBoard(boardId, it) }
+                ?: throw InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
+        ).let { stickerRepository.findAllByBoardId(boardId).associateBy { sticker -> sticker.id } }
             .let { stickersById ->
                 layouts.forEach { command ->
                     stickersById
                         .getValue(command.id)
                         .apply { updateLayout(command.toDomain()) }
-                        .also {
-                            if (!stickerCommandRepository.updateLayout(it)) {
-                                throw InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
-                            }
-                        }
+                        .takeIf(stickerCommandRepository::updateLayout)
+                        ?: throw InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
                 }
             }
-    }
 
     @Transactional
-    fun deleteAllByBoardId(boardId: UUID) {
+    fun deleteAllByBoardId(boardId: UUID): Unit =
         stickerRepository
             .findAllByBoardId(boardId)
             .takeIf { it.isNotEmpty() }
@@ -114,17 +105,16 @@ class StickerCommandService(
                     Instant.now().let { deletedAt ->
                         stickers
                             .onEach {
-                                it.delete(deletedAt)
-                                if (!stickerCommandRepository.softDelete(it.id, deletedAt)) {
-                                    throw InvalidInputException(message = "삭제할 수 없는 스티커가 포함되어 있습니다.")
-                                }
+                                it
+                                    .apply { delete(deletedAt) }
+                                    .takeIf { sticker -> stickerCommandRepository.softDelete(sticker.id, deletedAt) }
+                                    ?: throw InvalidInputException(message = "삭제할 수 없는 스티커가 포함되어 있습니다.")
                             }.map { it.id }
                             .also { drawingCommandPort.deleteByStickerIds(boardId, it) }
-                            .also(stickerRecapRepository::deleteByStickerIds)
+                            .let(stickerRecapRepository::deleteByStickerIds)
                     }
                 }
-            }
-    }
+            } ?: Unit
 
     private fun getOwned(
         userId: UUID,

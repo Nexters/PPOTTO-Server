@@ -9,7 +9,5 @@ import java.util.UUID
 class RefreshTokenUserSessionRevoker(
     private val refreshTokenStore: RefreshTokenStore,
 ) : UserSessionRevoker {
-    override fun revoke(userId: UUID) {
-        refreshTokenStore.delete(userId)
-    }
+    override fun revoke(userId: UUID): Unit = refreshTokenStore.delete(userId)
 }

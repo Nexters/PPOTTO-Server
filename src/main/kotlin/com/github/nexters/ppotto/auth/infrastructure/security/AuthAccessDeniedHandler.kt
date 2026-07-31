@@ -15,7 +15,5 @@ class AuthAccessDeniedHandler(
         request: HttpServletRequest,
         response: HttpServletResponse,
         accessDeniedException: AccessDeniedException,
-    ) {
-        errorWriter.write(response, CommonErrorCode.FORBIDDEN)
-    }
+    ): Unit = errorWriter.write(response, CommonErrorCode.FORBIDDEN)
 }

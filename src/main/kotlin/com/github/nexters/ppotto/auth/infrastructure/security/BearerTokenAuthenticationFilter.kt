@@ -23,7 +23,7 @@ class BearerTokenAuthenticationFilter(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain,
-    ) {
+    ): Unit =
         request.getHeader(AUTHORIZATION).let { authorization ->
             when {
                 authorization == null -> filterChain.doFilter(request, response)
@@ -32,14 +32,13 @@ class BearerTokenAuthenticationFilter(
                 else -> authenticate(authorization.removePrefix(BEARER_PREFIX).trim(), request, response, filterChain)
             }
         }
-    }
 
     private fun authenticate(
         token: String,
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain,
-    ) {
+    ): Unit =
         try {
             tokenProvider
                 .verifyAccessToken(token)
@@ -50,12 +49,12 @@ class BearerTokenAuthenticationFilter(
                         .createEmptyContext()
                         .apply { this.authentication = authentication }
                 }.also(SecurityContextHolder::setContext)
-                .also { filterChain.doFilter(request, response) }
+                .let { filterChain.doFilter(request, response) }
         } catch (e: UnauthorizedException) {
-            SecurityContextHolder.clearContext()
-            reject(request, response, e)
+            SecurityContextHolder
+                .clearContext()
+                .let { reject(request, response, e) }
         }
-    }
 
     private fun reject(
         request: HttpServletRequest,

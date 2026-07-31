@@ -55,14 +55,13 @@ class UserService(
     fun withdraw(
         id: UUID,
         withdrawnAt: Instant = Instant.now(),
-    ) {
+    ): Unit =
         getById(id)
             .also { user ->
                 user.providerRefreshToken?.let {
                     socialAccountRevoker.revoke(user.provider, tokenCipher.decrypt(it))
                 }
             }.let { userRepository.withdraw(it.withdraw(withdrawnAt)) }
-            ?.also { userSessionRevoker.revoke(id) }
+            ?.let { userSessionRevoker.revoke(id) }
             ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
-    }
 }

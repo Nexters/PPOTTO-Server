@@ -117,25 +117,28 @@ class AnalysisService(
         analysisUserId: UUID,
         userId: UUID,
     ) {
-        if (analysisUserId != userId) throw NotFoundException()
+        analysisUserId
+            .takeIf { it == userId }
+            ?: throw NotFoundException()
     }
 
     private fun validateUploading(status: AnalysisStatus) {
-        if (status != AnalysisStatus.UPLOADING) {
-            throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
-        }
+        status
+            .takeIf { it == AnalysisStatus.UPLOADING }
+            ?: throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
     }
 
     private fun validatePhotoCount(size: Int) {
-        if (size !in 90..100) {
-            throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
-        }
+        size
+            .takeIf { it in 90..100 }
+            ?: throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
     }
 
     private fun validateNoActiveAnalysis(userId: UUID) {
-        if (analysisRepository.existsActiveByUserId(userId)) {
-            throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
-        }
+        analysisRepository
+            .existsActiveByUserId(userId)
+            .takeUnless { it }
+            ?: throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
     }
 
     private fun saveAnalysisWithConstraintFallback(

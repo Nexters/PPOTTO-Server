@@ -6,6 +6,6 @@ Request logging.
 
 | File | Description |
 |------|-------------|
-| `RequestLoggingFilter.kt` | `OncePerRequestFilter`. Uses a fluent elapsed-time scope, puts an 8-char `requestId` into MDC, logs `METHOD uri status elapsed` per request, and skips `/actuator/**` |
+| `RequestLoggingFilter.kt` | `OncePerRequestFilter`. Uses one expression-bodied request-id and elapsed-time chain, logs `METHOD uri status elapsed`, and skips `/actuator/**` |
 
 Update this file when logging behavior changes.

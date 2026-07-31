@@ -15,7 +15,5 @@ class AuthAuthenticationEntryPoint(
         request: HttpServletRequest,
         response: HttpServletResponse,
         authException: AuthenticationException,
-    ) {
-        errorWriter.write(response, CommonErrorCode.UNAUTHORIZED)
-    }
+    ): Unit = errorWriter.write(response, CommonErrorCode.UNAUTHORIZED)
 }

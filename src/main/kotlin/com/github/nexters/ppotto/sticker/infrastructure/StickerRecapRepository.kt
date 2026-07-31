@@ -78,10 +78,12 @@ class StickerRecapRepository(
                     .deleteFrom(RECAP_COMMENTS)
                     .where(RECAP_COMMENTS.STICKER_ID.`in`(it))
                     .execute()
-                dslContext
-                    .deleteFrom(STICKER_PHOTOS)
-                    .where(STICKER_PHOTOS.STICKER_ID.`in`(it))
-                    .execute()
+                    .let {
+                        dslContext
+                            .deleteFrom(STICKER_PHOTOS)
+                            .where(STICKER_PHOTOS.STICKER_ID.`in`(stickerIds))
+                            .execute()
+                    }
             }
     }
 

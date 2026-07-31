@@ -6,11 +6,11 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 
 | Directory | Description |
 |-----------|---------|
-| `domain/` | Pure Kotlin `Sticker` aggregate, fluent content validation, creation values, `StickerPhoto`, `RecapComment`, type, and error code |
+| `domain/` | Pure Kotlin `Sticker` aggregate with fluent state transitions and validation, creation values, `StickerPhoto`, `RecapComment`, type, and error code |
 | `infrastructure/StickerRepository.kt` | Fluent jOOQ persistence for sticker roots, analysis-result locking, ownership validation, and root lookups |
 | `infrastructure/StickerCommandRepository.kt` | Field-specific atomic updates that never overwrite `deleted_at` from stale aggregate state |
 | `infrastructure/StickerRecapRepository.kt` | Fluent jOOQ batch persistence and deletion for recap photo links and comments |
-| `infrastructure/BoardStickerAdapter.kt` | Explicit board query/command port mappings backed by sticker application services |
+| `infrastructure/BoardStickerAdapter.kt` | Expression-bodied board query/command port mappings backed by sticker application services |
 | `application/` | Fluent transactional analysis-result save plus sticker query and command pipelines |
 | `application/port/` | Cross-domain contracts for analysis/photo ownership plus recap photo metadata and signed URLs |
 | `presentation/StickerApi.kt` | Version 1 sticker and recap mapping and Swagger contract |

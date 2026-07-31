@@ -50,46 +50,48 @@ class Sticker(
         private set
 
     init {
-        validateTitle(title)
-        validateContent(type, sourcePhotoId, imageKey, textContent)
+        title
+            .also(::validateTitle)
+            .let { validateContent(type, sourcePhotoId, imageKey, textContent) }
     }
 
-    fun rename(title: String) {
-        validateTitle(title)
-        this.title = title
-    }
+    fun rename(title: String): Unit =
+        title
+            .also(::validateTitle)
+            .let { this.title = it }
 
-    fun markViewed(viewedAt: Instant) {
-        if (this.viewedAt == null) {
-            this.viewedAt = viewedAt
-        }
-    }
+    fun markViewed(viewedAt: Instant): Unit =
+        viewedAt
+            .takeIf { this.viewedAt == null }
+            ?.let { this.viewedAt = it }
+            ?: Unit
 
-    fun updateLayout(layout: StickerLayout) {
-        posX = layout.posX
-        posY = layout.posY
-        scale = layout.scale
-        rotation = layout.rotation
-        zIndex = layout.zIndex
-        badgeOffsetX = layout.badgeOffsetX
-        badgeOffsetY = layout.badgeOffsetY
-        badgeRotation = layout.badgeRotation
-        layout.title?.let(::rename)
-    }
+    fun updateLayout(layout: StickerLayout): Unit =
+        layout
+            .also {
+                posX = it.posX
+                posY = it.posY
+                scale = it.scale
+                rotation = it.rotation
+                zIndex = it.zIndex
+                badgeOffsetX = it.badgeOffsetX
+                badgeOffsetY = it.badgeOffsetY
+                badgeRotation = it.badgeRotation
+            }.let { it.title?.let(::rename) ?: Unit }
 
-    fun delete(deletedAt: Instant) {
-        if (this.deletedAt == null) {
-            this.deletedAt = deletedAt
-        }
-    }
+    fun delete(deletedAt: Instant): Unit =
+        deletedAt
+            .takeIf { this.deletedAt == null }
+            ?.let { this.deletedAt = it }
+            ?: Unit
 
     companion object {
         const val MAX_TITLE_LENGTH = 15
 
         fun validateTitle(title: String) {
-            if (title.isBlank() || title.length > MAX_TITLE_LENGTH) {
-                throw InvalidInputException()
-            }
+            title
+                .takeUnless { it.isBlank() || it.length > MAX_TITLE_LENGTH }
+                ?: throw InvalidInputException()
         }
 
         fun validateContent(
@@ -101,11 +103,8 @@ class Sticker(
             when (type) {
                 StickerType.IMAGE -> sourcePhotoId != null && !imageKey.isNullOrBlank()
                 StickerType.TEXT -> !textContent.isNullOrBlank()
-            }.also {
-                if (!it) {
-                    throw InvalidInputException()
-                }
-            }
+            }.takeIf { it }
+                ?: throw InvalidInputException()
         }
     }
 }
@@ -119,8 +118,9 @@ data class StickerCreation(
     val layout: StickerLayout,
 ) {
     init {
-        Sticker.validateTitle(title)
-        Sticker.validateContent(type, sourcePhotoId, imageKey, textContent)
+        title
+            .also(Sticker::validateTitle)
+            .let { Sticker.validateContent(type, sourcePhotoId, imageKey, textContent) }
     }
 }
 

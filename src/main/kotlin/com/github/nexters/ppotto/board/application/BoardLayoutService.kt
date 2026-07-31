@@ -25,7 +25,7 @@ class BoardLayoutService(
         boardId: UUID,
         userId: UUID,
         command: BoardLayoutUpdateCommand,
-    ) {
+    ): Unit =
         command
             .also {
                 boardRepository.lockCommandsByUserId(userId)
@@ -43,43 +43,43 @@ class BoardLayoutService(
                 stickerCommandPort.updateLayouts(boardId, it.stickers)
             }.also {
                 drawingRepository.upsertAll(it.createdDrawings.map { drawing -> drawing.toDomain(boardId) })
-            }.also {
+            }.let {
                 check(drawingRepository.softDeleteByIds(boardId, it.deletedDrawingIds) == it.deletedDrawingIds.size)
             }
-    }
 
-    private fun validateCommand(command: BoardLayoutUpdateCommand) {
-        validateDrawingIds(command)
-        validateStickerLayouts(command.stickers)
-        validateDrawings(command.createdDrawings)
-    }
+    private fun validateCommand(command: BoardLayoutUpdateCommand): Unit =
+        command
+            .also(::validateDrawingIds)
+            .also { validateStickerLayouts(it.stickers) }
+            .let { validateDrawings(it.createdDrawings) }
 
     private fun validateDrawingIds(command: BoardLayoutUpdateCommand) {
-        command.createdDrawings.map { it.id }.let { createdIds ->
-            command.deletedDrawingIds.let { deletedIds ->
-                if (
-                    createdIds.size != createdIds.toSet().size ||
-                    deletedIds.size != deletedIds.toSet().size ||
-                    createdIds.any(deletedIds.toSet()::contains)
-                ) {
-                    throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
-                }
-            }
-        }
+        command.createdDrawings
+            .map { it.id }
+            .let { createdIds ->
+                createdIds
+                    .toSet()
+                    .takeIf { it.size == createdIds.size }
+                    ?.let { uniqueCreatedIds ->
+                        command.deletedDrawingIds
+                            .toSet()
+                            .takeIf { it.size == command.deletedDrawingIds.size }
+                            ?.takeIf { deletedIds -> uniqueCreatedIds.none(deletedIds::contains) }
+                    }
+            } ?: throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
     }
 
     private fun validateStickerLayouts(stickers: List<BoardStickerLayoutCommand>) {
-        stickers.map { it.id }.let { stickerIds ->
-            if (stickerIds.size != stickerIds.toSet().size || stickers.any { it.isInvalid() }) {
-                throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
-            }
-        }
+        stickers
+            .map { it.id }
+            .takeIf { it.size == it.toSet().size && stickers.none { sticker -> sticker.isInvalid() } }
+            ?: throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
     }
 
     private fun validateDrawings(drawings: List<DrawingCreateCommand>) {
-        if (drawings.any { it.isInvalid() }) {
-            throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
-        }
+        drawings
+            .takeUnless { it.any { drawing -> drawing.isInvalid() } }
+            ?: throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
     }
 
     private fun BoardStickerLayoutCommand.isInvalid(): Boolean =
@@ -115,13 +115,12 @@ class BoardLayoutService(
             .let(drawingRepository::findBoardIdsByIds)
             .values
             .any { it != boardId }
-            .takeIf { it }
-            ?.let { throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT) }
-
-        command.deletedDrawingIds
-            .toSet()
-            .takeIf { drawingRepository.findActiveIds(boardId, it) != it }
-            ?.let { throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT) }
+            .takeUnless { it }
+            ?.let {
+                command.deletedDrawingIds
+                    .toSet()
+                    .takeIf { drawingRepository.findActiveIds(boardId, it) == it }
+            } ?: throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
     }
 
     companion object {

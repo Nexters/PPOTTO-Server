@@ -20,9 +20,9 @@ class AuthUserAdapter(
         userService
             .findOrCreate(profile.toCommand())
             .also {
-                if (it.isNewUser) {
-                    boardCommandService.createDefault(it.user.id)
-                }
+                it
+                    .takeIf(UserRegistrationResult::isNewUser)
+                    ?.let { newUser -> boardCommandService.createDefault(newUser.user.id) }
             }.let { it.toAuthUser() }
 
     private fun SocialProfile.toCommand() =

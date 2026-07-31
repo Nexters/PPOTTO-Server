@@ -10,9 +10,12 @@ data class SocialUserCommand(
     val providerRefreshToken: String?,
 ) {
     init {
-        require(providerUserId.isNotBlank())
-        require(email.isNotBlank())
-        require(providerRefreshToken == null || providerRefreshToken.isNotBlank())
+        listOf(
+            providerUserId.isNotBlank(),
+            email.isNotBlank(),
+            providerRefreshToken == null || providerRefreshToken.isNotBlank(),
+        ).all { it }
+            .let { require(it) }
     }
 }
 

@@ -41,9 +41,9 @@ class AuthService(
                 authUserPort
                     .findOrCreate(profile)
                     .also { user ->
-                        if (profile.authorizationCodeExchangeFailed && user.isNewUser) {
-                            throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
-                        }
+                        user
+                            .takeUnless { profile.authorizationCodeExchangeFailed && it.isNewUser }
+                            ?: throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
                     }
             }.let { user ->
                 authTermsPort.findPendingTerms(user.userId).let { pendingTerms ->

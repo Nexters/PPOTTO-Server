@@ -16,10 +16,16 @@ class SecurityErrorWriter(
     fun write(
         response: HttpServletResponse,
         errorCode: ErrorCode,
-    ) {
-        response.status = errorCode.status.value()
-        response.contentType = MediaType.APPLICATION_JSON_VALUE
-        response.characterEncoding = StandardCharsets.UTF_8.name()
-        objectMapper.writeValue(response.outputStream, ApiResponse.error(ErrorResponse.of(errorCode)))
-    }
+    ): Unit =
+        response
+            .apply {
+                status = errorCode.status.value()
+                contentType = MediaType.APPLICATION_JSON_VALUE
+                characterEncoding = StandardCharsets.UTF_8.name()
+            }.let {
+                objectMapper.writeValue(
+                    it.outputStream,
+                    ApiResponse.error(ErrorResponse.of(errorCode)),
+                )
+            }
 }

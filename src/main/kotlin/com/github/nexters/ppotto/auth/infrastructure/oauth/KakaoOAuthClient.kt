@@ -64,7 +64,9 @@ class KakaoOAuthClient(
         tokenInfo: KakaoTokenInfo,
         userInfo: KakaoUserInfo,
     ) {
-        if (tokenInfo.appId != properties.appId || tokenInfo.id != userInfo.id) failAuthentication()
+        tokenInfo
+            .takeIf { it.appId == properties.appId && it.id == userInfo.id }
+            ?: failAuthentication()
     }
 
     private fun requireEmail(userInfo: KakaoUserInfo): String =

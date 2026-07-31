@@ -28,21 +28,21 @@ class BoardStickerAdapter(
         boardId: UUID,
         stickerIds: Set<UUID>,
     ) {
-        if (!stickerCommandService.validateOwnedByBoard(boardId, stickerIds)) {
-            throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
-        }
+        stickerCommandService
+            .validateOwnedByBoard(boardId, stickerIds)
+            .takeIf { it }
+            ?: throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
     }
 
     override fun updateLayouts(
         boardId: UUID,
         layouts: List<BoardStickerLayoutCommand>,
-    ) {
-        stickerCommandService.updateLayouts(boardId, layouts.map { it.toStickerCommand() })
-    }
+    ): Unit =
+        layouts
+            .map { it.toStickerCommand() }
+            .let { stickerCommandService.updateLayouts(boardId, it) }
 
-    override fun deleteAllByBoardId(boardId: UUID) {
-        stickerCommandService.deleteAllByBoardId(boardId)
-    }
+    override fun deleteAllByBoardId(boardId: UUID): Unit = stickerCommandService.deleteAllByBoardId(boardId)
 
     private fun StickerItemResult.toBoardItem() =
         BoardStickerItem(

@@ -17,29 +17,27 @@ class RequestLoggingFilter : OncePerRequestFilter() {
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain,
-    ) {
-        MDC.put(
-            "requestId",
-            UUID
-                .randomUUID()
-                .toString()
-                .substring(0, 8),
-        )
-        System.currentTimeMillis().let { started ->
-            try {
-                filterChain.doFilter(request, response)
-            } finally {
-                log.info(
-                    "{} {} {} {}ms",
-                    request.method,
-                    request.requestURI,
-                    response.status,
-                    System.currentTimeMillis() - started,
-                )
-                MDC.clear()
+    ): Unit =
+        UUID
+            .randomUUID()
+            .toString()
+            .substring(0, 8)
+            .also { MDC.put("requestId", it) }
+            .let { System.currentTimeMillis() }
+            .let { started ->
+                try {
+                    filterChain.doFilter(request, response)
+                } finally {
+                    log
+                        .info(
+                            "{} {} {} {}ms",
+                            request.method,
+                            request.requestURI,
+                            response.status,
+                            System.currentTimeMillis() - started,
+                        ).let { MDC.clear() }
+                }
             }
-        }
-    }
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean = request.requestURI.startsWith("/actuator")
 }

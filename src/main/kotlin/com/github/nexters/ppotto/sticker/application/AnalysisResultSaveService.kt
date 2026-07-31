@@ -44,16 +44,17 @@ class AnalysisResultSaveService(
                             ).let { creation ->
                                 stickerRepository.save(it.analysisId, it.boardId, creation)
                             }.also { sticker ->
-                                stickerRecapRepository.savePhotos(sticker.id, result.photoIds)
-                                stickerRecapRepository.saveComments(sticker.id, result.comments)
+                                stickerRecapRepository
+                                    .savePhotos(sticker.id, result.photoIds)
+                                    .let { stickerRecapRepository.saveComments(sticker.id, result.comments) }
                             }.id
                         }.let(::SavedAnalysisResult)
             }
 
     private fun validateStickerCount(stickerCount: Int) {
-        if (stickerCount > MAX_STICKER_COUNT) {
-            throw InvalidInputException(message = "분석 결과 스티커는 최대 6개까지 저장할 수 있습니다.")
-        }
+        stickerCount
+            .takeIf { it <= MAX_STICKER_COUNT }
+            ?: throw InvalidInputException(message = "분석 결과 스티커는 최대 6개까지 저장할 수 있습니다.")
     }
 
     private fun ownershipPort(): AnalysisPhotoOwnershipPort =
@@ -64,15 +65,17 @@ class AnalysisResultSaveService(
         command: SaveAnalysisResultCommand,
         ownershipPort: AnalysisPhotoOwnershipPort,
     ) {
-        boardAccessService
-            .getById(command.boardId)
-            .takeIf { it.userId == command.userId }
-            ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-
-        command.stickers
-            .flatMap { it.photoIds + listOfNotNull(it.sourcePhotoId) }
-            .toSet()
-            .let {
+        command
+            .also {
+                boardAccessService
+                    .getById(it.boardId)
+                    .takeIf { board -> board.userId == it.userId }
+                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+            }.let {
+                it.stickers
+                    .flatMap { sticker -> sticker.photoIds + listOfNotNull(sticker.sourcePhotoId) }
+                    .toSet()
+            }.let {
                 AnalysisPhotoOwnershipScope(
                     userId = command.userId,
                     boardId = command.boardId,

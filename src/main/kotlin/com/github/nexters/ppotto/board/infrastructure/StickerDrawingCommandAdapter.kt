@@ -12,7 +12,5 @@ class StickerDrawingCommandAdapter(
     override fun deleteByStickerIds(
         boardId: UUID,
         stickerIds: Collection<UUID>,
-    ) {
-        drawingCommandService.deleteByStickerIds(boardId, stickerIds)
-    }
+    ): Unit = drawingCommandService.deleteByStickerIds(boardId, stickerIds)
 }

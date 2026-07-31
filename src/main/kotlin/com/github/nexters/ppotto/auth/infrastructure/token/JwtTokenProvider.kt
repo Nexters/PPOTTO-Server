@@ -56,19 +56,17 @@ class JwtTokenProvider(
         try {
             SignedJWT
                 .parse(accessToken)
-                .also {
-                    if (it.header.algorithm != JWSAlgorithm.HS256 || !it.verify(MACVerifier(secret))) unauthorized()
-                }.let { it.jwtClaimsSet }
-                .also {
-                    if (it.issuer != properties.issuer) unauthorized()
-                    if (it.expirationTime
-                            ?.toInstant()
-                            ?.isAfter(clock.instant()) != true
-                    ) {
-                        unauthorized()
-                    }
-                    if (it.getStringClaim(TOKEN_USE) != ACCESS) unauthorized()
-                }.let { UUID.fromString(it.subject) }
+                .takeIf { it.header.algorithm == JWSAlgorithm.HS256 }
+                ?.takeIf { it.verify(MACVerifier(secret)) }
+                ?.let { it.jwtClaimsSet }
+                ?.takeIf { it.issuer == properties.issuer }
+                ?.takeIf {
+                    it.expirationTime
+                        ?.toInstant()
+                        ?.isAfter(clock.instant()) == true
+                }?.takeIf { it.getStringClaim(TOKEN_USE) == ACCESS }
+                ?.let { UUID.fromString(it.subject) }
+                ?: unauthorized()
         } catch (e: UnauthorizedException) {
             throw e
         } catch (e: ParseException) {

@@ -5,6 +5,8 @@ value class EncryptedProviderRefreshToken(
     val value: String,
 ) {
     init {
-        require(value.isNotBlank())
+        value
+            .isNotBlank()
+            .let { require(it) }
     }
 }

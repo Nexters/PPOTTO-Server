@@ -93,9 +93,8 @@ class StickerQueryService(
     private fun checkPhotoContract(
         requestedIds: Collection<UUID>,
         photos: List<RecapPhotoMetadata>,
-    ) {
+    ): Unit =
         check(photos.map { it.id }.toSet() == requestedIds.toSet()) {
             "리캡 사진 조회 결과가 요청한 사진과 일치하지 않습니다."
         }
-    }
 }

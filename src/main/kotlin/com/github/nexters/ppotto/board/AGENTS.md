@@ -18,7 +18,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardAccessService.kt` | Port-free board existence and ownership lookup boundary for cross-domain services |
 | `application/BoardDrawingCommandService.kt` | Board-owned drawing soft-deletion transaction surface |
 | `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port |
-| `application/BoardLayoutService.kt` | Fluent user-serialized sticker/drawing ownership validation and atomic changed-layout persistence |
+| `application/BoardLayoutService.kt` | Expression-bodied user-serialized sticker/drawing guard chain and atomic changed-layout persistence |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
 | `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
 | `presentation/BoardApi.kt` | `/boards` v1 CRUD mapping and Swagger contract |

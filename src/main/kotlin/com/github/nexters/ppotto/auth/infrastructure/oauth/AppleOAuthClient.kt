@@ -103,17 +103,14 @@ class AppleOAuthClient(
 
     private fun verifySignature(jwt: SignedJWT) {
         jwt
-            .also {
-                if (it.header.algorithm != JWSAlgorithm.RS256) {
-                    failAuthentication()
-                }
-            }.let {
+            .takeIf { it.header.algorithm == JWSAlgorithm.RS256 }
+            ?.let {
                 it.header.keyID
                     ?.let(::publicKey)
                     ?.let(::RSASSAVerifier)
                     ?.let(it::verify)
                     ?: false
-            }.takeIf { it }
+            }.takeIf { it == true }
             ?: failAuthentication()
     }
 
@@ -122,19 +119,13 @@ class AppleOAuthClient(
         rawNonce: String,
     ): AppleIdentity =
         claims
-            .also {
-                if (it.issuer != properties.issuer) {
-                    failAuthentication()
-                }
-                if (!it.audience.contains(properties.clientId)) {
-                    failAuthentication()
-                }
-                if (it.expirationTime
-                        ?.toInstant()
-                        ?.isAfter(clock.instant()) != true
-                ) {
-                    failAuthentication()
-                }
+            .takeIf { it.issuer == properties.issuer }
+            ?.takeIf { it.audience.contains(properties.clientId) }
+            ?.takeIf {
+                it.expirationTime
+                    ?.toInstant()
+                    ?.isAfter(clock.instant()) == true
+            }?.also {
                 it
                     .getStringClaim(NONCE)
                     ?.takeIf { nonce ->
@@ -144,12 +135,12 @@ class AppleOAuthClient(
                         )
                     }
                     ?: failAuthentication()
-            }.let {
+            }?.let {
                 AppleIdentity(
                     subject = it.subject?.takeIf(String::isNotBlank) ?: failAuthentication(),
                     email = it.getStringClaim(EMAIL)?.takeIf(String::isNotBlank) ?: failAuthentication(),
                 )
-            }
+            } ?: failAuthentication()
 
     private fun exchangeAuthorizationCode(authorizationCode: String): String? =
         LinkedMultiValueMap<String, String>()
@@ -169,8 +160,9 @@ class AppleOAuthClient(
                         .body(AppleTokenResponse::class.java)
                         ?.refreshToken
                 } catch (e: RestClientException) {
-                    log.warn("애플 authorization code 교환에 실패했습니다.", e)
-                    null
+                    log
+                        .warn("애플 authorization code 교환에 실패했습니다.", e)
+                        .let { null }
                 }
             }
 

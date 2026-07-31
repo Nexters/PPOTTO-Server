@@ -28,15 +28,14 @@ class BoardCommandService(
         userId: UUID,
         name: String?,
     ): Board =
-        boardRepository
-            .lockCommandsByUserId(userId)
-            .let { boardRepository.countByUserId(userId) }
-            .also {
-                if (it >= Board.MAX_COUNT) {
-                    throw InvalidInputException(BoardErrorCode.COUNT_LIMIT_EXCEEDED)
-                }
-            }.let { name ?: Board.defaultName(it + 1) }
-            .also(::validateName)
+        (
+            boardRepository
+                .lockCommandsByUserId(userId)
+                .let { boardRepository.countByUserId(userId) }
+                .takeIf { it < Board.MAX_COUNT }
+                ?.let { name ?: Board.defaultName(it + 1) }
+                ?: throw InvalidInputException(BoardErrorCode.COUNT_LIMIT_EXCEEDED)
+        ).also(::validateName)
             .let { boardRepository.save(userId, it) }
 
     @Transactional
@@ -54,15 +53,15 @@ class BoardCommandService(
     fun delete(
         boardId: UUID,
         userId: UUID,
-    ) {
-        boardRepository.lockCommandsByUserId(userId)
-        getOwnedByIdForUpdate(boardId, userId)
-        boardId
+    ): Unit =
+        boardRepository
+            .lockCommandsByUserId(userId)
+            .let { getOwnedByIdForUpdate(boardId, userId) }
+            .let { boardId }
             .also { validateDeletable(it, userId) }
             .also(drawingCommandService::deleteAllByBoardId)
             .also(stickerCommandPort::deleteAllByBoardId)
-            .also { check(boardRepository.softDelete(it, userId)) }
-    }
+            .let { check(boardRepository.softDelete(it, userId)) }
 
     private fun getOwnedByIdForUpdate(
         boardId: UUID,
@@ -75,17 +74,20 @@ class BoardCommandService(
         boardId: UUID,
         userId: UUID,
     ) {
-        if (boardRepository.countByUserId(userId) <= 1) {
-            throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
-        }
-        if (analysisActivityPort.hasActiveAnalysis(boardId, userId)) {
-            throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
-        }
+        boardRepository
+            .countByUserId(userId)
+            .takeIf { it > 1 }
+            ?.let {
+                analysisActivityPort
+                    .hasActiveAnalysis(boardId, userId)
+                    .takeUnless { it }
+                    ?: throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
+            } ?: throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
     }
 
     private fun validateName(name: String) {
-        if (name.isBlank() || name.length > Board.MAX_NAME_LENGTH) {
-            throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
-        }
+        name
+            .takeUnless { it.isBlank() || it.length > Board.MAX_NAME_LENGTH }
+            ?: throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
     }
 }

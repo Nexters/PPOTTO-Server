@@ -34,12 +34,14 @@ class TermsService(
         .also { requestedTermIds ->
             termRepository.findCurrentEffective(Instant.now()).let { currentTerms ->
                 currentTerms.mapTo(mutableSetOf()) { it.id }.let { currentTermIds ->
-                    termAgreementRepository.findAgreedTermIds(userId, currentTermIds).also { agreedTermIds ->
-                        validateRequiredTerms(currentTerms, agreedTermIds + requestedTermIds)
-                        if (!currentTermIds.containsAll(requestedTermIds)) {
-                            throw InvalidInputException()
+                    termAgreementRepository
+                        .findAgreedTermIds(userId, currentTermIds)
+                        .also { validateRequiredTerms(currentTerms, it + requestedTermIds) }
+                        .let {
+                            currentTermIds
+                                .takeIf { ids -> ids.containsAll(requestedTermIds) }
+                                ?: throw InvalidInputException()
                         }
-                    }
                 }
             }
         }.let { termAgreementRepository.saveAll(userId, it) }
@@ -55,8 +57,9 @@ class TermsService(
         currentTerms: List<Term>,
         agreedTermIds: Set<UUID>,
     ) {
-        if (currentTerms.any { it.isRequired && it.id !in agreedTermIds }) {
-            throw InvalidInputException(TermErrorCode.REQUIRED_TERMS_MISSING)
-        }
+        currentTerms
+            .none { it.isRequired && it.id !in agreedTermIds }
+            .takeIf { it }
+            ?: throw InvalidInputException(TermErrorCode.REQUIRED_TERMS_MISSING)
     }
 }
