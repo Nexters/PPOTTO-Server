@@ -1,0 +1,10 @@
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	log {
+		output stdout
+		format json
+	}
+
+	reverse_proxy app:8080
+}

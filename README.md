@@ -2,6 +2,8 @@
 
 ## 시작하기
 
+### 로컬 개발
+
 ```bash
 cp .env.template .env
 docker compose up -d
@@ -11,6 +13,68 @@ docker compose up -d
 - API 문서: `http://localhost:8080/swagger-ui.html`
 - 헬스체크: `http://localhost:8080/actuator/health`
 
+### Dev 서버
+
+Dev 서버는 Caddy, API, PostgreSQL 18 + pgvector를 함께 실행한다. API와 DB 포트는
+외부에 공개하지 않고 Caddy의 80/443 포트만 공개한다.
+
+```bash
+cp .env.template .env.dev
+mkdir -p ../secrets
+# ../secrets/gcs-dev-service-account.json 배치
+docker compose -f compose.deploy.yaml -f compose.dev.yaml config
+docker compose -f compose.deploy.yaml -f compose.dev.yaml up -d --build
+```
+
+`.env.dev`에서 `APP_DOMAIN`, `CORS_ALLOWED_ORIGINS`, DB 및 Swagger 비밀번호,
+`GCS_BUCKET`을 실제 Dev 환경 값으로 변경한다. 앱은 서버 배포 설정을 사용하기 위해
+`SPRING_PROFILES_ACTIVE=prod`로 실행된다.
+
+### Production 서버
+
+Production은 Dev와 프로젝트명, 환경파일, GCS 자격증명, Docker 볼륨이 모두 분리된다.
+
+```bash
+cp .env.template .env.production
+mkdir -p ../secrets
+# ../secrets/gcs-production-service-account.json 배치
+docker compose -f compose.deploy.yaml -f compose.production.yaml config
+docker compose -f compose.deploy.yaml -f compose.production.yaml up -d --build
+```
+
+두 Compose는 모두 80/443 포트를 사용하므로 같은 호스트에서 동시에 실행하지 않는다.
+Production과 Dev를 동시에 운영해야 할 때는 서버를 분리하거나 공용 프록시 구성을 사용한다.
+
+### CD 설정
+
+`dev` 또는 `main` push의 CI가 성공하면 CD 워크플로가 해당 커밋을 이미지로 빌드해
+Container Registry에 커밋 SHA 태그로 푸시한다. 이후 서버에 SSH로 접속해 검증된 커밋만
+fast-forward하고 같은 SHA의 이미지를 pull해 실행한다. `dev`는 GitHub Environment
+`development`, `main`은 `production`을 사용한다. 두 환경의 배포 절차는 하나의 공통
+job을 사용하고, 브랜치별 설정만 먼저 선택한다.
+
+각 GitHub Environment에 다음 Secret을 등록한다.
+
+| Secret | 설명 |
+|---|---|
+| `DEPLOY_HOST` | 배포 서버 공인 IP 또는 호스트명 |
+| `DEPLOY_PORT` | SSH 포트. 비어 있으면 30438 |
+| `DEPLOY_USER` | 배포 계정 |
+| `DEPLOY_SSH_KEY` | 배포 계정에 접속할 OpenSSH private key |
+| `DEPLOY_KNOWN_HOSTS` | `호스트 ssh-ed25519 공개키` 형식의 고정된 SSH 호스트 키 |
+| `REGISTRY_HOST` | Registry 호스트명. 예: `ghcr.io` |
+| `REGISTRY_REPOSITORY` | Registry 내 이미지 경로. 예: `nexters/ppotto-server` |
+| `REGISTRY_USERNAME` | Registry 로그인 계정 |
+| `REGISTRY_PASSWORD` | 이미지를 push할 수 있는 Registry token 또는 비밀번호 |
+
+Production Environment에는 GitHub의 required reviewer를 설정해 운영 배포 전에 승인을
+요구하는 것을 권장한다. 서버 작업 트리에 수정 사항이 있거나 fast-forward가 불가능하면
+배포는 중단되며, 강제 reset은 수행하지 않는다. Private Registry라면 배포 전에 서버에서도
+`docker login REGISTRY_HOST`를 한 번 실행해 pull 권한을 저장해야 한다.
+
+GCS 서비스 계정 JSON은 저장소 밖 `/home/ppotto/secrets`에 보관하며 디렉터리는 `700`,
+파일은 `600` 권한을 사용한다.
+
 ## 프로젝트 구조
 
 ```
@@ -18,6 +82,10 @@ Server/
 ├── build.gradle.kts             빌드 스크립트 (버전은 gradle/libs.versions.toml에서 관리)
 ├── buildSrc/                    Flyway + jOOQ codegen 빌드 플러그인
 ├── compose.yaml                 로컬 PostgreSQL + pgvector (기본 포트 54782)
+├── compose.deploy.yaml          서버 배포 공통 Caddy + API + PostgreSQL
+├── compose.dev.yaml             Dev 서버 환경별 override
+├── compose.production.yaml      Production 서버 환경별 override
+├── Caddyfile                    HTTPS 및 API reverse proxy
 ├── Dockerfile                   멀티스테이지 + 레이어 분리 + non-root 실행
 └── src/
     ├── main/kotlin/com/github/nexters/ppotto/

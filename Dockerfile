@@ -19,10 +19,13 @@ COPY --from=extractor --chown=spring:spring /builder/extracted/dependencies/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/spring-boot-loader/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/snapshot-dependencies/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/application/ ./
-RUN SPRING_PROFILES_ACTIVE=prod SPRING_FLYWAY_ENABLED=false \
+RUN --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-gcs-key.json,target=/tmp/dummy-gcs-key.json,readonly \
+    SPRING_PROFILES_ACTIVE=prod SPRING_FLYWAY_ENABLED=false \
     SERVER_PORT=8080 POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_DB=aot \
     POSTGRES_USER=aot POSTGRES_PASSWORD=aot CORS_ALLOWED_ORIGINS=http://localhost \
     SWAGGER_USER=aot SWAGGER_PASSWORD=aot \
+    GCS_BUCKET=aot GCS_CREDENTIALS_PATH=/tmp/dummy-gcs-key.json \
+    GCS_UPLOAD_SIGNED_URL_EXPIRATION_MINUTES=15 GCS_TIMEOUT_MILLIS=5000 \
     java -XX:AOTCacheOutput=application.aot -Dspring.context.exit=onRefresh -jar application.jar
 USER spring:spring
 EXPOSE 8080

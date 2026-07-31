@@ -18,12 +18,12 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 25
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - run: ./gradlew build koverXmlReport
       - uses: mi-kas/kover-report@v2.5
         if: github.event_name == 'pull_request'
@@ -32,18 +32,3 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: 커버리지
           update-comment: true
-
-  docker:
-    name: Docker 이미지 빌드
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: ppotto-server:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
