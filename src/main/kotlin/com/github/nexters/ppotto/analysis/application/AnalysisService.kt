@@ -12,7 +12,9 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardQueryService
 import com.github.nexters.ppotto.global.error.ConflictException
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
@@ -26,13 +28,21 @@ class AnalysisService(
     private val photoStorage: PhotoStorage,
     private val transactionTemplate: TransactionTemplate,
 ) {
+    // signed URL 발급 최적화 필요 (트래픽 증가 전에 우선순위)
+    // 현재: analysis/photos를 트랜잭션 내에서 저장하고, 같은 트랜잭션 내에서 signed URL을 발급한다.
+    // 이유: API 응답에 analysisId와 모든 uploads를 함께 반환해야 하며 (원자성), 실패 복구용 reissue API가 아직 없다.
+    // 리스크: signing 지연(credential 방식 의존) 동안 DB 커넥션을 90~100개 photo만큼 점유 → 트래픽 증가 시 병목 가능성
+    // 장기 방향: (1) analysis/photos 커밋 → (2) signed URL 발급 → (3) 실패 시 POST /analysis/{id}/reissue로 복구
+    // (reissue API 구현 및 analysis-status 추가 후 전환 추천)
     @Transactional
     fun createAnalysis(
         boardId: UUID,
         photos: List<PhotoUploadItemRequest>,
     ): AnalysisCreationResult {
+        validatePhotoCount(photos.size)
         val board = boardQueryService.getById(boardId)
-        val analysis = analysisRepository.save(userId = board.userId, boardId = boardId)
+        validateNoActiveAnalysis(board.userId)
+        val analysis = saveAnalysisWithConstraintFallback(board.userId, boardId)
 
         val savedPhotos =
             photoRepository.saveAll(
@@ -40,7 +50,7 @@ class AnalysisService(
                 boardId = boardId,
                 items =
                     photos.map {
-                        val contentType = it.contentType?.let { raw -> PhotoContentType.fromMimeType(raw) } ?: PhotoContentType.DEFAULT
+                        val contentType = PhotoContentType.fromMimeType(it.contentType)
                         PhotoCreate(contentType, it.takenAt)
                     },
             )
@@ -89,5 +99,29 @@ class AnalysisService(
 
             UploadVerificationResult(completed.size, pending.size, pending.map { it.id })
         }
+    }
+
+    private fun validatePhotoCount(size: Int) {
+        if (size !in 90..100) {
+            throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
+        }
+    }
+
+    private fun validateNoActiveAnalysis(userId: UUID) {
+        if (analysisRepository.existsActiveByUserId(userId)) {
+            throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
+        }
+    }
+
+    private fun saveAnalysisWithConstraintFallback(
+        userId: UUID,
+        boardId: UUID,
+    ) = try {
+        analysisRepository.save(userId = userId, boardId = boardId)
+    } catch (
+        @Suppress("SwallowedException")
+        e: DataIntegrityViolationException,
+    ) {
+        throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
     }
 }

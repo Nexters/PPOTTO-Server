@@ -6,4 +6,9 @@ enum class AnalysisStatus {
     GENERATING,
     COMPLETED,
     FAILED,
+    ;
+
+    companion object {
+        val ACTIVE = setOf(UPLOADING, ANALYZING, GENERATING)
+    }
 }

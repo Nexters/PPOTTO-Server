@@ -71,7 +71,7 @@ class AnalysisControllerTest(
             }
 
             When("사진이 89장으로(하한 미만) 요청하면") {
-                Then("400 응답을 반환한다") {
+                Then("400 응답과 ANALYSIS-001을 반환한다") {
                     mockMvc
                         .perform(
                             post("/analysis")
@@ -86,15 +86,58 @@ class AnalysisControllerTest(
                                 ),
                         ).andExpect(status().isBadRequest)
                         .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-001"))
+                }
+            }
+
+            When("사진이 101장으로(상한 초과) 요청하면") {
+                Then("400 응답과 ANALYSIS-001을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": ${createPhotosJson(101)}
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-001"))
+                }
+            }
+
+            When("이미 활성 분석이 있는 상태에서 새 분석을 요청하면") {
+                val existingPhotos = (0 until 90).map { PhotoUploadItemRequest(Instant.now(), "image/jpeg") }
+                analysisService.createAnalysis(board.id, existingPhotos)
+
+                Then("409 응답과 ANALYSIS-002을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": ${createPhotosJson(90)}
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isConflict)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-002"))
                 }
             }
 
             When("업로드 완료를 통보하면") {
-                val created =
-                    analysisService.createAnalysis(
-                        board.id,
-                        listOf(PhotoUploadItemRequest(Instant.now(), "image/jpeg")),
-                    )
+                val uploadBoard = boardRepository.save(userRepository.save().id)
+                val photos =
+                    (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
+                val created = analysisService.createAnalysis(uploadBoard.id, photos)
 
                 Then("성공 응답에 업로드/실패 카운트가 담긴다") {
                     mockMvc
@@ -110,7 +153,7 @@ class AnalysisControllerTest(
 
         Given("존재하지 않는 boardId로") {
             When("분석 생성을 요청하면") {
-                Then("404 응답을 반환한다") {
+                Then("404 응답과 BOARD-002를 반환한다") {
                     mockMvc
                         .perform(
                             post("/analysis")
@@ -124,6 +167,8 @@ class AnalysisControllerTest(
                                     """.trimIndent(),
                                 ),
                         ).andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("BOARD-002"))
                 }
             }
         }
@@ -134,6 +179,104 @@ class AnalysisControllerTest(
                     mockMvc
                         .perform(post("/analysis/${UUID.randomUUID()}/start"))
                         .andExpect(status().isNotFound)
+                }
+            }
+        }
+
+        Given("Board가 등록된 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+
+            When("contentType 필드를 누락하고 요청하면") {
+                Then("400 응답을 반환한다") {
+                    val photosJson =
+                        (0 until 90).joinToString(",") {
+                            """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z"}"""
+                        }
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": [$photosJson]
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                }
+            }
+
+            When("contentType이 null이고 요청하면") {
+                Then("400 응답을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": [{"takenAt": "2026-07-01T00:00:00Z", "contentType": null}]
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                }
+            }
+
+            When("지원하지 않는 contentType(image/gif)으로 요청하면") {
+                Then("400 응답을 반환한다") {
+                    val photosJson =
+                        (0 until 90).joinToString(",") {
+                            if (it == 0) {
+                                """{"takenAt": "2026-07-01T00:00:00Z", "contentType": "image/gif"}"""
+                            } else {
+                                """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/jpeg"}"""
+                            }
+                        }
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": [$photosJson]
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                }
+            }
+
+            When("정상 contentType(image/heic)로 요청하면") {
+                Then("성공 응답에 analysisId와 사진별 signed URL이 담긴다") {
+                    val photosJson =
+                        (0 until 90).joinToString(",") {
+                            """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/heic"}"""
+                        }
+                    mockMvc
+                        .perform(
+                            post("/analysis")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": [$photosJson]
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.analysisId").exists())
+                        .andExpect(jsonPath("$.data.uploads.length()").value(90))
                 }
             }
         }

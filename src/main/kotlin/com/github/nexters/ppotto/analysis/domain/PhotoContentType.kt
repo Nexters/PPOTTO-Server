@@ -12,8 +12,6 @@ enum class PhotoContentType(
     ;
 
     companion object {
-        val DEFAULT = JPEG
-
         fun fromMimeType(mimeType: String): PhotoContentType = entries.find { it.mimeType == mimeType } ?: throw InvalidInputException()
     }
 }

@@ -16,6 +16,7 @@ CI workflow and GitHub templates. All user-facing text in Korean.
 ## Rules
 
 - CI must stay green; a failing `./gradlew build` locally will fail CI identically.
+- Keep JavaScript actions on Node 24-compatible major versions.
 - Repo settings: squash merge only, branch auto-delete, ruleset "main 보호" requires PR (0 approvals, review threads must be resolved). Admins may bypass.
 
 Update this file when workflows or templates change.
