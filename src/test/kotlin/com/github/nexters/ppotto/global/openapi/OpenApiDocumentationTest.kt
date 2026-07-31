@@ -130,6 +130,32 @@ class OpenApiDocumentationTest(
                     )
             }
 
+            Then("성공 응답 예시를 운영 ObjectMapper 설정 그대로 직렬화한다") {
+                result
+                    .andExpect(
+                        jsonPath(
+                            "$['paths']['/users/me']['get']['responses']['200']" +
+                                "['content']['*/*']['examples']['카카오 사용자']['value']['data']['createdAt']",
+                        ).value("2026-07-01T00:12:33Z"),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/users/me']['get']['responses']['200']" +
+                                "['content']['*/*']['examples']['카카오 사용자']['value']['error']",
+                        ).doesNotExist(),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/boards/{boardId}']['get']['responses']['200']" +
+                                "['content']['*/*']['examples']['스티커와 그림이 있는 보드']" +
+                                "['value']['data']['stickers'][0]['posY']",
+                        ).value(318.0),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/analysis/active']['get']['responses']['200']" +
+                                "['content']['*/*']['examples']['진행 중 분석 없음']['value']['data']",
+                        ).doesNotExist(),
+                    )
+            }
+
             Then("요청 바디에 provider별 예시를 제공한다") {
                 result
                     .andExpect(

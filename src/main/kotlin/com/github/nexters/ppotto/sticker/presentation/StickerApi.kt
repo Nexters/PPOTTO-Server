@@ -4,13 +4,11 @@ import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapDetailResponse
-import com.github.nexters.ppotto.sticker.presentation.dto.StickerApiExamples
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -41,16 +39,6 @@ interface StickerApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "리캡 상세",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "이미지 스티커 리캡",
-                        value = StickerApiExamples.RECAP_DETAIL_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @StickerNotFoundApiResponse
     fun getRecap(
@@ -76,12 +64,6 @@ interface StickerApi {
                     Content(
                         mediaType = "application/json",
                         schema = Schema(implementation = UpdateStickerTitleRequest::class),
-                        examples = [
-                            ExampleObject(
-                                name = "제목 수정",
-                                value = StickerApiExamples.UPDATE_STICKER_TITLE_REQUEST,
-                            ),
-                        ],
                     ),
                 ],
             ),
@@ -90,16 +72,6 @@ interface StickerApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "수정 완료",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "수정 완료",
-                        value = StickerApiExamples.UPDATE_STICKER_TITLE_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @InvalidInputApiResponse
     @StickerNotFoundApiResponse

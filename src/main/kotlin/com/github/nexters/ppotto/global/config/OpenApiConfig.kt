@@ -1,12 +1,11 @@
 package com.github.nexters.ppotto.global.config
 
+import com.github.nexters.ppotto.global.openapi.ApiExampleFactory
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import com.github.nexters.ppotto.global.security.CurrentUser
-import io.swagger.v3.core.util.Json
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
-import io.swagger.v3.oas.models.examples.Example
 import io.swagger.v3.oas.models.info.Contact
 import io.swagger.v3.oas.models.info.Info
 import io.swagger.v3.oas.models.media.Content
@@ -92,7 +91,7 @@ class OpenApiConfig {
         }
 
     @Bean
-    fun operationCustomizer(): OperationCustomizer =
+    fun operationCustomizer(exampleFactory: ApiExampleFactory): OperationCustomizer =
         OperationCustomizer { operation, handlerMethod ->
             operation.also { customizedOperation ->
                 handlerMethod.methodParameters.let { parameters ->
@@ -101,7 +100,7 @@ class OpenApiConfig {
                             customizedOperation.addSecurityItem(SecurityRequirement().addList(BEARER_AUTH_SCHEME))
                             customizedOperation.responses.addApiResponse(
                                 "401",
-                                unauthorizedApiResponse("access token이 없거나 유효하지 않음 (COMMON-004)"),
+                                unauthorizedApiResponse(exampleFactory, "access token이 없거나 유효하지 않음 (COMMON-004)"),
                             )
                         }
 
@@ -113,7 +112,7 @@ class OpenApiConfig {
                                 )
                             customizedOperation.responses.addApiResponse(
                                 "401",
-                                unauthorizedApiResponse("전달한 access token이 유효하지 않음 (COMMON-004)"),
+                                unauthorizedApiResponse(exampleFactory, "전달한 access token이 유효하지 않음 (COMMON-004)"),
                             )
                         }
                     }
@@ -121,7 +120,10 @@ class OpenApiConfig {
             }
         }
 
-    private fun unauthorizedApiResponse(description: String): ApiResponse =
+    private fun unauthorizedApiResponse(
+        exampleFactory: ApiExampleFactory,
+        description: String,
+    ): ApiResponse =
         ApiResponse()
             .description(description)
             .content(
@@ -129,7 +131,7 @@ class OpenApiConfig {
                     APPLICATION_JSON,
                     MediaType()
                         .schema(Schema<Any>().`$ref`(API_ERROR_RESPONSE_REF))
-                        .addExamples("COMMON-004", Example().value(Json.mapper().readTree(ApiExamples.UNAUTHORIZED))),
+                        .addExamples("COMMON-004", exampleFactory.createUnnamed(ApiExamples.UNAUTHORIZED)),
                 ),
             )
 

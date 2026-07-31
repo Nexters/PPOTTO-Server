@@ -1,12 +1,10 @@
 package com.github.nexters.ppotto.board.presentation
 
-import com.github.nexters.ppotto.board.presentation.dto.BoardApiExamples
 import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
-import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.ConflictApiResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
@@ -14,7 +12,6 @@ import com.github.nexters.ppotto.global.response.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -38,16 +35,6 @@ interface BoardApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "보드 목록",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "보드 목록",
-                        value = BoardApiExamples.BOARD_LIST_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     fun list(userId: UUID): ApiResponse<List<BoardResponse>>
 
@@ -61,12 +48,6 @@ interface BoardApi {
                     Content(
                         mediaType = "application/json",
                         schema = Schema(implementation = CreateBoardRequest::class),
-                        examples = [
-                            ExampleObject(
-                                name = "이름 지정",
-                                value = BoardApiExamples.CREATE_BOARD_REQUEST,
-                            ),
-                        ],
                     ),
                 ],
             ),
@@ -75,16 +56,6 @@ interface BoardApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "생성된 보드",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "생성 완료",
-                        value = BoardApiExamples.CREATED_BOARD_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @OpenApiResponse(
         responseCode = "400",
@@ -93,18 +64,6 @@ interface BoardApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "COMMON-001",
-                        summary = "이름 형식 오류 (10자 초과 등)",
-                        value = ApiExamples.INVALID_INPUT_WITH_FIELD_ERRORS,
-                    ),
-                    ExampleObject(
-                        name = "BOARD-003",
-                        summary = "보드 개수 제한(100개) 초과",
-                        value = BoardApiExamples.COUNT_LIMIT_EXCEEDED,
-                    ),
-                ],
             ),
         ],
     )
@@ -130,16 +89,6 @@ interface BoardApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "보드 상태",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "스티커와 그림이 있는 보드",
-                        value = BoardApiExamples.BOARD_DETAIL_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @BoardNotFoundApiResponse
     fun get(
@@ -165,12 +114,6 @@ interface BoardApi {
                     Content(
                         mediaType = "application/json",
                         schema = Schema(implementation = RenameBoardRequest::class),
-                        examples = [
-                            ExampleObject(
-                                name = "이름 변경",
-                                value = BoardApiExamples.RENAME_BOARD_REQUEST,
-                            ),
-                        ],
                     ),
                 ],
             ),
@@ -179,16 +122,6 @@ interface BoardApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "변경된 보드",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "변경 완료",
-                        value = BoardApiExamples.RENAMED_BOARD_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @InvalidInputApiResponse
     @BoardNotFoundApiResponse
@@ -219,18 +152,6 @@ interface BoardApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "BOARD-004",
-                        summary = "마지막 보드는 삭제 불가",
-                        value = BoardApiExamples.LAST_BOARD_CANNOT_BE_DELETED,
-                    ),
-                    ExampleObject(
-                        name = "BOARD-005",
-                        summary = "진행 중인 분석이 이 보드를 대상으로 함",
-                        value = BoardApiExamples.ACTIVE_ANALYSIS_EXISTS,
-                    ),
-                ],
             ),
         ],
     )

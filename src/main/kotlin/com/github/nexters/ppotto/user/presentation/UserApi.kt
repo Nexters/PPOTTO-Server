@@ -2,11 +2,8 @@ package com.github.nexters.ppotto.user.presentation
 
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
-import com.github.nexters.ppotto.user.presentation.dto.UserApiExamples
 import com.github.nexters.ppotto.user.presentation.dto.UserResponse
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -26,20 +23,6 @@ interface UserApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "내 정보",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "카카오 사용자",
-                        value = UserApiExamples.KAKAO_USER_RESPONSE,
-                    ),
-                    ExampleObject(
-                        name = "애플 사용자 - 이메일 가리기 (private relay)",
-                        value = UserApiExamples.APPLE_PRIVATE_RELAY_USER_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     fun getMe(userId: UUID): ApiResponse<UserResponse>
 

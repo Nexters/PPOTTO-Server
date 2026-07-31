@@ -1,6 +1,5 @@
 package com.github.nexters.ppotto.auth.presentation
 
-import com.github.nexters.ppotto.auth.presentation.dto.AuthApiExamples
 import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.RefreshRequest
@@ -11,7 +10,6 @@ import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.PostMapping
@@ -34,20 +32,6 @@ interface AuthApi {
                     Content(
                         mediaType = "application/json",
                         schema = Schema(implementation = LoginRequest::class),
-                        examples = [
-                            ExampleObject(
-                                name = "카카오 로그인",
-                                value = AuthApiExamples.KAKAO_LOGIN_REQUEST,
-                            ),
-                            ExampleObject(
-                                name = "애플 최초 로그인",
-                                value = AuthApiExamples.APPLE_FIRST_LOGIN_REQUEST,
-                            ),
-                            ExampleObject(
-                                name = "애플 재로그인",
-                                value = AuthApiExamples.APPLE_RELOGIN_REQUEST,
-                            ),
-                        ],
                     ),
                 ],
             ),
@@ -56,20 +40,6 @@ interface AuthApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "로그인 성공",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "신규 가입 - 약관 동의 필요",
-                        value = AuthApiExamples.NEW_USER_LOGIN_RESPONSE,
-                    ),
-                    ExampleObject(
-                        name = "재로그인 - 바로 보드 진입",
-                        value = AuthApiExamples.RETURNING_USER_LOGIN_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @InvalidInputApiResponse
     @OpenApiResponse(
@@ -79,18 +49,6 @@ interface AuthApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "AUTH-001",
-                        summary = "provider 토큰 검증 실패 (만료, 위조, aud/app_id 불일치, nonce 불일치)",
-                        value = AuthApiExamples.SOCIAL_AUTHENTICATION_FAILED,
-                    ),
-                    ExampleObject(
-                        name = "AUTH-003",
-                        summary = "애플 authorization code 교환 실패 (만료 또는 재사용). 최초 로그인에서만 치명",
-                        value = AuthApiExamples.APPLE_CODE_EXCHANGE_FAILED,
-                    ),
-                ],
             ),
         ],
     )
@@ -101,13 +59,6 @@ interface AuthApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "AUTH-004",
-                        summary = "카카오 이메일 동의 필요. account_email 추가 동의 후 재시도",
-                        value = AuthApiExamples.KAKAO_EMAIL_CONSENT_REQUIRED,
-                    ),
-                ],
             ),
         ],
     )
@@ -122,16 +73,6 @@ interface AuthApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "재발급 성공",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "재발급 성공",
-                        value = AuthApiExamples.TOKEN_PAIR_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @OpenApiResponse(
         responseCode = "401",
@@ -140,13 +81,6 @@ interface AuthApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "AUTH-002",
-                        summary = "refresh token 만료 또는 위조. 재로그인 필요",
-                        value = AuthApiExamples.INVALID_REFRESH_TOKEN,
-                    ),
-                ],
             ),
         ],
     )

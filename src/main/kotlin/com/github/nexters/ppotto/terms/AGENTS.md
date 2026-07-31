@@ -12,7 +12,8 @@ Terms domain. Owns effective term versions and append-only user agreement histor
 | `infrastructure/integration/WithdrawnUserTermAgreementDeletionAdapter.kt` | User-domain `WithdrawnUserTermAgreementDeletionPort` adapter through `TermsService` |
 | `presentation/TermsApi.kt` | Version 1 terms HTTP mapping and Swagger contract |
 | `presentation/TermsController.kt` | Fluent public optional-auth term lookup and protected agreement implementation |
-| `presentation/dto/` | Swagger-described terms request and response schemas plus `TermsApiExamples` (로그인/비로그인 약관 목록 응답, 동의 요청, `TERM-001` 실패 예시 JSON 상수) |
+| `presentation/TermsApiExamples.kt` | `ApiExampleProvider` 구현. 로그인/비로그인 약관 목록 응답, 동의 요청, `TERM-001` 실패 예시를 실제 DTO 인스턴스로 정의합니다 |
+| `presentation/dto/` | Swagger-described terms request and response schemas |
 
 Current versions are selected by the latest `effective_at` at or before the lookup time for each code. Anonymous current-term reads return every `agreed` value as `false`; authenticated reads project stored agreement state. Agreement writes never access the user repository and rely on the database foreign key for user integrity.
 

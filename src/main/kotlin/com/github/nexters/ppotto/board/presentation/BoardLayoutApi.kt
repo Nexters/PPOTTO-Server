@@ -1,15 +1,12 @@
 package com.github.nexters.ppotto.board.presentation
 
-import com.github.nexters.ppotto.board.presentation.dto.BoardApiExamples
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutRequest
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
-import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.PatchMapping
@@ -39,20 +36,6 @@ interface BoardLayoutApi {
                     Content(
                         mediaType = "application/json",
                         schema = Schema(implementation = BoardLayoutRequest::class),
-                        examples = [
-                            ExampleObject(
-                                name = "스티커 이동 모드 종료",
-                                value = BoardApiExamples.STICKER_MOVE_LAYOUT_REQUEST,
-                            ),
-                            ExampleObject(
-                                name = "텍스트 모드 종료 (제목 + 뱃지 배치)",
-                                value = BoardApiExamples.TEXT_MODE_LAYOUT_REQUEST,
-                            ),
-                            ExampleObject(
-                                name = "드로잉 모드 종료 (생성 2건, 삭제 1건)",
-                                value = BoardApiExamples.DRAWING_MODE_LAYOUT_REQUEST,
-                            ),
-                        ],
                     ),
                 ],
             ),
@@ -65,18 +48,6 @@ interface BoardLayoutApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "COMMON-001",
-                        summary = "필드 형식 오류 (제목 15자 초과 등)",
-                        value = ApiExamples.INVALID_INPUT,
-                    ),
-                    ExampleObject(
-                        name = "BOARD-001",
-                        summary = "소유하지 않은 항목 포함. 부분 저장 없이 전체 거부",
-                        value = BoardApiExamples.INVALID_LAYOUT,
-                    ),
-                ],
             ),
         ],
     )

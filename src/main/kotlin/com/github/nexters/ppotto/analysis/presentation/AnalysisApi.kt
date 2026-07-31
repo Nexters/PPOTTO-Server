@@ -1,17 +1,14 @@
 package com.github.nexters.ppotto.analysis.presentation
 
-import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisApiExamples
 import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
-import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.response.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.ExampleObject
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
@@ -37,12 +34,6 @@ interface AnalysisApi {
                     Content(
                         mediaType = "application/json",
                         schema = Schema(implementation = CreateAnalysisRequest::class),
-                        examples = [
-                            ExampleObject(
-                                name = "분석 생성 (지면상 3장, 실제 요청은 90~100장)",
-                                value = AnalysisApiExamples.CREATE_ANALYSIS_REQUEST,
-                            ),
-                        ],
                     ),
                 ],
             ),
@@ -51,16 +42,6 @@ interface AnalysisApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "발급 완료 (status=UPLOADING)",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "업로드 URL 발급",
-                        value = AnalysisApiExamples.CREATE_ANALYSIS_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @OpenApiResponse(
         responseCode = "400",
@@ -69,18 +50,6 @@ interface AnalysisApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "COMMON-001",
-                        summary = "요청 바디 검증 실패",
-                        value = ApiExamples.INVALID_INPUT,
-                    ),
-                    ExampleObject(
-                        name = "ANALYSIS-001",
-                        summary = "사진 수 정책 위반 (90~100장)",
-                        value = AnalysisApiExamples.PHOTO_COUNT_OUT_OF_RANGE,
-                    ),
-                ],
             ),
         ],
     )
@@ -91,13 +60,6 @@ interface AnalysisApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "BOARD-002",
-                        summary = "보드 없음 또는 소유자 불일치",
-                        value = AnalysisApiExamples.BOARD_NOT_FOUND,
-                    ),
-                ],
             ),
         ],
     )
@@ -108,13 +70,6 @@ interface AnalysisApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "ANALYSIS-002",
-                        summary = "유저당 1개. /analysis/active로 복귀하거나 취소 후 재시도",
-                        value = AnalysisApiExamples.ACTIVE_ANALYSIS_EXISTS,
-                    ),
-                ],
             ),
         ],
     )
@@ -132,20 +87,6 @@ interface AnalysisApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "진행 중 분석 또는 null",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "분석 진행 중",
-                        value = AnalysisApiExamples.ANALYZING_STATUS_RESPONSE,
-                    ),
-                    ExampleObject(
-                        name = "진행 중 분석 없음",
-                        value = AnalysisApiExamples.NO_ACTIVE_ANALYSIS_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     fun getActive(userId: UUID): ApiResponse<AnalysisStatusResponse?>
 
@@ -166,16 +107,6 @@ interface AnalysisApi {
         responseCode = "202",
         useReturnTypeSchema = true,
         description = "분석 시작됨",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "일부 사진 업로드 실패",
-                        value = AnalysisApiExamples.START_UPLOAD_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @AnalysisNotFoundApiResponse
     @OpenApiResponse(
@@ -185,18 +116,6 @@ interface AnalysisApi {
             Content(
                 mediaType = "application/json",
                 schema = Schema(implementation = ApiErrorResponse::class),
-                examples = [
-                    ExampleObject(
-                        name = "ANALYSIS-003",
-                        summary = "이미 시작되었거나 종료된 분석",
-                        value = AnalysisApiExamples.ALREADY_STARTED_OR_FINISHED,
-                    ),
-                    ExampleObject(
-                        name = "ANALYSIS-008",
-                        summary = "업로드 완료된 사진 0장",
-                        value = AnalysisApiExamples.NO_UPLOADED_PHOTOS,
-                    ),
-                ],
             ),
         ],
     )
@@ -221,24 +140,6 @@ interface AnalysisApi {
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "분석 상태",
-        content = [
-            Content(
-                examples = [
-                    ExampleObject(
-                        name = "분석 중",
-                        value = AnalysisApiExamples.ANALYZING_STATUS_RESPONSE,
-                    ),
-                    ExampleObject(
-                        name = "완료",
-                        value = AnalysisApiExamples.COMPLETED_STATUS_RESPONSE,
-                    ),
-                    ExampleObject(
-                        name = "실패",
-                        value = AnalysisApiExamples.FAILED_STATUS_RESPONSE,
-                    ),
-                ],
-            ),
-        ],
     )
     @AnalysisNotFoundApiResponse
     fun get(
