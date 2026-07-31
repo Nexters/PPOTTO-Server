@@ -1,9 +1,5 @@
 package com.github.nexters.ppotto.analysis.support
 
-import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
-import com.github.nexters.ppotto.analysis.domain.PhotoStorage
-import com.github.nexters.ppotto.analysis.domain.StickerGenerator
-import com.github.nexters.ppotto.analysis.domain.StickerStorage
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
@@ -12,17 +8,17 @@ import org.springframework.context.annotation.Primary
 class AnalysisTestConfig {
     @Bean
     @Primary
-    fun photoStorage(): PhotoStorage = FakePhotoStorage()
+    fun photoStorage(): FakePhotoStorage = FakePhotoStorage()
 
     @Bean
     @Primary
-    fun geminiClassifier(): GeminiClassifier = FakeGeminiClassifier()
+    fun geminiClassifier(): FakeGeminiClassifier = FakeGeminiClassifier()
 
     @Bean
     @Primary
-    fun stickerGenerator(): StickerGenerator = FakeStickerGenerator()
+    fun stickerGenerator(): FakeStickerGenerator = FakeStickerGenerator()
 
     @Bean
     @Primary
-    fun stickerStorage(): StickerStorage = FakeStickerStorage()
+    fun stickerStorage(): FakeStickerStorage = FakeStickerStorage()
 }

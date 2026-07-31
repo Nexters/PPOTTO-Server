@@ -22,6 +22,6 @@ class GcsStickerStorage(
                 .setContentType("image/png")
                 .build()
         storage.create(blobInfo, bytes)
-        return "gs://${gcsProperties.bucket}/$objectKey"
+        return objectKey
     }
 }

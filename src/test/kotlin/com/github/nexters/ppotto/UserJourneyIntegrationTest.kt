@@ -8,12 +8,6 @@ import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.jooq.tables.references.TERM_AGREEMENTS
 import com.github.nexters.ppotto.jooq.tables.references.USERS
-import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
-import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
-import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
-import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
-import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.UserJourneyTestConfig
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
@@ -39,13 +33,11 @@ import java.time.Instant
 import java.util.UUID
 
 private const val PHOTO_COUNT = 90
-private const val STICKER_IMAGE_KEY = "stickers/journey-result.png"
 
 @AutoConfigureMockMvc
 @Import(UserJourneyTestConfig::class, AnalysisTestConfig::class)
 class UserJourneyIntegrationTest(
     mockMvc: MockMvc,
-    analysisResultSaveService: AnalysisResultSaveService,
     cleanupService: WithdrawnUserCleanupService,
     dslContext: DSLContext,
 ) : IntegrationTest({
@@ -143,10 +135,6 @@ class UserJourneyIntegrationTest(
                             .response
                             .getContentAsString(Charsets.UTF_8)
                     val analysisId = UUID.fromString(JsonPath.read<String>(created, "$.data.analysisId"))
-                    val photoIds =
-                        JsonPath
-                            .read<List<String>>(created, "$.data.uploads[*].photoId")
-                            .map(UUID::fromString)
 
                     mockMvc
                         .perform(post("/analysis/$analysisId/start").authorized(accessToken))
@@ -155,33 +143,29 @@ class UserJourneyIntegrationTest(
                         .andExpect(jsonPath("$.data.failedCount").value(0))
 
                     val stickerIds =
-                        analysisResultSaveService
-                            .save(
-                                SaveAnalysisResultCommand(
-                                    userId = userId,
-                                    analysisId = analysisId,
-                                    boardId = boardId,
-                                    stickers = analysisStickerResults(photoIds),
-                                ),
-                            ).stickerIds
-                    stickerIds shouldHaveSize 2
+                        mockMvc
+                            .perform(get("/boards/$boardId").authorized(accessToken))
+                            .andExpect(status().isOk)
+                            .andExpect(jsonPath("$.data.stickers.length()").value(1))
+                            .andExpect(jsonPath("$.data.stickers[0].type").value("IMAGE"))
+                            .andExpect(jsonPath("$.data.stickers[0].title").value("테스트뱃지"))
+                            .andExpect(jsonPath("$.data.stickers[0].isNew").value(true))
+                            .andExpect(jsonPath("$.data.stickers[0].posX").value(0.0))
+                            .andReturn()
+                            .response
+                            .getContentAsString(Charsets.UTF_8)
+                            .let { JsonPath.read<List<String>>(it, "$.data.stickers[*].id") }
+                            .map(UUID::fromString)
+                    stickerIds shouldHaveSize 1
+
+                    val stickerId = stickerIds.single()
 
                     mockMvc
-                        .perform(get("/boards/$boardId").authorized(accessToken))
-                        .andExpect(status().isOk)
-                        .andExpect(jsonPath("$.data.stickers.length()").value(2))
-                        .andExpect(jsonPath("$.data.stickers[0].id").value(stickerIds.first().toString()))
-                        .andExpect(jsonPath("$.data.stickers[0].type").value("IMAGE"))
-                        .andExpect(jsonPath("$.data.stickers[0].isNew").value(true))
-                        .andExpect(jsonPath("$.data.stickers[0].posX").value(10.0))
-                        .andExpect(jsonPath("$.data.stickers[1].type").value("TEXT"))
-
-                    mockMvc
-                        .perform(get("/stickers/${stickerIds.first()}").authorized(accessToken))
+                        .perform(get("/stickers/$stickerId").authorized(accessToken))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.comments.length()").value(1))
-                        .andExpect(jsonPath("$.data.comments[0].content").value("함께한 여름"))
-                        .andExpect(jsonPath("$.data.photos.length()").value(2))
+                        .andExpect(jsonPath("$.data.comments[0].content").value("테스트 리캡 문구입니다."))
+                        .andExpect(jsonPath("$.data.photos.length()").value(PHOTO_COUNT))
                         .andReturn()
                         .response
                         .getContentAsString(Charsets.UTF_8)
@@ -189,12 +173,12 @@ class UserJourneyIntegrationTest(
                         .shouldStartWith("https://fake-read-url/photos/$analysisId/")
 
                     mockMvc
-                        .perform(post("/stickers/${stickerIds.first()}/view").authorized(accessToken))
+                        .perform(post("/stickers/$stickerId/view").authorized(accessToken))
                         .andExpect(status().isOk)
 
                     mockMvc
                         .perform(
-                            patch("/stickers/${stickerIds.first()}")
+                            patch("/stickers/$stickerId")
                                 .authorized(accessToken)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""{"title":"제주 여행"}"""),
@@ -202,15 +186,20 @@ class UserJourneyIntegrationTest(
                         .andExpect(jsonPath("$.data.title").value("제주 여행"))
 
                     mockMvc
-                        .perform(delete("/stickers/${stickerIds.last()}").authorized(accessToken))
-                        .andExpect(status().isOk)
-
-                    mockMvc
                         .perform(get("/boards/$boardId").authorized(accessToken))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.stickers.length()").value(1))
                         .andExpect(jsonPath("$.data.stickers[0].title").value("제주 여행"))
                         .andExpect(jsonPath("$.data.stickers[0].isNew").value(false))
+
+                    mockMvc
+                        .perform(delete("/stickers/$stickerId").authorized(accessToken))
+                        .andExpect(status().isOk)
+
+                    mockMvc
+                        .perform(get("/boards/$boardId").authorized(accessToken))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.stickers.length()").value(0))
 
                     mockMvc
                         .perform(delete("/users/me").authorized(accessToken))
@@ -254,42 +243,3 @@ private fun createAnalysisBody(boardId: UUID): String =
         .joinToString(",") {
             """{"takenAt":"${Instant.parse("2026-07-01T00:00:00Z").plusSeconds(it.toLong())}","contentType":"image/jpeg"}"""
         }.let { """{"boardId":"$boardId","photos":[$it]}""" }
-
-private fun analysisStickerResults(photoIds: List<UUID>): List<AnalysisStickerResult> =
-    listOf(
-        AnalysisStickerResult(
-            type = StickerType.IMAGE,
-            title = "여름 바다",
-            sourcePhotoId = photoIds.first(),
-            imageKey = STICKER_IMAGE_KEY,
-            textContent = null,
-            layout = stickerLayout(10.0, 0),
-            photoIds = photoIds.take(2),
-            comments = listOf(RecapCommentCreation("함께한 여름", false, null, null)),
-        ),
-        AnalysisStickerResult(
-            type = StickerType.TEXT,
-            title = "여행 메모",
-            sourcePhotoId = null,
-            imageKey = null,
-            textContent = "즐거웠던 순간",
-            layout = stickerLayout(20.0, 1),
-            photoIds = photoIds.drop(2).take(1),
-            comments = emptyList(),
-        ),
-    )
-
-private fun stickerLayout(
-    posX: Double,
-    zIndex: Int,
-): StickerLayout =
-    StickerLayout(
-        posX = posX,
-        posY = 5.0,
-        scale = 1.0,
-        rotation = 0.0,
-        zIndex = zIndex,
-        badgeOffsetX = 0.0,
-        badgeOffsetY = 0.0,
-        badgeRotation = 0.0,
-    )

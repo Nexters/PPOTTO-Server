@@ -3,7 +3,7 @@ package com.github.nexters.ppotto.analysis.application
 import java.util.UUID
 
 data class AnalysisPipelineResult(
-    val recapId: UUID,
+    val analysisId: UUID,
     val themes: List<ThemeAnalysisResult>,
 )
 
@@ -14,5 +14,5 @@ data class ThemeAnalysisResult(
     val text: String,
     val stickerTargetSubject: String,
     val stickerSourcePhotoId: UUID,
-    val stickerUrl: String?,
+    val stickerImageKey: String?,
 )

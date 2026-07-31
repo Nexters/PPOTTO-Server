@@ -10,6 +10,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext
 import org.springframework.dao.DataIntegrityViolationException
+import java.time.Instant
 
 class AnalysisRepositoryTest(
     analysisRepository: AnalysisRepository,
@@ -34,6 +35,99 @@ class AnalysisRepositoryTest(
             }
         }
 
+        Given("UPLOADING 상태의 Analysis를 ANALYZING으로 변경하면") {
+            val board = boardRepository.save(userRepository.save().id)
+            val saved = analysisRepository.save(board.userId, board.id)
+            val startedAt = Instant.now()
+
+            When("markAnalyzing을 호출하면") {
+                analysisRepository.markAnalyzing(saved.id, startedAt)
+
+                Then("진행률 10과 시작 시각을 기록한다") {
+                    val found = analysisRepository.findById(saved.id)
+
+                    found?.status shouldBe AnalysisStatus.ANALYZING
+                    found?.progress shouldBe 10
+                    found?.startedAt shouldBe startedAt
+                }
+            }
+        }
+
+        Given("ANALYZING 상태의 Analysis가 있을 때") {
+            val board = boardRepository.save(userRepository.save().id)
+            val saved = analysisRepository.save(board.userId, board.id)
+            analysisRepository.markAnalyzing(saved.id, Instant.now())
+
+            When("중간 진행률을 갱신하면") {
+                analysisRepository.updateProgress(saved.id, 45)
+
+                Then("progress가 갱신된다") {
+                    analysisRepository.findById(saved.id)?.progress shouldBe 45
+                }
+            }
+
+            When("100 이상의 진행률로 갱신하면") {
+                analysisRepository.updateProgress(saved.id, 100)
+
+                Then("완료 전 최대 진행률 99로 보정된다") {
+                    analysisRepository.findById(saved.id)?.progress shouldBe 99
+                }
+            }
+        }
+
+        Given("UPLOADING 상태의 Analysis가 있을 때") {
+            val board = boardRepository.save(userRepository.save().id)
+            val saved = analysisRepository.save(board.userId, board.id)
+
+            When("중간 진행률 갱신을 시도하면") {
+                val updatedCount = analysisRepository.updateProgress(saved.id, 45)
+
+                Then("변경하지 않는다") {
+                    updatedCount shouldBe 0
+                    analysisRepository.findById(saved.id)?.progress shouldBe 0
+                }
+            }
+        }
+
+        Given("ANALYZING 상태의 Analysis를 완료 처리하면") {
+            val board = boardRepository.save(userRepository.save().id)
+            val saved = analysisRepository.save(board.userId, board.id)
+            val completedAt = Instant.now()
+            analysisRepository.markAnalyzing(saved.id, Instant.now())
+            analysisRepository.updateProgress(saved.id, 60)
+
+            When("markCompleted를 호출하면") {
+                analysisRepository.markCompleted(saved.id, completedAt)
+
+                Then("COMPLETED 상태와 진행률 100을 기록한다") {
+                    val found = analysisRepository.findById(saved.id)
+
+                    found?.status shouldBe AnalysisStatus.COMPLETED
+                    found?.progress shouldBe 100
+                    found?.completedAt shouldBe completedAt
+                }
+            }
+        }
+
+        Given("ANALYZING 상태의 Analysis가 실패하면") {
+            val board = boardRepository.save(userRepository.save().id)
+            val saved = analysisRepository.save(board.userId, board.id)
+            analysisRepository.markAnalyzing(saved.id, Instant.now())
+            analysisRepository.updateProgress(saved.id, 60)
+
+            When("markFailed를 호출하면") {
+                analysisRepository.markFailed(saved.id, "실패")
+
+                Then("마지막 진행률을 유지한다") {
+                    val found = analysisRepository.findById(saved.id)
+
+                    found?.status shouldBe AnalysisStatus.FAILED
+                    found?.progress shouldBe 60
+                    found?.failedReason shouldBe "실패"
+                }
+            }
+        }
+
         Given("존재하지 않는 아이디로") {
             When("조회하면") {
                 val found =
@@ -53,13 +147,12 @@ class AnalysisRepositoryTest(
             val board = boardRepository.save(user.id)
 
             Then("초기에는 활성 분석이 없다") {
-                analysisRepository.existsActiveByUserId(user.id) shouldBe false
+                analysisRepository.findActiveByUserId(user.id).shouldBeNull()
             }
 
             val analysis = analysisRepository.save(user.id, board.id)
 
             Then("UPLOADING 상태에서는 활성 분석이 있다") {
-                analysisRepository.existsActiveByUserId(user.id) shouldBe true
                 analysisRepository.findActiveByUserId(user.id)?.id shouldBe analysis.id
             }
 
@@ -70,7 +163,6 @@ class AnalysisRepositoryTest(
                 .execute()
 
             Then("ANALYZING 상태에서도 활성 분석이 있다") {
-                analysisRepository.existsActiveByUserId(user.id) shouldBe true
                 analysisRepository.findActiveByUserId(user.id)?.id shouldBe analysis.id
             }
 
@@ -81,7 +173,6 @@ class AnalysisRepositoryTest(
                 .execute()
 
             Then("COMPLETED 상태에서는 활성 분석이 없다") {
-                analysisRepository.existsActiveByUserId(user.id) shouldBe false
                 analysisRepository.findActiveByUserId(user.id).shouldBeNull()
             }
 
@@ -92,7 +183,6 @@ class AnalysisRepositoryTest(
                 .execute()
 
             Then("FAILED 상태에서도 활성 분석이 없다") {
-                analysisRepository.existsActiveByUserId(user.id) shouldBe false
                 analysisRepository.findActiveByUserId(user.id).shouldBeNull()
             }
         }

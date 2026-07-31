@@ -61,16 +61,6 @@ class AnalysisRepository(
             .fetchOne()
             ?.toDomain()
 
-    fun existsActiveByUserId(userId: UUID): Boolean =
-        dslContext.fetchExists(
-            dslContext
-                .selectFrom(ANALYSIS)
-                .where(ANALYSIS.USER_ID.eq(userId))
-                .and(
-                    ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }),
-                ),
-        )
-
     fun existsActiveByBoardIdAndUserId(
         boardId: UUID,
         userId: UUID,
@@ -92,10 +82,21 @@ class AnalysisRepository(
         dslContext
             .update(ANALYSIS)
             .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
-            .set(ANALYSIS.PROGRESS, 10)
+            .set(ANALYSIS.PROGRESS, ANALYZING_STARTED_PROGRESS)
             .set(ANALYSIS.STARTED_AT, startedAt)
             .where(ANALYSIS.ID.eq(id))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.UPLOADING.name))
+            .execute()
+
+    fun updateProgress(
+        id: UUID,
+        progress: Int,
+    ): Int =
+        dslContext
+            .update(ANALYSIS)
+            .set(ANALYSIS.PROGRESS, progress.coerceIn(MIN_PROGRESS, MAX_IN_PROGRESS))
+            .where(ANALYSIS.ID.eq(id))
+            .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
             .execute()
 
     fun markCompleted(
@@ -105,7 +106,7 @@ class AnalysisRepository(
         dslContext
             .update(ANALYSIS)
             .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
-            .set(ANALYSIS.PROGRESS, 100)
+            .set(ANALYSIS.PROGRESS, COMPLETED_PROGRESS)
             .set(ANALYSIS.COMPLETED_AT, completedAt)
             .where(ANALYSIS.ID.eq(id))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
@@ -136,4 +137,11 @@ class AnalysisRepository(
             createdAt = createdAt!!,
             updatedAt = updatedAt!!,
         )
+
+    companion object {
+        const val ANALYZING_STARTED_PROGRESS = 10
+        const val COMPLETED_PROGRESS = 100
+        private const val MIN_PROGRESS = 0
+        private const val MAX_IN_PROGRESS = 99
+    }
 }

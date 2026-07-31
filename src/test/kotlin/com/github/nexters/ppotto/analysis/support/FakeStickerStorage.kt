@@ -10,6 +10,6 @@ class FakeStickerStorage : StickerStorage {
         bytes: ByteArray,
     ): String {
         uploaded[objectKey] = bytes
-        return "https://fake-sticker-url/$objectKey"
+        return objectKey
     }
 }

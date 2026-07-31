@@ -26,13 +26,13 @@ class AnalysisResultSaveService(
                 validateStickerCount(it.stickers.size)
                 validateOwnership(it, ownershipPort())
                 stickerRepository.lockAnalysisResult(it.analysisId)
-            }.let {
+            }.let { command ->
                 stickerRepository
-                    .findAllByAnalysisId(it.analysisId)
+                    .findAllByAnalysisId(command.analysisId)
                     .takeIf { stickers -> stickers.isNotEmpty() }
                     ?.map { sticker -> sticker.id }
                     ?.let(::SavedAnalysisResult)
-                    ?: it.stickers
+                    ?: command.stickers
                         .map { result ->
                             StickerCreation(
                                 type = result.type,
@@ -42,7 +42,7 @@ class AnalysisResultSaveService(
                                 textContent = result.textContent,
                                 layout = result.layout,
                             ).let { creation ->
-                                stickerRepository.save(it.analysisId, it.boardId, creation)
+                                stickerRepository.save(command.analysisId, command.boardId, creation)
                             }.also { sticker ->
                                 stickerRecapRepository
                                     .savePhotos(sticker.id, result.photoIds)

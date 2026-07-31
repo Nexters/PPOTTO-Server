@@ -147,7 +147,7 @@ class AnalysisService(
     }
 
     private fun validateNoActiveAnalysis(userId: UUID) {
-        if (analysisRepository.existsActiveByUserId(userId)) {
+        if (analysisRepository.findActiveByUserId(userId) != null) {
             throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
         }
     }
