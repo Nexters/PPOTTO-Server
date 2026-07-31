@@ -18,6 +18,8 @@ class AnalysisPipelineEventListener(
         runCatching { analysisPipelineService.run(event.analysisId, event.photos) }
             .onSuccess {
                 log.info("analysis pipeline result for analysisId={}: {}", event.analysisId, it)
+                // TODO: 결과 저장 로직(테마/스티커/리캡 DB 저장) 추가 시, markCompleted 호출을
+                //  저장 성공 이후로 옮길 것 — 현재는 저장 없이 COMPLETED로 표시됨 (이번 브랜치 스코프 제한)
                 analysisRepository.markCompleted(event.analysisId, Instant.now())
             }.onFailure {
                 log.error("analysis pipeline failed for analysisId={}", event.analysisId, it)
