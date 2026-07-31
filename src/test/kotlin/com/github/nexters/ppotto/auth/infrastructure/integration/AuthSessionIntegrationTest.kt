@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.auth.infrastructure.integration
 
 import com.github.nexters.ppotto.auth.application.AuthService
+import com.github.nexters.ppotto.auth.application.AuthService.Companion.SIGNUP_TRANSACTION
 import com.github.nexters.ppotto.auth.application.port.AuthActiveUserPort
 import com.github.nexters.ppotto.auth.application.port.AuthTermsPort
 import com.github.nexters.ppotto.auth.application.port.AuthUserPort
@@ -16,6 +17,7 @@ import com.github.nexters.ppotto.user.application.UserService
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
@@ -84,7 +86,7 @@ class AuthSessionTestConfig {
         authUserPort: AuthUserPort,
         refreshTokenStore: SessionRefreshTokenStore,
         tokenProvider: SessionTokenProvider,
-        signupTransaction: TransactionOperations,
+        @Qualifier(SIGNUP_TRANSACTION) signupTransaction: TransactionOperations,
     ): AuthService =
         AuthService(
             oauthClients = emptyList(),
