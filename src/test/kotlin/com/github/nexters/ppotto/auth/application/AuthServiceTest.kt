@@ -16,11 +16,13 @@ import com.github.nexters.ppotto.global.error.UnauthorizedException
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
+import org.springframework.transaction.support.TransactionOperations
 import java.util.UUID
 
 class AuthServiceTest :
     BehaviorSpec({
         val userId = UUID.randomUUID()
+        val noTransaction = TransactionOperations.withoutTransaction()
         val refreshStore = FakeRefreshTokenStore()
         val tokenProvider =
             object : TokenProvider {
@@ -34,7 +36,7 @@ class AuthServiceTest :
         Given("소셜 계정이 처음 가입하고 provider 검증이 성공했을 때") {
             val oauthClient = FakeOAuthClient()
             val userPort = AuthUserPort { AuthUser(userId, true) }
-            val service = AuthService(listOf(oauthClient), tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
+            val service = AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
 
             When("로그인하면") {
                 Then("신규 사용자 여부와 저장된 서비스 토큰을 반환한다") {
@@ -49,7 +51,7 @@ class AuthServiceTest :
         Given("애플 최초 가입에서 authorization code 교환이 실패했을 때") {
             val oauthClient = FakeOAuthClient(exchangeFailed = true)
             val userPort = AuthUserPort { AuthUser(userId, true) }
-            val service = AuthService(listOf(oauthClient), tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
+            val service = AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
 
             When("로그인하면") {
                 Then("AUTH-003 예외가 발생한다") {
@@ -65,7 +67,7 @@ class AuthServiceTest :
         Given("애플 기존 사용자의 authorization code 교환이 실패했을 때") {
             val oauthClient = FakeOAuthClient(exchangeFailed = true)
             val userPort = AuthUserPort { AuthUser(userId, false) }
-            val service = AuthService(listOf(oauthClient), tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
+            val service = AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
 
             When("로그인하면") {
                 Then("기존 사용자는 로그인을 계속한다") {
@@ -77,7 +79,7 @@ class AuthServiceTest :
         Given("한 번 사용한 refresh token이 주어졌을 때") {
             val oauthClient = FakeOAuthClient()
             val userPort = AuthUserPort { AuthUser(userId, false) }
-            val service = AuthService(listOf(oauthClient), tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
+            val service = AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
             val issued = service.login(LoginCommand.Kakao("kakao-token")).tokenPair
             service.refresh(issued.refreshToken)
 
@@ -96,7 +98,8 @@ class AuthServiceTest :
             val oauthClient = FakeOAuthClient()
             val userPort = AuthUserPort { AuthUser(userId, false) }
             val inactiveUserPort = AuthActiveUserPort { false }
-            val service = AuthService(listOf(oauthClient), tokenProvider, refreshStore, userPort, termsPort, inactiveUserPort)
+            val service =
+                AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, inactiveUserPort)
             val refreshToken = "withdrawn-${UUID.randomUUID()}"
             refreshStore.save(userId, refreshToken)
 

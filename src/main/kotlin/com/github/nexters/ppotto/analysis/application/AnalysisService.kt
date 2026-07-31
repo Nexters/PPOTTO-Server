@@ -11,7 +11,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
-import com.github.nexters.ppotto.board.application.BoardQueryService
+import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.config.GcsProperties
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
@@ -28,7 +28,7 @@ import java.util.UUID
 class AnalysisService(
     private val analysisRepository: AnalysisRepository,
     private val photoRepository: PhotoRepository,
-    private val boardQueryService: BoardQueryService,
+    private val boardAccessService: BoardAccessService,
     private val photoStorage: PhotoStorage,
     private val transactionTemplate: TransactionTemplate,
     private val gcsProperties: GcsProperties,
@@ -41,7 +41,7 @@ class AnalysisService(
         photos: List<PhotoUploadItemRequest>,
     ): AnalysisCreationResult {
         validatePhotoCount(photos.size)
-        boardQueryService.getOwnedById(boardId, userId)
+        boardAccessService.getOwnedByIdForUpdate(boardId, userId)
         validateNoActiveAnalysis(userId)
         val analysis = saveAnalysisWithConstraintFallback(userId, boardId)
 
