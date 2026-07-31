@@ -12,6 +12,10 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
 | `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, cleanup, and controller tests |
 | `auth/` | Boot HTTP Service Client group/config, provider, token, refresh rotation, application flow, and Bearer security focused tests |
+| `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, and idempotent agreement service tests |
+| `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration tests |
+| `terms/presentation/TermsControllerTest.kt` | Versioned terms API contract, principal, and error response integration tests |
+| `terms/support/TermsTestSecurityConfig.kt` | Test-only UUID authentication principal filter for MockMvc |
 | `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including provider-token encryption, OAuth HTTP timeouts, Redis, and JWT settings, in tests (tests do not read `.env`) |
 
 ## Rules

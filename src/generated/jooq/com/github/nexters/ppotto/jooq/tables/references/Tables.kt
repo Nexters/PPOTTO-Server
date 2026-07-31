@@ -8,6 +8,8 @@ package com.github.nexters.ppotto.jooq.tables.references
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Photos
+import com.github.nexters.ppotto.jooq.tables.TermAgreements
+import com.github.nexters.ppotto.jooq.tables.Terms
 import com.github.nexters.ppotto.jooq.tables.Users
 
 
@@ -26,6 +28,16 @@ val BOARDS: Boards = Boards.BOARDS
  * The table <code>public.photos</code>.
  */
 val PHOTOS: Photos = Photos.PHOTOS
+
+/**
+ * The table <code>public.term_agreements</code>.
+ */
+val TERM_AGREEMENTS: TermAgreements = TermAgreements.TERM_AGREEMENTS
+
+/**
+ * The table <code>public.terms</code>.
+ */
+val TERMS: Terms = Terms.TERMS
 
 /**
  * The table <code>public.users</code>.
