@@ -121,8 +121,7 @@ class AnalysisServiceTest(
 
                     val failure = results.single { it.isFailure }.exceptionOrNull()
                     failure.shouldBeInstanceOf<ConflictException>()
-                    @Suppress("UselessCast")
-                    (failure as ConflictException).errorCode.code shouldBe "ANALYSIS-002"
+                    failure.errorCode.code shouldBe "ANALYSIS-002"
                 }
             }
         }

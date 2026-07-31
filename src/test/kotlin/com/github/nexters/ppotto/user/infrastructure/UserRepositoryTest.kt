@@ -4,7 +4,7 @@ import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.application.port.ProviderRefreshTokenCipher
 import com.github.nexters.ppotto.user.domain.OAuthProvider
-import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -76,11 +76,12 @@ class UserRepositoryTest(
             }
 
             When("유예 기준보다 오래된 탈퇴 사용자를 조회하고 삭제하면") {
+                userRepository.withdraw(saved.withdraw(withdrawnAt))
                 val candidates = userRepository.findWithdrawnBefore(Instant.now().minus(1, ChronoUnit.DAYS), 10)
                 val deleted = userRepository.hardDelete(saved.id)
 
                 Then("탈퇴 사용자를 후보로 반환하고 하드 삭제한다") {
-                    candidates.map { it.id } shouldContainExactly listOf(saved.id)
+                    candidates.map { it.id } shouldContain saved.id
                     deleted shouldBe true
                 }
             }

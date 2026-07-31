@@ -11,7 +11,8 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `support/TestcontainersConfiguration.kt` | `@ServiceConnection` PostgreSQLContainer (pgvector/pgvector:pg18, matches compose image) |
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
 | `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, cleanup, and controller tests |
-| `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including the local-only provider-token encryption key, in tests (tests do not read `.env`) |
+| `auth/` | Boot HTTP Service Client group/config, provider, token, refresh rotation, application flow, and Bearer security focused tests |
+| `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including provider-token encryption, OAuth HTTP timeouts, Redis, and JWT settings, in tests (tests do not read `.env`) |
 
 ## Rules
 

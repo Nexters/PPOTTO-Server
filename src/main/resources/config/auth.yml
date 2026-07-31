@@ -1,0 +1,31 @@
+spring:
+  http:
+    serviceclient:
+      kakao-oauth:
+        connect-timeout: ${OAUTH_CONNECT_TIMEOUT_MILLIS}ms
+        read-timeout: ${OAUTH_READ_TIMEOUT_MILLIS}ms
+      apple-oauth:
+        connect-timeout: ${OAUTH_CONNECT_TIMEOUT_MILLIS}ms
+        read-timeout: ${OAUTH_READ_TIMEOUT_MILLIS}ms
+
+auth:
+  kakao:
+    app-id: ${KAKAO_APP_ID}
+    access-token-info-uri: ${KAKAO_ACCESS_TOKEN_INFO_URI}
+    user-info-uri: ${KAKAO_USER_INFO_URI}
+  apple:
+    client-id: ${APPLE_CLIENT_ID}
+    team-id: ${APPLE_TEAM_ID}
+    key-id: ${APPLE_KEY_ID}
+    private-key-path: ${APPLE_PRIVATE_KEY_PATH}
+    issuer: ${APPLE_ISSUER}
+    jwks-uri: ${APPLE_JWKS_URI}
+    token-uri: ${APPLE_TOKEN_URI}
+    revoke-uri: ${APPLE_REVOKE_URI}
+    client-secret-expiration-days: ${APPLE_CLIENT_SECRET_EXPIRATION_DAYS}
+    jwks-cache-seconds: ${APPLE_JWKS_CACHE_SECONDS}
+  jwt:
+    issuer: ${JWT_ISSUER}
+    secret: ${JWT_SECRET}
+    access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS}
+    refresh-token-expiration-days: ${JWT_REFRESH_TOKEN_EXPIRATION_DAYS}
