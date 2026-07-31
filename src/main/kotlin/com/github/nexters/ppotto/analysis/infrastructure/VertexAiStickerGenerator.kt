@@ -25,7 +25,16 @@ class VertexAiStickerGenerator(
         val content =
             Content.fromParts(
                 Part.fromUri(sourceGcsUri, sourceMimeType),
-                Part.fromText("이 사진에서 '$targetSubject'만 남기고 배경을 제거해서 투명 배경 PNG 스티커로 만들어줘."),
+                Part.fromText(
+                    """
+                    Create a sticker image by isolating only this subject from the photo: '$targetSubject'.
+                    Preserve the subject's natural appeal from the original photo, including an attractive pose, expression, color, texture, and recognizable silhouette.
+                    Make the cutout feel clean, polished, and visually appealing as a standalone sticker, but do not redraw, cartoonize, beautify unrealistically, or add new design elements.
+                    The output must be a PNG with a fully transparent alpha-channel background.
+                    Do not keep or generate any original background, white background, black background, solid-color background, checkerboard background, studio backdrop, shadow, outline, border, or decorative element.
+                    Every pixel outside the cutout subject must be transparent, and the subject edge should be clean and natural.
+                    """.trimIndent(),
+                ),
             )
 
         val httpOptions =
