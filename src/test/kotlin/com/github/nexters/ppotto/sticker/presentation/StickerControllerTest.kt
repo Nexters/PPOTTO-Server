@@ -5,20 +5,17 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
-import com.github.nexters.ppotto.sticker.application.port.RecapPhotoMetadata
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
-import com.github.nexters.ppotto.sticker.support.FakeRecapPhotoQueryPort
-import com.github.nexters.ppotto.sticker.support.StickerTestConfig
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import org.hamcrest.Matchers.containsString
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
@@ -33,12 +30,10 @@ import java.time.Instant
 import java.util.UUID
 
 @AutoConfigureMockMvc(addFilters = false)
-@Import(StickerTestConfig::class)
 class StickerControllerTest(
     @Autowired val mockMvc: MockMvc,
     stickerRepository: StickerRepository,
     stickerRecapRepository: StickerRecapRepository,
-    fakePhotoPort: FakeRecapPhotoQueryPort,
     photoRepository: PhotoRepository,
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
@@ -77,12 +72,6 @@ class StickerControllerTest(
                 sticker.id,
                 listOf(RecapCommentCreation("코멘트", false, null, null)),
             )
-            fakePhotoPort.photos[photo.id] =
-                RecapPhotoMetadata(
-                    photo.id,
-                    "https://example.com/photos/${photo.id}",
-                    requireNotNull(photo.takenAt),
-                )
 
             When("리캡 상세를 요청하면") {
                 authenticate(board.userId)
@@ -95,6 +84,10 @@ class StickerControllerTest(
                         .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
                         .andExpect(jsonPath("$.data.comments[0].content").value("코멘트"))
                         .andExpect(jsonPath("$.data.photos[0].id").value(photo.id.toString()))
+                        .andExpect(
+                            jsonPath("$.data.photos[0].imageUrl")
+                                .value(containsString("photos/${analysis.id}/${photo.id}.jpg")),
+                        )
                 }
             }
 

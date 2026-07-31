@@ -53,16 +53,6 @@ class PhotoRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun findAllByIds(ids: Collection<UUID>): List<Photo> {
-        if (ids.isEmpty()) return emptyList()
-
-        return dslContext
-            .selectFrom(PHOTOS)
-            .where(PHOTOS.ID.`in`(ids))
-            .fetch()
-            .map { record -> record.toDomain() }
-    }
-
     fun markCompletedBatch(updates: Map<UUID, Instant>): List<Photo> {
         if (updates.isEmpty()) return emptyList()
 
@@ -91,6 +81,36 @@ class PhotoRepository(
                 .execute()
         }
     }
+
+    fun findAllByIds(ids: Collection<UUID>): List<Photo> =
+        ids
+            .toSet()
+            .takeIf { it.isNotEmpty() }
+            ?.let { uniqueIds ->
+                dslContext
+                    .selectFrom(PHOTOS)
+                    .where(PHOTOS.ID.`in`(uniqueIds))
+                    .fetch()
+                    .map { it.toDomain() }
+            } ?: emptyList()
+
+    fun countOwnedByAnalysis(
+        analysisId: UUID,
+        boardId: UUID,
+        ids: Collection<UUID>,
+    ): Int =
+        ids
+            .toSet()
+            .takeIf { it.isNotEmpty() }
+            ?.let { uniqueIds ->
+                dslContext
+                    .selectCount()
+                    .from(PHOTOS)
+                    .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
+                    .and(PHOTOS.BOARD_ID.eq(boardId))
+                    .and(PHOTOS.ID.`in`(uniqueIds))
+                    .fetchSingle(0, Int::class.java)
+            } ?: 0
 
     private fun PhotosRecord.toDomain() =
         Photo(

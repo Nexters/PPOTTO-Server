@@ -89,6 +89,4 @@ private class EchoStickerStorage : StickerStorage {
         objectKey: String,
         bytes: ByteArray,
     ): String = objectKey
-
-    override fun issueReadUrls(objectKeys: List<String>): List<String> = objectKeys
 }

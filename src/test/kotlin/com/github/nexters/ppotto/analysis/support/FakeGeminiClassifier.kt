@@ -7,9 +7,11 @@ import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 
 class FakeGeminiClassifier : GeminiClassifier {
     var failureToThrow: Throwable? = null
+    var classifications: List<ThemeClassification>? = null
 
     override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> {
         failureToThrow?.let { throw it }
+        classifications?.let { return it }
         return listOf(
             ThemeClassification(
                 theme = "테스트테마",

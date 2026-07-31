@@ -1,6 +1,8 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.analysis.domain.RecapContent
+import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
@@ -13,6 +15,9 @@ import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
+import com.github.nexters.ppotto.sticker.domain.StickerType
+import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -38,6 +43,8 @@ class AnalysisServiceTest(
     private val photoStorage: FakePhotoStorage,
     private val geminiClassifier: FakeGeminiClassifier,
     private val dslContext: DSLContext,
+    private val stickerRepository: StickerRepository,
+    private val stickerRecapRepository: StickerRecapRepository,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
 ) : IntegrationTest({
@@ -49,6 +56,7 @@ class AnalysisServiceTest(
 
         afterEach {
             geminiClassifier.failureToThrow = null
+            geminiClassifier.classifications = null
             photoStorage.clear()
         }
 
@@ -239,11 +247,13 @@ class AnalysisServiceTest(
                 }
 
                 Then("analysis의 status는 COMPLETED로 바뀌고 startedAt이 기록된다") {
-                    val analysis = analysisRepository.findById(created.analysisId)
-                    analysis.shouldNotBeNull()
-                    analysis.status shouldBe AnalysisStatus.COMPLETED
-                    analysis.progress shouldBe 100
-                    analysis.startedAt.shouldNotBeNull()
+                    eventually {
+                        val analysis = analysisRepository.findById(created.analysisId)
+                        analysis.shouldNotBeNull()
+                        analysis.status shouldBe AnalysisStatus.COMPLETED
+                        analysis.progress shouldBe 100
+                        analysis.startedAt.shouldNotBeNull()
+                    }
                 }
             }
         }
@@ -270,6 +280,59 @@ class AnalysisServiceTest(
                     analysis.status shouldBe AnalysisStatus.FAILED
                     analysis.progress shouldBe 10
                     analysis.failedReason shouldBe "AI 분석 실패"
+                }
+            }
+        }
+
+        Given("Gemini 응답 스키마와 같은 분석 결과가 준비된 상태에서") {
+            val board = boardRepository.save(userRepository.save().id)
+            val photos =
+                (0 until 90).map { i ->
+                    PhotoUploadItemRequest(
+                        Instant.parse("2026-07-01T00:00:00Z").plusSeconds(i.toLong()),
+                        "image/jpeg",
+                    )
+                }
+            val created = analysisService.createAnalysis(board.userId, board.id, photos)
+            val savedPhotos = photoRepository.findAllByAnalysisId(created.analysisId)
+            val themePhotoIds = savedPhotos.take(3).map { it.id }
+            val sourcePhotoId = themePhotoIds[1]
+            geminiClassifier.classifications =
+                listOf(
+                    ThemeClassification(
+                        theme = "여름 여행",
+                        categorizedPhotoIds = themePhotoIds,
+                        recap = RecapContent(badge = "여행하루", text = "바다와 산책이 함께 남은 여행 리캡입니다."),
+                        stickerTargetSubject = "파란 셔츠를 입고 웃는 사람",
+                        stickerSourcePhotoId = sourcePhotoId,
+                    ),
+                )
+
+            When("업로드 완료로 파이프라인이 실행되면") {
+                analysisService.startUpload(board.userId, created.analysisId)
+
+                Then("프롬프트 응답 필드가 스티커와 리캡 DB에 저장된다") {
+                    eventually {
+                        val analysis = analysisRepository.findById(created.analysisId)
+                        analysis.shouldNotBeNull()
+                        analysis.status shouldBe AnalysisStatus.COMPLETED
+                        analysis.progress shouldBe 100
+
+                        val sticker = stickerRepository.findAllByAnalysisId(created.analysisId).single()
+                        sticker.type shouldBe StickerType.IMAGE
+                        sticker.title shouldBe "여행하루"
+                        sticker.sourcePhotoId shouldBe sourcePhotoId
+                        sticker.imageKey shouldBe
+                            "stickers/${created.analysisId}/0-$sourcePhotoId.png"
+
+                        stickerRecapRepository.findPhotoIds(sticker.id) shouldContainExactly themePhotoIds
+                        stickerRecapRepository.findComments(sticker.id).single().let {
+                            it.content shouldBe "바다와 산책이 함께 남은 여행 리캡입니다."
+                            it.isFloat shouldBe false
+                            it.posX shouldBe null
+                            it.posY shouldBe null
+                        }
+                    }
                 }
             }
         }
@@ -441,3 +504,20 @@ class AnalysisServiceTest(
             }
         }
     })
+
+private fun eventually(assertion: () -> Unit) {
+    val deadline = System.nanoTime() + 5_000_000_000
+
+    while (true) {
+        try {
+            assertion()
+            return
+        } catch (e: AssertionError) {
+            if (System.nanoTime() >= deadline) throw e
+            Thread.sleep(50)
+        } catch (e: NoSuchElementException) {
+            if (System.nanoTime() >= deadline) throw e
+            Thread.sleep(50)
+        }
+    }
+}

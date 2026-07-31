@@ -5,7 +5,7 @@ import java.time.Instant
 interface PhotoStorage {
     fun issueUploadUrls(targets: List<PhotoUploadTarget>): List<String>
 
-    fun issueReadUrls(objectKeys: List<String>): List<String>
+    fun issueReadUrls(objectKeys: Collection<String>): Map<String, String>
 
     fun existingObjects(prefix: String): Map<String, BlobMeta>
 }

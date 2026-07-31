@@ -10,7 +10,8 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `support/IntegrationTest.kt` | Base class: `@SpringBootTest` + `@ActiveProfiles("test")` + Testcontainers import. Extend this for integration tests |
 | `support/TestcontainersConfiguration.kt` | `@ServiceConnection` PostgreSQLContainer (pgvector/pgvector:pg18, matches compose image) |
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
-| `analysis/` | Authenticated ownership, upload verification, active-analysis/status lookup, persistence, and API contract tests |
+| `analysis/` | Authenticated ownership, upload verification, active-analysis/status lookup, progress/result persistence, Gemini-shaped classification save mapping, and API contract tests |
+| `analysis/infrastructure/integration/AnalysisStickerIntegrationTest.kt` | Production analysis/sticker port wiring, analysis-result save to recap read round trip with real signed URLs, and photo-ownership rejection tests |
 | `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, session-revoking withdrawal, cleanup, and controller tests |
 | `auth/` | OAuth HTTP timeout/config validation, deterministic JWT tamper detection, active-user refresh validation, Bearer security tests including optional-auth terms behavior, and cross-domain 가입 tests: 기본 보드 실패 rollback, 약관 조회 실패 rollback, Apple authorization code 교환 실패 rollback, 로그인 트랜잭션 경계, 가입 전용 트랜잭션 bean timeout 배선, 동시 가입 중복 방지 |
 | `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, idempotent agreement, and schema-valid user fixture tests |
@@ -36,8 +37,8 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/presentation/BoardControllerTest.kt` | Authenticated CRUD response and ownership integration tests |
 | `board/support/BoardTestConfig.kt` | Primary fake analysis/sticker application ports for board integration tests |
 | `board/support/BoardTestFixtures.kt` | UUIDv7 and sticker response fixtures |
-| `sticker/` | Sticker aggregate unit tests plus repository, service, and API integration tests |
-| `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including local-only auth keys, provider-token keys, OAuth HTTP timeouts, Redis, JWT, and Vertex AI settings, in tests (tests do not read `.env`) |
+| `sticker/` | Sticker aggregate unit tests plus repository, service, and API integration tests. No port fakes live here: the analysis/photo ownership, recap photo, and sticker image ports are `List<Port>` + `singleOrNull()` contracts, so a fake bean would duplicate the production adapter instead of overriding it |
+| `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including local-only auth keys, provider-token keys, OAuth HTTP timeouts, Redis, JWT, GCS signed URL expirations, and Vertex AI settings, in tests (tests do not read `.env`) |
 
 ## Rules
 
@@ -59,5 +60,7 @@ class PhotoServiceTest(
 - Pure unit tests extend any Kotest spec directly without Spring.
 - One Spring context (and one Postgres container) is shared across all integration tests via context caching; avoid `@MockkBean`-style context mutations unless necessary.
 - `IntegrationTest` uses `IsolationMode.InstancePerLeaf` while the Spring context stays cached, so stateful test doubles (latches, counters) must be resettable and reset per test. One-shot singleton fields silently stop blocking once a spec gains a second leaf.
+- `@Primary` only overrides single-bean injection. For a port injected as `List<Port>` and resolved with `singleOrNull()` (all `sticker/application/port` contracts), registering a fake adds a second bean and breaks the service — test the production adapter instead.
+- GCS signing needs no network: `src/test/resources/dummy-gcs-key.json` is a real RSA key, so read/upload V4 signed URLs are asserted against `https://storage.googleapis.com/ppotto-test-bucket/...` with real signatures. Only object listing/upload verification needs `analysis/support/AnalysisTestConfig`.
 
 Update this file when test infrastructure changes.

@@ -91,7 +91,7 @@ photo/
 | `compose.production.yaml` | Production deployment overrides; mounts GCS credentials from `../secrets` |
 | `Caddyfile` | Shared automatic HTTPS and reverse proxy configuration |
 | `Dockerfile` | Layered JDK 25 image. The AOT cache training step refreshes a full `prod`-profile context, so it must carry every config env var plus build-only mounted dummy GCS and Apple credentials |
-| `.env.template` | Local environment defaults, including GCS signed URL expirations, a non-production provider-token encryption key, and external-service timeouts |
+| `.env.template` | Local environment defaults, including a non-production provider-token encryption key, GCS upload/read signed URL expirations, and external-service timeouts |
 | `build.gradle.kts` | Single-module build, including Spring Security, Redis, JWT, OAuth, and authenticated MockMvc test support |
 
 ## Maintenance

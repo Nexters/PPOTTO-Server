@@ -12,6 +12,4 @@ class FakeStickerStorage : StickerStorage {
         uploaded[objectKey] = bytes
         return objectKey
     }
-
-    override fun issueReadUrls(objectKeys: List<String>): List<String> = objectKeys.map { "https://fake-sticker-url/$it" }
 }
