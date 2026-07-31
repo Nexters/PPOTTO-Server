@@ -13,6 +13,7 @@ Application root package. One top-level subpackage = one domain.
 | `analysis/` | Analysis domain, owns `Analysis` and `Photo` (1:N with Board): full DDD-lite layout (see `analysis/AGENTS.md`) |
 | `auth/` | Social OAuth, service token, refresh rotation, and Bearer authentication domain (see `auth/AGENTS.md`) |
 | `terms/` | Terms domain: current effective versions and append-only user agreements (see `terms/AGENTS.md`) |
+| `sticker/` | Sticker aggregate and recap domain: full DDD-lite layout (see `sticker/AGENTS.md`) |
 
 ## Adding a new domain
 

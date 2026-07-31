@@ -16,6 +16,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `terms/infrastructure/TermRepositoryTest.kt` | Current effective term selection and idempotent agreement repository integration tests |
 | `terms/presentation/TermsControllerTest.kt` | Versioned terms API contract, principal, and error response integration tests |
 | `terms/support/TermsTestSecurityConfig.kt` | Test-only UUID authentication principal filter for MockMvc |
+| `sticker/` | Sticker aggregate unit tests plus repository, service, and API integration tests |
 | `../../../../../resources/application-test.yml` | Supplies values for env placeholders, including provider-token encryption, OAuth HTTP timeouts, Redis, and JWT settings, in tests (tests do not read `.env`) |
 
 ## Rules

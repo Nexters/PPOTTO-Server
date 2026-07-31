@@ -8,6 +8,9 @@ package com.github.nexters.ppotto.jooq.tables.references
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Photos
+import com.github.nexters.ppotto.jooq.tables.RecapComments
+import com.github.nexters.ppotto.jooq.tables.StickerPhotos
+import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
 import com.github.nexters.ppotto.jooq.tables.Users
@@ -28,6 +31,21 @@ val BOARDS: Boards = Boards.BOARDS
  * The table <code>public.photos</code>.
  */
 val PHOTOS: Photos = Photos.PHOTOS
+
+/**
+ * The table <code>public.recap_comments</code>.
+ */
+val RECAP_COMMENTS: RecapComments = RecapComments.RECAP_COMMENTS
+
+/**
+ * The table <code>public.sticker_photos</code>.
+ */
+val STICKER_PHOTOS: StickerPhotos = StickerPhotos.STICKER_PHOTOS
+
+/**
+ * The table <code>public.stickers</code>.
+ */
+val STICKERS: Stickers = Stickers.STICKERS
 
 /**
  * The table <code>public.term_agreements</code>.

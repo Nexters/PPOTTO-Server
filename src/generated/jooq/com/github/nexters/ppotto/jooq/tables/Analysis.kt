@@ -10,6 +10,8 @@ import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_BOARD_ID
 import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_USER_CREATED
 import com.github.nexters.ppotto.jooq.indexes.UK_ANALYSIS_ACTIVE
 import com.github.nexters.ppotto.jooq.keys.ANALYSIS_PKEY
+import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_ANALYSIS
+import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 
 import java.time.Instant
@@ -25,6 +27,7 @@ import org.jooq.ForeignKey
 import org.jooq.Index
 import org.jooq.InverseForeignKey
 import org.jooq.Name
+import org.jooq.Path
 import org.jooq.PlainSQL
 import org.jooq.QueryPart
 import org.jooq.Record
@@ -147,9 +150,38 @@ open class Analysis(
      * Create a <code>public.analysis</code> table reference
      */
     constructor(): this(DSL.name("analysis"), null)
+
+    constructor(path: Table<out Record>, childPath: ForeignKey<out Record, AnalysisRecord>?, parentPath: InverseForeignKey<out Record, AnalysisRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, ANALYSIS, null, null)
+
+    /**
+     * A subtype implementing {@link Path} for simplified path-based joins.
+     */
+    open class AnalysisPath : Analysis, Path<AnalysisRecord> {
+        constructor(path: Table<out Record>, childPath: ForeignKey<out Record, AnalysisRecord>?, parentPath: InverseForeignKey<out Record, AnalysisRecord>?): super(path, childPath, parentPath)
+        private constructor(alias: Name, aliased: Table<AnalysisRecord>): super(alias, aliased)
+        override fun `as`(alias: String): AnalysisPath = AnalysisPath(DSL.name(alias), this)
+        override fun `as`(alias: Name): AnalysisPath = AnalysisPath(alias, this)
+        override fun `as`(alias: Table<*>): AnalysisPath = AnalysisPath(alias.qualifiedName, this)
+    }
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
     override fun getIndexes(): List<Index> = listOf(IDX_ANALYSIS_BOARD_ID, IDX_ANALYSIS_USER_CREATED, UK_ANALYSIS_ACTIVE)
     override fun getPrimaryKey(): UniqueKey<AnalysisRecord> = ANALYSIS_PKEY
+
+    private lateinit var _stickers: StickersPath
+
+    /**
+     * Get the implicit to-many join path to the <code>public.stickers</code>
+     * table
+     */
+    fun stickers(): StickersPath {
+        if (!this::_stickers.isInitialized)
+            _stickers = StickersPath(this, null, STICKERS__FK_STICKERS_ANALYSIS.inverseKey)
+
+        return _stickers;
+    }
+
+    val stickers: StickersPath
+        get(): StickersPath = stickers()
     override fun getChecks(): List<Check<AnalysisRecord>> = listOf(
         Internal.createCheck(this, DSL.name("analysis_progress_check"), "(((progress >= 0) AND (progress <= 100)))", true)
     )

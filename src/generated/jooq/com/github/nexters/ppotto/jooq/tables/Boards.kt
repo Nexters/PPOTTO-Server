@@ -8,6 +8,8 @@ import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_BOARDS_USER_ID
 import com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY
+import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_BOARD
+import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 
 import java.time.Instant
@@ -22,6 +24,7 @@ import org.jooq.ForeignKey
 import org.jooq.Index
 import org.jooq.InverseForeignKey
 import org.jooq.Name
+import org.jooq.Path
 import org.jooq.PlainSQL
 import org.jooq.QueryPart
 import org.jooq.Record
@@ -114,9 +117,38 @@ open class Boards(
      * Create a <code>public.boards</code> table reference
      */
     constructor(): this(DSL.name("boards"), null)
+
+    constructor(path: Table<out Record>, childPath: ForeignKey<out Record, BoardsRecord>?, parentPath: InverseForeignKey<out Record, BoardsRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, BOARDS, null, null)
+
+    /**
+     * A subtype implementing {@link Path} for simplified path-based joins.
+     */
+    open class BoardsPath : Boards, Path<BoardsRecord> {
+        constructor(path: Table<out Record>, childPath: ForeignKey<out Record, BoardsRecord>?, parentPath: InverseForeignKey<out Record, BoardsRecord>?): super(path, childPath, parentPath)
+        private constructor(alias: Name, aliased: Table<BoardsRecord>): super(alias, aliased)
+        override fun `as`(alias: String): BoardsPath = BoardsPath(DSL.name(alias), this)
+        override fun `as`(alias: Name): BoardsPath = BoardsPath(alias, this)
+        override fun `as`(alias: Table<*>): BoardsPath = BoardsPath(alias.qualifiedName, this)
+    }
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
     override fun getIndexes(): List<Index> = listOf(IDX_BOARDS_USER_ID)
     override fun getPrimaryKey(): UniqueKey<BoardsRecord> = BOARDS_PKEY
+
+    private lateinit var _stickers: StickersPath
+
+    /**
+     * Get the implicit to-many join path to the <code>public.stickers</code>
+     * table
+     */
+    fun stickers(): StickersPath {
+        if (!this::_stickers.isInitialized)
+            _stickers = StickersPath(this, null, STICKERS__FK_STICKERS_BOARD.inverseKey)
+
+        return _stickers;
+    }
+
+    val stickers: StickersPath
+        get(): StickersPath = stickers()
     override fun `as`(alias: String): Boards = Boards(DSL.name(alias), this)
     override fun `as`(alias: Name): Boards = Boards(alias, this)
     override fun `as`(alias: Table<*>): Boards = Boards(alias.qualifiedName, this)

@@ -8,6 +8,9 @@ package com.github.nexters.ppotto.jooq.indexes
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Photos
+import com.github.nexters.ppotto.jooq.tables.RecapComments
+import com.github.nexters.ppotto.jooq.tables.StickerPhotos
+import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
 import com.github.nexters.ppotto.jooq.tables.Users
@@ -27,6 +30,11 @@ val IDX_ANALYSIS_USER_CREATED: Index = Internal.createIndex(DSL.name("idx_analys
 val IDX_BOARDS_USER_ID: Index = Internal.createIndex(DSL.name("idx_boards_user_id"), Boards.BOARDS, arrayOf(Boards.BOARDS.USER_ID), false)
 val IDX_PHOTOS_ANALYSIS_ID: Index = Internal.createIndex(DSL.name("idx_photos_analysis_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.ANALYSIS_ID), false)
 val IDX_PHOTOS_BOARD_ID: Index = Internal.createIndex(DSL.name("idx_photos_board_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.BOARD_ID), false)
+val IX_RECAP_STICKER: Index = Internal.createIndex(DSL.name("ix_recap_sticker"), RecapComments.RECAP_COMMENTS, arrayOf(RecapComments.RECAP_COMMENTS.STICKER_ID), false)
+val IX_STICKER_ANALYSIS: Index = Internal.createIndex(DSL.name("ix_sticker_analysis"), Stickers.STICKERS, arrayOf(Stickers.STICKERS.ANALYSIS_ID), false)
+val IX_STICKER_BOARD_Z: Index = Internal.createIndex(DSL.name("ix_sticker_board_z"), Stickers.STICKERS, arrayOf(Stickers.STICKERS.BOARD_ID, Stickers.STICKERS.Z_INDEX), false)
+val IX_STICKER_PHOTO_PHOTO: Index = Internal.createIndex(DSL.name("ix_sticker_photo_photo"), StickerPhotos.STICKER_PHOTOS, arrayOf(StickerPhotos.STICKER_PHOTOS.PHOTO_ID), false)
+val IX_STICKER_SOURCE_PHOTO: Index = Internal.createIndex(DSL.name("ix_sticker_source_photo"), Stickers.STICKERS, arrayOf(Stickers.STICKERS.SOURCE_PHOTO_ID), false)
 val IX_TERM_AGREEMENT_TERM: Index = Internal.createIndex(DSL.name("ix_term_agreement_term"), TermAgreements.TERM_AGREEMENTS, arrayOf(TermAgreements.TERM_AGREEMENTS.TERM_ID), false)
 val IX_TERMS_CODE_EFFECTIVE: Index = Internal.createIndex(DSL.name("ix_terms_code_effective"), Terms.TERMS, arrayOf(Terms.TERMS.CODE, Terms.TERMS.EFFECTIVE_AT), false)
 val UK_ANALYSIS_ACTIVE: Index = Internal.createIndex(DSL.name("uk_analysis_active"), Analysis.ANALYSIS, arrayOf(Analysis.ANALYSIS.USER_ID), true)
