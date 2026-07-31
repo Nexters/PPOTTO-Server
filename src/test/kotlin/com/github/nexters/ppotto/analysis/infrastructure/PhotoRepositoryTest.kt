@@ -11,7 +11,6 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.UUID
 
 class PhotoRepositoryTest(
     photoRepository: PhotoRepository,
@@ -88,7 +87,10 @@ class PhotoRepositoryTest(
                 photoRepository.markFailedBatch(saved.map { it.id })
 
                 Then("기존 COMPLETED를 FAILED로 갱신하지 않는다 (PENDING이 아니므로)") {
-                    photoRepository.findAllByAnalysisId(analysis.id).first().uploadStatus shouldBe UploadStatus.COMPLETED
+                    photoRepository
+                        .findAllByAnalysisId(analysis.id)
+                        .first()
+                        .uploadStatus shouldBe UploadStatus.COMPLETED
                 }
             }
 
