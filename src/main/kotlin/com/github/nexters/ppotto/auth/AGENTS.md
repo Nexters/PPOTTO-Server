@@ -8,7 +8,7 @@
 |-----------|-------------|
 | `domain/` | provider, 로그인 command/result, 가입 트랜잭션 결과(`AuthSignup`), 토큰 모델, AUTH error code |
 | `application/` | 표현식 기반 로그인/활성 사용자 재검증/재발급/로그아웃 체인과 user/terms 연결 port. `@Qualifier(SIGNUP_TRANSACTION)`으로 주입한 `signupTransaction`(`TransactionOperations`)으로 가입 구간만 트랜잭션으로 감쌉니다 |
-| `infrastructure/oauth/` | Fluent Kakao API, Apple identity token/JWKS/code exchange/revoke adapter |
+| `infrastructure/oauth/` | `KakaoOAuthApi`/`AppleOAuthApi` HTTP Service interfaces (`@GetExchange`/`@PostExchange`, full URL passed as a `URI` method parameter) plus Kakao verification and Apple identity token/JWKS/code exchange/revoke adapters |
 | `infrastructure/integration/` | Fluent user 가입·활성 상태·기본 보드·약관·세션 연결과 provider 계정 해지 adapter. 가입 adapter는 `@Transactional`로 사용자와 기본 보드를 한 단위로 묶습니다 |
 | `infrastructure/token/` | Fluent HS256 access JWT와 opaque refresh token 발급, Redis rotation adapter |
 | `infrastructure/security/` | Expression-bodied Bearer 인증 context 조립과 예외 정규화, UUID principal, 401/403 ApiResponse writer |
@@ -16,7 +16,7 @@
 | `presentation/AuthController.kt` | Fluent Auth API implementation with request binding and required UUID logout user injection |
 | `presentation/AuthApiExamples.kt` | `ApiExampleProvider` 구현. provider별 로그인 요청, 신규 가입/재로그인 응답, `AUTH-001`~`AUTH-004` 실패 예시를 실제 DTO 인스턴스로 정의합니다 |
 | `presentation/dto/` | Swagger-described authentication request and response schemas |
-| `config/` | 검증된 Kakao, Apple, OAuth HTTP timeout, JWT properties와 adapter/application bean wiring. `AuthTransactionConfig`는 가입 전용 `signupTransaction` bean(`TransactionOperations`, timeout `SIGNUP_TRANSACTION_TIMEOUT_SECONDS` = 5초)을 정의합니다. 생성자 프로퍼티 그룹 사이 한 줄 개행 유지 |
+| `config/` | 검증된 Kakao, Apple, JWT properties와 adapter/application bean wiring. `AuthHttpConfig`는 `@ImportHttpServices(group = "oauth")`로 OAuth HTTP Service proxy를 등록하고 timeout은 `spring.http.serviceclient.oauth.*` 프로퍼티가 적용합니다. `AuthTransactionConfig`는 가입 전용 `signupTransaction` bean(`TransactionOperations`, timeout `SIGNUP_TRANSACTION_TIMEOUT_SECONDS` = 5초)을 정의합니다. 생성자 프로퍼티 그룹 사이 한 줄 개행 유지 |
 
 ## Rules
 
@@ -32,6 +32,8 @@
 - refresh token 재발급은 token issue/rotation 전에 user application service로 활성 사용자를 재검증합니다.
 - provider refresh token 평문은 user port 경계까지만 전달하며 user 저장 adapter가 즉시 암호화합니다.
 - refresh token은 원문을 Redis key/value에 저장하지 않고 SHA-256 hash로만 식별합니다.
-- OAuth RestClient는 설정된 connect/read timeout을 반드시 적용합니다.
+- OAuth HTTP 호출은 `spring.http.serviceclient.oauth.connect-timeout/read-timeout`(`OAUTH_CONNECT_TIMEOUT_MILLIS`/`OAUTH_READ_TIMEOUT_MILLIS`, 단위 없는 정수는 ms)을 반드시 적용합니다.
+- `KAKAO_*_URI`/`APPLE_*_URI`는 경로를 포함한 전체 URL 계약입니다. base-url로 쪼개지 말고 HTTP Service 인터페이스 메서드의 `URI` 파라미터로 그대로 전달합니다.
+- HTTP Service 인터페이스 반환형은 nullable을 유지합니다. non-null로 선언하면 2xx 빈 본문이 `RestClientException`이 아닌 NPE가 되어 `AUTH-001` 변환 경로를 벗어납니다.
 
 Update this file when auth packages or contracts change.

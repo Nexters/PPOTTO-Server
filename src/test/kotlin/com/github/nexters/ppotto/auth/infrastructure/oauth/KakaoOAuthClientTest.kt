@@ -10,6 +10,8 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.support.RestClientAdapter
+import org.springframework.web.service.invoker.HttpServiceProxyFactory
 import java.net.InetSocketAddress
 import java.net.URI
 
@@ -35,7 +37,10 @@ class KakaoOAuthClientTest :
         val baseUri = "http://localhost:${server.address.port}"
         val client =
             KakaoOAuthClient(
-                RestClient.builder(),
+                HttpServiceProxyFactory
+                    .builderFor(RestClientAdapter.create(RestClient.builder().build()))
+                    .build()
+                    .createClient(KakaoOAuthApi::class.java),
                 KakaoAuthProperties(9876, URI("$baseUri/token"), URI("$baseUri/user")),
             )
 

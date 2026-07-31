@@ -14,6 +14,8 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.support.RestClientAdapter
+import org.springframework.web.service.invoker.HttpServiceProxyFactory
 import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -84,7 +86,10 @@ class AppleOAuthClientTest :
             )
         val client =
             AppleOAuthClient(
-                RestClient.builder(),
+                HttpServiceProxyFactory
+                    .builderFor(RestClientAdapter.create(RestClient.builder().build()))
+                    .build()
+                    .createClient(AppleOAuthApi::class.java),
                 properties,
                 AppleClientSecretGenerator(properties),
             )
