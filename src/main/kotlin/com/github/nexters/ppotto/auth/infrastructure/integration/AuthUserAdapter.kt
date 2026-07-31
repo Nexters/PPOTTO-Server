@@ -16,13 +16,14 @@ class AuthUserAdapter(
     private val userService: UserService,
     private val boardCommandService: BoardCommandService,
 ) : AuthUserPort {
-    override fun findOrCreate(profile: SocialProfile): AuthUser {
-        val registration = userService.findOrCreate(profile.toCommand())
-        if (registration.isNewUser) {
-            boardCommandService.createDefault(registration.user.id)
-        }
-        return registration.toAuthUser()
-    }
+    override fun findOrCreate(profile: SocialProfile): AuthUser =
+        userService
+            .findOrCreate(profile.toCommand())
+            .also {
+                if (it.isNewUser) {
+                    boardCommandService.createDefault(it.user.id)
+                }
+            }.let { it.toAuthUser() }
 
     private fun SocialProfile.toCommand() =
         SocialUserCommand(

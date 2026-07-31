@@ -22,32 +22,34 @@ class StickerController(
         @AuthenticatedUser userId: UUID,
         @PathVariable stickerId: UUID,
     ): ApiResponse<RecapDetailResponse> =
-        ApiResponse.success(
-            RecapDetailResponse.from(stickerQueryService.getRecap(userId, stickerId)),
-        )
+        stickerQueryService
+            .getRecap(userId, stickerId)
+            .let(RecapDetailResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun updateTitle(
         @AuthenticatedUser userId: UUID,
         @PathVariable stickerId: UUID,
         @Valid @RequestBody request: UpdateStickerTitleRequest,
     ): ApiResponse<UpdateStickerTitleResponse> =
-        ApiResponse.success(
-            UpdateStickerTitleResponse.from(stickerCommandService.rename(userId, stickerId, request.title)),
-        )
+        stickerCommandService
+            .rename(userId, stickerId, request.title)
+            .let(UpdateStickerTitleResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun delete(
         @AuthenticatedUser userId: UUID,
         @PathVariable stickerId: UUID,
-    ): ApiResponse<Unit> {
-        stickerCommandService.delete(userId, stickerId)
-        return ApiResponse.success()
-    }
+    ): ApiResponse<Unit> =
+        stickerCommandService
+            .delete(userId, stickerId)
+            .let { ApiResponse.success() }
 
     override fun markViewed(
         @AuthenticatedUser userId: UUID,
         @PathVariable stickerId: UUID,
-    ): ApiResponse<Unit> {
-        stickerCommandService.markViewed(userId, stickerId)
-        return ApiResponse.success()
-    }
+    ): ApiResponse<Unit> =
+        stickerCommandService
+            .markViewed(userId, stickerId)
+            .let { ApiResponse.success() }
 }

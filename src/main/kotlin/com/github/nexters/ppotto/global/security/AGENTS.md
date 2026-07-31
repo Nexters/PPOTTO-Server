@@ -8,7 +8,7 @@ HTTP 인증 사용자를 컨트롤러 인자로 주입하는 공통 MVC 경계�
 |------|-------------|
 | `AuthenticatedUser.kt` | UUID 인증 사용자를 요구하는 컨트롤러 인자 어노테이션 |
 | `CurrentUser.kt` | 공개 API에서 선택적으로 UUID 인증 사용자를 받는 인자 어노테이션 |
-| `CurrentUserArgumentResolver.kt` | SecurityContext UUID principal을 해석하고 필수 인증 누락을 `COMMON-004`로 변환 |
+| `CurrentUserArgumentResolver.kt` | SecurityContext UUID principal을 fluent 분기로 해석하고 필수 인증 누락을 `COMMON-004`로 변환 |
 
 ## Rules
 

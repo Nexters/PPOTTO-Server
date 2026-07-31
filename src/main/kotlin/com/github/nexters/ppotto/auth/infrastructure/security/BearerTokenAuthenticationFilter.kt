@@ -24,12 +24,13 @@ class BearerTokenAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val authorization = request.getHeader(AUTHORIZATION)
-        when {
-            authorization == null -> filterChain.doFilter(request, response)
-            !authorization.startsWith(BEARER_PREFIX) -> reject(request, response)
-            authorization.removePrefix(BEARER_PREFIX).isBlank() -> reject(request, response)
-            else -> authenticate(authorization.removePrefix(BEARER_PREFIX).trim(), request, response, filterChain)
+        request.getHeader(AUTHORIZATION).let { authorization ->
+            when {
+                authorization == null -> filterChain.doFilter(request, response)
+                !authorization.startsWith(BEARER_PREFIX) -> reject(request, response)
+                authorization.removePrefix(BEARER_PREFIX).isBlank() -> reject(request, response)
+                else -> authenticate(authorization.removePrefix(BEARER_PREFIX).trim(), request, response, filterChain)
+            }
         }
     }
 
@@ -40,13 +41,16 @@ class BearerTokenAuthenticationFilter(
         filterChain: FilterChain,
     ) {
         try {
-            val userId = tokenProvider.verifyAccessToken(token)
-            val authentication = UsernamePasswordAuthenticationToken(userId, token, emptyList())
-            authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
-            val context = SecurityContextHolder.createEmptyContext()
-            context.authentication = authentication
-            SecurityContextHolder.setContext(context)
-            filterChain.doFilter(request, response)
+            tokenProvider
+                .verifyAccessToken(token)
+                .let { UsernamePasswordAuthenticationToken(it, token, emptyList()) }
+                .apply { details = WebAuthenticationDetailsSource().buildDetails(request) }
+                .let { authentication ->
+                    SecurityContextHolder
+                        .createEmptyContext()
+                        .apply { this.authentication = authentication }
+                }.also(SecurityContextHolder::setContext)
+                .also { filterChain.doFilter(request, response) }
         } catch (e: UnauthorizedException) {
             SecurityContextHolder.clearContext()
             reject(request, response, e)
@@ -57,12 +61,10 @@ class BearerTokenAuthenticationFilter(
         request: HttpServletRequest,
         response: HttpServletResponse,
         cause: Exception? = null,
-    ) {
-        val exception =
-            cause?.let { BadCredentialsException("Bearer token 인증에 실패했습니다.", it) }
-                ?: BadCredentialsException("Bearer token 인증에 실패했습니다.")
-        authenticationEntryPoint.commence(request, response, exception)
-    }
+    ) = (
+        cause?.let { BadCredentialsException("Bearer token 인증에 실패했습니다.", it) }
+            ?: BadCredentialsException("Bearer token 인증에 실패했습니다.")
+    ).let { authenticationEntryPoint.commence(request, response, it) }
 
     private companion object {
         const val AUTHORIZATION = "Authorization"

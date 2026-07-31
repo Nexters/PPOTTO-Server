@@ -22,40 +22,44 @@ class BoardController(
     override fun list(
         @AuthenticatedUser userId: UUID,
     ): ApiResponse<List<BoardResponse>> =
-        ApiResponse.success(
-            boardQueryService.list(userId).map(BoardResponse::from),
-        )
+        boardQueryService
+            .list(userId)
+            .map(BoardResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun create(
         @AuthenticatedUser userId: UUID,
         @Valid @RequestBody request: CreateBoardRequest,
     ): ApiResponse<BoardResponse> =
-        ApiResponse.success(
-            BoardResponse.from(boardCommandService.create(userId, request.name)),
-        )
+        boardCommandService
+            .create(userId, request.name)
+            .let(BoardResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun get(
         @AuthenticatedUser userId: UUID,
         @PathVariable boardId: UUID,
     ): ApiResponse<BoardDetailResponse> =
-        ApiResponse.success(
-            BoardDetailResponse.from(boardQueryService.getDetail(boardId, userId)),
-        )
+        boardQueryService
+            .getDetail(boardId, userId)
+            .let(BoardDetailResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun rename(
         @AuthenticatedUser userId: UUID,
         @PathVariable boardId: UUID,
         @Valid @RequestBody request: RenameBoardRequest,
     ): ApiResponse<BoardResponse> =
-        ApiResponse.success(
-            BoardResponse.from(boardCommandService.rename(boardId, userId, request.name)),
-        )
+        boardCommandService
+            .rename(boardId, userId, request.name)
+            .let(BoardResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun delete(
         @AuthenticatedUser userId: UUID,
         @PathVariable boardId: UUID,
-    ): ApiResponse<Unit> {
-        boardCommandService.delete(boardId, userId)
-        return ApiResponse.success()
-    }
+    ): ApiResponse<Unit> =
+        boardCommandService
+            .delete(boardId, userId)
+            .let { ApiResponse.success() }
 }

@@ -22,9 +22,9 @@ data class RecapCommentCreation(
     val posY: Double?,
 ) {
     init {
-        val hasFloatPosition = posX != null && posY != null
-        if (content.isBlank() || (isFloat && !hasFloatPosition)) {
-            throw InvalidInputException()
-        }
+        content
+            .takeUnless(String::isBlank)
+            ?.takeIf { !isFloat || (posX != null && posY != null) }
+            ?: throw InvalidInputException()
     }
 }

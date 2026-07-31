@@ -37,14 +37,14 @@ class UserRepository(
             .fetchOne()!!
             .toDomain()
 
-    fun save(): User {
-        val suffix = UUID.randomUUID()
-        return save(
-            provider = OAuthProvider.KAKAO,
-            providerUserId = "test-$suffix",
-            email = "test-$suffix@example.com",
-        )
-    }
+    fun save(): User =
+        UUID.randomUUID().let {
+            save(
+                provider = OAuthProvider.KAKAO,
+                providerUserId = "test-$it",
+                email = "test-$it@example.com",
+            )
+        }
 
     fun findById(id: UUID): User? =
         dslContext
@@ -73,23 +73,19 @@ class UserRepository(
         id: UUID,
         email: String,
         providerRefreshToken: EncryptedProviderRefreshToken?,
-    ): User? {
-        val update =
-            dslContext
-                .update(USERS)
-                .set(USERS.EMAIL, email)
-
-        if (providerRefreshToken != null) {
-            update.set(USERS.PROVIDER_REFRESH_TOKEN, providerRefreshToken.value)
-        }
-
-        return update
-            .where(USERS.ID.eq(id))
+    ): User? =
+        dslContext
+            .update(USERS)
+            .set(USERS.EMAIL, email)
+            .apply {
+                providerRefreshToken?.let {
+                    set(USERS.PROVIDER_REFRESH_TOKEN, it.value)
+                }
+            }.where(USERS.ID.eq(id))
             .and(USERS.DELETED_AT.isNull)
             .returning()
             .fetchOne()
             ?.toDomain()
-    }
 
     fun withdraw(user: User): User? =
         dslContext

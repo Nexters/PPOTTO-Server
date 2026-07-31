@@ -6,7 +6,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 
 | Directory | Description |
 |-----------|---------|
-| `domain/` | Pure account model, `OAuthProvider`, encrypted-token value type, and `USER-*` errors |
+| `domain/` | Pure account model with fluent withdrawal transition, `OAuthProvider`, encrypted-token value type, and `USER-*` errors |
 | `application/port/ProviderRefreshTokenCipher.kt` | Plaintext-to-encrypted token boundary; AES-GCM adapter lives in infrastructure |
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain must provide the real adapter |
 | `application/port/UserSessionRevoker.kt` | 탈퇴 시 서비스 refresh token을 폐기하는 auth 연동 경계 |
@@ -14,12 +14,12 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `application/UserService.kt` | Fluent transaction pipeline for atomic social lookup/create, active account lookup, and session-revoking withdrawal |
 | `application/WithdrawnUserCleanupService.kt` | Fluent bounded cleanup pipeline; hard-deletes a user only after the cross-domain deletion port succeeds |
 | `presentation/UserApi.kt` | Version 1 `GET /users/me` and `DELETE /users/me` mapping and Swagger contract |
-| `presentation/UserController.kt` | User API implementation with required UUID user injection |
+| `presentation/UserController.kt` | Fluent User API implementation with required UUID user injection |
 | `presentation/dto/UserResponse.kt` | Swagger-described public account response without social-provider identifiers or tokens |
-| `infrastructure/UserRepository.kt` | DSLContext persistence for active account lookup, profile refresh, withdrawal, and hard deletion |
+| `infrastructure/UserRepository.kt` | Fluent DSLContext persistence for active account lookup, profile refresh, withdrawal, and hard deletion |
 | `infrastructure/SocialUserRepository.kt` | Atomic active social-account creation using the partial unique index as the conflict target |
-| `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration for provider refresh-token encryption |
-| `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Versioned AES-256-GCM provider refresh-token encryption adapter |
+| `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration following the shared constructor property spacing convention |
+| `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Fluent versioned AES-256-GCM provider refresh-token encryption adapter |
 | `infrastructure/UserPortFallbackConfig.kt` | Fail-closed fallback beans used until provider, session, and deletion adapters are integrated |
 
 ## Rules

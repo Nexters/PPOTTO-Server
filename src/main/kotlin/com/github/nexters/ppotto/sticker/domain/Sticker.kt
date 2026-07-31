@@ -98,13 +98,13 @@ class Sticker(
             imageKey: String?,
             textContent: String?,
         ) {
-            val valid =
-                when (type) {
-                    StickerType.IMAGE -> sourcePhotoId != null && !imageKey.isNullOrBlank()
-                    StickerType.TEXT -> !textContent.isNullOrBlank()
+            when (type) {
+                StickerType.IMAGE -> sourcePhotoId != null && !imageKey.isNullOrBlank()
+                StickerType.TEXT -> !textContent.isNullOrBlank()
+            }.also {
+                if (!it) {
+                    throw InvalidInputException()
                 }
-            if (!valid) {
-                throw InvalidInputException()
             }
         }
     }

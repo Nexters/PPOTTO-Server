@@ -11,7 +11,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `domain/DrawingScope.kt` | Drawing ownership scope: `STICKER` or `BOARD` |
 | `domain/BoardErrorCode.kt` | `BOARD-001` through `BOARD-005` API errors |
 | `infrastructure/BoardRepository.kt` | Active-board CRUD, ownership filtering, row locking, user-scoped command advisory locking, and soft deletion |
-| `infrastructure/DrawingRepository.kt` | JSONB drawing upsert, lookup, ownership filtering, and board/sticker-scoped soft deletion |
+| `infrastructure/DrawingRepository.kt` | Fluent JSONB drawing upsert, guarded lookup, ownership filtering, and board/sticker-scoped soft deletion |
 | `infrastructure/StickerDrawingCommandAdapter.kt` | Sticker-domain drawing deletion port adapter backed by the board application service |
 | `infrastructure/BoardExternalPortFallbackConfiguration.kt` | Fail-closed standalone fallbacks that back off when integration adapters are registered |
 | `application/BoardCommandService.kt` | Fluent default/create/rename/delete transaction pipelines and board policies |
@@ -22,9 +22,9 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
 | `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
 | `presentation/BoardApi.kt` | `/boards` v1 CRUD mapping and Swagger contract |
-| `presentation/BoardController.kt` | Board CRUD API implementation with request binding and required UUID user injection |
+| `presentation/BoardController.kt` | Fluent Board CRUD API implementation with request binding and required UUID user injection |
 | `presentation/BoardLayoutApi.kt` | `PATCH /boards/{boardId}/layout` v1 mapping and Swagger contract |
-| `presentation/BoardLayoutController.kt` | Board layout API implementation with request binding and required UUID user injection |
+| `presentation/BoardLayoutController.kt` | Fluent Board layout API implementation with request binding and required UUID user injection |
 | `presentation/dto/BoardRequests.kt` | Swagger-described create and rename validation DTOs |
 | `presentation/dto/BoardResponses.kt` | Swagger-described board list/detail, sticker, and drawing response DTOs |
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |

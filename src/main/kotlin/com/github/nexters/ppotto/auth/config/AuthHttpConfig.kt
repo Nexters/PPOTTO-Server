@@ -11,12 +11,10 @@ import java.time.Duration
 class AuthHttpConfig {
     @Bean
     @ConditionalOnMissingBean
-    fun restClientBuilder(properties: OAuthHttpProperties): RestClient.Builder {
-        val requestFactory =
-            SimpleClientHttpRequestFactory().apply {
+    fun restClientBuilder(properties: OAuthHttpProperties): RestClient.Builder =
+        SimpleClientHttpRequestFactory()
+            .apply {
                 setConnectTimeout(Duration.ofMillis(properties.connectTimeoutMillis))
                 setReadTimeout(Duration.ofMillis(properties.readTimeoutMillis))
-            }
-        return RestClient.builder().requestFactory(requestFactory)
-    }
+            }.let { RestClient.builder().requestFactory(it) }
 }

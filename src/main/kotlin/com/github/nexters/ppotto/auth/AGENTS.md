@@ -8,14 +8,14 @@
 |-----------|-------------|
 | `domain/` | provider, 로그인 command/result, 토큰 모델, AUTH error code |
 | `application/` | 체이닝된 로그인/활성 사용자 재검증/재발급/로그아웃 orchestration과 user/terms 연결 port |
-| `infrastructure/oauth/` | Kakao API, Apple identity token/JWKS/code exchange/revoke adapter |
-| `infrastructure/integration/` | user 가입·활성 상태·기본 보드·약관·세션 연결과 provider 계정 해지 adapter |
-| `infrastructure/token/` | HS256 access JWT와 opaque refresh token 발급, Redis rotation adapter |
-| `infrastructure/security/` | Bearer filter, UUID principal, 401/403 ApiResponse writer |
+| `infrastructure/oauth/` | Fluent Kakao API, Apple identity token/JWKS/code exchange/revoke adapter |
+| `infrastructure/integration/` | Fluent user 가입·활성 상태·기본 보드·약관·세션 연결과 provider 계정 해지 adapter |
+| `infrastructure/token/` | Fluent HS256 access JWT와 opaque refresh token 발급, Redis rotation adapter |
+| `infrastructure/security/` | Fluent Bearer 인증 context 조립, UUID principal, 401/403 ApiResponse writer |
 | `presentation/AuthApi.kt` | `/auth/login`, `/auth/refresh`, `/auth/logout` version 1 mapping and Swagger contract |
-| `presentation/AuthController.kt` | Auth API implementation with request binding and required UUID logout user injection |
+| `presentation/AuthController.kt` | Fluent Auth API implementation with request binding and required UUID logout user injection |
 | `presentation/dto/` | Swagger-described authentication request and response schemas |
-| `config/` | Validated Kakao, Apple, OAuth HTTP timeout, JWT properties와 adapter/application bean wiring |
+| `config/` | 검증된 Kakao, Apple, OAuth HTTP timeout, JWT properties와 adapter/application bean wiring. 생성자 프로퍼티 그룹 사이 한 줄 개행 유지 |
 
 ## Rules
 

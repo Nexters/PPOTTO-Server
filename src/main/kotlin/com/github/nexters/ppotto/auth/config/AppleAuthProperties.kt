@@ -13,23 +13,32 @@ import java.net.URI
 data class AppleAuthProperties(
     @field:NotBlank
     val clientId: String,
+
     @field:NotBlank
     val teamId: String,
+
     @field:NotBlank
     val keyId: String,
+
     @field:NotBlank
     val privateKeyPath: String,
+
     @field:NotBlank
     val issuer: String,
+
     @field:NotNull
     val jwksUri: URI,
+
     @field:NotNull
     val tokenUri: URI,
+
     @field:NotNull
     val revokeUri: URI,
+
     @field:Positive
     @field:Max(180)
     val clientSecretExpirationDays: Long,
+
     @field:Positive
     val jwksCacheSeconds: Long,
 )

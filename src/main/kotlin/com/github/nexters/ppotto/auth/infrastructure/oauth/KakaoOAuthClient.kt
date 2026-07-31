@@ -22,13 +22,14 @@ class KakaoOAuthClient(
     override val provider = OAuthProvider.KAKAO
     private val restClient = restClientBuilder.build()
 
-    override fun authenticate(command: LoginCommand): SocialProfile {
-        val kakaoCommand = requireKakaoCommand(command)
-        val tokenInfo = fetchTokenInfo(kakaoCommand.accessToken)
-        val userInfo = fetchUserInfo(kakaoCommand.accessToken)
-        validateIdentity(tokenInfo, userInfo)
-        return SocialProfile(provider, userInfo.id.toString(), requireEmail(userInfo))
-    }
+    override fun authenticate(command: LoginCommand): SocialProfile =
+        requireKakaoCommand(command).let { kakaoCommand ->
+            fetchTokenInfo(kakaoCommand.accessToken).let { tokenInfo ->
+                fetchUserInfo(kakaoCommand.accessToken)
+                    .also { validateIdentity(tokenInfo, it) }
+                    .let { SocialProfile(provider, it.id.toString(), requireEmail(it)) }
+            }
+        }
 
     override fun revoke(providerRefreshToken: String) = Unit
 
@@ -72,11 +73,10 @@ class KakaoOAuthClient(
             ?.takeIf(String::isNotBlank)
             ?: throw ForbiddenException(AuthErrorCode.KAKAO_EMAIL_CONSENT_REQUIRED)
 
-    private fun failAuthentication(cause: Exception? = null): Nothing {
-        val exception = UnauthorizedException(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)
-        cause?.let(exception::addSuppressed)
-        throw exception
-    }
+    private fun failAuthentication(cause: Exception? = null): Nothing =
+        UnauthorizedException(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)
+            .also { exception -> cause?.let(exception::addSuppressed) }
+            .let { throw it }
 
     private data class KakaoTokenInfo(
         val id: Long,

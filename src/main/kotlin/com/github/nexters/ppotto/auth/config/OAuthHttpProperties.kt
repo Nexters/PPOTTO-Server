@@ -9,6 +9,7 @@ import org.springframework.validation.annotation.Validated
 data class OAuthHttpProperties(
     @field:Positive
     val connectTimeoutMillis: Long,
+
     @field:Positive
     val readTimeoutMillis: Long,
 )

@@ -6,6 +6,6 @@ Request logging.
 
 | File | Description |
 |------|-------------|
-| `RequestLoggingFilter.kt` | `OncePerRequestFilter`. Puts an 8-char `requestId` into MDC, logs `METHOD uri status elapsed` per request, skips `/actuator/**`. MDC key appears in the console pattern configured in `config/logging.yml` |
+| `RequestLoggingFilter.kt` | `OncePerRequestFilter`. Uses a fluent elapsed-time scope, puts an 8-char `requestId` into MDC, logs `METHOD uri status elapsed` per request, and skips `/actuator/**` |
 
 Update this file when logging behavior changes.

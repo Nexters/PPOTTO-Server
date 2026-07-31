@@ -25,18 +25,13 @@ class CurrentUserArgumentResolver : HandlerMethodArgumentResolver {
         mavContainer: ModelAndViewContainer?,
         webRequest: NativeWebRequest,
         binderFactory: WebDataBinderFactory?,
-    ): UUID? {
-        val authentication = SecurityContextHolder.getContext().authentication
-        val principal = authentication?.principal
-        if (principal is UUID) {
-            return principal
+    ): UUID? =
+        SecurityContextHolder.getContext().authentication.let { authentication ->
+            when {
+                authentication?.principal is UUID -> authentication.principal as UUID
+                parameter.hasParameterAnnotation(CurrentUser::class.java) &&
+                    (authentication == null || authentication is AnonymousAuthenticationToken) -> null
+                else -> throw UnauthorizedException()
+            }
         }
-        if (
-            parameter.hasParameterAnnotation(CurrentUser::class.java) &&
-            (authentication == null || authentication is AnonymousAuthenticationToken)
-        ) {
-            return null
-        }
-        throw UnauthorizedException()
-    }
 }

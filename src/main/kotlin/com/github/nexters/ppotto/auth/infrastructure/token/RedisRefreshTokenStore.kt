@@ -20,17 +20,18 @@ class RedisRefreshTokenStore(
     override fun save(
         userId: UUID,
         refreshToken: String,
-    ) {
-        val tokenHash = hash(refreshToken)
-        redisTemplate.execute(
-            SAVE_SCRIPT,
-            listOf(userKey(userId), tokenKey(tokenHash)),
-            TOKEN_KEY_PREFIX,
-            tokenHash,
-            expirationSeconds.toString(),
-            userId.toString(),
-        )
-    }
+    ): Unit =
+        hash(refreshToken).let { tokenHash ->
+            redisTemplate.execute(
+                SAVE_SCRIPT,
+                listOf(userKey(userId), tokenKey(tokenHash)),
+                TOKEN_KEY_PREFIX,
+                tokenHash,
+                expirationSeconds.toString(),
+                userId.toString(),
+            )
+            Unit
+        }
 
     override fun findUserId(refreshToken: String): UUID? =
         redisTemplate
@@ -44,27 +45,27 @@ class RedisRefreshTokenStore(
         userId: UUID,
         currentRefreshToken: String,
         newRefreshToken: String,
-    ): Boolean {
-        val currentHash = hash(currentRefreshToken)
-        val newHash = hash(newRefreshToken)
-        val result =
-            redisTemplate.execute(
-                ROTATE_SCRIPT,
-                listOf(userKey(userId), tokenKey(currentHash), tokenKey(newHash)),
-                currentHash,
-                newHash,
-                userId.toString(),
-                expirationSeconds.toString(),
-            )
-        return result == SUCCESS
-    }
+    ): Boolean =
+        hash(currentRefreshToken).let { currentHash ->
+            hash(newRefreshToken).let { newHash ->
+                redisTemplate.execute(
+                    ROTATE_SCRIPT,
+                    listOf(userKey(userId), tokenKey(currentHash), tokenKey(newHash)),
+                    currentHash,
+                    newHash,
+                    userId.toString(),
+                    expirationSeconds.toString(),
+                ) == SUCCESS
+            }
+        }
 
     override fun delete(userId: UUID) {
-        redisTemplate.execute(
-            DELETE_SCRIPT,
-            listOf(userKey(userId)),
-            TOKEN_KEY_PREFIX,
-        )
+        redisTemplate
+            .execute(
+                DELETE_SCRIPT,
+                listOf(userKey(userId)),
+                TOKEN_KEY_PREFIX,
+            )
     }
 
     private fun userKey(userId: UUID) = "$USER_KEY_PREFIX$userId"

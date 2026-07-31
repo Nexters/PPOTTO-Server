@@ -11,11 +11,14 @@ import org.springframework.validation.annotation.Validated
 data class GcsProperties(
     @field:NotBlank
     val bucket: String,
+
     @field:NotBlank
     val credentialsPath: String,
+
     @field:Positive
     @field:Max(SIGNED_URL_MAX_EXPIRATION_MINUTES)
     val uploadSignedUrlExpirationMinutes: Long,
+
     @field:Positive
     val timeoutMillis: Long,
 )

@@ -22,29 +22,41 @@ class AesGcmProviderRefreshTokenCipher(
             .let { SecretKeySpec(it, "AES") }
     private val secureRandom = SecureRandom()
 
-    override fun encrypt(plaintext: String): EncryptedProviderRefreshToken {
-        require(plaintext.isNotBlank())
-        val initializationVector = ByteArray(IV_SIZE_BYTES).also(secureRandom::nextBytes)
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(TAG_SIZE_BITS, initializationVector))
-        cipher.updateAAD(ADDITIONAL_AUTHENTICATED_DATA)
-        val ciphertext = cipher.doFinal(plaintext.toByteArray(UTF_8))
-        val payload = initializationVector + ciphertext
-        return EncryptedProviderRefreshToken("$FORMAT_PREFIX.${ENCODER.encodeToString(payload)}")
-    }
+    override fun encrypt(plaintext: String): EncryptedProviderRefreshToken =
+        plaintext
+            .also { require(it.isNotBlank()) }
+            .let {
+                ByteArray(IV_SIZE_BYTES)
+                    .also(secureRandom::nextBytes)
+                    .let { initializationVector ->
+                        Cipher
+                            .getInstance(TRANSFORMATION)
+                            .apply {
+                                init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(TAG_SIZE_BITS, initializationVector))
+                                updateAAD(ADDITIONAL_AUTHENTICATED_DATA)
+                            }.doFinal(it.toByteArray(UTF_8))
+                            .let(initializationVector::plus)
+                    }
+            }.let { EncryptedProviderRefreshToken("$FORMAT_PREFIX.${ENCODER.encodeToString(it)}") }
 
-    override fun decrypt(encrypted: EncryptedProviderRefreshToken): String {
-        val parts = encrypted.value.split('.', limit = 2)
-        require(parts.size == 2 && parts[0] == FORMAT_PREFIX)
-        val payload = DECODER.decode(parts[1])
-        require(payload.size > IV_SIZE_BYTES)
-        val initializationVector = payload.copyOfRange(0, IV_SIZE_BYTES)
-        val ciphertext = payload.copyOfRange(IV_SIZE_BYTES, payload.size)
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_SIZE_BITS, initializationVector))
-        cipher.updateAAD(ADDITIONAL_AUTHENTICATED_DATA)
-        return cipher.doFinal(ciphertext).toString(UTF_8)
-    }
+    override fun decrypt(encrypted: EncryptedProviderRefreshToken): String =
+        encrypted
+            .value
+            .split('.', limit = 2)
+            .also { require(it.size == 2 && it[0] == FORMAT_PREFIX) }
+            .let { DECODER.decode(it[1]) }
+            .also { require(it.size > IV_SIZE_BYTES) }
+            .let { payload ->
+                payload.copyOfRange(0, IV_SIZE_BYTES).let { initializationVector ->
+                    Cipher
+                        .getInstance(TRANSFORMATION)
+                        .apply {
+                            init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(TAG_SIZE_BITS, initializationVector))
+                            updateAAD(ADDITIONAL_AUTHENTICATED_DATA)
+                        }.doFinal(payload.copyOfRange(IV_SIZE_BYTES, payload.size))
+                        .toString(UTF_8)
+                }
+            }
 
     companion object {
         private const val FORMAT_PREFIX = "v1"

@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.sticker.domain.RecapComment
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerPhoto
 import org.jooq.DSLContext
+import org.jooq.impl.DSL.row
 import org.springframework.stereotype.Repository
 import java.util.UUID
 
@@ -17,42 +18,41 @@ class StickerRecapRepository(
     fun savePhotos(
         stickerId: UUID,
         photoIds: List<UUID>,
-    ): List<StickerPhoto> {
-        if (photoIds.isEmpty()) return emptyList()
-
-        var insert = dslContext.insertInto(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID, STICKER_PHOTOS.PHOTO_ID)
-        photoIds.forEach { photoId ->
-            insert = insert.values(stickerId, photoId)
-        }
-        return insert
-            .returning()
-            .fetch()
-            .map { StickerPhoto(it.id!!, it.stickerId, it.photoId) }
-    }
+    ): List<StickerPhoto> =
+        photoIds
+            .takeIf { it.isNotEmpty() }
+            ?.let { ids ->
+                dslContext
+                    .insertInto(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID, STICKER_PHOTOS.PHOTO_ID)
+                    .valuesOfRows(ids.map { row(stickerId, it) })
+                    .returning()
+                    .fetch()
+                    .map { StickerPhoto(it.id!!, it.stickerId, it.photoId) }
+            } ?: emptyList()
 
     fun saveComments(
         stickerId: UUID,
         creations: List<RecapCommentCreation>,
-    ): List<RecapComment> {
-        if (creations.isEmpty()) return emptyList()
-
-        var insert =
-            dslContext.insertInto(
-                RECAP_COMMENTS,
-                RECAP_COMMENTS.STICKER_ID,
-                RECAP_COMMENTS.CONTENT,
-                RECAP_COMMENTS.IS_FLOAT,
-                RECAP_COMMENTS.POS_X,
-                RECAP_COMMENTS.POS_Y,
-            )
-        creations.forEach { creation ->
-            insert = insert.values(stickerId, creation.content, creation.isFloat, creation.posX, creation.posY)
-        }
-        return insert
-            .returning()
-            .fetch()
-            .map { it.toDomain() }
-    }
+    ): List<RecapComment> =
+        creations
+            .takeIf { it.isNotEmpty() }
+            ?.let { comments ->
+                dslContext
+                    .insertInto(
+                        RECAP_COMMENTS,
+                        RECAP_COMMENTS.STICKER_ID,
+                        RECAP_COMMENTS.CONTENT,
+                        RECAP_COMMENTS.IS_FLOAT,
+                        RECAP_COMMENTS.POS_X,
+                        RECAP_COMMENTS.POS_Y,
+                    ).valuesOfRows(
+                        comments.map {
+                            row(stickerId, it.content, it.isFloat, it.posX, it.posY)
+                        },
+                    ).returning()
+                    .fetch()
+                    .map { it.toDomain() }
+            } ?: emptyList()
 
     fun findPhotoIds(stickerId: UUID): List<UUID> =
         dslContext
@@ -71,15 +71,18 @@ class StickerRecapRepository(
             .map { it.toDomain() }
 
     fun deleteByStickerIds(stickerIds: Collection<UUID>) {
-        if (stickerIds.isEmpty()) return
-        dslContext
-            .deleteFrom(RECAP_COMMENTS)
-            .where(RECAP_COMMENTS.STICKER_ID.`in`(stickerIds))
-            .execute()
-        dslContext
-            .deleteFrom(STICKER_PHOTOS)
-            .where(STICKER_PHOTOS.STICKER_ID.`in`(stickerIds))
-            .execute()
+        stickerIds
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                dslContext
+                    .deleteFrom(RECAP_COMMENTS)
+                    .where(RECAP_COMMENTS.STICKER_ID.`in`(it))
+                    .execute()
+                dslContext
+                    .deleteFrom(STICKER_PHOTOS)
+                    .where(STICKER_PHOTOS.STICKER_ID.`in`(it))
+                    .execute()
+            }
     }
 
     private fun RecapCommentsRecord.toDomain() =

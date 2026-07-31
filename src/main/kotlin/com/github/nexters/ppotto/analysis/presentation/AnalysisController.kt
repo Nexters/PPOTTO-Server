@@ -19,16 +19,18 @@ class AnalysisController(
     override fun create(
         @AuthenticatedUser userId: UUID,
         @Valid @RequestBody request: CreateAnalysisRequest,
-    ): ApiResponse<CreateAnalysisResponse> {
-        val result = analysisService.createAnalysis(userId, request.boardId, request.photos.map { it.toServiceRequest() })
-        return ApiResponse.success(CreateAnalysisResponse.from(result))
-    }
+    ): ApiResponse<CreateAnalysisResponse> =
+        analysisService
+            .createAnalysis(userId, request.boardId, request.photos.map { it.toServiceRequest() })
+            .let(CreateAnalysisResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun start(
         @AuthenticatedUser userId: UUID,
         @PathVariable analysisId: UUID,
-    ): ApiResponse<StartUploadResponse> {
-        val result = analysisService.startUpload(userId, analysisId)
-        return ApiResponse.success(StartUploadResponse.from(result))
-    }
+    ): ApiResponse<StartUploadResponse> =
+        analysisService
+            .startUpload(userId, analysisId)
+            .let(StartUploadResponse::from)
+            .let { ApiResponse.success(it) }
 }

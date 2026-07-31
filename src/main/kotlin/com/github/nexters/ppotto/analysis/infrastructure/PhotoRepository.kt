@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.analysis.domain.UploadStatus
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
 import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
 import org.jooq.DSLContext
+import org.jooq.impl.DSL.row
 import org.springframework.stereotype.Repository
 import java.time.Instant
 import java.util.UUID
@@ -23,20 +24,20 @@ class PhotoRepository(
         analysisId: UUID,
         boardId: UUID,
         items: List<PhotoCreate>,
-    ): List<Photo> {
-        if (items.isEmpty()) return emptyList()
-
-        var insert =
-            dslContext
-                .insertInto(PHOTOS, PHOTOS.ANALYSIS_ID, PHOTOS.BOARD_ID, PHOTOS.CONTENT_TYPE, PHOTOS.TAKEN_AT)
-        items.forEach { item ->
-            insert = insert.values(analysisId, boardId, item.contentType.mimeType, item.takenAt)
-        }
-        return insert
-            .returning()
-            .fetch()
-            .map { it.toDomain() }
-    }
+    ): List<Photo> =
+        items
+            .takeIf { it.isNotEmpty() }
+            ?.let { photos ->
+                dslContext
+                    .insertInto(PHOTOS, PHOTOS.ANALYSIS_ID, PHOTOS.BOARD_ID, PHOTOS.CONTENT_TYPE, PHOTOS.TAKEN_AT)
+                    .valuesOfRows(
+                        photos.map {
+                            row(analysisId, boardId, it.contentType.mimeType, it.takenAt)
+                        },
+                    ).returning()
+                    .fetch()
+                    .map { it.toDomain() }
+            } ?: emptyList()
 
     fun findPendingByAnalysisId(analysisId: UUID): List<Photo> =
         dslContext
@@ -57,21 +58,20 @@ class PhotoRepository(
         updates: Map<UUID, Instant>,
         expectedStatus: UploadStatus,
         newStatus: UploadStatus,
-    ): List<Photo> {
-        if (updates.isEmpty()) return emptyList()
-
-        return updates.mapNotNull { (id, uploadedAt) ->
-            dslContext
-                .update(PHOTOS)
-                .set(PHOTOS.UPLOAD_STATUS, newStatus.name)
-                .set(PHOTOS.UPLOADED_AT, uploadedAt)
-                .where(PHOTOS.ID.eq(id))
-                .and(PHOTOS.UPLOAD_STATUS.eq(expectedStatus.name))
-                .returning()
-                .fetchOne()
-                ?.toDomain()
-        }
-    }
+    ): List<Photo> =
+        updates
+            .takeIf { it.isNotEmpty() }
+            ?.mapNotNull { (id, uploadedAt) ->
+                dslContext
+                    .update(PHOTOS)
+                    .set(PHOTOS.UPLOAD_STATUS, newStatus.name)
+                    .set(PHOTOS.UPLOADED_AT, uploadedAt)
+                    .where(PHOTOS.ID.eq(id))
+                    .and(PHOTOS.UPLOAD_STATUS.eq(expectedStatus.name))
+                    .returning()
+                    .fetchOne()
+                    ?.toDomain()
+            } ?: emptyList()
 
     private fun PhotosRecord.toDomain() =
         Photo(

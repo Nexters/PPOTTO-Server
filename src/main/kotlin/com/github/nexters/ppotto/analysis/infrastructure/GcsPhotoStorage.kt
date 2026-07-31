@@ -31,26 +31,24 @@ class GcsPhotoStorage(
     private fun signUrl(
         objectKey: String,
         contentType: String,
-    ): String {
-        val blobInfo =
-            BlobInfo
-                .newBuilder(BlobId.of(gcsProperties.bucket, objectKey))
-                .setContentType(contentType)
-                .build()
-
-        return storage
-            .signUrl(
-                blobInfo,
-                gcsProperties.uploadSignedUrlExpirationMinutes,
-                TimeUnit.MINUTES,
-                Storage.SignUrlOption.httpMethod(HttpMethod.PUT),
-                Storage.SignUrlOption.withV4Signature(),
-                Storage.SignUrlOption.withExtHeaders(
-                    mapOf(
-                        "Content-Type" to contentType,
-                        "x-goog-content-length-range" to "0,$MAX_PHOTO_SIZE_BYTES",
+    ): String =
+        BlobInfo
+            .newBuilder(BlobId.of(gcsProperties.bucket, objectKey))
+            .setContentType(contentType)
+            .build()
+            .let {
+                storage.signUrl(
+                    it,
+                    gcsProperties.uploadSignedUrlExpirationMinutes,
+                    TimeUnit.MINUTES,
+                    Storage.SignUrlOption.httpMethod(HttpMethod.PUT),
+                    Storage.SignUrlOption.withV4Signature(),
+                    Storage.SignUrlOption.withExtHeaders(
+                        mapOf(
+                            "Content-Type" to contentType,
+                            "x-goog-content-length-range" to "0,$MAX_PHOTO_SIZE_BYTES",
+                        ),
                     ),
-                ),
-            ).toString()
-    }
+                )
+            }.toString()
 }

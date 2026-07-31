@@ -18,13 +18,9 @@ class OAuthSocialAccountRevoker(
     override fun revoke(
         provider: UserOAuthProvider,
         providerRefreshToken: String,
-    ) {
-        val oauthClient =
-            checkNotNull(oauthClients[provider.toAuthProvider()]) {
-                "OAuth provider client가 연결되지 않았습니다."
-            }
-        oauthClient.revoke(providerRefreshToken)
-    }
+    ) = checkNotNull(oauthClients[provider.toAuthProvider()]) {
+        "OAuth provider client가 연결되지 않았습니다."
+    }.revoke(providerRefreshToken)
 
     private fun UserOAuthProvider.toAuthProvider(): OAuthProvider =
         when (this) {

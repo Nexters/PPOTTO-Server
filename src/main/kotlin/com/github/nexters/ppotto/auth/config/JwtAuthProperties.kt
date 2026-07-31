@@ -11,10 +11,13 @@ import org.springframework.validation.annotation.Validated
 data class JwtAuthProperties(
     @field:NotBlank
     val issuer: String,
+
     @field:Size(min = 32)
     val secret: String,
+
     @field:Positive
     val accessTokenExpirationSeconds: Long,
+
     @field:Positive
     val refreshTokenExpirationDays: Long,
 )

@@ -23,16 +23,24 @@ class AuthController(
 ) : AuthApi {
     override fun login(
         @Valid @RequestBody request: LoginRequest,
-    ): ApiResponse<LoginResponse> = ApiResponse.success(LoginResponse.from(authService.login(request.toCommand())))
+    ): ApiResponse<LoginResponse> =
+        authService
+            .login(request.toCommand())
+            .let(LoginResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun refresh(
         @Valid @RequestBody request: RefreshRequest,
-    ): ApiResponse<TokenPairResponse> = ApiResponse.success(TokenPairResponse.from(authService.refresh(request.refreshToken)))
+    ): ApiResponse<TokenPairResponse> =
+        authService
+            .refresh(request.refreshToken)
+            .let(TokenPairResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun logout(
         @AuthenticatedUser userId: UUID,
-    ): ApiResponse<Unit> {
-        authService.logout(userId)
-        return ApiResponse.success()
-    }
+    ): ApiResponse<Unit> =
+        authService
+            .logout(userId)
+            .let { ApiResponse.success() }
 }

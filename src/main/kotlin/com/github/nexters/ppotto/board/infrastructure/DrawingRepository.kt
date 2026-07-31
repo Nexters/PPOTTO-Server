@@ -29,62 +29,66 @@ class DrawingRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun findBoardIdsByIds(ids: Collection<UUID>): Map<UUID, UUID> {
-        if (ids.isEmpty()) return emptyMap()
-
-        return dslContext
-            .select(DRAWINGS.ID, DRAWINGS.BOARD_ID)
-            .from(DRAWINGS)
-            .where(DRAWINGS.ID.`in`(ids))
-            .fetch()
-            .associate { it.value1()!! to it.value2()!! }
-    }
+    fun findBoardIdsByIds(ids: Collection<UUID>): Map<UUID, UUID> =
+        ids
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                dslContext
+                    .select(DRAWINGS.ID, DRAWINGS.BOARD_ID)
+                    .from(DRAWINGS)
+                    .where(DRAWINGS.ID.`in`(it))
+                    .fetch()
+                    .associate { record -> record.value1()!! to record.value2()!! }
+            } ?: emptyMap()
 
     fun findActiveIds(
         boardId: UUID,
         ids: Collection<UUID>,
-    ): Set<UUID> {
-        if (ids.isEmpty()) return emptySet()
-
-        return dslContext
-            .select(DRAWINGS.ID)
-            .from(DRAWINGS)
-            .where(DRAWINGS.BOARD_ID.eq(boardId))
-            .and(DRAWINGS.ID.`in`(ids))
-            .and(DRAWINGS.DELETED_AT.isNull)
-            .mapNotNull { it.value1() }
-            .toSet()
-    }
+    ): Set<UUID> =
+        ids
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                dslContext
+                    .select(DRAWINGS.ID)
+                    .from(DRAWINGS)
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.ID.`in`(it))
+                    .and(DRAWINGS.DELETED_AT.isNull)
+                    .mapNotNull { record -> record.value1() }
+                    .toSet()
+            } ?: emptySet()
 
     fun softDeleteByIds(
         boardId: UUID,
         ids: Collection<UUID>,
-    ): Int {
-        if (ids.isEmpty()) return 0
-
-        return dslContext
-            .update(DRAWINGS)
-            .set(DRAWINGS.DELETED_AT, Instant.now())
-            .where(DRAWINGS.BOARD_ID.eq(boardId))
-            .and(DRAWINGS.ID.`in`(ids))
-            .and(DRAWINGS.DELETED_AT.isNull)
-            .execute()
-    }
+    ): Int =
+        ids
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                dslContext
+                    .update(DRAWINGS)
+                    .set(DRAWINGS.DELETED_AT, Instant.now())
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.ID.`in`(it))
+                    .and(DRAWINGS.DELETED_AT.isNull)
+                    .execute()
+            } ?: 0
 
     fun softDeleteByStickerIds(
         boardId: UUID,
         stickerIds: Collection<UUID>,
-    ): Int {
-        if (stickerIds.isEmpty()) return 0
-
-        return dslContext
-            .update(DRAWINGS)
-            .set(DRAWINGS.DELETED_AT, Instant.now())
-            .where(DRAWINGS.BOARD_ID.eq(boardId))
-            .and(DRAWINGS.STICKER_ID.`in`(stickerIds))
-            .and(DRAWINGS.DELETED_AT.isNull)
-            .execute()
-    }
+    ): Int =
+        stickerIds
+            .takeIf { it.isNotEmpty() }
+            ?.let {
+                dslContext
+                    .update(DRAWINGS)
+                    .set(DRAWINGS.DELETED_AT, Instant.now())
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.STICKER_ID.`in`(it))
+                    .and(DRAWINGS.DELETED_AT.isNull)
+                    .execute()
+            } ?: 0
 
     fun softDeleteAllByBoardId(boardId: UUID): Int =
         dslContext

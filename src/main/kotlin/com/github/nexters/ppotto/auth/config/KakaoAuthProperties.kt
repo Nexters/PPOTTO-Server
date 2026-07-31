@@ -11,8 +11,10 @@ import java.net.URI
 data class KakaoAuthProperties(
     @field:Positive
     val appId: Long,
+
     @field:NotNull
     val accessTokenInfoUri: URI,
+
     @field:NotNull
     val userInfoUri: URI,
 )

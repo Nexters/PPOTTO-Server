@@ -91,19 +91,17 @@ class StickerRepository(
     fun validateOwnedByBoard(
         boardId: UUID,
         stickerIds: Collection<UUID>,
-    ): Boolean {
-        if (stickerIds.isEmpty()) return true
-        val uniqueIds = stickerIds.toSet()
-        val count =
-            dslContext
-                .selectCount()
-                .from(STICKERS)
-                .where(STICKERS.BOARD_ID.eq(boardId))
-                .and(STICKERS.ID.`in`(uniqueIds))
-                .and(STICKERS.DELETED_AT.isNull)
-                .fetchSingle(0, Int::class.java)
-        return count == uniqueIds.size
-    }
+    ): Boolean =
+        stickerIds.toSet().let { uniqueIds ->
+            uniqueIds.isEmpty() ||
+                dslContext
+                    .selectCount()
+                    .from(STICKERS)
+                    .where(STICKERS.BOARD_ID.eq(boardId))
+                    .and(STICKERS.ID.`in`(uniqueIds))
+                    .and(STICKERS.DELETED_AT.isNull)
+                    .fetchSingle(0, Int::class.java) == uniqueIds.size
+        }
 
     private fun StickersRecord.toDomain() =
         Sticker(

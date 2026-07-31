@@ -51,12 +51,13 @@ class GlobalExceptionHandler {
         status: HttpStatus,
         error: ErrorResponse,
         e: Exception,
-    ): ResponseEntity<ApiResponse<Unit>> {
-        if (status.is5xxServerError) {
-            log.error("unhandled exception", e)
-        } else {
-            log.warn("{}: {}", e::class.simpleName, e.message)
-        }
-        return ResponseEntity.status(status).body(ApiResponse.error(error))
-    }
+    ): ResponseEntity<ApiResponse<Unit>> =
+        e
+            .also {
+                if (status.is5xxServerError) {
+                    log.error("unhandled exception", it)
+                } else {
+                    log.warn("{}: {}", it::class.simpleName, it.message)
+                }
+            }.let { ResponseEntity.status(status).body(ApiResponse.error(error)) }
 }

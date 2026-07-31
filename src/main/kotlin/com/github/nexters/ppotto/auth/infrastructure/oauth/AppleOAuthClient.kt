@@ -47,44 +47,48 @@ class AppleOAuthClient(
     @Volatile
     private var jwksCache = JwksCache(Instant.EPOCH, emptyMap())
 
-    override fun authenticate(command: LoginCommand): SocialProfile {
-        val appleCommand = command as? LoginCommand.Apple ?: throw InvalidInputException()
-        val claims = verifyIdentityToken(appleCommand.identityToken, appleCommand.rawNonce)
-        val refreshToken = exchangeAuthorizationCode(appleCommand.authorizationCode)
-        return SocialProfile(
-            provider = provider,
-            providerUserId = claims.subject,
-            email = claims.email,
-            providerRefreshToken = refreshToken,
-            authorizationCodeExchangeFailed = refreshToken == null,
-        )
-    }
+    override fun authenticate(command: LoginCommand): SocialProfile =
+        (command as? LoginCommand.Apple ?: throw InvalidInputException()).let { appleCommand ->
+            verifyIdentityToken(appleCommand.identityToken, appleCommand.rawNonce).let { identity ->
+                exchangeAuthorizationCode(appleCommand.authorizationCode).let { refreshToken ->
+                    SocialProfile(
+                        provider = provider,
+                        providerUserId = identity.subject,
+                        email = identity.email,
+                        providerRefreshToken = refreshToken,
+                        authorizationCodeExchangeFailed = refreshToken == null,
+                    )
+                }
+            }
+        }
 
     override fun revoke(providerRefreshToken: String) {
-        val form =
-            LinkedMultiValueMap<String, String>().apply {
+        LinkedMultiValueMap<String, String>()
+            .apply {
                 add(CLIENT_ID, properties.clientId)
                 add(CLIENT_SECRET, clientSecretGenerator.generate())
                 add(TOKEN, providerRefreshToken)
                 add(TOKEN_TYPE_HINT, REFRESH_TOKEN)
+            }.let {
+                restClient
+                    .post()
+                    .uri(properties.revokeUri)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(it)
+                    .retrieve()
+                    .toBodilessEntity()
             }
-        restClient
-            .post()
-            .uri(properties.revokeUri)
-            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-            .body(form)
-            .retrieve()
-            .toBodilessEntity()
     }
 
     private fun verifyIdentityToken(
         identityToken: String,
         rawNonce: String,
-    ): AppleIdentity {
+    ): AppleIdentity =
         try {
-            val jwt = SignedJWT.parse(identityToken)
-            verifySignature(jwt)
-            return extractIdentity(jwt.jwtClaimsSet, rawNonce)
+            SignedJWT
+                .parse(identityToken)
+                .also(::verifySignature)
+                .let { extractIdentity(it.jwtClaimsSet, rawNonce) }
         } catch (e: UnauthorizedException) {
             throw e
         } catch (e: ParseException) {
@@ -96,72 +100,96 @@ class AppleOAuthClient(
         } catch (e: IllegalArgumentException) {
             failAuthentication(e)
         }
-    }
 
     private fun verifySignature(jwt: SignedJWT) {
-        if (jwt.header.algorithm != JWSAlgorithm.RS256) failAuthentication()
-        val keyId = jwt.header.keyID ?: failAuthentication()
-        if (!jwt.verify(RSASSAVerifier(publicKey(keyId)))) failAuthentication()
+        jwt
+            .also {
+                if (it.header.algorithm != JWSAlgorithm.RS256) {
+                    failAuthentication()
+                }
+            }.let {
+                it.header.keyID
+                    ?.let(::publicKey)
+                    ?.let(::RSASSAVerifier)
+                    ?.let(it::verify)
+                    ?: false
+            }.takeIf { it }
+            ?: failAuthentication()
     }
 
     private fun extractIdentity(
         claims: JWTClaimsSet,
         rawNonce: String,
-    ): AppleIdentity {
-        if (claims.issuer != properties.issuer) failAuthentication()
-        if (!claims.audience.contains(properties.clientId)) failAuthentication()
-        if (claims.expirationTime
-                ?.toInstant()
-                ?.isAfter(clock.instant()) != true
-        ) {
-            failAuthentication()
-        }
-        val subject = claims.subject?.takeIf(String::isNotBlank) ?: failAuthentication()
-        val email = claims.getStringClaim(EMAIL)?.takeIf(String::isNotBlank) ?: failAuthentication()
-        val nonce = claims.getStringClaim(NONCE) ?: failAuthentication()
-        if (!MessageDigest.isEqual(nonce.toByteArray(), hashNonce(rawNonce).toByteArray())) failAuthentication()
-        return AppleIdentity(subject, email)
-    }
+    ): AppleIdentity =
+        claims
+            .also {
+                if (it.issuer != properties.issuer) {
+                    failAuthentication()
+                }
+                if (!it.audience.contains(properties.clientId)) {
+                    failAuthentication()
+                }
+                if (it.expirationTime
+                        ?.toInstant()
+                        ?.isAfter(clock.instant()) != true
+                ) {
+                    failAuthentication()
+                }
+                it
+                    .getStringClaim(NONCE)
+                    ?.takeIf { nonce ->
+                        MessageDigest.isEqual(
+                            nonce.toByteArray(),
+                            hashNonce(rawNonce).toByteArray(),
+                        )
+                    }
+                    ?: failAuthentication()
+            }.let {
+                AppleIdentity(
+                    subject = it.subject?.takeIf(String::isNotBlank) ?: failAuthentication(),
+                    email = it.getStringClaim(EMAIL)?.takeIf(String::isNotBlank) ?: failAuthentication(),
+                )
+            }
 
-    private fun exchangeAuthorizationCode(authorizationCode: String): String? {
-        val form =
-            LinkedMultiValueMap<String, String>().apply {
+    private fun exchangeAuthorizationCode(authorizationCode: String): String? =
+        LinkedMultiValueMap<String, String>()
+            .apply {
                 add(CLIENT_ID, properties.clientId)
                 add(CLIENT_SECRET, clientSecretGenerator.generate())
                 add(CODE, authorizationCode)
                 add(GRANT_TYPE, AUTHORIZATION_CODE)
+            }.let {
+                try {
+                    restClient
+                        .post()
+                        .uri(properties.tokenUri)
+                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                        .body(it)
+                        .retrieve()
+                        .body(AppleTokenResponse::class.java)
+                        ?.refreshToken
+                } catch (e: RestClientException) {
+                    log.warn("애플 authorization code 교환에 실패했습니다.", e)
+                    null
+                }
             }
-        return try {
-            restClient
-                .post()
-                .uri(properties.tokenUri)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
-                .retrieve()
-                .body(AppleTokenResponse::class.java)
-                ?.refreshToken
-        } catch (e: RestClientException) {
-            log.warn("애플 authorization code 교환에 실패했습니다.", e)
-            null
-        }
-    }
 
-    private fun publicKey(keyId: String): RSAPublicKey {
-        val current = jwksCache
-        if (clock.instant().isBefore(current.expiresAt)) {
-            current.keys[keyId]?.let { return it }
-        }
-        return synchronized(cacheMonitor) {
-            val rechecked = jwksCache
-            if (clock.instant().isBefore(rechecked.expiresAt)) {
-                rechecked.keys[keyId]?.let { return@synchronized it }
+    private fun publicKey(keyId: String): RSAPublicKey =
+        jwksCache
+            .takeIf { clock.instant().isBefore(it.expiresAt) }
+            ?.keys
+            ?.get(keyId)
+            ?: synchronized(cacheMonitor) {
+                jwksCache
+                    .takeIf { clock.instant().isBefore(it.expiresAt) }
+                    ?.keys
+                    ?.get(keyId)
+                    ?: refreshJwks().keys[keyId]
+                    ?: failAuthentication()
             }
-            refreshJwks().keys[keyId] ?: failAuthentication()
-        }
-    }
 
-    private fun refreshJwks(): JwksCache {
-        val response =
+    private fun refreshJwks(): JwksCache =
+        (
             try {
                 restClient
                     .get()
@@ -172,21 +200,21 @@ class AppleOAuthClient(
             } catch (e: RestClientException) {
                 failAuthentication(e)
             }
-        val keys =
-            response.keys
-                .filter { it.keyType == RSA && it.algorithm == RS256 }
-                .associate { it.keyId to it.toPublicKey() }
-        val cache = JwksCache(clock.instant().plusSeconds(properties.jwksCacheSeconds), keys)
-        jwksCache = cache
-        return cache
-    }
+        ).keys
+            .filter { it.keyType == RSA && it.algorithm == RS256 }
+            .associate { it.keyId to it.toPublicKey() }
+            .let { JwksCache(clock.instant().plusSeconds(properties.jwksCacheSeconds), it) }
+            .also { jwksCache = it }
 
-    private fun AppleJwk.toPublicKey(): RSAPublicKey {
-        val decoder = Base64.getUrlDecoder()
-        val modulus = BigInteger(1, decoder.decode(modulus))
-        val exponent = BigInteger(1, decoder.decode(exponent))
-        return KeyFactory.getInstance(RSA).generatePublic(RSAPublicKeySpec(modulus, exponent)) as RSAPublicKey
-    }
+    private fun AppleJwk.toPublicKey(): RSAPublicKey =
+        Base64
+            .getUrlDecoder()
+            .let {
+                RSAPublicKeySpec(
+                    BigInteger(1, it.decode(modulus)),
+                    BigInteger(1, it.decode(exponent)),
+                )
+            }.let { KeyFactory.getInstance(RSA).generatePublic(it) as RSAPublicKey }
 
     private fun hashNonce(rawNonce: String): String =
         MessageDigest
@@ -194,11 +222,10 @@ class AppleOAuthClient(
             .digest(rawNonce.toByteArray(StandardCharsets.UTF_8))
             .joinToString("") { "%02x".format(it) }
 
-    private fun failAuthentication(cause: Exception? = null): Nothing {
-        val exception = UnauthorizedException(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)
-        cause?.let(exception::addSuppressed)
-        throw exception
-    }
+    private fun failAuthentication(cause: Exception? = null): Nothing =
+        UnauthorizedException(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)
+            .also { exception -> cause?.let(exception::addSuppressed) }
+            .let { throw it }
 
     private data class AppleIdentity(
         val subject: String,

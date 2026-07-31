@@ -13,15 +13,16 @@ class UserController(
 ) : UserApi {
     override fun getMe(
         @AuthenticatedUser userId: UUID,
-    ): ApiResponse<UserResponse> {
-        val user = userService.getById(userId)
-        return ApiResponse.success(UserResponse.from(user))
-    }
+    ): ApiResponse<UserResponse> =
+        userService
+            .getById(userId)
+            .let(UserResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun deleteMe(
         @AuthenticatedUser userId: UUID,
-    ): ApiResponse<Unit> {
-        userService.withdraw(userId)
-        return ApiResponse.success()
-    }
+    ): ApiResponse<Unit> =
+        userService
+            .withdraw(userId)
+            .let { ApiResponse.success() }
 }

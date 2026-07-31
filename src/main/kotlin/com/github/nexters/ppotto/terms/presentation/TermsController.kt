@@ -18,17 +18,16 @@ class TermsController(
     override fun findCurrentTerms(
         @CurrentUser userId: UUID?,
     ): ApiResponse<List<TermResponse>> =
-        ApiResponse.success(
-            termsService
-                .findCurrentTerms(userId)
-                .map { TermResponse.from(it) },
-        )
+        termsService
+            .findCurrentTerms(userId)
+            .map(TermResponse::from)
+            .let { ApiResponse.success(it) }
 
     override fun agree(
         @AuthenticatedUser userId: UUID,
         @Valid @RequestBody request: AgreeTermsRequest,
-    ): ApiResponse<Unit> {
-        termsService.agree(userId, request.termIds)
-        return ApiResponse.success()
-    }
+    ): ApiResponse<Unit> =
+        termsService
+            .agree(userId, request.termIds)
+            .let { ApiResponse.success() }
 }

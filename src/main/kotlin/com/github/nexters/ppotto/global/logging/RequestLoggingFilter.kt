@@ -25,18 +25,19 @@ class RequestLoggingFilter : OncePerRequestFilter() {
                 .toString()
                 .substring(0, 8),
         )
-        val started = System.currentTimeMillis()
-        try {
-            filterChain.doFilter(request, response)
-        } finally {
-            log.info(
-                "{} {} {} {}ms",
-                request.method,
-                request.requestURI,
-                response.status,
-                System.currentTimeMillis() - started,
-            )
-            MDC.clear()
+        System.currentTimeMillis().let { started ->
+            try {
+                filterChain.doFilter(request, response)
+            } finally {
+                log.info(
+                    "{} {} {} {}ms",
+                    request.method,
+                    request.requestURI,
+                    response.status,
+                    System.currentTimeMillis() - started,
+                )
+                MDC.clear()
+            }
         }
     }
 

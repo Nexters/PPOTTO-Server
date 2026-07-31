@@ -66,39 +66,42 @@ class OpenApiConfig {
     @Bean
     fun operationCustomizer(): OperationCustomizer =
         OperationCustomizer { operation, handlerMethod ->
-            operation.addParametersItem(
-                Parameter()
-                    .name(API_VERSION_HEADER)
-                    .`in`("header")
-                    .required(false)
-                    .description("API 버전. 생략하면 1")
-                    .schema(StringSchema()._default("1"))
-                    .example("1"),
-            )
-
-            val parameters = handlerMethod.methodParameters
-            when {
-                parameters.any { it.hasParameterAnnotation(AuthenticatedUser::class.java) } -> {
-                    operation.addSecurityItem(SecurityRequirement().addList(BEARER_AUTH_SCHEME))
-                    operation.responses.addApiResponse(
-                        "401",
-                        ApiResponse().description("access token이 없거나 유효하지 않음"),
-                    )
-                }
-
-                parameters.any { it.hasParameterAnnotation(CurrentUser::class.java) } -> {
-                    operation.security =
-                        listOf(
-                            SecurityRequirement(),
-                            SecurityRequirement().addList(BEARER_AUTH_SCHEME),
-                        )
-                    operation.responses.addApiResponse(
-                        "401",
-                        ApiResponse().description("전달한 access token이 유효하지 않음"),
-                    )
-                }
-            }
             operation
+                .also {
+                    it.addParametersItem(
+                        Parameter()
+                            .name(API_VERSION_HEADER)
+                            .`in`("header")
+                            .required(false)
+                            .description("API 버전. 생략하면 1")
+                            .schema(StringSchema()._default("1"))
+                            .example("1"),
+                    )
+                }.also { customizedOperation ->
+                    handlerMethod.methodParameters.let { parameters ->
+                        when {
+                            parameters.any { it.hasParameterAnnotation(AuthenticatedUser::class.java) } -> {
+                                customizedOperation.addSecurityItem(SecurityRequirement().addList(BEARER_AUTH_SCHEME))
+                                customizedOperation.responses.addApiResponse(
+                                    "401",
+                                    ApiResponse().description("access token이 없거나 유효하지 않음"),
+                                )
+                            }
+
+                            parameters.any { it.hasParameterAnnotation(CurrentUser::class.java) } -> {
+                                customizedOperation.security =
+                                    listOf(
+                                        SecurityRequirement(),
+                                        SecurityRequirement().addList(BEARER_AUTH_SCHEME),
+                                    )
+                                customizedOperation.responses.addApiResponse(
+                                    "401",
+                                    ApiResponse().description("전달한 access token이 유효하지 않음"),
+                                )
+                            }
+                        }
+                    }
+                }
         }
 
     private companion object {
