@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.Analysis
+import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import java.time.Instant
 import java.util.UUID
 
@@ -23,3 +25,26 @@ data class UploadVerificationResult(
     val failedCount: Int,
     val failedPhotoIds: List<UUID>,
 )
+
+data class AnalysisStatusResult(
+    val id: UUID,
+    val boardId: UUID,
+    val status: AnalysisStatus,
+    val progress: Int,
+    val failedReason: String?,
+    val startedAt: Instant?,
+    val completedAt: Instant?,
+) {
+    companion object {
+        fun from(analysis: Analysis): AnalysisStatusResult =
+            AnalysisStatusResult(
+                id = analysis.id,
+                boardId = analysis.boardId,
+                status = analysis.status,
+                progress = analysis.progress,
+                failedReason = analysis.failedReason,
+                startedAt = analysis.startedAt,
+                completedAt = analysis.completedAt,
+            )
+    }
+}

@@ -31,6 +31,28 @@ class AnalysisRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun findByIdAndUserId(
+        id: UUID,
+        userId: UUID,
+    ): Analysis? =
+        dslContext
+            .selectFrom(ANALYSIS)
+            .where(ANALYSIS.ID.eq(id))
+            .and(ANALYSIS.USER_ID.eq(userId))
+            .fetchOne()
+            ?.toDomain()
+
+    fun findActiveByUserId(userId: UUID): Analysis? =
+        dslContext
+            .selectFrom(ANALYSIS)
+            .where(ANALYSIS.USER_ID.eq(userId))
+            .and(
+                ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }),
+            ).orderBy(ANALYSIS.CREATED_AT.desc())
+            .limit(1)
+            .fetchOne()
+            ?.toDomain()
+
     fun findByIdForUpdate(id: UUID): Analysis? =
         dslContext
             .selectFrom(ANALYSIS)
@@ -70,6 +92,7 @@ class AnalysisRepository(
         dslContext
             .update(ANALYSIS)
             .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
+            .set(ANALYSIS.PROGRESS, 10)
             .set(ANALYSIS.STARTED_AT, startedAt)
             .where(ANALYSIS.ID.eq(id))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.UPLOADING.name))
@@ -82,6 +105,7 @@ class AnalysisRepository(
         dslContext
             .update(ANALYSIS)
             .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
+            .set(ANALYSIS.PROGRESS, 100)
             .set(ANALYSIS.COMPLETED_AT, completedAt)
             .where(ANALYSIS.ID.eq(id))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))

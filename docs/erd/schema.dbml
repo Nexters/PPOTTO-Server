@@ -5,7 +5,7 @@ Project ppotto {
   - CREATE EXTENSION IF NOT EXISTS citext;
   - partial unique 로 교체:
     uk_users_provider_uid -> WHERE deleted_at IS NULL
-    uk_session_active -> WHERE status IN ('UPLOADING','ANALYZING','GENERATING')
+    uk_session_active -> WHERE status IN ('UPLOADING','ANALYZING')
   - CHECK 제약 (LLM 파이프라인이 직접 쓰는 경로라 API 검증이 닿지 않음):
     stickers: (type='IMAGE' AND image_key IS NOT NULL) OR (type='TEXT' AND text_content IS NOT NULL)
     drawings: (scope='STICKER') = (sticker_id IS NOT NULL)
@@ -24,7 +24,6 @@ Enum oauth_provider {
 Enum session_status {
   UPLOADING  [note: '세션 생성 = URL 발급이라 이게 시작 상태']
   ANALYZING
-  GENERATING
   COMPLETED
   FAILED     [note: '실패/취소/만료. failed_reason 에 CANCELED, EXPIRED 등 기록']
 }
@@ -181,7 +180,7 @@ Table analysis_sessions {
 
   indexes {
     (user_id, created_at) [name: 'ix_session_user_created']
-    user_id [unique, name: 'uk_session_active', note: 'export 후 WHERE status IN (UPLOADING, ANALYZING, GENERATING) 부분 유니크로 교체. 진행 중 세션 1개를 DB가 강제(더블탭 이중 세션 차단)']
+    user_id [unique, name: 'uk_session_active', note: 'export 후 WHERE status IN (UPLOADING, ANALYZING) 부분 유니크로 교체. 진행 중 세션 1개를 DB가 강제(더블탭 이중 세션 차단)']
     board_id [name: 'ix_session_board']
   }
 }

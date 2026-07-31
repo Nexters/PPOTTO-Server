@@ -1,6 +1,8 @@
 package com.github.nexters.ppotto.analysis.presentation
 
+import com.github.nexters.ppotto.analysis.application.AnalysisQueryService
 import com.github.nexters.ppotto.analysis.application.AnalysisService
+import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
@@ -15,6 +17,7 @@ import java.util.UUID
 @RestController
 class AnalysisController(
     private val analysisService: AnalysisService,
+    private val analysisQueryService: AnalysisQueryService,
 ) : AnalysisApi {
     override fun create(
         @AuthenticatedUser userId: UUID,
@@ -25,6 +28,14 @@ class AnalysisController(
             .let(CreateAnalysisResponse::from)
             .let { ApiResponse.success(it) }
 
+    override fun getActive(
+        @AuthenticatedUser userId: UUID,
+    ): ApiResponse<AnalysisStatusResponse?> =
+        analysisQueryService
+            .getActiveAnalysis(userId)
+            ?.let(AnalysisStatusResponse::from)
+            .let { ApiResponse.success(it) }
+
     override fun start(
         @AuthenticatedUser userId: UUID,
         @PathVariable analysisId: UUID,
@@ -32,5 +43,14 @@ class AnalysisController(
         analysisService
             .startUpload(userId, analysisId)
             .let(StartUploadResponse::from)
+            .let { ApiResponse.success(it) }
+
+    override fun get(
+        @AuthenticatedUser userId: UUID,
+        @PathVariable analysisId: UUID,
+    ): ApiResponse<AnalysisStatusResponse> =
+        analysisQueryService
+            .getAnalysis(analysisId, userId)
+            .let(AnalysisStatusResponse::from)
             .let { ApiResponse.success(it) }
 }

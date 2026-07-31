@@ -2348,7 +2348,7 @@ Request example:
 | --- | --- | --- | --- | --- |
 | id | Y | `string` | - | - |
 | boardId | Y | `string` | - | 결과 스티커가 붙을 보드 |
-| status | Y | `string` | UPLOADING, ANALYZING, GENERATING, COMPLETED, FAILED | UPLOADING 업로드 중(생성 직후부터) / ANALYZING 분석 중 /<br>GENERATING 생성·배치 중 / COMPLETED 완료 / FAILED 실패·취소·만료<br> |
+| status | Y | `string` | UPLOADING, ANALYZING, COMPLETED, FAILED | UPLOADING 업로드 중(생성 직후부터) / ANALYZING 분석·생성·배치 중 / COMPLETED 완료 / FAILED 실패·취소·만료 |
 | progress | Y | `integer` | - | 0~100 |
 | failedReason | N | `string \| null` | - | - |
 | startedAt | N | `string \| null` | - | start 호출로 분석이 시작된 시각 |

@@ -10,7 +10,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `support/IntegrationTest.kt` | Base class: `@SpringBootTest` + `@ActiveProfiles("test")` + Testcontainers import. Extend this for integration tests |
 | `support/TestcontainersConfiguration.kt` | `@ServiceConnection` PostgreSQLContainer (pgvector/pgvector:pg18, matches compose image) |
 | `ApplicationIntegrationTest.kt` | Context + DB round-trip smoke test |
-| `analysis/` | Authenticated ownership, upload verification, active-analysis integration, persistence, and API contract tests |
+| `analysis/` | Authenticated ownership, upload verification, active-analysis/status lookup, persistence, and API contract tests |
 | `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, session-revoking withdrawal, cleanup, and controller tests |
 | `auth/` | OAuth HTTP timeout/config validation, deterministic JWT tamper detection, active-user refresh validation, cross-domain 가입 rollback, and Bearer security tests including optional-auth terms behavior |
 | `terms/application/TermsServiceTest.kt` | Current and pending term status, required validation, idempotent agreement, and schema-valid user fixture tests |
