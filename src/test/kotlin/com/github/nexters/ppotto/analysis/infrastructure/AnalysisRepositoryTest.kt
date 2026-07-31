@@ -11,6 +11,7 @@ import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext
 import org.springframework.dao.DataIntegrityViolationException
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class AnalysisRepositoryTest(
     analysisRepository: AnalysisRepository,
@@ -38,7 +39,7 @@ class AnalysisRepositoryTest(
         Given("UPLOADING 상태의 Analysis를 ANALYZING으로 변경하면") {
             val board = boardRepository.save(userRepository.save().id)
             val saved = analysisRepository.save(board.userId, board.id)
-            val startedAt = Instant.now()
+            val startedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
 
             When("markAnalyzing을 호출하면") {
                 analysisRepository.markAnalyzing(saved.id, startedAt)
@@ -56,7 +57,7 @@ class AnalysisRepositoryTest(
         Given("ANALYZING 상태의 Analysis가 있을 때") {
             val board = boardRepository.save(userRepository.save().id)
             val saved = analysisRepository.save(board.userId, board.id)
-            analysisRepository.markAnalyzing(saved.id, Instant.now())
+            analysisRepository.markAnalyzing(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
 
             When("중간 진행률을 갱신하면") {
                 analysisRepository.updateProgress(saved.id, 45)
@@ -92,8 +93,8 @@ class AnalysisRepositoryTest(
         Given("ANALYZING 상태의 Analysis를 완료 처리하면") {
             val board = boardRepository.save(userRepository.save().id)
             val saved = analysisRepository.save(board.userId, board.id)
-            val completedAt = Instant.now()
-            analysisRepository.markAnalyzing(saved.id, Instant.now())
+            val completedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
+            analysisRepository.markAnalyzing(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
             analysisRepository.updateProgress(saved.id, 60)
 
             When("markCompleted를 호출하면") {
@@ -112,7 +113,7 @@ class AnalysisRepositoryTest(
         Given("ANALYZING 상태의 Analysis가 실패하면") {
             val board = boardRepository.save(userRepository.save().id)
             val saved = analysisRepository.save(board.userId, board.id)
-            analysisRepository.markAnalyzing(saved.id, Instant.now())
+            analysisRepository.markAnalyzing(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
             analysisRepository.updateProgress(saved.id, 60)
 
             When("markFailed를 호출하면") {
