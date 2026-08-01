@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.sticker.presentation
 
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
@@ -59,7 +61,7 @@ private val RECAP_DETAIL_RESPONSE =
                 RecapDetailResponse(
                     sticker =
                         StickerResponse(
-                            id = STICKER_ID,
+                            id = StickerId(STICKER_ID),
                             title = "동물 밈 짤줍",
                             isNew = false,
                             type = StickerType.IMAGE,
@@ -79,12 +81,12 @@ private val RECAP_DETAIL_RESPONSE =
                     photos =
                         listOf(
                             RecapPhotoResponse(
-                                id = UUID.fromString("01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f"),
+                                id = PhotoId(UUID.fromString("01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f")),
                                 imageUrl = "https://storage.googleapis.com/ppotto-photos/01983f2e.jpg?X-Goog-Signature=sample",
                                 takenAt = Instant.parse("2026-06-14T04:22:10Z"),
                             ),
                             RecapPhotoResponse(
-                                id = UUID.fromString("01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a"),
+                                id = PhotoId(UUID.fromString("01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a")),
                                 imageUrl = "https://storage.googleapis.com/ppotto-photos/01983f2f.jpg?X-Goog-Signature=sample",
                                 takenAt = Instant.parse("2026-07-02T10:05:44Z"),
                             ),
@@ -102,7 +104,7 @@ private val UPDATE_STICKER_TITLE_REQUEST =
 private val UPDATE_STICKER_TITLE_RESPONSE =
     ApiExample(
         name = "수정 완료",
-        value = ApiResponse.success(UpdateStickerTitleResponse(id = STICKER_ID, title = "고양이 모음집")),
+        value = ApiResponse.success(UpdateStickerTitleResponse(id = StickerId(STICKER_ID), title = "고양이 모음집")),
     )
 
 private val STICKER_NOT_FOUND_RESPONSE =

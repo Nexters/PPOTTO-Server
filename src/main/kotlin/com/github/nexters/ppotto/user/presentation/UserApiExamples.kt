@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.presentation
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
@@ -18,7 +19,7 @@ private val KAKAO_USER_RESPONSE =
         value =
             ApiResponse.success(
                 UserResponse(
-                    id = UUID.fromString("01983f2a-7c31-7b02-93d4-1f2e3d4c5b6a"),
+                    id = UserId(UUID.fromString("01983f2a-7c31-7b02-93d4-1f2e3d4c5b6a")),
                     provider = OAuthProvider.KAKAO,
                     email = "ppotto@kakao.com",
                     createdAt = Instant.parse("2026-07-01T00:12:33Z"),
@@ -32,7 +33,7 @@ private val APPLE_PRIVATE_RELAY_USER_RESPONSE =
         value =
             ApiResponse.success(
                 UserResponse(
-                    id = UUID.fromString("01983f2a-6b20-7a01-82c3-0e1d2c3b4a59"),
+                    id = UserId(UUID.fromString("01983f2a-6b20-7a01-82c3-0e1d2c3b4a59")),
                     provider = OAuthProvider.APPLE,
                     email = "mxq7r2v9td@privaterelay.appleid.com",
                     createdAt = Instant.parse("2026-07-15T12:40:05Z"),

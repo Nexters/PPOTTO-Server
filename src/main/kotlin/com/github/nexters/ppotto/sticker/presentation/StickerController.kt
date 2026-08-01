@@ -13,7 +13,6 @@ import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 class StickerController(
@@ -21,37 +20,37 @@ class StickerController(
     private val stickerCommandService: StickerCommandService,
 ) : StickerApi {
     override fun getRecap(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable stickerId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable stickerId: StickerId,
     ): ApiResponse<RecapDetailResponse> =
         stickerQueryService
-            .getRecap(UserId(userId), StickerId(stickerId))
+            .getRecap(userId, stickerId)
             .let(RecapDetailResponse::from)
             .let { ApiResponse.success(it) }
 
     override fun updateTitle(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable stickerId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable stickerId: StickerId,
         @Valid @RequestBody request: UpdateStickerTitleRequest,
     ): ApiResponse<UpdateStickerTitleResponse> =
         stickerCommandService
-            .rename(UserId(userId), StickerId(stickerId), request.title)
+            .rename(userId, stickerId, request.title)
             .let(UpdateStickerTitleResponse::from)
             .let { ApiResponse.success(it) }
 
     override fun delete(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable stickerId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable stickerId: StickerId,
     ): ApiResponse<Unit> =
         stickerCommandService
-            .delete(UserId(userId), StickerId(stickerId))
+            .delete(userId, stickerId)
             .let { ApiResponse.success() }
 
     override fun markViewed(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable stickerId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable stickerId: StickerId,
     ): ApiResponse<Unit> =
         stickerCommandService
-            .markViewed(UserId(userId), StickerId(stickerId))
+            .markViewed(userId, stickerId)
             .let { ApiResponse.success() }
 }

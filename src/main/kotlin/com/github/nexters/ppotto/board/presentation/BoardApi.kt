@@ -4,6 +4,8 @@ import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.ConflictApiResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
@@ -19,7 +21,6 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
-import java.util.UUID
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
@@ -28,6 +29,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 interface BoardApi {
     @GetMapping
     @Operation(
+        operationId = "list",
         summary = "내 보드 목록 조회",
         description = "보드 선택 드롭다운에 사용할 활성 보드 목록을 반환함. id(uuidv7) 오름차순이 생성순",
     )
@@ -36,10 +38,11 @@ interface BoardApi {
         useReturnTypeSchema = true,
         description = "보드 목록",
     )
-    fun list(userId: UUID): ApiResponse<List<BoardResponse>>
+    fun list(userId: UserId): ApiResponse<List<BoardResponse>>
 
     @PostMapping
     @Operation(
+        operationId = "create",
         summary = "보드 생성",
         description = "새 보드를 만들며 이름을 생략하면 순서에 맞는 기본 이름을 사용함. 사용자당 최대 100개",
         requestBody =
@@ -69,12 +72,13 @@ interface BoardApi {
     )
     @ConflictApiResponse
     fun create(
-        userId: UUID,
+        userId: UserId,
         request: CreateBoardRequest,
     ): ApiResponse<BoardResponse>
 
     @GetMapping("/{boardId}")
     @Operation(
+        operationId = "get",
         summary = "보드 상세 조회",
         description = "보드와 배치된 스티커, 그림을 함께 반환함. imageUrl은 만료가 있으므로 진입할 때마다 새로 조회함",
         parameters = [
@@ -92,12 +96,13 @@ interface BoardApi {
     )
     @BoardNotFoundApiResponse
     fun get(
-        userId: UUID,
-        boardId: UUID,
+        userId: UserId,
+        boardId: BoardId,
     ): ApiResponse<BoardDetailResponse>
 
     @PatchMapping("/{boardId}")
     @Operation(
+        operationId = "rename",
         summary = "보드 이름 변경",
         description = "내 보드의 이름을 변경함. 최대 10자",
         parameters = [
@@ -126,13 +131,14 @@ interface BoardApi {
     @InvalidInputApiResponse
     @BoardNotFoundApiResponse
     fun rename(
-        userId: UUID,
-        boardId: UUID,
+        userId: UserId,
+        boardId: BoardId,
         request: RenameBoardRequest,
     ): ApiResponse<BoardResponse>
 
     @DeleteMapping("/{boardId}")
     @Operation(
+        operationId = "delete_1",
         summary = "보드 삭제",
         description = "보드와 그 위의 스티커, 리캡, 그림을 함께 삭제함. 마지막 보드나 분석 중인 보드는 삭제할 수 없음",
         parameters = [
@@ -156,7 +162,7 @@ interface BoardApi {
         ],
     )
     fun delete(
-        userId: UUID,
-        boardId: UUID,
+        userId: UserId,
+        boardId: BoardId,
     ): ApiResponse<Unit>
 }

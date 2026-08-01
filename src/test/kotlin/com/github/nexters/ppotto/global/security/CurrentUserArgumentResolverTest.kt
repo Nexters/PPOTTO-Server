@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.global.security
 
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.nulls.shouldBeNull
@@ -11,16 +12,29 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.context.request.ServletWebRequest
 import java.util.UUID
+import kotlin.reflect.KFunction
+import kotlin.reflect.jvm.javaMethod
 
 class CurrentUserArgumentResolverTest :
     BehaviorSpec({
         val resolver = CurrentUserArgumentResolver()
         val webRequest = ServletWebRequest(MockHttpServletRequest())
-        val requiredParameter = methodParameter("required")
-        val optionalParameter = methodParameter("optional")
+        val requiredParameter = methodParameter(CurrentUserArgumentFixture::required)
+        val optionalParameter = methodParameter(CurrentUserArgumentFixture::optional)
+        val rawRequiredParameter = methodParameter(CurrentUserArgumentFixture::rawRequired)
 
         afterEach {
             SecurityContextHolder.clearContext()
+        }
+
+        Given("강타입과 UUID 파라미터가 있으면") {
+            When("지원 여부를 판정하면") {
+                Then("둘 다 지원한다") {
+                    resolver.supportsParameter(requiredParameter) shouldBe true
+                    resolver.supportsParameter(optionalParameter) shouldBe true
+                    resolver.supportsParameter(rawRequiredParameter) shouldBe true
+                }
+            }
         }
 
         Given("UUID principal이 인증 컨텍스트에 있으면") {
@@ -32,6 +46,7 @@ class CurrentUserArgumentResolverTest :
                 Then("같은 UUID를 반환한다") {
                     resolver.resolveArgument(requiredParameter, null, webRequest, null) shouldBe userId
                     resolver.resolveArgument(optionalParameter, null, webRequest, null) shouldBe userId
+                    resolver.resolveArgument(rawRequiredParameter, null, webRequest, null) shouldBe userId
                 }
             }
         }
@@ -68,16 +83,17 @@ class CurrentUserArgumentResolverTest :
 
 private class CurrentUserArgumentFixture {
     fun required(
-        @AuthenticatedUser userId: UUID,
+        @AuthenticatedUser userId: UserId,
     ) = userId
 
     fun optional(
-        @CurrentUser userId: UUID?,
+        @CurrentUser userId: UserId?,
+    ) = userId
+
+    fun rawRequired(
+        @AuthenticatedUser userId: UUID,
     ) = userId
 }
 
-private fun methodParameter(methodName: String): MethodParameter =
-    MethodParameter(
-        CurrentUserArgumentFixture::class.java.getDeclaredMethod(methodName, UUID::class.java),
-        0,
-    )
+private fun methodParameter(function: KFunction<*>): MethodParameter =
+    MethodParameter(function.javaMethod ?: error("자바 메서드를 찾을 수 없습니다: $function"), 0)

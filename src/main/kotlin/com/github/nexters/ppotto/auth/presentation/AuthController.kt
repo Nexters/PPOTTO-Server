@@ -11,7 +11,6 @@ import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 class AuthController(
@@ -34,9 +33,9 @@ class AuthController(
             .let { ApiResponse.success(it) }
 
     override fun logout(
-        @AuthenticatedUser userId: UUID,
+        @AuthenticatedUser userId: UserId,
     ): ApiResponse<Unit> =
         authService
-            .logout(UserId(userId))
+            .logout(userId)
             .let { ApiResponse.success() }
 }

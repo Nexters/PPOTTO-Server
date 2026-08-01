@@ -19,6 +19,6 @@ Current versions are selected by the latest `effective_at` at or before the look
 
 Because `term_agreements.user_id` is a real foreign key, withdrawn-user cleanup must delete agreements before the user row is hard-deleted. `terms` rows themselves are shared master data and are never deleted by that batch.
 
-`Term.id`, `TermResult.id`, and all service/repository user references use the typed `TermId`/`UserId` from `global/identifier`; raw `UUID` survives only in jOOQ bindings inside repositories, presentation DTOs, and `TermAgreement.id` (internal record identity that never crosses a method boundary).
+`Term.id`, `TermResult.id`, presentation (handler parameters, `TermResponse.id`, `AgreeTermsRequest.termIds`), and all service/repository user references use the typed `TermId`/`UserId` from `global/identifier`; raw `UUID` survives only in jOOQ bindings inside repositories and `TermAgreement.id` (internal record identity that never crosses a method boundary).
 
 Update this file when the terms package layout changes.

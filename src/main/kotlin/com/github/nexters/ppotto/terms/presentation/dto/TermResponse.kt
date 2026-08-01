@@ -1,14 +1,15 @@
 package com.github.nexters.ppotto.terms.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.terms.application.TermResult
 import io.swagger.v3.oas.annotations.media.Schema
-import java.util.UUID
 
 @Schema(description = "현재 유효한 약관과 사용자 동의 상태")
 data class TermResponse(
-    @field:Schema(description = "약관 ID (uuidv7)", example = "01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val id: UUID,
+    @get:Schema(description = "약관 ID (uuidv7)", example = "01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("id")
+    val id: TermId,
     @field:Schema(description = "약관 코드", example = "TOS")
     val code: String,
     @field:Schema(description = "약관 버전", example = "1.0")
@@ -27,7 +28,7 @@ data class TermResponse(
     companion object {
         fun from(result: TermResult) =
             TermResponse(
-                id = result.id.value,
+                id = result.id,
                 code = result.code,
                 version = result.version,
                 isRequired = result.isRequired,

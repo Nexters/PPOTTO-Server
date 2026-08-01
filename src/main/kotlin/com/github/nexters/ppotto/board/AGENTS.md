@@ -25,9 +25,9 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
 | `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
 | `presentation/BoardApi.kt` | `/boards` v1 CRUD mapping and Swagger contract |
-| `presentation/BoardController.kt` | Fluent Board CRUD API implementation with request binding and required UUID user injection |
+| `presentation/BoardController.kt` | Fluent Board CRUD API implementation with request binding and required typed user injection |
 | `presentation/BoardLayoutApi.kt` | `PATCH /boards/{boardId}/layout` v1 mapping and Swagger contract |
-| `presentation/BoardLayoutController.kt` | Fluent Board layout API implementation with request binding and required UUID user injection |
+| `presentation/BoardLayoutController.kt` | Fluent Board layout API implementation with request binding and required typed user injection |
 | `presentation/dto/BoardRequests.kt` | Swagger-described create and rename validation DTOs |
 | `presentation/dto/BoardResponses.kt` | Swagger-described board list/detail, sticker, and drawing response DTOs |
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
@@ -36,7 +36,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 
 ## Rules
 
-- Typed identifiers (`BoardId`, `UserId`, `DrawingId`, `StickerId` from `global/identifier/`) flow through domain models, repository public signatures, application services, and the `application/port/` contracts. Raw `UUID` survives only inside jOOQ DSL bindings (`.value` out, wrap in `toDomain`) and in presentation DTO fields; controllers wrap the `@AuthenticatedUser` UUID principal and path variables, and DTO mapping functions wrap request ids / unwrap response ids.
+- Typed identifiers (`BoardId`, `UserId`, `DrawingId`, `StickerId` from `global/identifier/`) flow end to end: domain models, repository public signatures, application services, the `application/port/` contracts, and presentation (`@AuthenticatedUser`/`@PathVariable` parameters and DTO id fields). Raw `UUID` survives only inside jOOQ DSL bindings (`.value` out, wrap in `toDomain`); JSON stays unwrapped uuid strings via Jackson value class serialization, with `@get:JsonProperty` + `@get:Schema` pinning springdoc property naming on id fields.
 - Same DB-generated column convention as `user/`: board `id`/`createdAt`/`updatedAt` come back via `RETURNING`, never set client-side.
 - Drawing IDs are client-generated UUIDv7 values and are upserted for retry idempotency.
 - Soft-deleted boards and drawings never appear in active queries.

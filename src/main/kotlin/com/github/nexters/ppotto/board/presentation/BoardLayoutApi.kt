@@ -1,6 +1,8 @@
 package com.github.nexters.ppotto.board.presentation
 
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutRequest
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
@@ -11,7 +13,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.RequestMapping
-import java.util.UUID
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
@@ -20,6 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 interface BoardLayoutApi {
     @PatchMapping("/{boardId}/layout")
     @Operation(
+        operationId = "update",
         summary = "보드 편집 결과 저장",
         description = "스티커 배치와 그림 생성·삭제를 하나의 트랜잭션으로 반영함. 편집 모드에서 바뀐 필드만 보냄",
         parameters = [
@@ -53,8 +55,8 @@ interface BoardLayoutApi {
     )
     @BoardNotFoundApiResponse
     fun update(
-        userId: UUID,
-        boardId: UUID,
+        userId: UserId,
+        boardId: BoardId,
         request: BoardLayoutRequest,
     ): ApiResponse<Unit>
 }

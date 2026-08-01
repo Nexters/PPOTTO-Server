@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.RefreshRequest
 import com.github.nexters.ppotto.auth.presentation.dto.TokenPairResponse
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
@@ -14,7 +15,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
-import java.util.UUID
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
@@ -88,9 +88,10 @@ interface AuthApi {
 
     @PostMapping("/logout")
     @Operation(
+        operationId = "logout",
         summary = "로그아웃",
         description = "현재 사용자의 refresh token 세션을 폐기함. 서버 데이터는 유지되므로 재로그인하면 그대로 복구됨",
     )
     @EmptySuccessApiResponse
-    fun logout(userId: UUID): ApiResponse<Unit>
+    fun logout(userId: UserId): ApiResponse<Unit>
 }

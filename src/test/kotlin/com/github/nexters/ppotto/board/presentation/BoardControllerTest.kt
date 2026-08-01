@@ -23,17 +23,17 @@ class BoardControllerTest(
             val user = userRepository.saveTestUser()
 
             When("보드를 생성하고 이름을 변경하면") {
-                val created = boardController.create(user.id.value, CreateBoardRequest()).data!!
-                val renamed = boardController.rename(user.id.value, created.id, RenameBoardRequest("여름 휴가")).data!!
+                val created = boardController.create(user.id, CreateBoardRequest()).data!!
+                val renamed = boardController.rename(user.id, created.id, RenameBoardRequest("여름 휴가")).data!!
 
                 Then("목록과 상세 응답에 변경한 이름을 반환한다") {
                     renamed.name shouldBe "여름 휴가"
                     boardController
-                        .list(user.id.value)
+                        .list(user.id)
                         .data!!
                         .map { it.id } shouldContainExactly listOf(created.id)
                     boardController
-                        .get(user.id.value, created.id)
+                        .get(user.id, created.id)
                         .data!!
                         .name shouldBe "여름 휴가"
                 }
@@ -48,7 +48,7 @@ class BoardControllerTest(
                 Then("성공 응답으로 노출되지 않는다") {
                     val other = userRepository.saveTestUser()
                     shouldThrow<NotFoundException> {
-                        boardController.get(other.id.value, board.id.value)
+                        boardController.get(other.id, board.id)
                     }
                 }
             }

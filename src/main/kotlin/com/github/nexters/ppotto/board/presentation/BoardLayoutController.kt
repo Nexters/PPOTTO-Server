@@ -10,18 +10,17 @@ import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 class BoardLayoutController(
     private val boardLayoutService: BoardLayoutService,
 ) : BoardLayoutApi {
     override fun update(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable boardId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable boardId: BoardId,
         @Valid @RequestBody request: BoardLayoutRequest,
     ): ApiResponse<Unit> =
         boardLayoutService
-            .update(BoardId(boardId), UserId(userId), request.toCommand())
+            .update(boardId, userId, request.toCommand())
             .let { ApiResponse.success() }
 }
