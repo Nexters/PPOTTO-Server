@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.auth.infrastructure.token
 
 import com.github.nexters.ppotto.auth.application.port.RefreshTokenStore
 import com.github.nexters.ppotto.auth.config.JwtAuthProperties
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
 import org.springframework.stereotype.Component
@@ -18,7 +19,7 @@ class RedisRefreshTokenStore(
     private val expirationSeconds = Duration.ofDays(properties.refreshTokenExpirationDays).seconds
 
     override fun save(
-        userId: UUID,
+        userId: UserId,
         refreshToken: String,
     ): Unit =
         hash(refreshToken).let { tokenHash ->
@@ -30,19 +31,18 @@ class RedisRefreshTokenStore(
                 expirationSeconds.toString(),
                 userId.toString(),
             )
-            Unit
         }
 
-    override fun findUserId(refreshToken: String): UUID? =
+    override fun findUserId(refreshToken: String): UserId? =
         redisTemplate
             .opsForValue()
             .get(tokenKey(hash(refreshToken)))
             ?.let {
-                runCatching { UUID.fromString(it) }.getOrNull()
+                runCatching { UserId(UUID.fromString(it)) }.getOrNull()
             }
 
     override fun rotate(
-        userId: UUID,
+        userId: UserId,
         currentRefreshToken: String,
         newRefreshToken: String,
     ): Boolean =
@@ -59,7 +59,7 @@ class RedisRefreshTokenStore(
             }
         }
 
-    override fun delete(userId: UUID) {
+    override fun delete(userId: UserId) {
         redisTemplate
             .execute(
                 DELETE_SCRIPT,
@@ -68,7 +68,7 @@ class RedisRefreshTokenStore(
             )
     }
 
-    private fun userKey(userId: UUID) = "$USER_KEY_PREFIX$userId"
+    private fun userKey(userId: UserId) = "$USER_KEY_PREFIX$userId"
 
     private fun tokenKey(tokenHash: String) = "$TOKEN_KEY_PREFIX$tokenHash"
 

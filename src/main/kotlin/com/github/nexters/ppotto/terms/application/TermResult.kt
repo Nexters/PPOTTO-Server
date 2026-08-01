@@ -1,10 +1,10 @@
 package com.github.nexters.ppotto.terms.application
 
+import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.terms.domain.Term
-import java.util.UUID
 
 data class TermResult(
-    val id: UUID,
+    val id: TermId,
     val code: String,
     val version: String,
     val isRequired: Boolean,

@@ -11,7 +11,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `domain/DrawingScope.kt` | Drawing ownership scope: `STICKER` or `BOARD` |
 | `domain/BoardErrorCode.kt` | `BOARD-001` through `BOARD-005` API errors |
 | `infrastructure/BoardRepository.kt` | Active-board CRUD, ownership filtering, row locking, user-scoped command advisory locking, and soft deletion |
-| `infrastructure/DrawingRepository.kt` | Fluent JSONB drawing upsert, guarded lookup, ownership filtering, board/sticker-scoped soft deletion, and board-scoped hard deletion |
+| `infrastructure/DrawingRepository.kt` | Single-statement multi-row JSONB drawing upsert (`excluded`-based `ON CONFLICT` update guarded per row by `board_id`, one stroke serialization per drawing, results re-ordered to input order), guarded lookup, ownership filtering, board/sticker-scoped soft deletion, and board-scoped hard deletion |
 | `infrastructure/BoardWithdrawalRepository.kt` | Withdrawn-user board id lookup and hard deletion, kept out of `BoardRepository` so the active-board repository stays soft-delete only |
 | `infrastructure/StickerDrawingCommandAdapter.kt` | Sticker-domain drawing deletion port adapter backed by the board application service |
 | `infrastructure/integration/WithdrawnUserBoardDeletionAdapter.kt` | User-domain `WithdrawnUserBoardDeletionPort` adapter through `BoardWithdrawalService` |
@@ -20,22 +20,23 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardAccessService.kt` | Port-free board existence, ownership, and `MANDATORY`-propagation row-locking ownership lookup boundary for cross-domain services |
 | `application/BoardDrawingCommandService.kt` | Board-owned drawing soft-deletion transaction surface |
 | `application/BoardWithdrawalService.kt` | Withdrawn-user board id lookup and atomic drawing/board hard deletion, including already soft-deleted rows |
-| `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port. Cross-domain ownership lookups belong to `BoardAccessService`, not here |
+| `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port. Cross-domain ownership lookups belong to `BoardAccessService`, not here. `getDetail` is intentionally non-transactional so the sticker port's signed-URL issuing never holds a DB connection |
 | `application/BoardLayoutService.kt` | Expression-bodied user-serialized sticker/drawing guard chain and atomic changed-layout persistence |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
 | `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
 | `presentation/BoardApi.kt` | `/boards` v1 CRUD mapping and Swagger contract |
-| `presentation/BoardController.kt` | Fluent Board CRUD API implementation with request binding and required UUID user injection |
+| `presentation/BoardController.kt` | Fluent Board CRUD API implementation with request binding and required typed user injection |
 | `presentation/BoardLayoutApi.kt` | `PATCH /boards/{boardId}/layout` v1 mapping and Swagger contract |
-| `presentation/BoardLayoutController.kt` | Fluent Board layout API implementation with request binding and required UUID user injection |
+| `presentation/BoardLayoutController.kt` | Fluent Board layout API implementation with request binding and required typed user injection |
 | `presentation/dto/BoardRequests.kt` | Swagger-described create and rename validation DTOs |
 | `presentation/dto/BoardResponses.kt` | Swagger-described board list/detail, sticker, and drawing response DTOs |
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
-| `presentation/BoardApiExamples.kt` | `ApiExampleProvider` 구현. 보드 목록/상세/생성/이름 변경 응답, 편집 모드별 layout 요청, `BOARD-001`~`BOARD-005` 실패 예시를 실제 DTO 인스턴스로 정의합니다. `BoardApi`와 `BoardLayoutApi` 예시를 함께 담습니다 |
-| `presentation/BoardNotFoundApiResponse.kt` | 네 개 보드 엔드포인트가 공유하는 404 `BOARD-002` 합성 어노테이션 |
+| `presentation/BoardApiExamples.kt` | `ApiExampleProvider` implementation. Defines board list/detail/create/rename responses, per-edit-mode layout requests, and `BOARD-001`~`BOARD-005` failure examples as real DTO instances. Holds the examples for both `BoardApi` and `BoardLayoutApi` |
+| `presentation/BoardNotFoundApiResponse.kt` | Composed annotation for the 404 `BOARD-002` response shared by the four board endpoints |
 
 ## Rules
 
+- Typed identifiers (`BoardId`, `UserId`, `DrawingId`, `StickerId` from `global/identifier/`) flow end to end: domain models, repository public signatures, application services, the `application/port/` contracts, and presentation (`@AuthenticatedUser`/`@PathVariable` parameters and DTO id fields). jOOQ id columns are generated typed (codegen `forcedType`), so DSL bindings and `toDomain` pass typed ids straight through with no unwrapping; JSON stays unwrapped uuid strings via Jackson value class serialization, with `@get:JsonProperty` + `@get:Schema` pinning springdoc property naming on id fields.
 - Same DB-generated column convention as `user/`: board `id`/`createdAt`/`updatedAt` come back via `RETURNING`, never set client-side.
 - Drawing IDs are client-generated UUIDv7 values and are upserted for retry idempotency.
 - Soft-deleted boards and drawings never appear in active queries.
@@ -49,5 +50,6 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 - Cross-domain board ownership checks use `BoardAccessService`, which must stay independent of external ports.
 - Board code never reads analysis or sticker repositories directly.
 - Withdrawal hard deletion is the only path that ignores `deleted_at`; every other query stays soft-delete aware. It runs after the sticker domain has removed its rows, because `stickers.board_id` is a real FK.
+- `getDetail` must not be wrapped in `@Transactional`: the sticker query port signs V4 read URLs (local RSA, CPU-bound) and a surrounding transaction would pin a pooled connection through that work on the board-entry hot path. Ownership still resolves first through `BoardAccessService.getOwnedById` in its own read-only transaction, and READ_COMMITTED per-statement snapshots make a wrapping transaction add no consistency.
 
 Update this file when layers are added to this domain.

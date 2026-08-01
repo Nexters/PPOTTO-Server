@@ -1,10 +1,11 @@
 package com.github.nexters.ppotto.sticker.application.port
 
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.StickerId
 
 interface StickerDrawingCommandPort {
     fun deleteByStickerIds(
-        boardId: UUID,
-        stickerIds: Collection<UUID>,
+        boardId: BoardId,
+        stickerIds: Collection<StickerId>,
     )
 }

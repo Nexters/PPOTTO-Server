@@ -10,6 +10,9 @@ import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
@@ -28,6 +31,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.terms.application.TermsService
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
 import com.github.nexters.ppotto.user.application.port.WithdrawnUserDataDeletionPort
@@ -72,14 +76,14 @@ class WithdrawnUserDataDeletionAdapterTest(
 
         Given("모든 도메인 데이터를 가진 탈퇴 사용자가 유예기간을 지났을 때") {
             objectStorageCleaner.clear()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val drawing =
                 drawingRepository
                     .upsertAll(
                         listOf(
                             NewDrawing(
-                                id = uuidV7(),
+                                id = DrawingId(uuidV7()),
                                 boardId = board.id,
                                 stickerId = null,
                                 scope = DrawingScope.BOARD,
@@ -89,20 +93,21 @@ class WithdrawnUserDataDeletionAdapterTest(
                             ),
                         ),
                     ).single()
-            val analysis = analysisRepository.save(user.id, board.id)
+            val analysis = analysisRepository.save(user.id.value, board.id.value)
             val photo =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id,
+                        board.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val stickerId =
                 analysisResultSaveService
                     .save(
                         SaveAnalysisResultCommand(
                             userId = user.id,
-                            analysisId = analysis.id,
+                            analysisId = AnalysisId(analysis.id),
                             boardId = board.id,
                             stickers =
                                 listOf(
@@ -110,7 +115,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                                         type = StickerType.IMAGE,
                                         title = "분석 결과",
                                         summary = "웃기고 귀여우면 일단 주워요",
-                                        sourcePhotoId = photo.id,
+                                        sourcePhotoId = PhotoId(photo.id),
                                         imageKey = STICKER_IMAGE_KEY,
                                         textContent = null,
                                         layout =
@@ -124,7 +129,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                                                 badgeOffsetY = 0.0,
                                                 badgeRotation = 0.0,
                                             ),
-                                        photoIds = listOf(photo.id),
+                                        photoIds = listOf(PhotoId(photo.id)),
                                         comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
                                     ),
                                 ),
@@ -160,8 +165,8 @@ class WithdrawnUserDataDeletionAdapterTest(
                     dslContext.fetchExists(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID.eq(stickerId)) shouldBe false
                     dslContext.fetchExists(STICKERS, STICKERS.ID.eq(stickerId)) shouldBe false
                     dslContext.fetchExists(DRAWINGS, DRAWINGS.ID.eq(drawing.id)) shouldBe false
-                    dslContext.fetchExists(PHOTOS, PHOTOS.ID.eq(photo.id)) shouldBe false
-                    dslContext.fetchExists(ANALYSIS, ANALYSIS.ID.eq(analysis.id)) shouldBe false
+                    dslContext.fetchExists(PHOTOS, PHOTOS.ID.eq(PhotoId(photo.id))) shouldBe false
+                    dslContext.fetchExists(ANALYSIS, ANALYSIS.ID.eq(AnalysisId(analysis.id))) shouldBe false
                     dslContext.fetchExists(BOARDS, BOARDS.ID.eq(board.id)) shouldBe false
                     dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id)) shouldBe false
                     dslContext.fetchExists(USERS, USERS.ID.eq(user.id)) shouldBe false
@@ -170,7 +175,7 @@ class WithdrawnUserDataDeletionAdapterTest(
         }
 
         Given("연관 데이터가 없는 탈퇴 사용자가 있을 때") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             userRepository.withdraw(user.withdraw(Instant.parse("2026-07-01T00:00:00Z")))!!
 
             When("정리 배치를 두 번 실행하면") {

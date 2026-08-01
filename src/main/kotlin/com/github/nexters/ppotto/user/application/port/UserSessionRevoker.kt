@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.user.application.port
 
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.UserId
 
 fun interface UserSessionRevoker {
-    fun revoke(userId: UUID)
+    fun revoke(userId: UserId)
 }

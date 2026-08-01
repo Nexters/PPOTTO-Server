@@ -4,6 +4,10 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.jooq.PhotoIdConverter
+import com.github.nexters.ppotto.global.jooq.StickerIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_STICKER_PHOTO_PHOTO
 import com.github.nexters.ppotto.jooq.keys.STICKER_PHOTOS_PKEY
@@ -88,12 +92,12 @@ open class StickerPhotos(
     /**
      * The column <code>public.sticker_photos.sticker_id</code>.
      */
-    val STICKER_ID: TableField<StickerPhotosRecord, UUID?> = createField(DSL.name("sticker_id"), SQLDataType.UUID.nullable(false), this, "")
+    val STICKER_ID: TableField<StickerPhotosRecord, StickerId?> = createField(DSL.name("sticker_id"), SQLDataType.UUID.nullable(false), this, "", StickerIdConverter())
 
     /**
      * The column <code>public.sticker_photos.photo_id</code>.
      */
-    val PHOTO_ID: TableField<StickerPhotosRecord, UUID?> = createField(DSL.name("photo_id"), SQLDataType.UUID.nullable(false), this, "")
+    val PHOTO_ID: TableField<StickerPhotosRecord, PhotoId?> = createField(DSL.name("photo_id"), SQLDataType.UUID.nullable(false), this, "", PhotoIdConverter())
 
     private constructor(alias: Name, aliased: Table<StickerPhotosRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<StickerPhotosRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

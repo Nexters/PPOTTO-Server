@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import java.time.Instant
 import java.util.UUID
 
@@ -50,7 +51,7 @@ data class AnalysisStatusResult(
 }
 
 data class PhotoReadResult(
-    val id: UUID,
+    val id: PhotoId,
     val imageUrl: String,
     val takenAt: Instant,
 )

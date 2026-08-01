@@ -4,10 +4,13 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.Stickers
 
 import java.time.Instant
-import java.util.UUID
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -19,17 +22,17 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRecord>(Stickers.STICKERS) {
 
-    open var id: UUID?
+    open var id: StickerId?
         set(value): Unit = set(0, value)
-        get(): UUID? = get(0) as UUID?
+        get(): StickerId? = get(0) as StickerId?
 
-    open var analysisId: UUID
+    open var analysisId: AnalysisId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): AnalysisId = get(1) as AnalysisId
 
-    open var boardId: UUID
+    open var boardId: BoardId
         set(value): Unit = set(2, value)
-        get(): UUID = get(2) as UUID
+        get(): BoardId = get(2) as BoardId
 
     open var type: String
         set(value): Unit = set(3, value)
@@ -43,9 +46,9 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         set(value): Unit = set(5, value)
         get(): Instant? = get(5) as Instant?
 
-    open var sourcePhotoId: UUID?
+    open var sourcePhotoId: PhotoId?
         set(value): Unit = set(6, value)
-        get(): UUID? = get(6) as UUID?
+        get(): PhotoId? = get(6) as PhotoId?
 
     open var imageKey: String?
         set(value): Unit = set(7, value)
@@ -107,12 +110,12 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
+    override fun key(): Record1<StickerId?> = super.key() as Record1<StickerId?>
 
     /**
      * Create a detached, initialised StickersRecord
      */
-    constructor(id: UUID? = null, analysisId: UUID, boardId: UUID, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: UUID? = null, imageKey: String? = null, textContent: String? = null, posX: Double, posY: Double, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String): this() {
+    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double, posY: Double, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId

@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.terms.presentation
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
@@ -12,7 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
-import java.util.UUID
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 interface TermsApi {
     @GetMapping
     @Operation(
+        operationId = "findCurrentTerms",
         summary = "현재 유효 약관 목록 조회",
         description = "인증 없이 조회할 수 있으며 로그인한 사용자는 약관별 동의 상태도 함께 확인함",
     )
@@ -29,10 +30,11 @@ interface TermsApi {
         useReturnTypeSchema = true,
         description = "code별 현재 유효 버전 1건씩",
     )
-    fun findCurrentTerms(userId: UUID?): ApiResponse<List<TermResponse>>
+    fun findCurrentTerms(userId: UserId?): ApiResponse<List<TermResponse>>
 
     @PostMapping("/agreements")
     @Operation(
+        operationId = "agree",
         summary = "약관 동의 제출",
         description = "현재 약관에 대한 동의를 저장하며 필수 약관은 모두 포함해야 함. 이미 동의한 약관은 무시됨 (멱등)",
         requestBody =
@@ -58,7 +60,7 @@ interface TermsApi {
         ],
     )
     fun agree(
-        userId: UUID,
+        userId: UserId,
         request: AgreeTermsRequest,
     ): ApiResponse<Unit>
 }

@@ -4,6 +4,8 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.StickerPhotos
 
 import java.util.UUID
@@ -22,13 +24,13 @@ open class StickerPhotosRecord private constructor() : UpdatableRecordImpl<Stick
         set(value): Unit = set(0, value)
         get(): UUID? = get(0) as UUID?
 
-    open var stickerId: UUID
+    open var stickerId: StickerId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): StickerId = get(1) as StickerId
 
-    open var photoId: UUID
+    open var photoId: PhotoId
         set(value): Unit = set(2, value)
-        get(): UUID = get(2) as UUID
+        get(): PhotoId = get(2) as PhotoId
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -39,7 +41,7 @@ open class StickerPhotosRecord private constructor() : UpdatableRecordImpl<Stick
     /**
      * Create a detached, initialised StickerPhotosRecord
      */
-    constructor(id: UUID? = null, stickerId: UUID, photoId: UUID): this() {
+    constructor(id: UUID? = null, stickerId: StickerId, photoId: PhotoId): this() {
         this.id = id
         this.stickerId = stickerId
         this.photoId = photoId

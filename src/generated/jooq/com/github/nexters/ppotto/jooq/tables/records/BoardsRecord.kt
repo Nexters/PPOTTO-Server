@@ -4,10 +4,11 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.Boards
 
 import java.time.Instant
-import java.util.UUID
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -19,13 +20,13 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class BoardsRecord private constructor() : UpdatableRecordImpl<BoardsRecord>(Boards.BOARDS) {
 
-    open var id: UUID?
+    open var id: BoardId?
         set(value): Unit = set(0, value)
-        get(): UUID? = get(0) as UUID?
+        get(): BoardId? = get(0) as BoardId?
 
-    open var userId: UUID
+    open var userId: UserId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): UserId = get(1) as UserId
 
     open var createdAt: Instant?
         set(value): Unit = set(2, value)
@@ -47,12 +48,12 @@ open class BoardsRecord private constructor() : UpdatableRecordImpl<BoardsRecord
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
+    override fun key(): Record1<BoardId?> = super.key() as Record1<BoardId?>
 
     /**
      * Create a detached, initialised BoardsRecord
      */
-    constructor(id: UUID? = null, userId: UUID, createdAt: Instant? = null, updatedAt: Instant? = null, name: String, deletedAt: Instant? = null): this() {
+    constructor(id: BoardId? = null, userId: UserId, createdAt: Instant? = null, updatedAt: Instant? = null, name: String, deletedAt: Instant? = null): this() {
         this.id = id
         this.userId = userId
         this.createdAt = createdAt

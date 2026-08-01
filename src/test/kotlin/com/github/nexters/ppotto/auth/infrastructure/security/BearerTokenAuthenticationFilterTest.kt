@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.auth.infrastructure.security
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import org.springframework.mock.web.MockHttpServletRequest
@@ -16,11 +17,11 @@ class BearerTokenAuthenticationFilterTest :
         val userId = UUID.randomUUID()
         val tokenProvider =
             object : TokenProvider {
-                override fun issue(userId: UUID) = TokenPair("access", "refresh", 3600)
+                override fun issue(userId: UserId) = TokenPair("access", "refresh", 3600)
 
-                override fun verifyAccessToken(accessToken: String): UUID {
+                override fun verifyAccessToken(accessToken: String): UserId {
                     if (accessToken != "valid-token") throw UnauthorizedException()
-                    return userId
+                    return UserId(userId)
                 }
             }
         val errorWriter =

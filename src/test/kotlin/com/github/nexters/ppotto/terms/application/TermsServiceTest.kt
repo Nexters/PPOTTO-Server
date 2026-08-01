@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.terms.application
 
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.jooq.tables.references.TERM_AGREEMENTS
@@ -18,7 +19,7 @@ class TermsServiceTest(
     termsService: TermsService,
     dslContext: DSLContext,
 ) : IntegrationTest({
-        fun saveUser(): UUID {
+        fun saveUser(): UserId {
             val suffix = UUID.randomUUID()
             return dslContext
                 .insertInto(

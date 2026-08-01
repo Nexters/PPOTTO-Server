@@ -4,11 +4,11 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.Users
 
 import java.time.Instant
-import java.util.UUID
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -20,9 +20,9 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(Users.USERS) {
 
-    open var id: UUID?
+    open var id: UserId?
         set(value): Unit = set(0, value)
-        get(): UUID? = get(0) as UUID?
+        get(): UserId? = get(0) as UserId?
 
     open var createdAt: Instant?
         set(value): Unit = set(1, value)
@@ -56,12 +56,12 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
+    override fun key(): Record1<UserId?> = super.key() as Record1<UserId?>
 
     /**
      * Create a detached, initialised UsersRecord
      */
-    constructor(id: UUID? = null, createdAt: Instant? = null, updatedAt: Instant? = null, provider: OauthProvider? = null, providerUserId: String? = null, providerRefreshToken: String? = null, email: String? = null, deletedAt: Instant? = null): this() {
+    constructor(id: UserId? = null, createdAt: Instant? = null, updatedAt: Instant? = null, provider: OauthProvider? = null, providerUserId: String? = null, providerRefreshToken: String? = null, email: String? = null, deletedAt: Instant? = null): this() {
         this.id = id
         this.createdAt = createdAt
         this.updatedAt = updatedAt

@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.terms.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.jooq.tables.references.USERS
@@ -17,7 +18,7 @@ class TermRepositoryTest(
     termAgreementRepository: TermAgreementRepository,
     dslContext: DSLContext,
 ) : IntegrationTest({
-        fun saveUser(): UUID {
+        fun saveUser(): UserId {
             val suffix = UUID.randomUUID()
             return dslContext
                 .insertInto(

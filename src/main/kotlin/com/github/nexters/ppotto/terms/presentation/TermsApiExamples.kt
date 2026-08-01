@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.terms.presentation
 
+import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
@@ -11,8 +12,8 @@ import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.reflect.KFunction
 
-private val TOS_ID = UUID.fromString("01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-private val PRIVACY_ID = UUID.fromString("01983f2a-2b3c-7d4e-9f5a-6b7c8d9e0f1a")
+private val TOS_ID = TermId(UUID.fromString("01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f"))
+private val PRIVACY_ID = TermId(UUID.fromString("01983f2a-2b3c-7d4e-9f5a-6b7c8d9e0f1a"))
 
 private val TOS_TERM =
     TermResponse(

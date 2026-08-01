@@ -1,18 +1,19 @@
 package com.github.nexters.ppotto.board.infrastructure
 
 import com.github.nexters.ppotto.board.domain.Board
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import java.time.Instant
-import java.util.UUID
 
 @Repository
 class BoardRepository(
     private val dslContext: DSLContext,
 ) {
-    fun lockCommandsByUserId(userId: UUID) {
+    fun lockCommandsByUserId(userId: UserId) {
         dslContext.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0))",
             "board-user:$userId",
@@ -20,7 +21,7 @@ class BoardRepository(
     }
 
     fun save(
-        userId: UUID,
+        userId: UserId,
         name: String = Board.defaultName(1),
     ): Board =
         dslContext
@@ -30,7 +31,7 @@ class BoardRepository(
             .fetchOne()!!
             .toDomain()
 
-    fun findById(id: UUID): Board? =
+    fun findById(id: BoardId): Board? =
         dslContext
             .selectFrom(BOARDS)
             .where(BOARDS.ID.eq(id))
@@ -39,8 +40,8 @@ class BoardRepository(
             ?.toDomain()
 
     fun findOwnedById(
-        id: UUID,
-        userId: UUID,
+        id: BoardId,
+        userId: UserId,
     ): Board? =
         dslContext
             .selectFrom(BOARDS)
@@ -51,8 +52,8 @@ class BoardRepository(
             ?.toDomain()
 
     fun findOwnedByIdForUpdate(
-        id: UUID,
-        userId: UUID,
+        id: BoardId,
+        userId: UserId,
     ): Board? =
         dslContext
             .selectFrom(BOARDS)
@@ -63,7 +64,7 @@ class BoardRepository(
             .fetchOne()
             ?.toDomain()
 
-    fun findByUserId(userId: UUID): List<Board> =
+    fun findByUserId(userId: UserId): List<Board> =
         dslContext
             .selectFrom(BOARDS)
             .where(BOARDS.USER_ID.eq(userId))
@@ -72,7 +73,7 @@ class BoardRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun countByUserId(userId: UUID): Int =
+    fun countByUserId(userId: UserId): Int =
         dslContext
             .fetchCount(
                 dslContext
@@ -83,8 +84,8 @@ class BoardRepository(
             )
 
     fun updateName(
-        id: UUID,
-        userId: UUID,
+        id: BoardId,
+        userId: UserId,
         name: String,
     ): Board? =
         dslContext
@@ -98,8 +99,8 @@ class BoardRepository(
             ?.toDomain()
 
     fun softDelete(
-        id: UUID,
-        userId: UUID,
+        id: BoardId,
+        userId: UserId,
     ): Boolean =
         dslContext
             .update(BOARDS)

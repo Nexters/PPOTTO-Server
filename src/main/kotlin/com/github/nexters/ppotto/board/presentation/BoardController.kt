@@ -6,13 +6,14 @@ import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 class BoardController(
@@ -20,7 +21,7 @@ class BoardController(
     private val boardQueryService: BoardQueryService,
 ) : BoardApi {
     override fun list(
-        @AuthenticatedUser userId: UUID,
+        @AuthenticatedUser userId: UserId,
     ): ApiResponse<List<BoardResponse>> =
         boardQueryService
             .list(userId)
@@ -28,7 +29,7 @@ class BoardController(
             .let { ApiResponse.success(it) }
 
     override fun create(
-        @AuthenticatedUser userId: UUID,
+        @AuthenticatedUser userId: UserId,
         @Valid @RequestBody request: CreateBoardRequest,
     ): ApiResponse<BoardResponse> =
         boardCommandService
@@ -37,8 +38,8 @@ class BoardController(
             .let { ApiResponse.success(it) }
 
     override fun get(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable boardId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable boardId: BoardId,
     ): ApiResponse<BoardDetailResponse> =
         boardQueryService
             .getDetail(boardId, userId)
@@ -46,8 +47,8 @@ class BoardController(
             .let { ApiResponse.success(it) }
 
     override fun rename(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable boardId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable boardId: BoardId,
         @Valid @RequestBody request: RenameBoardRequest,
     ): ApiResponse<BoardResponse> =
         boardCommandService
@@ -56,8 +57,8 @@ class BoardController(
             .let { ApiResponse.success(it) }
 
     override fun delete(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable boardId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable boardId: BoardId,
     ): ApiResponse<Unit> =
         boardCommandService
             .delete(boardId, userId)

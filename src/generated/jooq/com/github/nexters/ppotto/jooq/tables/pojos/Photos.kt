@@ -4,9 +4,12 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+
 import java.io.Serializable
 import java.time.Instant
-import java.util.UUID
 
 
 /**
@@ -14,9 +17,9 @@ import java.util.UUID
  */
 @Suppress("warnings")
 data class Photos(
-    val id: UUID? = null,
-    val analysisId: UUID,
-    val boardId: UUID,
+    val id: PhotoId? = null,
+    val analysisId: AnalysisId,
+    val boardId: BoardId,
     val contentType: String,
     val uploadStatus: String? = null,
     val uploadedAt: Instant? = null,

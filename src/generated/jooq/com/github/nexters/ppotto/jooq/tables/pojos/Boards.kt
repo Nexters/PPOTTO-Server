@@ -4,9 +4,11 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
+
 import java.io.Serializable
 import java.time.Instant
-import java.util.UUID
 
 
 /**
@@ -14,8 +16,8 @@ import java.util.UUID
  */
 @Suppress("warnings")
 data class Boards(
-    val id: UUID? = null,
-    val userId: UUID,
+    val id: BoardId? = null,
+    val userId: UserId,
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null,
     val name: String,

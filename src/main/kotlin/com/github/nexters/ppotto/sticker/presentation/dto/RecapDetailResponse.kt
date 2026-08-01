@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.sticker.presentation.dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.application.StickerRecapResult
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
@@ -47,8 +49,9 @@ data class RecapCommentResponse(
 
 @Schema(description = "분석 리캡 사진")
 data class RecapPhotoResponse(
-    @field:Schema(description = "사진 ID (uuidv7)", example = "01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val id: UUID,
+    @get:Schema(description = "사진 ID (uuidv7)", example = "01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("id")
+    val id: PhotoId,
     @field:Schema(
         description = "읽기용 signed URL (만료 1시간)",
         example = "https://storage.googleapis.com/ppotto-photos/01983f2e.jpg?X-Goog-Signature=sample",

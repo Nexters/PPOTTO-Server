@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.application.port.ProviderRefreshTokenCipher
@@ -89,7 +90,7 @@ class UserRepositoryTest(
 
         Given("존재하지 않는 아이디로") {
             When("조회하면") {
-                val found = userRepository.findById(UUID.randomUUID())
+                val found = userRepository.findById(UserId(UUID.randomUUID()))
 
                 Then("null을 반환한다") {
                     found.shouldBeNull()

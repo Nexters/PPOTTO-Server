@@ -15,6 +15,7 @@ import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.PendingTerm
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
+import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.application.BoardCommandService
 import com.github.nexters.ppotto.board.application.BoardDrawingCommandService
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
@@ -22,8 +23,10 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.runConcurrently
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize
@@ -42,10 +45,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.Callable
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import com.github.nexters.ppotto.user.domain.OAuthProvider as UserOAuthProvider
 
 class AuthDomainIntegrationTest(
@@ -107,12 +106,18 @@ class AuthDomainIntegrationTest(
                 )
 
             When("가입 port를 동시에 호출하면") {
-                val users = runConcurrently(6) { authUserPort.findOrCreate(profile) }
+                val users =
+                    runConcurrently(6) { authUserPort.findOrCreate(profile) }
+                        .map { it.getOrThrow() }
 
                 Then("계정과 기본 보드를 각각 한 번만 생성한다") {
                     users.map { it.userId }.distinct() shouldHaveSize 1
                     users.count { it.isNewUser } shouldBe 1
-                    boardRepository.findByUserId(users.first().userId) shouldHaveSize 1
+                    boardRepository.findByUserId(
+                        users
+                            .first()
+                            .userId,
+                    ) shouldHaveSize 1
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
                         ?.id shouldBe users.first().userId
@@ -241,31 +246,6 @@ class AuthSignupRollbackIntegrationTest(
         }
     })
 
-private fun <T> runConcurrently(
-    taskCount: Int,
-    task: () -> T,
-): List<T> {
-    val ready = CountDownLatch(taskCount)
-    val start = CountDownLatch(1)
-    val executor = Executors.newFixedThreadPool(taskCount)
-    return try {
-        List(taskCount) {
-            executor.submit(
-                Callable {
-                    ready.countDown()
-                    start.await()
-                    task()
-                },
-            )
-        }.also { check(ready.await(10, TimeUnit.SECONDS)) }
-            .also { start.countDown() }
-            .map { it.get(30, TimeUnit.SECONDS) }
-    } finally {
-        start.countDown()
-        executor.shutdownNow()
-    }
-}
-
 @Import(FailingBoardAuthTestConfig::class)
 class AuthSignupBoardRollbackIntegrationTest(
     authUserPort: AuthUserPort,
@@ -302,19 +282,28 @@ class FailingBoardAuthTestConfig {
     @Primary
     fun failingBoardCommandService(
         boardRepository: BoardRepository,
+        boardAccessService: BoardAccessService,
         drawingCommandService: BoardDrawingCommandService,
         analysisActivityPort: BoardAnalysisActivityPort,
         stickerCommandPort: BoardStickerCommandPort,
-    ): BoardCommandService = FailingBoardCommandService(boardRepository, drawingCommandService, analysisActivityPort, stickerCommandPort)
+    ): BoardCommandService =
+        FailingBoardCommandService(
+            boardRepository,
+            boardAccessService,
+            drawingCommandService,
+            analysisActivityPort,
+            stickerCommandPort,
+        )
 }
 
 open class FailingBoardCommandService(
     boardRepository: BoardRepository,
+    boardAccessService: BoardAccessService,
     drawingCommandService: BoardDrawingCommandService,
     analysisActivityPort: BoardAnalysisActivityPort,
     stickerCommandPort: BoardStickerCommandPort,
-) : BoardCommandService(boardRepository, drawingCommandService, analysisActivityPort, stickerCommandPort) {
-    override fun createDefault(userId: UUID): Board = error("기본 보드 생성 실패")
+) : BoardCommandService(boardRepository, boardAccessService, drawingCommandService, analysisActivityPort, stickerCommandPort) {
+    override fun createDefault(userId: UserId): Board = error("기본 보드 생성 실패")
 }
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -350,7 +339,7 @@ class SignupRollbackAuthTestConfig {
 }
 
 class LoginEffects {
-    var userId: UUID? = null
+    var userId: UserId? = null
     var failTerms: Boolean = true
     var providerCallInTransaction: Boolean = false
     var termsLookupInTransaction: Boolean = false
@@ -408,7 +397,7 @@ private class TrackingTermsPort(
     private val loginEffects: LoginEffects,
     private val delegate: AuthTermsPort,
 ) : AuthTermsPort {
-    override fun findPendingTerms(userId: UUID): List<PendingTerm> {
+    override fun findPendingTerms(userId: UserId): List<PendingTerm> {
         loginEffects.termsLookupInTransaction = isActualTransactionActive()
         check(!loginEffects.failTerms) { "약관 조회 실패" }
         return delegate.findPendingTerms(userId)
@@ -418,33 +407,33 @@ private class TrackingTermsPort(
 private class TrackingTokenProvider(
     private val loginEffects: LoginEffects,
 ) : TokenProvider {
-    override fun issue(userId: UUID): TokenPair {
+    override fun issue(userId: UserId): TokenPair {
         loginEffects.tokenIssueInTransaction = isActualTransactionActive()
         loginEffects.tokenIssueCount += 1
         return TokenPair("access-$userId", "refresh-$userId", 3_600)
     }
 
-    override fun verifyAccessToken(accessToken: String): UUID = UUID.fromString(accessToken)
+    override fun verifyAccessToken(accessToken: String): UserId = UserId(UUID.fromString(accessToken))
 }
 
 private class TrackingRefreshTokenStore(
     private val loginEffects: LoginEffects,
 ) : RefreshTokenStore {
     override fun save(
-        userId: UUID,
+        userId: UserId,
         refreshToken: String,
     ) {
         loginEffects.tokenSaveInTransaction = isActualTransactionActive()
         loginEffects.tokenSaveCount += 1
     }
 
-    override fun findUserId(refreshToken: String): UUID? = null
+    override fun findUserId(refreshToken: String): UserId? = null
 
     override fun rotate(
-        userId: UUID,
+        userId: UserId,
         currentRefreshToken: String,
         newRefreshToken: String,
     ): Boolean = false
 
-    override fun delete(userId: UUID) = Unit
+    override fun delete(userId: UserId) = Unit
 }

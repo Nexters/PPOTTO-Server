@@ -9,15 +9,15 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `domain/` | Pure account model with expression-bodied validation and withdrawal transition, `OAuthProvider`, encrypted-token value type, and `USER-*` errors |
 | `application/port/ProviderRefreshTokenCipher.kt` | Plaintext-to-encrypted token boundary; AES-GCM adapter lives in infrastructure |
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain must provide the real adapter |
-| `application/port/UserSessionRevoker.kt` | 탈퇴 시 서비스 refresh token을 폐기하는 auth 연동 경계 |
+| `application/port/UserSessionRevoker.kt` | Auth integration boundary that revokes the service refresh token on withdrawal |
 | `application/port/WithdrawnUserDataDeletionPort.kt` | Idempotent cross-domain contract for deleting all DB and object-storage data owned by a withdrawn user |
-| `application/port/WithdrawnUserDataPorts.kt` | Per-provider deletion contracts the composite adapter fans out to: board(+drawing), sticker(+recap, sticker image objects), analysis(+photo, GCS 원본), term agreement |
+| `application/port/WithdrawnUserDataPorts.kt` | Per-provider deletion contracts the composite adapter fans out to: board(+drawing), sticker(+recap, sticker image objects), analysis(+photo, original GCS objects), term agreement |
 | `application/UserService.kt` | Expression-bodied transaction pipeline for atomic social lookup/create, active account lookup, and session-revoking withdrawal |
 | `application/WithdrawnUserCleanupService.kt` | Fluent bounded cleanup pipeline; hard-deletes a user only after the cross-domain deletion port succeeds |
 | `presentation/UserApi.kt` | Version 1 `GET /users/me` and `DELETE /users/me` mapping and Swagger contract |
-| `presentation/UserController.kt` | Fluent User API implementation with required UUID user injection |
+| `presentation/UserController.kt` | Fluent User API implementation with required typed user injection |
 | `presentation/dto/UserResponse.kt` | Swagger-described public account response without social-provider identifiers or tokens |
-| `presentation/UserApiExamples.kt` | `ApiExampleProvider` 구현. 카카오 사용자와 애플 private relay 사용자 조회 응답 예시를 실제 DTO 인스턴스로 정의합니다 |
+| `presentation/UserApiExamples.kt` | `ApiExampleProvider` implementation. Defines Kakao-user and Apple private-relay-user lookup response examples as real DTO instances |
 | `infrastructure/UserRepository.kt` | Fluent DSLContext persistence for active account lookup, profile refresh, withdrawal, and hard deletion |
 | `infrastructure/SocialUserRepository.kt` | Atomic active social-account creation using the partial unique index as the conflict target |
 | `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration following the shared constructor property spacing convention |
@@ -34,7 +34,8 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 - Active account lookup always includes `deleted_at IS NULL`. Withdrawal anonymizes email and clears the provider refresh token before setting `deleted_at`.
 - Concurrent social signup uses the active-identity partial unique index as the conflict target, then reloads the winner instead of surfacing a unique violation.
 - Pre-social legacy rows remain nullable under the unvalidated completeness check and are excluded from application lookup until a real-identity backfill is completed. New social users always write provider, provider user id, and email together.
-- Controllers consume the UUID principal through the shared `@AuthenticatedUser` contract; absence returns `COMMON-004` before controller execution.
+- Controllers consume the authenticated `UserId` through the shared `@AuthenticatedUser` contract; absence returns `COMMON-004` before controller execution.
+- `User.id`, repository public signatures, application services, every `application/port` contract, and presentation (handler parameters and `UserResponse.id`) use the typed `UserId`/`BoardId` from `global/identifier`; jOOQ id columns are generated typed (codegen `forcedType`), so repository bindings pass typed ids straight through with no unwrapping.
 - Missing auth adapters fail closed: provider-account or session revoke aborts withdrawal.
 - Withdrawal revokes the service refresh-token session inside the user transaction.
 - The cleanup caller supplies the retention cutoff. `docs/` defines a retention grace period but no number, so `user.withdrawn-cleanup.retention-days` carries it as configuration; replace the conservative default once the privacy policy fixes a value.

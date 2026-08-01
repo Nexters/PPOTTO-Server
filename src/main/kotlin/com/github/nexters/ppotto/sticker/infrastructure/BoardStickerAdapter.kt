@@ -6,12 +6,13 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutComman
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.StickerItemResult
 import com.github.nexters.ppotto.sticker.application.StickerLayoutCommand
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
 import org.springframework.stereotype.Component
-import java.util.UUID
 
 @Component
 class BoardStickerAdapter(
@@ -19,14 +20,14 @@ class BoardStickerAdapter(
     private val stickerCommandService: StickerCommandService,
 ) : BoardStickerQueryPort,
     BoardStickerCommandPort {
-    override fun getByBoardId(boardId: UUID): List<BoardStickerItem> =
+    override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> =
         stickerQueryService
             .getByBoardId(boardId)
             .map { it.toBoardItem() }
 
     override fun validateOwnedByBoard(
-        boardId: UUID,
-        stickerIds: Set<UUID>,
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
     ) {
         stickerCommandService
             .validateOwnedByBoard(boardId, stickerIds)
@@ -35,14 +36,14 @@ class BoardStickerAdapter(
     }
 
     override fun updateLayouts(
-        boardId: UUID,
+        boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
     ): Unit =
         layouts
             .map { it.toStickerCommand() }
             .let { stickerCommandService.updateLayouts(boardId, it) }
 
-    override fun deleteAllByBoardId(boardId: UUID): Unit = stickerCommandService.deleteAllByBoardId(boardId)
+    override fun deleteAllByBoardId(boardId: BoardId): Unit = stickerCommandService.deleteAllByBoardId(boardId)
 
     private fun StickerItemResult.toBoardItem() =
         BoardStickerItem(

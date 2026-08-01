@@ -10,19 +10,16 @@ import com.github.nexters.ppotto.auth.domain.AuthErrorCode
 import com.github.nexters.ppotto.auth.domain.AuthSignup
 import com.github.nexters.ppotto.auth.domain.LoginCommand
 import com.github.nexters.ppotto.auth.domain.LoginResult
-import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionOperations
-import java.util.UUID
 
 @Service
-@ConditionalOnBean(AuthUserPort::class, AuthTermsPort::class, AuthActiveUserPort::class)
 class AuthService(
     oauthClients: List<OAuthClient>,
     @Qualifier(SIGNUP_TRANSACTION)
@@ -59,13 +56,7 @@ class AuthService(
                     .takeIf { refreshTokenStore.rotate(userId, refreshToken, it.refreshToken) }
             } ?: throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
-    fun logout(userId: UUID) = refreshTokenStore.delete(userId)
-
-    fun revokeProviderToken(
-        provider: OAuthProvider,
-        providerRefreshToken: String,
-    ) = (oauthClients[provider] ?: throw InvalidInputException())
-        .revoke(providerRefreshToken)
+    fun logout(userId: UserId) = refreshTokenStore.delete(userId)
 
     private fun signUp(profile: SocialProfile): AuthSignup =
         signupTransaction.execute {

@@ -7,6 +7,8 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
@@ -15,11 +17,12 @@ import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnership
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.GcsStickerImageStorage
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -69,17 +72,18 @@ class AnalysisStickerIntegrationTest(
         }
 
         Given("업로드된 사진을 가진 분석이 있는 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     listOf(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
                         PhotoCreate(PhotoContentType.PNG, Instant.parse("2026-07-01T00:00:00Z")),
                     ),
                 )
+            photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
 
             When("분석 결과를 저장하고 리캡을 조회하면") {
                 val stickerKey = StickerObjectKeys.keyFor(analysis.id, 0, photos.first().id)
@@ -87,9 +91,9 @@ class AnalysisStickerIntegrationTest(
                     analysisResultSaveService.save(
                         SaveAnalysisResultCommand(
                             userId = board.userId,
-                            analysisId = analysis.id,
+                            analysisId = AnalysisId(analysis.id),
                             boardId = board.id,
-                            stickers = listOf(stickerResult(photos.first().id, photos.map { it.id }, stickerKey)),
+                            stickers = listOf(stickerResult(PhotoId(photos.first().id), photos.map { PhotoId(it.id) }, stickerKey)),
                         ),
                     )
                 val recap = stickerQueryService.getRecap(board.userId, saved.stickerIds.single())
@@ -97,7 +101,7 @@ class AnalysisStickerIntegrationTest(
                 Then("파이프라인이 만든 스티커 오브젝트 키를 그대로 읽기용 signed URL로 서명한다") {
                     recap.sticker.id shouldBe saved.stickerIds.single()
                     recap.comments.map { it.content } shouldContainExactly listOf("리캡 코멘트")
-                    recap.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
+                    recap.photos.map { it.id } shouldContainExactly photos.reversed().map { PhotoId(it.id) }
                     requireNotNull(recap.sticker.imageUrl)
                         .shouldStartWith("https://storage.googleapis.com/ppotto-test-bucket/$stickerKey?")
                     recap.photos.first().imageUrl.shouldStartWith(
@@ -112,24 +116,27 @@ class AnalysisStickerIntegrationTest(
         }
 
         Given("서로 다른 사용자의 분석과 사진이 있는 상태에서") {
-            val ownerBoard = boardRepository.save(userRepository.save().id)
-            val ownerAnalysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val ownerAnalysis = analysisRepository.save(ownerBoard.userId.value, ownerBoard.id.value)
             val ownerPhoto =
                 photoRepository
                     .saveAll(
                         ownerAnalysis.id,
-                        ownerBoard.id,
+                        ownerBoard.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
-            val otherBoard = boardRepository.save(userRepository.save().id)
-            val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val otherAnalysis = analysisRepository.save(otherBoard.userId.value, otherBoard.id.value)
             val otherPhoto =
                 photoRepository
                     .saveAll(
                         otherAnalysis.id,
-                        otherBoard.id,
+                        otherBoard.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z"))),
                     ).single()
+            photoRepository.markCompletedBatch(
+                mapOf(ownerPhoto.id to Instant.now(), otherPhoto.id to Instant.now()),
+            )
 
             When("다른 사용자의 photoId를 섞어 저장하면") {
                 Then("실제 소유권 어댑터가 저장 전에 거부한다") {
@@ -137,11 +144,11 @@ class AnalysisStickerIntegrationTest(
                         analysisResultSaveService.save(
                             SaveAnalysisResultCommand(
                                 userId = ownerBoard.userId,
-                                analysisId = ownerAnalysis.id,
+                                analysisId = AnalysisId(ownerAnalysis.id),
                                 boardId = ownerBoard.id,
                                 stickers =
                                     listOf(
-                                        stickerResult(ownerPhoto.id, listOf(ownerPhoto.id, otherPhoto.id)),
+                                        stickerResult(PhotoId(ownerPhoto.id), listOf(PhotoId(ownerPhoto.id), PhotoId(otherPhoto.id))),
                                     ),
                             ),
                         )
@@ -156,9 +163,9 @@ class AnalysisStickerIntegrationTest(
                         analysisResultSaveService.save(
                             SaveAnalysisResultCommand(
                                 userId = ownerBoard.userId,
-                                analysisId = ownerAnalysis.id,
+                                analysisId = AnalysisId(ownerAnalysis.id),
                                 boardId = ownerBoard.id,
-                                stickers = listOf(stickerResult(ownerPhoto.id, listOf(UUID.randomUUID()))),
+                                stickers = listOf(stickerResult(PhotoId(ownerPhoto.id), listOf(PhotoId(UUID.randomUUID())))),
                             ),
                         )
                     }
@@ -166,11 +173,50 @@ class AnalysisStickerIntegrationTest(
                 }
             }
         }
+
+        Given("업로드가 완료되지 않은 사진이 남아 있는 분석에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val photos =
+                photoRepository.saveAll(
+                    analysis.id,
+                    board.id.value,
+                    listOf(
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
+                    ),
+                )
+            val completedPhoto = photos.first()
+            val pendingPhoto = photos.last()
+            photoRepository.markCompletedBatch(mapOf(completedPhoto.id to Instant.now()))
+
+            When("PENDING 사진을 리캡 photoIds에 섞어 저장하면") {
+                Then("실제 소유권 어댑터가 저장 전에 거부한다") {
+                    shouldThrow<NotFoundException> {
+                        analysisResultSaveService.save(
+                            SaveAnalysisResultCommand(
+                                userId = board.userId,
+                                analysisId = AnalysisId(analysis.id),
+                                boardId = board.id,
+                                stickers =
+                                    listOf(
+                                        stickerResult(
+                                            PhotoId(completedPhoto.id),
+                                            listOf(PhotoId(completedPhoto.id), PhotoId(pendingPhoto.id)),
+                                        ),
+                                    ),
+                            ),
+                        )
+                    }
+                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
+                }
+            }
+        }
     })
 
 private fun stickerResult(
-    sourcePhotoId: UUID,
-    photoIds: List<UUID>,
+    sourcePhotoId: PhotoId,
+    photoIds: List<PhotoId>,
     imageKey: String = "stickers/result.png",
 ) = AnalysisStickerResult(
     type = StickerType.IMAGE,
@@ -179,17 +225,7 @@ private fun stickerResult(
     sourcePhotoId = sourcePhotoId,
     imageKey = imageKey,
     textContent = null,
-    layout =
-        StickerLayout(
-            posX = 1.0,
-            posY = 2.0,
-            scale = 1.0,
-            rotation = 0.0,
-            zIndex = 0,
-            badgeOffsetX = 0.0,
-            badgeOffsetY = 0.0,
-            badgeRotation = 0.0,
-        ),
+    layout = defaultStickerLayout(),
     photoIds = photoIds,
     comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
 )

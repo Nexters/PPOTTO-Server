@@ -4,7 +4,13 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.jooq.BoardIdConverter
+import com.github.nexters.ppotto.global.jooq.DrawingIdConverter
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.StickerIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_DRAWING_BOARD
 import com.github.nexters.ppotto.jooq.indexes.IX_DRAWING_STICKER
@@ -12,7 +18,6 @@ import com.github.nexters.ppotto.jooq.keys.DRAWINGS_PKEY
 import com.github.nexters.ppotto.jooq.tables.records.DrawingsRecord
 
 import java.time.Instant
-import java.util.UUID
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -82,17 +87,17 @@ open class Drawings(
     /**
      * The column <code>public.drawings.id</code>.
      */
-    val ID: TableField<DrawingsRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "")
+    val ID: TableField<DrawingsRecord, DrawingId?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "", DrawingIdConverter())
 
     /**
      * The column <code>public.drawings.board_id</code>.
      */
-    val BOARD_ID: TableField<DrawingsRecord, UUID?> = createField(DSL.name("board_id"), SQLDataType.UUID.nullable(false), this, "")
+    val BOARD_ID: TableField<DrawingsRecord, BoardId?> = createField(DSL.name("board_id"), SQLDataType.UUID.nullable(false), this, "", BoardIdConverter())
 
     /**
      * The column <code>public.drawings.sticker_id</code>.
      */
-    val STICKER_ID: TableField<DrawingsRecord, UUID?> = createField(DSL.name("sticker_id"), SQLDataType.UUID, this, "")
+    val STICKER_ID: TableField<DrawingsRecord, StickerId?> = createField(DSL.name("sticker_id"), SQLDataType.UUID, this, "", StickerIdConverter())
 
     /**
      * The column <code>public.drawings.scope</code>.

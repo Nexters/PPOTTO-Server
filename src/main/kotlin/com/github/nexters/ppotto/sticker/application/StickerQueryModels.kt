@@ -1,11 +1,13 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import java.time.Instant
 import java.util.UUID
 
 data class StickerItemResult(
-    val id: UUID,
+    val id: StickerId,
     val title: String,
     val isNew: Boolean,
     val type: StickerType,
@@ -36,7 +38,7 @@ data class RecapCommentResult(
 )
 
 data class RecapPhotoResult(
-    val id: UUID,
+    val id: PhotoId,
     val imageUrl: String,
     val takenAt: Instant,
 )

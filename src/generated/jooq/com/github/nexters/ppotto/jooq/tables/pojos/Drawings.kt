@@ -4,9 +4,12 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
+
 import java.io.Serializable
 import java.time.Instant
-import java.util.UUID
 
 import org.jooq.JSONB
 
@@ -16,9 +19,9 @@ import org.jooq.JSONB
  */
 @Suppress("warnings")
 data class Drawings(
-    val id: UUID? = null,
-    val boardId: UUID,
-    val stickerId: UUID? = null,
+    val id: DrawingId? = null,
+    val boardId: BoardId,
+    val stickerId: StickerId? = null,
     val scope: String,
     val stroke: JSONB,
     val color: String,

@@ -11,6 +11,9 @@ import com.github.nexters.ppotto.board.presentation.dto.DrawingResponse
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.StickerLayoutRequest
 import com.github.nexters.ppotto.board.presentation.dto.StickerResponse
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
@@ -20,10 +23,10 @@ import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.reflect.KFunction
 
-private val BOARD_ID = UUID.fromString("01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
-private val CREATED_BOARD_ID = UUID.fromString("01983f2a-4d5e-7f6a-b7c8-9d0e1f2a3b4c")
-private val STICKER_ID = UUID.fromString("01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-private val DELETED_DRAWING_ID = UUID.fromString("01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a")
+private val BOARD_ID = BoardId(UUID.fromString("01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b"))
+private val CREATED_BOARD_ID = BoardId(UUID.fromString("01983f2a-4d5e-7f6a-b7c8-9d0e1f2a3b4c"))
+private val STICKER_ID = StickerId(UUID.fromString("01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f"))
+private val DELETED_DRAWING_ID = DrawingId(UUID.fromString("01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a"))
 
 private val STICKER_STROKE = mapOf<String, Any?>("points" to listOf(listOf(10.5, 22), listOf(14.2, 25.1), listOf(19.8, 27.4)))
 
@@ -74,7 +77,7 @@ private val DRAWING_MODE_LAYOUT_REQUEST =
                         created =
                             listOf(
                                 DrawingCreateRequest(
-                                    id = UUID.fromString("01983f2c-3c4d-7e5f-a6b7-8c9d0e1f2a3b"),
+                                    id = DrawingId(UUID.fromString("01983f2c-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
                                     scope = DrawingScope.STICKER,
                                     stickerId = STICKER_ID,
                                     stroke = STICKER_STROKE,
@@ -82,7 +85,7 @@ private val DRAWING_MODE_LAYOUT_REQUEST =
                                     strokeWidth = 4.0,
                                 ),
                                 DrawingCreateRequest(
-                                    id = UUID.fromString("01983f2c-4d5e-7f6a-b7c8-9d0e1f2a3b4c"),
+                                    id = DrawingId(UUID.fromString("01983f2c-4d5e-7f6a-b7c8-9d0e1f2a3b4c")),
                                     scope = DrawingScope.BOARD,
                                     stickerId = null,
                                     stroke = mapOf("points" to listOf(listOf(200, 512), listOf(204.8, 515.5))),
@@ -152,7 +155,7 @@ private val BOARD_DETAIL_RESPONSE =
                                 badgeRotation = 0.0,
                             ),
                             StickerResponse(
-                                id = UUID.fromString("01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b"),
+                                id = StickerId(UUID.fromString("01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
                                 title = "언제까지 일해요",
                                 isNew = true,
                                 type = "TEXT",
@@ -171,7 +174,7 @@ private val BOARD_DETAIL_RESPONSE =
                     drawings =
                         listOf(
                             DrawingResponse(
-                                id = UUID.fromString("01983f2c-1a2b-7c3d-8e4f-5a6b7c8d9e0f"),
+                                id = DrawingId(UUID.fromString("01983f2c-1a2b-7c3d-8e4f-5a6b7c8d9e0f")),
                                 scope = DrawingScope.STICKER,
                                 stickerId = STICKER_ID,
                                 stroke = STICKER_STROKE,

@@ -5,14 +5,18 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -29,32 +33,33 @@ class StickerQueryServiceTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("이미지 스티커와 리캡 데이터가 등록된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     listOf(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
                     ),
                 )
+            photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
             val sticker =
                 stickerRepository.save(
-                    analysis.id,
+                    AnalysisId(analysis.id),
                     board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "리캡",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = photos.first().id,
+                        sourcePhotoId = PhotoId(photos.first().id),
                         imageKey = "stickers/recap.png",
                         textContent = null,
-                        layout = queryLayout(),
+                        layout = defaultStickerLayout(),
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
+            stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
             stickerRecapRepository.saveComments(
                 sticker.id,
                 listOf(
@@ -80,7 +85,7 @@ class StickerQueryServiceTest(
                 Then("한 줄 요약과 코멘트와 촬영 시각순 사진을 반환한다") {
                     result.summary shouldBe "웃기고 귀여우면 일단 주워요"
                     result.comments.map { it.content } shouldContainExactly listOf("말풍선", "키워드")
-                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
+                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { PhotoId(it.id) }
                 }
 
                 Then("말풍선은 좌표를 갖고 키워드 칩은 좌표가 null이다") {
@@ -106,16 +111,39 @@ class StickerQueryServiceTest(
                 }
             }
         }
-    })
 
-private fun queryLayout() =
-    StickerLayout(
-        posX = 1.0,
-        posY = 2.0,
-        scale = 1.0,
-        rotation = 0.0,
-        zIndex = 0,
-        badgeOffsetX = 0.0,
-        badgeOffsetY = 0.0,
-        badgeRotation = 0.0,
-    )
+        Given("업로드가 완료되지 않은 사진이 리캡에 연결된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val pendingPhoto =
+                photoRepository
+                    .saveAll(
+                        analysis.id,
+                        board.id.value,
+                        listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
+                    ).single()
+            val sticker =
+                stickerRepository.save(
+                    AnalysisId(analysis.id),
+                    board.id,
+                    StickerCreation(
+                        type = StickerType.IMAGE,
+                        title = "리캡",
+                        summary = "웃기고 귀여우면 일단 주워요",
+                        sourcePhotoId = PhotoId(pendingPhoto.id),
+                        imageKey = "stickers/recap.png",
+                        textContent = null,
+                        layout = defaultStickerLayout(),
+                    ),
+                )
+            stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(pendingPhoto.id)))
+
+            When("리캡 상세를 조회하면") {
+                Then("완료되지 않은 사진을 제외하고 계약 불일치로 실패한다") {
+                    shouldThrow<IllegalStateException> {
+                        service.getRecap(board.userId, sticker.id)
+                    }
+                }
+            }
+        }
+    })

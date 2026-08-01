@@ -4,6 +4,9 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.TermId
+import com.github.nexters.ppotto.global.identifier.UserId
+
 import java.io.Serializable
 import java.time.Instant
 import java.util.UUID
@@ -15,8 +18,8 @@ import java.util.UUID
 @Suppress("warnings")
 data class TermAgreements(
     val id: UUID? = null,
-    val userId: UUID,
-    val termId: UUID,
+    val userId: UserId,
+    val termId: TermId,
     val agreedAt: Instant? = null
 ): Serializable {
 

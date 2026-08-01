@@ -4,9 +4,10 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.TermId
+
 import java.io.Serializable
 import java.time.Instant
-import java.util.UUID
 
 
 /**
@@ -14,7 +15,7 @@ import java.util.UUID
  */
 @Suppress("warnings")
 data class Terms(
-    val id: UUID? = null,
+    val id: TermId? = null,
     val code: String,
     val version: String,
     val isRequired: Boolean? = null,

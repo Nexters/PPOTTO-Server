@@ -10,11 +10,11 @@ import com.github.nexters.ppotto.auth.application.port.TokenProvider
 import com.github.nexters.ppotto.auth.domain.LoginCommand
 import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.transaction.support.TransactionOperations
-import java.util.UUID
 
 @TestConfiguration(proxyBeanMethods = false)
 class UserJourneyTestConfig {
@@ -59,19 +59,19 @@ class StubKakaoOAuthClient : OAuthClient {
 }
 
 class InMemoryRefreshTokenStore : RefreshTokenStore {
-    private val userIdsByToken = mutableMapOf<String, UUID>()
+    private val userIdsByToken = mutableMapOf<String, UserId>()
 
     override fun save(
-        userId: UUID,
+        userId: UserId,
         refreshToken: String,
     ) {
         userIdsByToken[refreshToken] = userId
     }
 
-    override fun findUserId(refreshToken: String): UUID? = userIdsByToken[refreshToken]
+    override fun findUserId(refreshToken: String): UserId? = userIdsByToken[refreshToken]
 
     override fun rotate(
-        userId: UUID,
+        userId: UserId,
         currentRefreshToken: String,
         newRefreshToken: String,
     ): Boolean =
@@ -81,7 +81,7 @@ class InMemoryRefreshTokenStore : RefreshTokenStore {
             ?.let { userIdsByToken.put(newRefreshToken, it) == null }
             ?: false
 
-    override fun delete(userId: UUID) {
+    override fun delete(userId: UserId) {
         userIdsByToken.entries.removeIf { it.value == userId }
     }
 }

@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.auth.infrastructure.token
 
 import com.github.nexters.ppotto.auth.config.JwtAuthProperties
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -20,7 +21,7 @@ class JwtTokenProviderTest :
             )
 
         Given("사용자 아이디가 주어졌을 때") {
-            val userId = UUID.randomUUID()
+            val userId = UserId(UUID.randomUUID())
 
             When("서비스 토큰을 발급하면") {
                 Then("access token에서 같은 사용자 아이디를 검증하고 refresh token은 매번 다르다") {
@@ -36,7 +37,7 @@ class JwtTokenProviderTest :
         }
 
         Given("서명이 변경된 access token이 주어졌을 때") {
-            val token = provider.issue(UUID.randomUUID()).accessToken
+            val token = provider.issue(UserId(UUID.randomUUID())).accessToken
             val tokenParts = token.split(".")
             val signature = tokenParts.last()
             val tamperedSignature = (if (signature.first() == 'a') "b" else "a") + signature.drop(1)

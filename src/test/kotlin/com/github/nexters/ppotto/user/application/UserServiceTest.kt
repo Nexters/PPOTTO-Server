@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.user.application
 
 import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.runConcurrently
 import com.github.nexters.ppotto.user.domain.OAuthProvider
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import com.github.nexters.ppotto.user.support.FakeSocialAccountRevoker
@@ -15,9 +16,6 @@ import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import com.github.nexters.ppotto.jooq.enums.OauthProvider as JooqOAuthProvider
 
 @Import(UserTestConfig::class)
@@ -77,28 +75,11 @@ class UserServiceTest(
                     providerRefreshToken = null,
                 )
             val requestCount = 8
-            val ready = CountDownLatch(requestCount)
-            val start = CountDownLatch(1)
-            val executor = Executors.newFixedThreadPool(requestCount)
 
             When("사용자를 동시에 조회하거나 생성하면") {
-                val futures =
-                    List(requestCount) {
-                        executor.submit<UserRegistrationResult> {
-                            ready.countDown()
-                            start.await()
-                            userService.findOrCreate(command)
-                        }
-                    }
                 val results =
-                    try {
-                        ready.await(10, TimeUnit.SECONDS) shouldBe true
-                        start.countDown()
-                        futures.map { it.get(10, TimeUnit.SECONDS) }
-                    } finally {
-                        start.countDown()
-                        executor.shutdownNow()
-                    }
+                    runConcurrently(requestCount) { userService.findOrCreate(command) }
+                        .map { it.getOrThrow() }
 
                 Then("한 사용자만 저장하고 한 요청만 신규 가입으로 반환한다") {
                     results

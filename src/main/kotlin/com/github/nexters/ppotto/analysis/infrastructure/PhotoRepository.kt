@@ -3,6 +3,9 @@ package com.github.nexters.ppotto.analysis.infrastructure
 import com.github.nexters.ppotto.analysis.domain.Photo
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
 import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
 import org.jooq.DSLContext
@@ -30,7 +33,7 @@ class PhotoRepository(
             dslContext
                 .insertInto(PHOTOS, PHOTOS.ANALYSIS_ID, PHOTOS.BOARD_ID, PHOTOS.CONTENT_TYPE, PHOTOS.TAKEN_AT)
         items.forEach { item ->
-            insert = insert.values(analysisId, boardId, item.contentType.mimeType, item.takenAt)
+            insert = insert.values(AnalysisId(analysisId), BoardId(boardId), item.contentType.mimeType, item.takenAt)
         }
         return insert
             .returning()
@@ -41,7 +44,7 @@ class PhotoRepository(
     fun findPendingByAnalysisId(analysisId: UUID): List<Photo> =
         dslContext
             .selectFrom(PHOTOS)
-            .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
+            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
             .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
             .fetch()
             .map { it.toDomain() }
@@ -49,7 +52,7 @@ class PhotoRepository(
     fun findAllByAnalysisId(analysisId: UUID): List<Photo> =
         dslContext
             .selectFrom(PHOTOS)
-            .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
+            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
             .fetch()
             .map { it.toDomain() }
 
@@ -61,7 +64,7 @@ class PhotoRepository(
                 .update(PHOTOS)
                 .set(PHOTOS.UPLOAD_STATUS, UploadStatus.COMPLETED.name)
                 .set(PHOTOS.UPLOADED_AT, uploadedAt)
-                .where(PHOTOS.ID.eq(id))
+                .where(PHOTOS.ID.eq(PhotoId(id)))
                 .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
                 .returning()
                 .fetchOne()
@@ -76,20 +79,27 @@ class PhotoRepository(
             dslContext
                 .update(PHOTOS)
                 .set(PHOTOS.UPLOAD_STATUS, UploadStatus.FAILED.name)
-                .where(PHOTOS.ID.eq(id))
+                .where(PHOTOS.ID.eq(PhotoId(id)))
                 .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
                 .execute()
         }
     }
 
-    fun findAllByIds(ids: Collection<UUID>): List<Photo> =
+    fun findCompletedByIds(
+        analysisId: UUID,
+        boardId: UUID,
+        ids: Collection<UUID>,
+    ): List<Photo> =
         ids
             .toSet()
             .takeIf { it.isNotEmpty() }
             ?.let { uniqueIds ->
                 dslContext
                     .selectFrom(PHOTOS)
-                    .where(PHOTOS.ID.`in`(uniqueIds))
+                    .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
+                    .and(PHOTOS.BOARD_ID.eq(BoardId(boardId)))
+                    .and(PHOTOS.ID.`in`(uniqueIds.map(::PhotoId)))
+                    .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
                     .fetch()
                     .map { it.toDomain() }
             } ?: emptyList()
@@ -106,9 +116,10 @@ class PhotoRepository(
                 dslContext
                     .selectCount()
                     .from(PHOTOS)
-                    .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
-                    .and(PHOTOS.BOARD_ID.eq(boardId))
-                    .and(PHOTOS.ID.`in`(uniqueIds))
+                    .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
+                    .and(PHOTOS.BOARD_ID.eq(BoardId(boardId)))
+                    .and(PHOTOS.ID.`in`(uniqueIds.map(::PhotoId)))
+                    .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
                     .fetchSingle(0, Int::class.java)
             } ?: 0
 
@@ -119,15 +130,15 @@ class PhotoRepository(
             ?.let {
                 dslContext
                     .deleteFrom(PHOTOS)
-                    .where(PHOTOS.ANALYSIS_ID.`in`(it))
+                    .where(PHOTOS.ANALYSIS_ID.`in`(it.map(::AnalysisId)))
                     .execute()
             } ?: 0
 
     private fun PhotosRecord.toDomain() =
         Photo(
-            id = id!!,
-            analysisId = analysisId,
-            boardId = boardId,
+            id = id!!.value,
+            analysisId = analysisId.value,
+            boardId = boardId.value,
             contentType =
                 PhotoContentType.entries.find { it.mimeType == contentType }
                     ?: error("unknown photos.content_type: $contentType"),

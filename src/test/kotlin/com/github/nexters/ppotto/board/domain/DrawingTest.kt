@@ -1,6 +1,9 @@
 package com.github.nexters.ppotto.board.domain
 
 import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -22,7 +25,7 @@ class DrawingTest :
             When("드로잉 생성 모델을 만들면") {
                 Then("도메인 불변식 검증에 실패한다") {
                     shouldThrow<IllegalArgumentException> {
-                        newDrawing(DrawingScope.BOARD, UUID.randomUUID())
+                        newDrawing(DrawingScope.BOARD, StickerId(UUID.randomUUID()))
                     }
                 }
             }
@@ -41,10 +44,10 @@ class DrawingTest :
 
 private fun newDrawing(
     scope: DrawingScope,
-    stickerId: UUID?,
+    stickerId: StickerId?,
 ) = NewDrawing(
-    id = uuidV7(),
-    boardId = UUID.randomUUID(),
+    id = DrawingId(uuidV7()),
+    boardId = BoardId(UUID.randomUUID()),
     stickerId = stickerId,
     scope = scope,
     stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),

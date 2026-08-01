@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.domain
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -9,7 +10,7 @@ import java.util.UUID
 class UserTest :
     BehaviorSpec({
         Given("활성 사용자가 있을 때") {
-            val id = UUID.randomUUID()
+            val id = UserId(UUID.randomUUID())
             val user =
                 User(
                     id = id,
@@ -40,7 +41,7 @@ class UserTest :
             val at = Instant.parse("2026-07-30T00:00:00Z")
             val user =
                 User(
-                    id = UUID.randomUUID(),
+                    id = UserId(UUID.randomUUID()),
                     provider = OAuthProvider.KAKAO,
                     providerUserId = "kakao-user",
                     email = "deleted@users.invalid",

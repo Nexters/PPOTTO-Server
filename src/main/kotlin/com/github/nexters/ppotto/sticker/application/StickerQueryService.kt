@@ -1,32 +1,32 @@
 package com.github.nexters.ppotto.sticker.application
 
-import com.github.nexters.ppotto.board.application.BoardAccessService
-import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoMetadata
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.domain.Sticker
-import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 @Service
 class StickerQueryService(
     private val stickerRepository: StickerRepository,
     private val stickerRecapRepository: StickerRecapRepository,
-    private val boardAccessService: BoardAccessService,
+    private val stickerAccessService: StickerAccessService,
     private val recapPhotoQueryPorts: List<RecapPhotoQueryPort>,
     private val stickerImageStoragePorts: List<StickerImageStoragePort>,
 ) {
-    fun getByBoardId(boardId: UUID): List<StickerItemResult> = stickerRepository.findAllByBoardId(boardId).let(::toResults)
+    fun getByBoardId(boardId: BoardId): List<StickerItemResult> = stickerRepository.findAllByBoardId(boardId).let(::toResults)
 
     fun getRecap(
-        userId: UUID,
-        stickerId: UUID,
+        userId: UserId,
+        stickerId: StickerId,
     ): StickerRecapResult =
-        getOwned(userId, stickerId).let { sticker ->
+        stickerAccessService.getOwned(userId, stickerId).let { sticker ->
             stickerRecapRepository
                 .findComments(stickerId)
                 .map { RecapCommentResult(it.id, it.content, it.posX, it.posY) }
@@ -36,26 +36,14 @@ class StickerQueryService(
                         .takeIf { it.isNotEmpty() }
                         ?.let { photoIds ->
                             photoQueryPort()
-                                .getByIds(photoIds)
+                                .getByIds(sticker.analysisId, sticker.boardId, photoIds)
                                 .also { checkPhotoContract(photoIds, it) }
-                                .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id })
+                                .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id.value })
                                 .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }
                         }.orEmpty()
                         .let { StickerRecapResult(toResults(listOf(sticker)).single(), sticker.summary, comments, it) }
                 }
         }
-
-    private fun getOwned(
-        userId: UUID,
-        stickerId: UUID,
-    ): Sticker =
-        (stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND))
-            .also { sticker ->
-                boardAccessService
-                    .getById(sticker.boardId)
-                    .takeIf { it.userId == userId }
-                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-            }
 
     private fun toResults(stickers: List<Sticker>): List<StickerItemResult> =
         stickers
@@ -91,7 +79,7 @@ class StickerQueryService(
         stickerImageStoragePorts.singleOrNull() ?: error("스티커 이미지 저장소 application port 구현이 필요합니다.")
 
     private fun checkPhotoContract(
-        requestedIds: Collection<UUID>,
+        requestedIds: Collection<PhotoId>,
         photos: List<RecapPhotoMetadata>,
     ): Unit =
         check(photos.map { it.id }.toSet() == requestedIds.toSet()) {

@@ -72,11 +72,10 @@ class AnalysisResultSaveService(
                     .getById(it.boardId)
                     .takeIf { board -> board.userId == it.userId }
                     ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-            }.let {
-                it.stickers
-                    .flatMap { sticker -> sticker.photoIds + listOfNotNull(sticker.sourcePhotoId) }
-                    .toSet()
-            }.let {
+            }.stickers
+            .flatMap { sticker -> sticker.photoIds + listOfNotNull(sticker.sourcePhotoId) }
+            .toSet()
+            .let {
                 AnalysisPhotoOwnershipScope(
                     userId = command.userId,
                     boardId = command.boardId,

@@ -4,10 +4,10 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.jooq.tables.Terms
 
 import java.time.Instant
-import java.util.UUID
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -19,9 +19,9 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class TermsRecord private constructor() : UpdatableRecordImpl<TermsRecord>(Terms.TERMS) {
 
-    open var id: UUID?
+    open var id: TermId?
         set(value): Unit = set(0, value)
-        get(): UUID? = get(0) as UUID?
+        get(): TermId? = get(0) as TermId?
 
     open var code: String
         set(value): Unit = set(1, value)
@@ -57,12 +57,12 @@ open class TermsRecord private constructor() : UpdatableRecordImpl<TermsRecord>(
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
+    override fun key(): Record1<TermId?> = super.key() as Record1<TermId?>
 
     /**
      * Create a detached, initialised TermsRecord
      */
-    constructor(id: UUID? = null, code: String, version: String, isRequired: Boolean? = null, contentUrl: String? = null, effectiveAt: Instant, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: TermId? = null, code: String, version: String, isRequired: Boolean? = null, contentUrl: String? = null, effectiveAt: Instant, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.code = code
         this.version = version

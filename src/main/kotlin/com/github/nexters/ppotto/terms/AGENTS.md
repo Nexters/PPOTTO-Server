@@ -12,11 +12,13 @@ Terms domain. Owns effective term versions and append-only user agreement histor
 | `infrastructure/integration/WithdrawnUserTermAgreementDeletionAdapter.kt` | User-domain `WithdrawnUserTermAgreementDeletionPort` adapter through `TermsService` |
 | `presentation/TermsApi.kt` | Version 1 terms HTTP mapping and Swagger contract |
 | `presentation/TermsController.kt` | Fluent public optional-auth term lookup and protected agreement implementation |
-| `presentation/TermsApiExamples.kt` | `ApiExampleProvider` 구현. 로그인/비로그인 약관 목록 응답, 동의 요청, `TERM-001` 실패 예시를 실제 DTO 인스턴스로 정의합니다 |
+| `presentation/TermsApiExamples.kt` | `ApiExampleProvider` implementation. Defines logged-in/anonymous terms list responses, the agreement request, and the `TERM-001` failure example as real DTO instances |
 | `presentation/dto/` | Swagger-described terms request and response schemas |
 
 Current versions are selected by the latest `effective_at` at or before the lookup time for each code. Anonymous current-term reads return every `agreed` value as `false`; authenticated reads project stored agreement state. Agreement writes never access the user repository and rely on the database foreign key for user integrity.
 
 Because `term_agreements.user_id` is a real foreign key, withdrawn-user cleanup must delete agreements before the user row is hard-deleted. `terms` rows themselves are shared master data and are never deleted by that batch.
+
+`Term.id`, `TermResult.id`, presentation (handler parameters, `TermResponse.id`, `AgreeTermsRequest.termIds`), and all service/repository user references use the typed `TermId`/`UserId` from `global/identifier`; jOOQ id columns are generated typed (codegen `forcedType`), so repository bindings pass typed ids straight through; raw `UUID` survives only on `TermAgreement.id` (internal record identity that never crosses a method boundary).
 
 Update this file when the terms package layout changes.

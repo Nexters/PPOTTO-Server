@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -21,12 +22,12 @@ import java.util.UUID
 
 class AuthServiceTest :
     BehaviorSpec({
-        val userId = UUID.randomUUID()
+        val userId = UserId(UUID.randomUUID())
         val noTransaction = TransactionOperations.withoutTransaction()
         val refreshStore = FakeRefreshTokenStore()
         val tokenProvider =
             object : TokenProvider {
-                override fun issue(userId: UUID) = TokenPair("access-$userId", "refresh-$userId-${UUID.randomUUID()}", 3600)
+                override fun issue(userId: UserId) = TokenPair("access-$userId", "refresh-$userId-${UUID.randomUUID()}", 3600)
 
                 override fun verifyAccessToken(accessToken: String) = userId
             }
@@ -36,7 +37,16 @@ class AuthServiceTest :
         Given("소셜 계정이 처음 가입하고 provider 검증이 성공했을 때") {
             val oauthClient = FakeOAuthClient()
             val userPort = AuthUserPort { AuthUser(userId, true) }
-            val service = AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
+            val service =
+                AuthService(
+                    oauthClients = listOf(oauthClient),
+                    signupTransaction = noTransaction,
+                    tokenProvider = tokenProvider,
+                    refreshTokenStore = refreshStore,
+                    authUserPort = userPort,
+                    authTermsPort = termsPort,
+                    authActiveUserPort = activeUserPort,
+                )
 
             When("로그인하면") {
                 Then("신규 사용자 여부와 저장된 서비스 토큰을 반환한다") {
@@ -51,7 +61,16 @@ class AuthServiceTest :
         Given("애플 최초 가입에서 authorization code 교환이 실패했을 때") {
             val oauthClient = FakeOAuthClient(exchangeFailed = true)
             val userPort = AuthUserPort { AuthUser(userId, true) }
-            val service = AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
+            val service =
+                AuthService(
+                    oauthClients = listOf(oauthClient),
+                    signupTransaction = noTransaction,
+                    tokenProvider = tokenProvider,
+                    refreshTokenStore = refreshStore,
+                    authUserPort = userPort,
+                    authTermsPort = termsPort,
+                    authActiveUserPort = activeUserPort,
+                )
 
             When("로그인하면") {
                 Then("AUTH-003 예외가 발생한다") {
@@ -67,7 +86,16 @@ class AuthServiceTest :
         Given("애플 기존 사용자의 authorization code 교환이 실패했을 때") {
             val oauthClient = FakeOAuthClient(exchangeFailed = true)
             val userPort = AuthUserPort { AuthUser(userId, false) }
-            val service = AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
+            val service =
+                AuthService(
+                    oauthClients = listOf(oauthClient),
+                    signupTransaction = noTransaction,
+                    tokenProvider = tokenProvider,
+                    refreshTokenStore = refreshStore,
+                    authUserPort = userPort,
+                    authTermsPort = termsPort,
+                    authActiveUserPort = activeUserPort,
+                )
 
             When("로그인하면") {
                 Then("기존 사용자는 로그인을 계속한다") {
@@ -79,7 +107,16 @@ class AuthServiceTest :
         Given("한 번 사용한 refresh token이 주어졌을 때") {
             val oauthClient = FakeOAuthClient()
             val userPort = AuthUserPort { AuthUser(userId, false) }
-            val service = AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, activeUserPort)
+            val service =
+                AuthService(
+                    oauthClients = listOf(oauthClient),
+                    signupTransaction = noTransaction,
+                    tokenProvider = tokenProvider,
+                    refreshTokenStore = refreshStore,
+                    authUserPort = userPort,
+                    authTermsPort = termsPort,
+                    authActiveUserPort = activeUserPort,
+                )
             val issued = service.login(LoginCommand.Kakao("kakao-token")).tokenPair
             service.refresh(issued.refreshToken)
 
@@ -99,7 +136,15 @@ class AuthServiceTest :
             val userPort = AuthUserPort { AuthUser(userId, false) }
             val inactiveUserPort = AuthActiveUserPort { false }
             val service =
-                AuthService(listOf(oauthClient), noTransaction, tokenProvider, refreshStore, userPort, termsPort, inactiveUserPort)
+                AuthService(
+                    oauthClients = listOf(oauthClient),
+                    signupTransaction = noTransaction,
+                    tokenProvider = tokenProvider,
+                    refreshTokenStore = refreshStore,
+                    authUserPort = userPort,
+                    authTermsPort = termsPort,
+                    authActiveUserPort = inactiveUserPort,
+                )
             val refreshToken = "withdrawn-${UUID.randomUUID()}"
             refreshStore.save(userId, refreshToken)
 
@@ -131,10 +176,10 @@ class AuthServiceTest :
     }
 
     private class FakeRefreshTokenStore : RefreshTokenStore {
-        private val tokens = mutableMapOf<String, UUID>()
+        private val tokens = mutableMapOf<String, UserId>()
 
         override fun save(
-            userId: UUID,
+            userId: UserId,
             refreshToken: String,
         ) {
             tokens[refreshToken] = userId
@@ -143,7 +188,7 @@ class AuthServiceTest :
         override fun findUserId(refreshToken: String) = tokens[refreshToken]
 
         override fun rotate(
-            userId: UUID,
+            userId: UserId,
             currentRefreshToken: String,
             newRefreshToken: String,
         ): Boolean {
@@ -152,7 +197,7 @@ class AuthServiceTest :
             return true
         }
 
-        override fun delete(userId: UUID) {
+        override fun delete(userId: UserId) {
             tokens.entries.removeIf { it.value == userId }
         }
     }

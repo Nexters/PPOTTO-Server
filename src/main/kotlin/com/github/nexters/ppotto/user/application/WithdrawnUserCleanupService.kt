@@ -1,10 +1,10 @@
 package com.github.nexters.ppotto.user.application
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.user.application.port.WithdrawnUserDataDeletionPort
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.springframework.stereotype.Service
 import java.time.Instant
-import java.util.UUID
 
 @Service
 class WithdrawnUserCleanupService(
@@ -39,5 +39,5 @@ class WithdrawnUserCleanupService(
 
 data class WithdrawnUserCleanupResult(
     val attempted: Int,
-    val deletedUserIds: List<UUID>,
+    val deletedUserIds: List<UserId>,
 )

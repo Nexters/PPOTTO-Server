@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.PendingTermResponse
 import com.github.nexters.ppotto.auth.presentation.dto.TokenPairResponse
+import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
@@ -70,7 +71,7 @@ private val NEW_USER_LOGIN_RESPONSE =
                     pendingTerms =
                         listOf(
                             PendingTermResponse(
-                                id = UUID.fromString("01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f"),
+                                id = TermId(UUID.fromString("01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f")),
                                 code = "TOS",
                                 version = "1.0",
                                 isRequired = true,
@@ -78,7 +79,7 @@ private val NEW_USER_LOGIN_RESPONSE =
                                 agreed = false,
                             ),
                             PendingTermResponse(
-                                id = UUID.fromString("01983f2a-2b3c-7d4e-9f5a-6b7c8d9e0f1a"),
+                                id = TermId(UUID.fromString("01983f2a-2b3c-7d4e-9f5a-6b7c8d9e0f1a")),
                                 code = "PRIVACY",
                                 version = "1.0",
                                 isRequired = true,

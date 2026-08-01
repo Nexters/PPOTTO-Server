@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.sticker.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.records.RecapCommentsRecord
 import com.github.nexters.ppotto.jooq.tables.references.RECAP_COMMENTS
 import com.github.nexters.ppotto.jooq.tables.references.STICKER_PHOTOS
@@ -9,15 +11,14 @@ import com.github.nexters.ppotto.sticker.domain.StickerPhoto
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.row
 import org.springframework.stereotype.Repository
-import java.util.UUID
 
 @Repository
 class StickerRecapRepository(
     private val dslContext: DSLContext,
 ) {
     fun savePhotos(
-        stickerId: UUID,
-        photoIds: List<UUID>,
+        stickerId: StickerId,
+        photoIds: List<PhotoId>,
     ): List<StickerPhoto> =
         photoIds
             .takeIf { it.isNotEmpty() }
@@ -31,7 +32,7 @@ class StickerRecapRepository(
             } ?: emptyList()
 
     fun saveComments(
-        stickerId: UUID,
+        stickerId: StickerId,
         creations: List<RecapCommentCreation>,
     ): List<RecapComment> =
         creations
@@ -53,7 +54,7 @@ class StickerRecapRepository(
                     .map { it.toDomain() }
             } ?: emptyList()
 
-    fun findPhotoIds(stickerId: UUID): List<UUID> =
+    fun findPhotoIds(stickerId: StickerId): List<PhotoId> =
         dslContext
             .select(STICKER_PHOTOS.PHOTO_ID)
             .from(STICKER_PHOTOS)
@@ -61,7 +62,7 @@ class StickerRecapRepository(
             .fetch(STICKER_PHOTOS.PHOTO_ID)
             .filterNotNull()
 
-    fun findComments(stickerId: UUID): List<RecapComment> =
+    fun findComments(stickerId: StickerId): List<RecapComment> =
         dslContext
             .selectFrom(RECAP_COMMENTS)
             .where(RECAP_COMMENTS.STICKER_ID.eq(stickerId))
@@ -69,18 +70,18 @@ class StickerRecapRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun deleteByStickerIds(stickerIds: Collection<UUID>) {
+    fun deleteByStickerIds(stickerIds: Collection<StickerId>) {
         stickerIds
             .takeIf { it.isNotEmpty() }
-            ?.let {
+            ?.let { ids ->
                 dslContext
                     .deleteFrom(RECAP_COMMENTS)
-                    .where(RECAP_COMMENTS.STICKER_ID.`in`(it))
+                    .where(RECAP_COMMENTS.STICKER_ID.`in`(ids))
                     .execute()
                     .let {
                         dslContext
                             .deleteFrom(STICKER_PHOTOS)
-                            .where(STICKER_PHOTOS.STICKER_ID.`in`(stickerIds))
+                            .where(STICKER_PHOTOS.STICKER_ID.`in`(ids))
                             .execute()
                     }
             }

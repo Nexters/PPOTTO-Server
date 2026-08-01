@@ -9,23 +9,25 @@ import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class BoardCommandService(
     private val boardRepository: BoardRepository,
+    private val boardAccessService: BoardAccessService,
     private val drawingCommandService: BoardDrawingCommandService,
     private val analysisActivityPort: BoardAnalysisActivityPort,
     private val stickerCommandPort: BoardStickerCommandPort,
 ) {
     @Transactional
-    fun createDefault(userId: UUID): Board = create(userId, null)
+    fun createDefault(userId: UserId): Board = create(userId, null)
 
     @Transactional
     fun create(
-        userId: UUID,
+        userId: UserId,
         name: String?,
     ): Board =
         (
@@ -40,8 +42,8 @@ class BoardCommandService(
 
     @Transactional
     fun rename(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
         name: String,
     ): Board =
         name
@@ -51,38 +53,29 @@ class BoardCommandService(
 
     @Transactional
     fun delete(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
     ): Unit =
         boardRepository
             .lockCommandsByUserId(userId)
-            .let { getOwnedByIdForUpdate(boardId, userId) }
+            .let { boardAccessService.getOwnedByIdForUpdate(boardId, userId) }
             .let { boardId }
             .also { validateDeletable(it, userId) }
             .also(drawingCommandService::deleteAllByBoardId)
             .also(stickerCommandPort::deleteAllByBoardId)
             .let { check(boardRepository.softDelete(it, userId)) }
 
-    private fun getOwnedByIdForUpdate(
-        boardId: UUID,
-        userId: UUID,
-    ): Board =
-        boardRepository.findOwnedByIdForUpdate(boardId, userId)
-            ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
-
     private fun validateDeletable(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
     ) {
         boardRepository
             .countByUserId(userId)
             .takeIf { it > 1 }
-            ?.let {
-                analysisActivityPort
-                    .hasActiveAnalysis(boardId, userId)
-                    .takeUnless { it }
-                    ?: throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
-            } ?: throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
+            ?: throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
+        boardId
+            .takeUnless { analysisActivityPort.hasActiveAnalysis(it, userId) }
+            ?: throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
     }
 
     private fun validateName(name: String) {

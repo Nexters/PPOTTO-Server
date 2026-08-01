@@ -4,9 +4,12 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
+
 import java.io.Serializable
 import java.time.Instant
-import java.util.UUID
 
 
 /**
@@ -14,9 +17,9 @@ import java.util.UUID
  */
 @Suppress("warnings")
 data class Analysis(
-    val id: UUID? = null,
-    val userId: UUID,
-    val boardId: UUID,
+    val id: AnalysisId? = null,
+    val userId: UserId,
+    val boardId: BoardId,
     val status: String,
     val progress: Int? = null,
     val failedReason: String? = null,

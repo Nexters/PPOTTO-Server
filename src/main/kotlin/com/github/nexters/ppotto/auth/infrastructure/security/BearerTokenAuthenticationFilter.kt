@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.auth.infrastructure.security
 
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
+import com.github.nexters.ppotto.global.config.PublicPaths
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -19,7 +20,7 @@ class BearerTokenAuthenticationFilter(
 ) : OncePerRequestFilter() {
     override fun shouldNotFilter(request: HttpServletRequest): Boolean =
         request.servletPath.let { path ->
-            path in PUBLIC_PATHS || DOCUMENT_PATH_PREFIXES.any(path::startsWith)
+            PublicPaths.isPublicApi(path) || PublicPaths.isDocument(path)
         }
 
     override fun doFilterInternal(
@@ -45,7 +46,7 @@ class BearerTokenAuthenticationFilter(
         try {
             tokenProvider
                 .verifyAccessToken(token)
-                .let { UsernamePasswordAuthenticationToken(it, token, emptyList()) }
+                .let { UsernamePasswordAuthenticationToken(it.value, token, emptyList()) }
                 .apply { details = WebAuthenticationDetailsSource().buildDetails(request) }
                 .let { authentication ->
                     SecurityContextHolder
@@ -71,18 +72,5 @@ class BearerTokenAuthenticationFilter(
     private companion object {
         const val AUTHORIZATION = "Authorization"
         const val BEARER_PREFIX = "Bearer "
-        val PUBLIC_PATHS =
-            setOf(
-                "/auth/login",
-                "/auth/refresh",
-                "/actuator/health",
-                "/actuator/health/liveness",
-                "/actuator/health/readiness",
-            )
-        val DOCUMENT_PATH_PREFIXES =
-            setOf(
-                "/swagger-ui",
-                "/v3/api-docs",
-            )
     }
 }

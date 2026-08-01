@@ -4,7 +4,13 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.jooq.AnalysisIdConverter
+import com.github.nexters.ppotto.global.jooq.BoardIdConverter
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.PhotoIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_PHOTOS_ANALYSIS_ID
 import com.github.nexters.ppotto.jooq.indexes.IDX_PHOTOS_BOARD_ID
@@ -16,7 +22,6 @@ import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
 
 import java.time.Instant
-import java.util.UUID
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -85,17 +90,17 @@ open class Photos(
     /**
      * The column <code>public.photos.id</code>.
      */
-    val ID: TableField<PhotosRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "")
+    val ID: TableField<PhotosRecord, PhotoId?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "", PhotoIdConverter())
 
     /**
      * The column <code>public.photos.analysis_id</code>.
      */
-    val ANALYSIS_ID: TableField<PhotosRecord, UUID?> = createField(DSL.name("analysis_id"), SQLDataType.UUID.nullable(false), this, "")
+    val ANALYSIS_ID: TableField<PhotosRecord, AnalysisId?> = createField(DSL.name("analysis_id"), SQLDataType.UUID.nullable(false), this, "", AnalysisIdConverter())
 
     /**
      * The column <code>public.photos.board_id</code>.
      */
-    val BOARD_ID: TableField<PhotosRecord, UUID?> = createField(DSL.name("board_id"), SQLDataType.UUID.nullable(false), this, "")
+    val BOARD_ID: TableField<PhotosRecord, BoardId?> = createField(DSL.name("board_id"), SQLDataType.UUID.nullable(false), this, "", BoardIdConverter())
 
     /**
      * The column <code>public.photos.content_type</code>.

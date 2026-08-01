@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.terms.presentation
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.jooq.tables.references.TERM_AGREEMENTS
@@ -43,6 +44,7 @@ class TermsControllerTest(
                     "terms-controller-$suffix@example.com",
                 ).returning(USERS.ID)
                 .fetchOne(USERS.ID)!!
+                .value
         }
 
         fun saveTerm(
@@ -82,7 +84,7 @@ class TermsControllerTest(
 
                 val requiredTermIds =
                     termsService
-                        .findCurrentTerms(userId)
+                        .findCurrentTerms(UserId(userId))
                         .filter { it.isRequired }
                         .map { it.id }
                 val requestBody =
@@ -107,7 +109,7 @@ class TermsControllerTest(
                     dslContext.fetchCount(
                         TERM_AGREEMENTS,
                         TERM_AGREEMENTS.USER_ID
-                            .eq(userId)
+                            .eq(UserId(userId))
                             .and(TERM_AGREEMENTS.TERM_ID.eq(term.id)),
                     ) shouldBe 1
 

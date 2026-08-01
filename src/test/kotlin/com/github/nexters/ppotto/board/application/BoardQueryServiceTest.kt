@@ -10,7 +10,9 @@ import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
@@ -27,12 +29,12 @@ class BoardQueryServiceTest(
 ) : IntegrationTest({
         Given("스티커와 드로잉이 있는 보드를 소유한 사용자가") {
             stickerPort.reset()
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id, "여름 휴가")
             val sticker = boardStickerItem()
             val drawing =
                 NewDrawing(
-                    id = uuidV7(),
+                    id = DrawingId(uuidV7()),
                     boardId = board.id,
                     stickerId = sticker.id,
                     scope = DrawingScope.STICKER,
@@ -57,7 +59,7 @@ class BoardQueryServiceTest(
                 Then("BOARD-002 오류가 발생한다") {
                     val exception =
                         shouldThrow<NotFoundException> {
-                            boardQueryService.getDetail(board.id, userRepository.save().id)
+                            boardQueryService.getDetail(board.id, userRepository.saveTestUser().id)
                         }
                     exception.errorCode shouldBe BoardErrorCode.NOT_FOUND
                 }

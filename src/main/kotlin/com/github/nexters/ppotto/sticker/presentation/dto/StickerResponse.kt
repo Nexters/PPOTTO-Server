@@ -1,15 +1,16 @@
 package com.github.nexters.ppotto.sticker.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.StickerItemResult
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import io.swagger.v3.oas.annotations.media.Schema
-import java.util.UUID
 
 @Schema(description = "스티커 내용과 보드 배치")
 data class StickerResponse(
-    @field:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val id: UUID,
+    @get:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("id")
+    val id: StickerId,
     @field:Schema(description = "제목 뱃지 문구이자 리캡 제목", example = "동물 밈 짤줍")
     val title: String,
     @get:Schema(description = "미열람 여부. 뱃지에 빨간 점 표시", example = "false")

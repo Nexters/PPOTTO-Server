@@ -9,9 +9,12 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class BoardLayoutService(
@@ -22,8 +25,8 @@ class BoardLayoutService(
 ) {
     @Transactional
     fun update(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
         command: BoardLayoutUpdateCommand,
     ): Unit =
         command
@@ -97,7 +100,7 @@ class BoardLayoutService(
 
     private fun DrawingCreateCommand.isInvalid(): Boolean =
         listOf(
-            id.version() != UUID_VERSION_7,
+            id.value.version() != UUID_VERSION_7,
             (scope == DrawingScope.STICKER) != (stickerId != null),
             stroke.isEmpty(),
             color.isBlank(),
@@ -106,7 +109,7 @@ class BoardLayoutService(
         ).any { it }
 
     private fun validateDrawingOwnership(
-        boardId: UUID,
+        boardId: BoardId,
         command: BoardLayoutUpdateCommand,
     ) {
         command.createdDrawings
@@ -132,18 +135,18 @@ class BoardLayoutService(
 data class BoardLayoutUpdateCommand(
     val stickers: List<BoardStickerLayoutCommand>,
     val createdDrawings: List<DrawingCreateCommand>,
-    val deletedDrawingIds: List<UUID>,
+    val deletedDrawingIds: List<DrawingId>,
 )
 
 data class DrawingCreateCommand(
-    val id: UUID,
+    val id: DrawingId,
     val scope: DrawingScope,
-    val stickerId: UUID?,
+    val stickerId: StickerId?,
     val stroke: Map<String, Any?>,
     val color: String,
     val strokeWidth: Double,
 ) {
-    fun toDomain(boardId: UUID): NewDrawing =
+    fun toDomain(boardId: BoardId): NewDrawing =
         NewDrawing(
             id = id,
             boardId = boardId,

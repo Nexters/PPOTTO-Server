@@ -5,6 +5,9 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.ErrorResponseException
+import org.springframework.web.HttpMediaTypeNotAcceptableException
+import org.springframework.web.HttpMediaTypeNotSupportedException
 import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
@@ -43,9 +46,30 @@ class GlobalExceptionHandler {
     fun handleMethodNotSupported(e: HttpRequestMethodNotSupportedException): ResponseEntity<ApiResponse<Unit>> =
         respond(HttpStatus.METHOD_NOT_ALLOWED, ErrorResponse.of(CommonErrorCode.METHOD_NOT_ALLOWED), e)
 
+    @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
+    fun handleMediaTypeNotSupported(e: HttpMediaTypeNotSupportedException): ResponseEntity<ApiResponse<Unit>> =
+        respond(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorResponse.of(CommonErrorCode.UNSUPPORTED_MEDIA_TYPE), e)
+
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException::class)
+    fun handleMediaTypeNotAcceptable(e: HttpMediaTypeNotAcceptableException): ResponseEntity<ApiResponse<Unit>> =
+        respond(HttpStatus.NOT_ACCEPTABLE, ErrorResponse.of(CommonErrorCode.NOT_ACCEPTABLE), e)
+
+    @ExceptionHandler(ErrorResponseException::class)
+    fun handleErrorResponseException(e: ErrorResponseException): ResponseEntity<ApiResponse<Unit>> =
+        HttpStatus
+            .valueOf(e.statusCode.value())
+            .let { respond(it, ErrorResponse.of(commonErrorCodeOf(it)), e) }
+
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<ApiResponse<Unit>> =
         respond(HttpStatus.INTERNAL_SERVER_ERROR, ErrorResponse.of(CommonErrorCode.INTERNAL_ERROR), e)
+
+    private fun commonErrorCodeOf(status: HttpStatus): CommonErrorCode =
+        CommonErrorCode.entries.firstOrNull { it.status == status }
+            ?: status
+                .takeIf(HttpStatus::is5xxServerError)
+                ?.let { CommonErrorCode.INTERNAL_ERROR }
+            ?: CommonErrorCode.INVALID_INPUT
 
     private fun respond(
         status: HttpStatus,

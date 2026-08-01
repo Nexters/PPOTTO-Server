@@ -9,7 +9,11 @@ import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -19,7 +23,6 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
-import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -35,10 +38,10 @@ class BoardLayoutConcurrencyTest(
     stickerPort: CoordinatedBoardStickerPort,
 ) : IntegrationTest({
         Given("삭제 가능한 보드의 레이아웃 검증이 끝난 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
-            val drawingId = uuidV7()
+            val drawingId = DrawingId(uuidV7())
             val layoutCommand =
                 BoardLayoutUpdateCommand(
                     stickers = emptyList(),
@@ -115,22 +118,22 @@ class CoordinatedBoardStickerPort :
     private val layoutRelease = CountDownLatch(1)
     private val deleteInvocation = CountDownLatch(1)
 
-    override fun getByBoardId(boardId: UUID): List<BoardStickerItem> = emptyList()
+    override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = emptyList()
 
     override fun validateOwnedByBoard(
-        boardId: UUID,
-        stickerIds: Set<UUID>,
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
     ) {
         layoutValidation.countDown()
         check(layoutRelease.await(10, TimeUnit.SECONDS))
     }
 
     override fun updateLayouts(
-        boardId: UUID,
+        boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
     ) = Unit
 
-    override fun deleteAllByBoardId(boardId: UUID) {
+    override fun deleteAllByBoardId(boardId: BoardId) {
         deleteInvocation.countDown()
     }
 

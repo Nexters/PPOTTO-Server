@@ -1,12 +1,12 @@
 package com.github.nexters.ppotto.user.support
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.user.application.port.UserSessionRevoker
-import java.util.UUID
 
 class FakeUserSessionRevoker : UserSessionRevoker {
-    val revokedUserIds = mutableListOf<UUID>()
+    val revokedUserIds = mutableListOf<UserId>()
 
-    override fun revoke(userId: UUID) {
+    override fun revoke(userId: UserId) {
         revokedUserIds += userId
     }
 

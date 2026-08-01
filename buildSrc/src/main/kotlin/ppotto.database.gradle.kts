@@ -55,6 +55,48 @@ jooq {
                         userType = "java.time.Instant"
                         converter = "com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter"
                     }
+                    forcedType {
+                        includeTypes = "(?i)UUID"
+                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id"
+                        userType = "com.github.nexters.ppotto.global.identifier.UserId"
+                        converter = "com.github.nexters.ppotto.global.jooq.UserIdConverter"
+                    }
+                    forcedType {
+                        includeTypes = "(?i)UUID"
+                        includeExpression = "boards\\.id|analysis\\.board_id|photos\\.board_id|stickers\\.board_id|drawings\\.board_id"
+                        userType = "com.github.nexters.ppotto.global.identifier.BoardId"
+                        converter = "com.github.nexters.ppotto.global.jooq.BoardIdConverter"
+                    }
+                    forcedType {
+                        includeTypes = "(?i)UUID"
+                        includeExpression = "stickers\\.id|sticker_photos\\.sticker_id|recap_comments\\.sticker_id|drawings\\.sticker_id"
+                        userType = "com.github.nexters.ppotto.global.identifier.StickerId"
+                        converter = "com.github.nexters.ppotto.global.jooq.StickerIdConverter"
+                    }
+                    forcedType {
+                        includeTypes = "(?i)UUID"
+                        includeExpression = "analysis\\.id|photos\\.analysis_id|stickers\\.analysis_id"
+                        userType = "com.github.nexters.ppotto.global.identifier.AnalysisId"
+                        converter = "com.github.nexters.ppotto.global.jooq.AnalysisIdConverter"
+                    }
+                    forcedType {
+                        includeTypes = "(?i)UUID"
+                        includeExpression = "photos\\.id|sticker_photos\\.photo_id|stickers\\.source_photo_id"
+                        userType = "com.github.nexters.ppotto.global.identifier.PhotoId"
+                        converter = "com.github.nexters.ppotto.global.jooq.PhotoIdConverter"
+                    }
+                    forcedType {
+                        includeTypes = "(?i)UUID"
+                        includeExpression = "drawings\\.id"
+                        userType = "com.github.nexters.ppotto.global.identifier.DrawingId"
+                        converter = "com.github.nexters.ppotto.global.jooq.DrawingIdConverter"
+                    }
+                    forcedType {
+                        includeTypes = "(?i)UUID"
+                        includeExpression = "terms\\.id|term_agreements\\.term_id"
+                        userType = "com.github.nexters.ppotto.global.identifier.TermId"
+                        converter = "com.github.nexters.ppotto.global.jooq.TermIdConverter"
+                    }
                 }
             }
             generate {

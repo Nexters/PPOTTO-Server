@@ -24,6 +24,7 @@ spring-boot-starter-jooq = { module = "org.springframework.boot:spring-boot-star
 spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
 spring-boot-starter-data-redis = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
 spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
+spring-boot-restclient = { module = "org.springframework.boot:spring-boot-restclient" }
 spring-boot-docker-compose = { module = "org.springframework.boot:spring-boot-docker-compose" }
 spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers" }
 spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }

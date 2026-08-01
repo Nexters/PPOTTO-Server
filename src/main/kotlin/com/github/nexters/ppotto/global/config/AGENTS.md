@@ -6,7 +6,8 @@ Spring configuration beans.
 
 | File | Description |
 |------|-------------|
-| `SecurityConfig.kt` | Swagger chain (`@Order(0)`, prod Basic), stateless JWT Bearer API chain (`@Order(100)`, `@Profile("!test")`), test-only permit-all fallback chain (`@Profile("test")`), and fluent CORS source construction. Login, refresh, health, swagger, and `GET /terms` are public; all other API requests require authentication |
+| `SecurityConfig.kt` | Swagger chain (`@Order(0)`, prod Basic), stateless JWT Bearer API chain (`@Order(100)`, `@Profile("!test")`), test-only permit-all fallback chain (`@Profile("test")`) that still runs `BearerTokenAuthenticationFilter` explicitly via `addFilterBefore`, a disabled `FilterRegistrationBean` that turns off the filter's servlet auto-registration so the filter only runs inside security chains, and fluent CORS source construction. Login, refresh, health, swagger, and `GET /terms` are public; all other API requests require authentication |
+| `PublicPaths.kt` | Single source of truth for public paths. Exposes ant patterns (`PUBLIC_API_PATTERNS`, `DOCUMENT_PATTERNS`) for the security chains and exact/prefix matchers (`isPublicApi`, `isDocument`) for `BearerTokenAuthenticationFilter.shouldNotFilter`, so the chain and the filter can never drift apart |
 | `CorsProperties.kt` | `@ConfigurationProperties("cors")` + `@Validated`. Bound from `CORS_ALLOWED_ORIGINS` |
 | `OpenApiConfig.kt` | Swagger metadata, response envelope contract, common error table, Bearer scheme, and fluent required/optional authentication documentation inferred from controller argument annotations. `apiVersionHeaderCustomizer` only rewrites the `X-API-Version` parameter that springdoc already derives from the Spring versioning config (description, default `1`, single-value enum); it never adds a second one. `operationCustomizer` attaches the shared `COMMON-004` example to the 401 it injects through `ApiExampleFactory`, so it uses the same production `ObjectMapper` as every other example |
 | `WebMvcConfig.kt` | `X-API-Version` header versioning with default `1` and `CurrentUserArgumentResolver` registration |
@@ -16,7 +17,7 @@ Spring configuration beans.
 
 ## Rules
 
-- 새 `TransactionOperations` bean을 추가하면 Boot의 공유 `transactionTemplate` 자동 설정이 back off합니다. `TransactionConfig.transactionTemplate`을 지우지 말고, 도메인 전용 bean은 이름 fallback 대신 `@Qualifier`로 주입해 모호성을 없앱니다.
+- Adding a new `TransactionOperations` bean makes Boot's shared `transactionTemplate` auto-configuration back off. Do not delete `TransactionConfig.transactionTemplate`, and inject domain-specific beans with `@Qualifier` instead of relying on name fallback so there is no ambiguity.
 - New `XxxProperties` classes follow the CorsProperties pattern: data class, constructor binding, `@Validated` + jakarta constraints. Separate annotated constructor property groups with one blank line.
 - The JWT chain stays at `API_CHAIN_ORDER`; keep swagger Basic auth ahead of it and the fallback chain last.
 - The API chain and the permit-all fallback chain both match any request, so their profiles must stay mutually exclusive (`@Profile("!test")` / `@Profile("test")`). If both are ever active, Spring Security aborts context refresh with `UnreachableFilterChainException` — which no test catches, because tests only run the `test` profile.

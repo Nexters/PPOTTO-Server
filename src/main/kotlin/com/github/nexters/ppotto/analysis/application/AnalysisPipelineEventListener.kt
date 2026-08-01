@@ -2,6 +2,10 @@ package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
@@ -41,9 +45,9 @@ class AnalysisPipelineEventListener(
             if (stickers.isNotEmpty()) {
                 analysisResultSaveService.save(
                     SaveAnalysisResultCommand(
-                        userId = analysis.userId,
-                        analysisId = event.analysisId,
-                        boardId = analysis.boardId,
+                        userId = UserId(analysis.userId),
+                        analysisId = AnalysisId(event.analysisId),
+                        boardId = BoardId(analysis.boardId),
                         stickers = stickers,
                     ),
                 )
@@ -77,11 +81,11 @@ class AnalysisPipelineEventListener(
             type = StickerType.IMAGE,
             title = badge,
             summary = text,
-            sourcePhotoId = stickerSourcePhotoId,
+            sourcePhotoId = PhotoId(stickerSourcePhotoId),
             imageKey = imageKey,
             textContent = null,
             layout = stickerLayout(themeIndex),
-            photoIds = categorizedPhotoIds,
+            photoIds = categorizedPhotoIds.map(::PhotoId),
             comments = emptyList(),
         )
     }

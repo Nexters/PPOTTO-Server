@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.auth.infrastructure.token
 
 import com.github.nexters.ppotto.auth.config.JwtAuthProperties
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
@@ -35,7 +36,7 @@ class RedisRefreshTokenStoreTest :
         }
 
         Given("refresh token이 저장된 상태에서") {
-            val userId = UUID.randomUUID()
+            val userId = UserId(UUID.randomUUID())
             val currentToken = "current-refresh-token"
             store.save(userId, currentToken)
 
@@ -60,7 +61,7 @@ class RedisRefreshTokenStoreTest :
         }
 
         Given("refresh token 원문을 저장할 때") {
-            val userId = UUID.randomUUID()
+            val userId = UserId(UUID.randomUUID())
             val rawToken = "raw-refresh-token"
 
             When("Redis key를 조회하면") {

@@ -9,8 +9,11 @@ import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.nulls.shouldBeNull
@@ -23,7 +26,6 @@ import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -44,7 +46,7 @@ class BoardAnalysisDeletionConcurrencyTest(
         beforeTest { stickerPort.reset() }
 
         Given("보드 삭제가 진행 중 분석 확인을 통과하고 스티커 정리 단계에 머문 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             val photos = photoRequests()
@@ -58,7 +60,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                 check(stickerPort.awaitDeleteInvocation())
                 val createFuture =
                     executor.submit(
-                        Callable { runCatching { analysisService.createAnalysis(user.id, board.id, photos) } },
+                        Callable { runCatching { analysisService.createAnalysis(user.id.value, board.id.value, photos) } },
                     )
                 val createBlockedBeforeRelease = runCatching { createFuture.get(1, TimeUnit.SECONDS) }.isFailure
                 stickerPort.releaseDelete()
@@ -82,7 +84,7 @@ class BoardAnalysisDeletionConcurrencyTest(
         }
 
         Given("분석 생성이 대상 보드 행을 잠근 채 커밋 전에 머문 상태에서") {
-            val user = userRepository.save()
+            val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
             val photos = photoRequests()
@@ -97,7 +99,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                         Callable {
                             runCatching {
                                 transactionTemplate.executeWithoutResult {
-                                    analysisService.createAnalysis(user.id, board.id, photos)
+                                    analysisService.createAnalysis(user.id.value, board.id.value, photos)
                                     createLocked.countDown()
                                     check(createCommitAllowed.await(10, TimeUnit.SECONDS))
                                 }
@@ -149,16 +151,16 @@ class BlockingBoardStickerCommandPort : BoardStickerCommandPort {
     private var deleteRelease = CountDownLatch(1)
 
     override fun validateOwnedByBoard(
-        boardId: UUID,
-        stickerIds: Set<UUID>,
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
     ) = Unit
 
     override fun updateLayouts(
-        boardId: UUID,
+        boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
     ) = Unit
 
-    override fun deleteAllByBoardId(boardId: UUID) {
+    override fun deleteAllByBoardId(boardId: BoardId) {
         deleteInvocation.countDown()
         check(deleteRelease.await(10, TimeUnit.SECONDS))
     }

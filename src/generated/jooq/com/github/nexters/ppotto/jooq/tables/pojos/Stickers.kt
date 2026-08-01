@@ -4,9 +4,13 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
+
 import java.io.Serializable
 import java.time.Instant
-import java.util.UUID
 
 
 /**
@@ -14,13 +18,13 @@ import java.util.UUID
  */
 @Suppress("warnings")
 data class Stickers(
-    val id: UUID? = null,
-    val analysisId: UUID,
-    val boardId: UUID,
+    val id: StickerId? = null,
+    val analysisId: AnalysisId,
+    val boardId: BoardId,
     val type: String,
     val title: String,
     val viewedAt: Instant? = null,
-    val sourcePhotoId: UUID? = null,
+    val sourcePhotoId: PhotoId? = null,
     val imageKey: String? = null,
     val textContent: String? = null,
     val posX: Double,

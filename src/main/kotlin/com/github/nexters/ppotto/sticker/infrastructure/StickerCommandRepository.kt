@@ -1,19 +1,19 @@
 package com.github.nexters.ppotto.sticker.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 import java.time.Instant
-import java.util.UUID
 
 @Repository
 class StickerCommandRepository(
     private val dslContext: DSLContext,
 ) {
     fun updateTitle(
-        stickerId: UUID,
+        stickerId: StickerId,
         title: String,
     ): Boolean =
         dslContext
@@ -24,7 +24,7 @@ class StickerCommandRepository(
             .execute() == 1
 
     fun markViewed(
-        stickerId: UUID,
+        stickerId: StickerId,
         viewedAt: Instant,
     ): Boolean =
         dslContext
@@ -51,7 +51,7 @@ class StickerCommandRepository(
             .execute() == 1
 
     fun softDelete(
-        stickerId: UUID,
+        stickerId: StickerId,
         deletedAt: Instant,
     ): Boolean =
         dslContext
@@ -61,14 +61,14 @@ class StickerCommandRepository(
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
-    fun hardDeleteByIds(stickerIds: Collection<UUID>): Int =
+    fun hardDeleteByIds(stickerIds: Collection<StickerId>): Int =
         stickerIds
             .toSet()
             .takeIf { it.isNotEmpty() }
-            ?.let {
+            ?.let { uniqueIds ->
                 dslContext
                     .deleteFrom(STICKERS)
-                    .where(STICKERS.ID.`in`(it))
+                    .where(STICKERS.ID.`in`(uniqueIds))
                     .execute()
             } ?: 0
 }

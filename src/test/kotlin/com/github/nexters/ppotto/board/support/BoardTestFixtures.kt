@@ -1,6 +1,11 @@
 package com.github.nexters.ppotto.board.support
 
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
+import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.board.domain.NewDrawing
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import java.util.UUID
 
 fun uuidV7(): UUID {
@@ -8,7 +13,25 @@ fun uuidV7(): UUID {
     return UUID.fromString(value.replaceRange(14, 15, "7"))
 }
 
-fun boardStickerItem(id: UUID = UUID.randomUUID()): BoardStickerItem =
+fun newDrawing(
+    boardId: BoardId,
+    stickerId: StickerId? = null,
+    id: DrawingId = DrawingId(uuidV7()),
+    stroke: Map<String, Any?> = mapOf("points" to listOf(listOf(1.0, 2.0))),
+    color: String = "#FFFFFF",
+    strokeWidth: Double = 2.0,
+): NewDrawing =
+    NewDrawing(
+        id = id,
+        boardId = boardId,
+        stickerId = stickerId,
+        scope = stickerId?.let { DrawingScope.STICKER } ?: DrawingScope.BOARD,
+        stroke = stroke,
+        color = color,
+        strokeWidth = strokeWidth,
+    )
+
+fun boardStickerItem(id: StickerId = StickerId(UUID.randomUUID())): BoardStickerItem =
     BoardStickerItem(
         id = id,
         title = "스티커",

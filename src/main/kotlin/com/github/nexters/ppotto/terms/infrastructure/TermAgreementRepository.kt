@@ -1,45 +1,46 @@
 package com.github.nexters.ppotto.terms.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.TermId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.records.TermAgreementsRecord
 import com.github.nexters.ppotto.jooq.tables.references.TERM_AGREEMENTS
 import com.github.nexters.ppotto.terms.domain.TermAgreement
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.row
 import org.springframework.stereotype.Repository
-import java.util.UUID
 
 @Repository
 class TermAgreementRepository(
     private val dslContext: DSLContext,
 ) {
     fun findAgreedTermIds(
-        userId: UUID,
-        termIds: Collection<UUID>,
-    ): Set<UUID> =
+        userId: UserId,
+        termIds: Collection<TermId>,
+    ): Set<TermId> =
         termIds
             .takeIf { it.isNotEmpty() }
-            ?.let {
+            ?.let { ids ->
                 dslContext
                     .select(TERM_AGREEMENTS.TERM_ID)
                     .from(TERM_AGREEMENTS)
                     .where(TERM_AGREEMENTS.USER_ID.eq(userId))
-                    .and(TERM_AGREEMENTS.TERM_ID.`in`(it))
+                    .and(TERM_AGREEMENTS.TERM_ID.`in`(ids))
                     .fetch(TERM_AGREEMENTS.TERM_ID)
                     .filterNotNull()
                     .toSet()
             } ?: emptySet()
 
     fun saveAll(
-        userId: UUID,
-        termIds: Collection<UUID>,
+        userId: UserId,
+        termIds: Collection<TermId>,
     ): List<TermAgreement> =
         termIds
             .distinct()
             .takeIf { it.isNotEmpty() }
-            ?.let {
+            ?.let { ids ->
                 dslContext
                     .insertInto(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
-                    .valuesOfRows(it.map { termId -> row(userId, termId) })
+                    .valuesOfRows(ids.map { termId -> row(userId, termId) })
                     .onConflict(TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
                     .doNothing()
                     .returning()
@@ -47,7 +48,7 @@ class TermAgreementRepository(
                     .map { record -> record.toDomain() }
             } ?: emptyList()
 
-    fun deleteAllByUserId(userId: UUID): Int =
+    fun deleteAllByUserId(userId: UserId): Int =
         dslContext
             .deleteFrom(TERM_AGREEMENTS)
             .where(TERM_AGREEMENTS.USER_ID.eq(userId))

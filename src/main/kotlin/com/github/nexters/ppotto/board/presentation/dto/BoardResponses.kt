@@ -7,13 +7,16 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import io.swagger.v3.oas.annotations.media.Schema
-import java.util.UUID
 
 @Schema(description = "보드 요약")
 data class BoardResponse(
-    @field:Schema(description = "보드 ID (uuidv7). 오름차순이 생성순", example = "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
-    val id: UUID,
+    @get:Schema(description = "보드 ID (uuidv7). 오름차순이 생성순", example = "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
+    @get:JsonProperty("id")
+    val id: BoardId,
     @field:Schema(description = "보드 이름. 최대 10자", example = "여름 휴가")
     val name: String,
 ) {
@@ -26,8 +29,9 @@ data class BoardResponse(
 
 @Schema(description = "보드와 배치된 스티커 및 그림")
 data class BoardDetailResponse(
-    @field:Schema(description = "보드 ID (uuidv7)", example = "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
-    val id: UUID,
+    @get:Schema(description = "보드 ID (uuidv7)", example = "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
+    @get:JsonProperty("id")
+    val id: BoardId,
     @field:Schema(description = "보드 이름", example = "Board 7")
     val name: String,
     @field:Schema(description = "보드에 배치된 스티커 목록")
@@ -48,8 +52,9 @@ data class BoardDetailResponse(
 
 @Schema(name = "BoardStickerResponse", description = "보드에 배치된 스티커")
 data class StickerResponse(
-    @field:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val id: UUID,
+    @get:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("id")
+    val id: StickerId,
     @field:Schema(description = "제목 뱃지 문구이자 리캡 제목", example = "동물 밈 짤줍")
     val title: String,
     @get:Schema(description = "미열람 여부. 뱃지에 빨간 점 표시", example = "false")
@@ -105,12 +110,14 @@ data class StickerResponse(
 
 @Schema(description = "보드 또는 스티커 위의 그림")
 data class DrawingResponse(
-    @field:Schema(description = "그림 ID (uuidv7)", example = "01983f2c-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val id: UUID,
+    @get:Schema(description = "그림 ID (uuidv7)", example = "01983f2c-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("id")
+    val id: DrawingId,
     @field:Schema(description = "그림이 붙는 대상", example = "STICKER")
     val scope: DrawingScope,
-    @field:Schema(description = "scope=STICKER일 때만 값이 있음", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val stickerId: UUID?,
+    @get:Schema(description = "scope=STICKER일 때만 값이 있음", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("stickerId")
+    val stickerId: StickerId?,
     @field:Schema(
         description = "선 데이터. 포맷은 클라이언트 정의를 그대로 저장",
         example = "{\"points\":[[10.5,22],[14.2,25.1],[19.8,27.4]]}",

@@ -4,6 +4,8 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.StickerId
+
 import java.io.Serializable
 import java.time.Instant
 import java.util.UUID
@@ -15,7 +17,7 @@ import java.util.UUID
 @Suppress("warnings")
 data class RecapComments(
     val id: UUID? = null,
-    val stickerId: UUID,
+    val stickerId: StickerId,
     val content: String,
     val posX: Double? = null,
     val posY: Double? = null,

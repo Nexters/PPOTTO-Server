@@ -1,6 +1,5 @@
 package com.github.nexters.ppotto.auth.infrastructure.oauth
 
-import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.auth.application.port.OAuthClient
 import com.github.nexters.ppotto.auth.config.AppleAuthProperties
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
@@ -15,10 +14,7 @@ import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import org.slf4j.LoggerFactory
-import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
-import org.springframework.util.LinkedMultiValueMap
-import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import java.math.BigInteger
 import java.nio.charset.StandardCharsets
@@ -33,13 +29,12 @@ import java.time.Instant
 import java.util.Base64
 
 @Component
-class AppleOAuthClient(
-    restClientBuilder: RestClient.Builder,
+internal class AppleOAuthClient(
+    private val appleOAuthApi: AppleOAuthApi,
     private val properties: AppleAuthProperties,
     private val clientSecretGenerator: AppleClientSecretGenerator,
 ) : OAuthClient {
     override val provider = OAuthProvider.APPLE
-    private val restClient = restClientBuilder.build()
     private val clock = Clock.systemUTC()
     private val cacheMonitor = Any()
     private val log = LoggerFactory.getLogger(javaClass)
@@ -63,21 +58,13 @@ class AppleOAuthClient(
         }
 
     override fun revoke(providerRefreshToken: String) {
-        LinkedMultiValueMap<String, String>()
-            .apply {
-                add(CLIENT_ID, properties.clientId)
-                add(CLIENT_SECRET, clientSecretGenerator.generate())
-                add(TOKEN, providerRefreshToken)
-                add(TOKEN_TYPE_HINT, REFRESH_TOKEN)
-            }.let {
-                restClient
-                    .post()
-                    .uri(properties.revokeUri)
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(it)
-                    .retrieve()
-                    .toBodilessEntity()
-            }
+        appleOAuthApi.revoke(
+            properties.revokeUri,
+            properties.clientId,
+            clientSecretGenerator.generate(),
+            providerRefreshToken,
+            REFRESH_TOKEN,
+        )
     }
 
     private fun verifyIdentityToken(
@@ -143,28 +130,20 @@ class AppleOAuthClient(
             } ?: failAuthentication()
 
     private fun exchangeAuthorizationCode(authorizationCode: String): String? =
-        LinkedMultiValueMap<String, String>()
-            .apply {
-                add(CLIENT_ID, properties.clientId)
-                add(CLIENT_SECRET, clientSecretGenerator.generate())
-                add(CODE, authorizationCode)
-                add(GRANT_TYPE, AUTHORIZATION_CODE)
-            }.let {
-                try {
-                    restClient
-                        .post()
-                        .uri(properties.tokenUri)
-                        .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                        .body(it)
-                        .retrieve()
-                        .body(AppleTokenResponse::class.java)
-                        ?.refreshToken
-                } catch (e: RestClientException) {
-                    log
-                        .warn("애플 authorization code 교환에 실패했습니다.", e)
-                        .let { null }
-                }
-            }
+        try {
+            appleOAuthApi
+                .exchangeToken(
+                    properties.tokenUri,
+                    properties.clientId,
+                    clientSecretGenerator.generate(),
+                    authorizationCode,
+                    AUTHORIZATION_CODE,
+                )?.refreshToken
+        } catch (e: RestClientException) {
+            log
+                .warn("애플 authorization code 교환에 실패했습니다.", e)
+                .let { null }
+        }
 
     private fun publicKey(keyId: String): RSAPublicKey =
         jwksCache
@@ -183,12 +162,7 @@ class AppleOAuthClient(
     private fun refreshJwks(): JwksCache =
         (
             try {
-                restClient
-                    .get()
-                    .uri(properties.jwksUri)
-                    .retrieve()
-                    .body(AppleJwksResponse::class.java)
-                    ?: failAuthentication()
+                appleOAuthApi.jwks(properties.jwksUri) ?: failAuthentication()
             } catch (e: RestClientException) {
                 failAuthentication(e)
             }
@@ -224,40 +198,12 @@ class AppleOAuthClient(
         val email: String,
     )
 
-    private data class AppleTokenResponse(
-        @JsonProperty("refresh_token")
-        val refreshToken: String?,
-    )
-
-    private data class AppleJwksResponse(
-        val keys: List<AppleJwk>,
-    )
-
-    private data class AppleJwk(
-        @JsonProperty("kty")
-        val keyType: String,
-        @JsonProperty("kid")
-        val keyId: String,
-        @JsonProperty("alg")
-        val algorithm: String,
-        @JsonProperty("n")
-        val modulus: String,
-        @JsonProperty("e")
-        val exponent: String,
-    )
-
     private data class JwksCache(
         val expiresAt: Instant,
         val keys: Map<String, RSAPublicKey>,
     )
 
     private companion object {
-        const val CLIENT_ID = "client_id"
-        const val CLIENT_SECRET = "client_secret"
-        const val TOKEN = "token"
-        const val TOKEN_TYPE_HINT = "token_type_hint"
-        const val CODE = "code"
-        const val GRANT_TYPE = "grant_type"
         const val AUTHORIZATION_CODE = "authorization_code"
         const val REFRESH_TOKEN = "refresh_token"
         const val EMAIL = "email"

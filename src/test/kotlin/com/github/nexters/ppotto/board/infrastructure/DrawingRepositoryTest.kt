@@ -3,7 +3,9 @@ package com.github.nexters.ppotto.board.infrastructure
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -14,8 +16,8 @@ class DrawingRepositoryTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("보드에 드로잉을 저장한 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
-            val drawingId = uuidV7()
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val drawingId = DrawingId(uuidV7())
             val original =
                 NewDrawing(
                     id = drawingId,

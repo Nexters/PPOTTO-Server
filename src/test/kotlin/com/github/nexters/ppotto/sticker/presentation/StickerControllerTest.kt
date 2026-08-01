@@ -5,13 +5,16 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.hamcrest.Matchers.containsString
 import org.springframework.beans.factory.annotation.Autowired
@@ -45,30 +48,31 @@ class StickerControllerTest(
         }
 
         Given("사용자 보드에 이미지 스티커와 리캡이 등록된 상태에서") {
-            val board = boardRepository.save(userRepository.save().id)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photo =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id,
+                        board.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val sticker =
                 stickerRepository.save(
-                    analysis.id,
+                    AnalysisId(analysis.id),
                     board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "원래 제목",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = photo.id,
+                        sourcePhotoId = PhotoId(photo.id),
                         imageKey = "stickers/controller.png",
                         textContent = null,
-                        layout = controllerLayout(),
+                        layout = defaultStickerLayout(),
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, listOf(photo.id))
+            stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(photo.id)))
             stickerRecapRepository.saveComments(
                 sticker.id,
                 listOf(
@@ -78,7 +82,7 @@ class StickerControllerTest(
             )
 
             When("리캡 상세를 요청하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("스티커와 한 줄 요약과 코멘트와 사진을 응답한다") {
                     mockMvc
@@ -102,7 +106,7 @@ class StickerControllerTest(
             }
 
             When("제목을 수정하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("변경한 제목을 응답한다") {
                     mockMvc
@@ -117,7 +121,7 @@ class StickerControllerTest(
             }
 
             When("빈 제목으로 수정하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("400 응답을 반환한다") {
                     mockMvc
@@ -131,7 +135,7 @@ class StickerControllerTest(
             }
 
             When("리캡을 열람 처리하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("여러 번 호출해도 성공한다") {
                     mockMvc.perform(post("/stickers/${sticker.id}/view")).andExpect(status().isOk)
@@ -140,7 +144,8 @@ class StickerControllerTest(
             }
 
             When("다른 사용자가 리캡을 조회하면") {
-                authenticate(userRepository.save().id)
+                val otherUser = userRepository.saveTestUser()
+                authenticate(otherUser.id.value)
 
                 Then("404 응답을 반환한다") {
                     mockMvc
@@ -151,7 +156,7 @@ class StickerControllerTest(
             }
 
             When("스티커를 삭제하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("성공 응답을 반환한다") {
                     mockMvc
@@ -173,15 +178,3 @@ class StickerControllerTest(
             }
         }
     })
-
-private fun controllerLayout() =
-    StickerLayout(
-        posX = 1.0,
-        posY = 2.0,
-        scale = 1.0,
-        rotation = 0.0,
-        zIndex = 0,
-        badgeOffsetX = 0.0,
-        badgeOffsetY = 0.0,
-        badgeRotation = 0.0,
-    )

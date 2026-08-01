@@ -1,20 +1,10 @@
 package com.github.nexters.ppotto.auth.config
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.context.annotation.Bean
+import com.github.nexters.ppotto.auth.infrastructure.oauth.AppleOAuthApi
+import com.github.nexters.ppotto.auth.infrastructure.oauth.KakaoOAuthApi
 import org.springframework.context.annotation.Configuration
-import org.springframework.http.client.SimpleClientHttpRequestFactory
-import org.springframework.web.client.RestClient
-import java.time.Duration
+import org.springframework.web.service.registry.ImportHttpServices
 
-@Configuration
-class AuthHttpConfig {
-    @Bean
-    @ConditionalOnMissingBean
-    fun restClientBuilder(properties: OAuthHttpProperties): RestClient.Builder =
-        SimpleClientHttpRequestFactory()
-            .apply {
-                setConnectTimeout(Duration.ofMillis(properties.connectTimeoutMillis))
-                setReadTimeout(Duration.ofMillis(properties.readTimeoutMillis))
-            }.let { RestClient.builder().requestFactory(it) }
-}
+@Configuration(proxyBeanMethods = false)
+@ImportHttpServices(group = "oauth", types = [KakaoOAuthApi::class, AppleOAuthApi::class])
+class AuthHttpConfig

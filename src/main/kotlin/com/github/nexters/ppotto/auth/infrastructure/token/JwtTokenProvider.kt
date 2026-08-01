@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.auth.config.JwtAuthProperties
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.nimbusds.jose.JOSEException
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
@@ -29,7 +30,7 @@ class JwtTokenProvider(
     private val random = SecureRandom()
     private val secret = properties.secret.toByteArray(StandardCharsets.UTF_8)
 
-    override fun issue(userId: UUID): TokenPair =
+    override fun issue(userId: UserId): TokenPair =
         clock
             .instant()
             .let { now ->
@@ -52,20 +53,20 @@ class JwtTokenProvider(
                 )
             }
 
-    override fun verifyAccessToken(accessToken: String): UUID =
+    override fun verifyAccessToken(accessToken: String): UserId =
         try {
             SignedJWT
                 .parse(accessToken)
                 .takeIf { it.header.algorithm == JWSAlgorithm.HS256 }
                 ?.takeIf { it.verify(MACVerifier(secret)) }
-                ?.let { it.jwtClaimsSet }
+                ?.jwtClaimsSet
                 ?.takeIf { it.issuer == properties.issuer }
                 ?.takeIf {
                     it.expirationTime
                         ?.toInstant()
                         ?.isAfter(clock.instant()) == true
                 }?.takeIf { it.getStringClaim(TOKEN_USE) == ACCESS }
-                ?.let { UUID.fromString(it.subject) }
+                ?.let { UserId(UUID.fromString(it.subject)) }
                 ?: unauthorized()
         } catch (e: UnauthorizedException) {
             throw e

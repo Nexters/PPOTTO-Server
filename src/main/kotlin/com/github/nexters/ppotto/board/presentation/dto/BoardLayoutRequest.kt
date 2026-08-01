@@ -6,13 +6,14 @@ import com.github.nexters.ppotto.board.application.BoardLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.DrawingCreateCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
-import java.util.UUID
 
 @Schema(description = "보드 편집 결과 일괄 저장 요청. 편집 모드에서 바뀐 것만 보냄")
 data class BoardLayoutRequest(
@@ -36,8 +37,9 @@ data class BoardLayoutRequest(
 
 @Schema(description = "스티커 배치와 제목")
 data class StickerLayoutRequest(
-    @field:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val id: UUID,
+    @get:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("id")
+    val id: StickerId,
     @field:Size(min = 1, max = BoardLayoutService.MAX_STICKER_TITLE_LENGTH)
     @field:Schema(description = "텍스트 모드에서 제목을 바꿨을 때만 보냄. 최대 15자", example = "고양이 모음집")
     val title: String? = null,
@@ -82,20 +84,22 @@ data class DrawingChangesRequest(
         description = "삭제할 그림 ID 목록",
         example = "[\"01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a\"]",
     )
-    val deletedIds: List<UUID>? = null,
+    val deletedIds: List<DrawingId>? = null,
 )
 
 @Schema(description = "새 그림")
 data class DrawingCreateRequest(
-    @field:Schema(
+    @get:Schema(
         description = "클라이언트가 생성한 uuidv7. 서버가 이 id로 upsert함",
         example = "01983f2c-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     )
-    val id: UUID,
+    @get:JsonProperty("id")
+    val id: DrawingId,
     @field:Schema(description = "그림이 붙는 대상", example = "STICKER")
     val scope: DrawingScope,
-    @field:Schema(description = "scope=STICKER일 때 필수", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val stickerId: UUID? = null,
+    @get:Schema(description = "scope=STICKER일 때 필수", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("stickerId")
+    val stickerId: StickerId? = null,
     @field:NotEmpty
     @field:Schema(
         description = "선 데이터. 포맷은 클라이언트 정의를 그대로 저장",

@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.auth.domain.LoginResult
 import com.github.nexters.ppotto.auth.domain.PendingTerm
 import com.github.nexters.ppotto.auth.domain.TokenPair
+import com.github.nexters.ppotto.global.identifier.TermId
 import io.swagger.v3.oas.annotations.media.Schema
-import java.util.UUID
 
 @Schema(description = "재발급된 서비스 토큰")
 data class TokenPairResponse(
@@ -62,8 +62,9 @@ data class LoginResponse(
 
 @Schema(description = "로그인 후 동의가 필요한 약관")
 data class PendingTermResponse(
-    @field:Schema(description = "약관 ID (uuidv7)", example = "01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val id: UUID,
+    @get:Schema(description = "약관 ID (uuidv7)", example = "01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("id")
+    val id: TermId,
     @field:Schema(description = "약관 코드", example = "TOS")
     val code: String,
     @field:Schema(description = "약관 버전", example = "1.0")

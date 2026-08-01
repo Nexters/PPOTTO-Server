@@ -4,7 +4,13 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.jooq.AnalysisIdConverter
+import com.github.nexters.ppotto.global.jooq.BoardIdConverter
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.UserIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_BOARD_ID
 import com.github.nexters.ppotto.jooq.indexes.IDX_ANALYSIS_USER_CREATED
@@ -15,7 +21,6 @@ import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 
 import java.time.Instant
-import java.util.UUID
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -85,17 +90,17 @@ open class Analysis(
     /**
      * The column <code>public.analysis.id</code>.
      */
-    val ID: TableField<AnalysisRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "")
+    val ID: TableField<AnalysisRecord, AnalysisId?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "", AnalysisIdConverter())
 
     /**
      * The column <code>public.analysis.user_id</code>.
      */
-    val USER_ID: TableField<AnalysisRecord, UUID?> = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "")
+    val USER_ID: TableField<AnalysisRecord, UserId?> = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "", UserIdConverter())
 
     /**
      * The column <code>public.analysis.board_id</code>.
      */
-    val BOARD_ID: TableField<AnalysisRecord, UUID?> = createField(DSL.name("board_id"), SQLDataType.UUID.nullable(false), this, "")
+    val BOARD_ID: TableField<AnalysisRecord, BoardId?> = createField(DSL.name("board_id"), SQLDataType.UUID.nullable(false), this, "", BoardIdConverter())
 
     /**
      * The column <code>public.analysis.status</code>.
