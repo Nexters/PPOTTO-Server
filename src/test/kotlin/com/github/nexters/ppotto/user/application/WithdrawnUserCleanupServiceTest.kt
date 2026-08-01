@@ -43,7 +43,7 @@ class WithdrawnUserCleanupServiceTest(
                     result.attempted shouldBe 1
                     result.deletedUserIds shouldContainExactly listOf(withdrawn.id)
                     dataDeletionPort.deletedUserIds shouldContainExactly listOf(withdrawn.id)
-                    dslContext.fetchExists(USERS, USERS.ID.eq(withdrawn.id)) shouldBe false
+                    dslContext.fetchExists(USERS, USERS.ID.eq(withdrawn.id.value)) shouldBe false
                 }
             }
         }
@@ -67,7 +67,7 @@ class WithdrawnUserCleanupServiceTest(
                             batchSize = 10,
                         )
                     }
-                    dslContext.fetchExists(USERS, USERS.ID.eq(withdrawn.id)) shouldBe true
+                    dslContext.fetchExists(USERS, USERS.ID.eq(withdrawn.id.value)) shouldBe true
                 }
             }
         }

@@ -20,6 +20,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -48,14 +49,14 @@ class BoardStickerIntegrationTest(
 ) : IntegrationTest({
         Given("실제 보드와 스티커 연동 빈이 기동된 상태에서") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id, "연동 보드")
-            val analysis = analysisRepository.save(user.id, board.id)
+            val board = boardRepository.save(user.rawId, "연동 보드")
+            val analysis = analysisRepository.save(user.rawId, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             val drawing = newDrawing(boardId = board.id, stickerId = sticker.id)
             drawingRepository.upsertAll(listOf(drawing))
 
             When("보드 상세를 조회하면") {
-                val detail = boardQueryService.getDetail(board.id, user.id)
+                val detail = boardQueryService.getDetail(board.id, user.rawId)
 
                 Then("순환 참조 없이 정확히 하나의 production port로 스티커와 드로잉을 조합한다") {
                     applicationContext.getBeansOfType(BoardAnalysisActivityPort::class.java) shouldHaveSize 1
@@ -87,15 +88,15 @@ class BoardStickerIntegrationTest(
 
         Given("실제 스티커가 있는 보드에서") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
-            val analysis = analysisRepository.save(user.id, board.id)
+            val board = boardRepository.save(user.rawId)
+            val analysis = analysisRepository.save(user.rawId, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             val drawing = newDrawing(boardId = board.id, stickerId = sticker.id)
 
             When("스티커 배치와 드로잉을 함께 저장하면") {
                 boardLayoutService.update(
                     board.id,
-                    user.id,
+                    user.rawId,
                     BoardLayoutUpdateCommand(
                         stickers = listOf(updatedLayout(sticker.id)),
                         createdDrawings =
@@ -132,8 +133,8 @@ class BoardStickerIntegrationTest(
 
         Given("스티커와 보드 범위 드로잉이 함께 있는 상태에서") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
-            val analysis = analysisRepository.save(user.id, board.id)
+            val board = boardRepository.save(user.rawId)
+            val analysis = analysisRepository.save(user.rawId, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             val stickerDrawing = newDrawing(boardId = board.id, stickerId = sticker.id)
             val boardDrawing = newDrawing(boardId = board.id)
@@ -144,7 +145,7 @@ class BoardStickerIntegrationTest(
             )
 
             When("스티커를 삭제하면") {
-                stickerCommandService.delete(user.id, sticker.id)
+                stickerCommandService.delete(user.rawId, sticker.id)
 
                 Then("해당 스티커의 드로잉과 리캡만 정리한다") {
                     stickerRepository.findById(sticker.id).shouldBeNull()
@@ -156,9 +157,9 @@ class BoardStickerIntegrationTest(
 
         Given("삭제 가능한 보드에 스티커와 리캡과 드로잉이 있는 상태에서") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
-            boardRepository.save(user.id)
-            val analysis = analysisRepository.save(user.id, board.id)
+            val board = boardRepository.save(user.rawId)
+            boardRepository.save(user.rawId)
+            val analysis = analysisRepository.save(user.rawId, board.id)
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
@@ -174,10 +175,10 @@ class BoardStickerIntegrationTest(
             )
 
             When("보드를 삭제하면") {
-                boardCommandService.delete(board.id, user.id)
+                boardCommandService.delete(board.id, user.rawId)
 
                 Then("보드와 스티커와 리캡과 모든 드로잉을 함께 정리한다") {
-                    boardRepository.findOwnedById(board.id, user.id).shouldBeNull()
+                    boardRepository.findOwnedById(board.id, user.rawId).shouldBeNull()
                     stickerRepository.findById(sticker.id).shouldBeNull()
                     stickerRecapRepository.findComments(sticker.id).shouldBeEmpty()
                     drawingRepository.findByBoardId(board.id).shouldBeEmpty()
@@ -187,18 +188,18 @@ class BoardStickerIntegrationTest(
 
         Given("진행 중인 분석이 있는 삭제 가능한 보드에서") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
-            boardRepository.save(user.id)
-            analysisRepository.save(user.id, board.id)
+            val board = boardRepository.save(user.rawId)
+            boardRepository.save(user.rawId)
+            analysisRepository.save(user.rawId, board.id)
 
             When("보드를 삭제하면") {
                 Then("실제 분석 연동 port가 BOARD-005로 거부한다") {
                     val exception =
                         shouldThrow<ConflictException> {
-                            boardCommandService.delete(board.id, user.id)
+                            boardCommandService.delete(board.id, user.rawId)
                         }
                     exception.errorCode shouldBe BoardErrorCode.ACTIVE_ANALYSIS_EXISTS
-                    boardRepository.findOwnedById(board.id, user.id)?.id shouldBe board.id
+                    boardRepository.findOwnedById(board.id, user.rawId)?.id shouldBe board.id
                 }
             }
         }

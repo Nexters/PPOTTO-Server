@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.presentation
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import com.github.nexters.ppotto.user.application.UserService
@@ -15,7 +16,7 @@ class UserController(
         @AuthenticatedUser userId: UUID,
     ): ApiResponse<UserResponse> =
         userService
-            .getById(userId)
+            .getById(UserId(userId))
             .let(UserResponse::from)
             .let { ApiResponse.success(it) }
 
@@ -23,6 +24,6 @@ class UserController(
         @AuthenticatedUser userId: UUID,
     ): ApiResponse<Unit> =
         userService
-            .withdraw(userId)
+            .withdraw(UserId(userId))
             .let { ApiResponse.success() }
 }

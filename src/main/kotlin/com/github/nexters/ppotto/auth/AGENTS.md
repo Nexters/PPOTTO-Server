@@ -35,5 +35,6 @@ Social login and service token authentication domain.
 - OAuth HTTP calls must apply `spring.http.serviceclient.oauth.connect-timeout/read-timeout` (`OAUTH_CONNECT_TIMEOUT_MILLIS`/`OAUTH_READ_TIMEOUT_MILLIS`; unit-less integers are milliseconds).
 - `KAKAO_*_URI`/`APPLE_*_URI` are full-URL contracts including the path. Do not split them into base-url plus path; pass them as-is through the HTTP Service interface methods' `URI` parameter.
 - HTTP Service interface return types stay nullable. Declaring them non-null turns a 2xx empty body into an NPE instead of a `RestClientException`, escaping the `AUTH-001` conversion path.
+- `AuthUser.userId`/`PendingTerm.id` and every port signature use typed ids (`UserId`/`TermId`). The JWT subject string and Redis key/value strings are external representations converted inside `JwtTokenProvider`/`RedisRefreshTokenStore`; the SecurityContext principal stays a raw `UUID` (`verifyAccessToken(...).value` in `BearerTokenAuthenticationFilter`) so `CurrentUserArgumentResolver` and controller signatures keep the presentation `UUID` contract, and controllers wrap.
 
 Update this file when auth packages or contracts change.

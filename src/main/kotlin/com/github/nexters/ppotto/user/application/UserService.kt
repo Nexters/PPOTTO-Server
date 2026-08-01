@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.user.application
 
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.user.application.port.ProviderRefreshTokenCipher
 import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
 import com.github.nexters.ppotto.user.application.port.UserSessionRevoker
@@ -11,7 +12,6 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
-import java.util.UUID
 
 @Service
 class UserService(
@@ -46,14 +46,14 @@ class UserService(
             }
 
     @Transactional(readOnly = true)
-    fun getById(id: UUID): User = userRepository.findById(id) ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
+    fun getById(id: UserId): User = userRepository.findById(id) ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
 
     @Transactional(readOnly = true)
-    fun isActive(id: UUID): Boolean = userRepository.findById(id) != null
+    fun isActive(id: UserId): Boolean = userRepository.findById(id) != null
 
     @Transactional
     fun withdraw(
-        id: UUID,
+        id: UserId,
         withdrawnAt: Instant = Instant.now(),
     ): Unit =
         getById(id)

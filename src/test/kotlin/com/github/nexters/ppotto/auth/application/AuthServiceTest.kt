@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -21,12 +22,12 @@ import java.util.UUID
 
 class AuthServiceTest :
     BehaviorSpec({
-        val userId = UUID.randomUUID()
+        val userId = UserId(UUID.randomUUID())
         val noTransaction = TransactionOperations.withoutTransaction()
         val refreshStore = FakeRefreshTokenStore()
         val tokenProvider =
             object : TokenProvider {
-                override fun issue(userId: UUID) = TokenPair("access-$userId", "refresh-$userId-${UUID.randomUUID()}", 3600)
+                override fun issue(userId: UserId) = TokenPair("access-$userId", "refresh-$userId-${UUID.randomUUID()}", 3600)
 
                 override fun verifyAccessToken(accessToken: String) = userId
             }
@@ -175,10 +176,10 @@ class AuthServiceTest :
     }
 
     private class FakeRefreshTokenStore : RefreshTokenStore {
-        private val tokens = mutableMapOf<String, UUID>()
+        private val tokens = mutableMapOf<String, UserId>()
 
         override fun save(
-            userId: UUID,
+            userId: UserId,
             refreshToken: String,
         ) {
             tokens[refreshToken] = userId
@@ -187,7 +188,7 @@ class AuthServiceTest :
         override fun findUserId(refreshToken: String) = tokens[refreshToken]
 
         override fun rotate(
-            userId: UUID,
+            userId: UserId,
             currentRefreshToken: String,
             newRefreshToken: String,
         ): Boolean {
@@ -196,7 +197,7 @@ class AuthServiceTest :
             return true
         }
 
-        override fun delete(userId: UUID) {
+        override fun delete(userId: UserId) {
             tokens.entries.removeIf { it.value == userId }
         }
     }

@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.terms.presentation
 
+import com.github.nexters.ppotto.global.identifier.TermId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import com.github.nexters.ppotto.global.security.CurrentUser
@@ -19,7 +21,7 @@ class TermsController(
         @CurrentUser userId: UUID?,
     ): ApiResponse<List<TermResponse>> =
         termsService
-            .findCurrentTerms(userId)
+            .findCurrentTerms(userId?.let(::UserId))
             .map(TermResponse::from)
             .let { ApiResponse.success(it) }
 
@@ -28,6 +30,6 @@ class TermsController(
         @Valid @RequestBody request: AgreeTermsRequest,
     ): ApiResponse<Unit> =
         termsService
-            .agree(userId, request.termIds)
+            .agree(UserId(userId), request.termIds.map(::TermId))
             .let { ApiResponse.success() }
 }

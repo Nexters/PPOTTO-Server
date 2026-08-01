@@ -14,10 +14,10 @@ import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionOperations
-import java.util.UUID
 
 @Service
 class AuthService(
@@ -56,7 +56,7 @@ class AuthService(
                     .takeIf { refreshTokenStore.rotate(userId, refreshToken, it.refreshToken) }
             } ?: throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
 
-    fun logout(userId: UUID) = refreshTokenStore.delete(userId)
+    fun logout(userId: UserId) = refreshTokenStore.delete(userId)
 
     private fun signUp(profile: SocialProfile): AuthSignup =
         signupTransaction.execute {

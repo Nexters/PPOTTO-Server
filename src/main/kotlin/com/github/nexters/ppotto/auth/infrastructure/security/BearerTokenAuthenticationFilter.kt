@@ -46,7 +46,7 @@ class BearerTokenAuthenticationFilter(
         try {
             tokenProvider
                 .verifyAccessToken(token)
-                .let { UsernamePasswordAuthenticationToken(it, token, emptyList()) }
+                .let { UsernamePasswordAuthenticationToken(it.value, token, emptyList()) }
                 .apply { details = WebAuthenticationDetailsSource().buildDetails(request) }
                 .let { authentication ->
                     SecurityContextHolder

@@ -12,6 +12,7 @@ import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -32,7 +33,7 @@ class BoardLayoutServiceTest(
         Given("보드 배경 드로잉을 저장한 사용자가") {
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
+            val board = boardRepository.save(user.rawId)
             val drawingId = uuidV7()
             val command =
                 BoardLayoutUpdateCommand(
@@ -50,12 +51,12 @@ class BoardLayoutServiceTest(
                         ),
                     deletedDrawingIds = emptyList(),
                 )
-            boardLayoutService.update(board.id, user.id, command)
+            boardLayoutService.update(board.id, user.rawId, command)
 
             When("같은 드로잉 아이디로 재시도하면") {
                 boardLayoutService.update(
                     board.id,
-                    user.id,
+                    user.rawId,
                     command.copy(
                         createdDrawings =
                             command.createdDrawings.map {
@@ -76,14 +77,14 @@ class BoardLayoutServiceTest(
         Given("스티커 범위 드로잉과 스티커 배치를 함께 저장하는 사용자가") {
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
+            val board = boardRepository.save(user.rawId)
             val sticker = boardStickerItem()
             stickerPort.stickersByBoardId[board.id] = listOf(sticker)
 
             When("레이아웃 저장을 요청하면") {
                 boardLayoutService.update(
                     board.id,
-                    user.id,
+                    user.rawId,
                     BoardLayoutUpdateCommand(
                         stickers = listOf(stickerLayout(sticker.id)),
                         createdDrawings =
@@ -114,8 +115,8 @@ class BoardLayoutServiceTest(
         Given("다른 보드의 드로잉 아이디가 삭제 목록에 섞인 경우") {
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
-            val otherBoard = boardRepository.save(user.id)
+            val board = boardRepository.save(user.rawId)
+            val otherBoard = boardRepository.save(user.rawId)
             val foreignDrawing =
                 NewDrawing(
                     id = uuidV7(),
@@ -134,7 +135,7 @@ class BoardLayoutServiceTest(
                         shouldThrow<InvalidInputException> {
                             boardLayoutService.update(
                                 board.id,
-                                user.id,
+                                user.rawId,
                                 BoardLayoutUpdateCommand(
                                     stickers = emptyList(),
                                     createdDrawings = emptyList(),
@@ -152,7 +153,7 @@ class BoardLayoutServiceTest(
         Given("소유하지 않은 스티커를 참조하는 드로잉이 있는 경우") {
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
+            val board = boardRepository.save(user.rawId)
 
             When("레이아웃 저장을 요청하면") {
                 Then("BOARD-001로 거부하고 드로잉을 저장하지 않는다") {
@@ -160,7 +161,7 @@ class BoardLayoutServiceTest(
                         shouldThrow<InvalidInputException> {
                             boardLayoutService.update(
                                 board.id,
-                                user.id,
+                                user.rawId,
                                 BoardLayoutUpdateCommand(
                                     stickers = emptyList(),
                                     createdDrawings =

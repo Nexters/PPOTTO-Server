@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.user.application.port
 
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.UserId
 
 fun interface WithdrawnUserDataDeletionPort {
-    fun deleteAllFor(userId: UUID)
+    fun deleteAllFor(userId: UserId)
 }

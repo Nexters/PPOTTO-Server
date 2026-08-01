@@ -1,10 +1,10 @@
 package com.github.nexters.ppotto.user.domain
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import java.time.Instant
-import java.util.UUID
 
 data class User(
-    val id: UUID,
+    val id: UserId,
     val provider: OAuthProvider,
     val providerUserId: String,
     val email: String,

@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.auth.application.port.AuthActiveUserPort
 import com.github.nexters.ppotto.auth.application.port.AuthTermsPort
 import com.github.nexters.ppotto.auth.application.port.AuthUserPort
 import com.github.nexters.ppotto.auth.domain.AuthUser
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
@@ -17,7 +18,7 @@ class AuthTestConfig {
 
     @Bean
     @Primary
-    fun authUserPort(): AuthUserPort = AuthUserPort { AuthUser(UUID.randomUUID(), true) }
+    fun authUserPort(): AuthUserPort = AuthUserPort { AuthUser(UserId(UUID.randomUUID()), true) }
 
     @Bean
     @Primary

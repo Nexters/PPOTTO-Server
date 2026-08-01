@@ -34,7 +34,8 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 - Active account lookup always includes `deleted_at IS NULL`. Withdrawal anonymizes email and clears the provider refresh token before setting `deleted_at`.
 - Concurrent social signup uses the active-identity partial unique index as the conflict target, then reloads the winner instead of surfacing a unique violation.
 - Pre-social legacy rows remain nullable under the unvalidated completeness check and are excluded from application lookup until a real-identity backfill is completed. New social users always write provider, provider user id, and email together.
-- Controllers consume the UUID principal through the shared `@AuthenticatedUser` contract; absence returns `COMMON-004` before controller execution.
+- Controllers consume the UUID principal through the shared `@AuthenticatedUser` contract; absence returns `COMMON-004` before controller execution. The controller wraps it into `UserId` before calling the application service.
+- `User.id`, repository public signatures, application services, and every `application/port` contract use the typed `UserId`/`BoardId` from `global/identifier`; raw `UUID` appears only in jOOQ DSL bindings inside repositories and presentation DTOs.
 - Missing auth adapters fail closed: provider-account or session revoke aborts withdrawal.
 - Withdrawal revokes the service refresh-token session inside the user transaction.
 - The cleanup caller supplies the retention cutoff. `docs/` defines a retention grace period but no number, so `user.withdrawn-cleanup.retention-days` carries it as configuration; replace the conservative default once the privacy policy fixes a value.

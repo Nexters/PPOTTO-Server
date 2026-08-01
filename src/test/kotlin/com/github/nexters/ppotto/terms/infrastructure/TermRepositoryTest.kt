@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.terms.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.TermId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.jooq.tables.references.USERS
@@ -17,7 +19,7 @@ class TermRepositoryTest(
     termAgreementRepository: TermAgreementRepository,
     dslContext: DSLContext,
 ) : IntegrationTest({
-        fun saveUser(): UUID {
+        fun saveUser(): UserId {
             val suffix = UUID.randomUUID()
             return dslContext
                 .insertInto(
@@ -31,6 +33,7 @@ class TermRepositoryTest(
                     "term-repository-$suffix@example.com",
                 ).returning(USERS.ID)
                 .fetchOne(USERS.ID)!!
+                .let(::UserId)
         }
 
         fun saveTerm(
@@ -67,7 +70,7 @@ class TermRepositoryTest(
 
                 Then("코드별 시행일이 가장 최근인 버전을 한 건씩 반환한다") {
                     found.map { it.id } shouldContainExactlyInAnyOrder
-                        listOf(currentTos.id!!, currentPrivacy.id!!)
+                        listOf(TermId(currentTos.id!!), TermId(currentPrivacy.id!!))
                 }
             }
         }
@@ -82,13 +85,13 @@ class TermRepositoryTest(
                 )
 
             When("같은 약관 동의를 중복해서 저장하면") {
-                val firstSaved = termAgreementRepository.saveAll(userId, listOf(term.id!!, term.id!!))
-                val secondSaved = termAgreementRepository.saveAll(userId, listOf(term.id!!))
+                val firstSaved = termAgreementRepository.saveAll(userId, listOf(TermId(term.id!!), TermId(term.id!!)))
+                val secondSaved = termAgreementRepository.saveAll(userId, listOf(TermId(term.id!!)))
 
                 Then("동의 이력은 한 건만 생성되고 재요청은 무시된다") {
-                    firstSaved.map { it.termId } shouldContainExactly listOf(term.id!!)
+                    firstSaved.map { it.termId } shouldContainExactly listOf(TermId(term.id!!))
                     secondSaved shouldBe emptyList()
-                    termAgreementRepository.findAgreedTermIds(userId, listOf(term.id!!)) shouldBe setOf(term.id!!)
+                    termAgreementRepository.findAgreedTermIds(userId, listOf(TermId(term.id!!))) shouldBe setOf(TermId(term.id!!))
                 }
             }
         }

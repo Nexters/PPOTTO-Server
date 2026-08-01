@@ -12,6 +12,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.hamcrest.Matchers.containsString
@@ -46,7 +47,7 @@ class StickerControllerTest(
         }
 
         Given("사용자 보드에 이미지 스티커와 리캡이 등록된 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val board = boardRepository.save(userRepository.saveTestUser().rawId)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photo =
                 photoRepository
@@ -142,7 +143,7 @@ class StickerControllerTest(
             }
 
             When("다른 사용자가 리캡을 조회하면") {
-                authenticate(userRepository.saveTestUser().id)
+                authenticate(userRepository.saveTestUser().rawId)
 
                 Then("404 응답을 반환한다") {
                     mockMvc

@@ -78,6 +78,6 @@ data class PendingTermResponse(
 ) {
     companion object {
         fun from(term: PendingTerm): PendingTermResponse =
-            PendingTermResponse(term.id, term.code, term.version, term.isRequired, term.contentUrl, term.agreed)
+            PendingTermResponse(term.id.value, term.code, term.version, term.isRequired, term.contentUrl, term.agreed)
     }
 }

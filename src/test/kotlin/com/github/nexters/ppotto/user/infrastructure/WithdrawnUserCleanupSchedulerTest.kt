@@ -45,7 +45,7 @@ class WithdrawnUserCleanupSchedulerTest(
                 WithdrawnUserCleanupScheduler(cleanupService, properties).cleanup()
 
                 Then("보존 기간이 지나지 않아 사용자 행을 남긴다") {
-                    dslContext.fetchExists(USERS, USERS.ID.eq(withdrawn.id)) shouldBe true
+                    dslContext.fetchExists(USERS, USERS.ID.eq(withdrawn.id.value)) shouldBe true
                 }
             }
         }

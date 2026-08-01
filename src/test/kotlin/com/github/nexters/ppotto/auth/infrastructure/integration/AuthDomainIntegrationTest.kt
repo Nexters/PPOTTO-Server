@@ -23,6 +23,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.runConcurrently
@@ -90,7 +91,7 @@ class AuthDomainIntegrationTest(
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.APPLE, providerUserId)
                         ?.id shouldBe first.userId
-                    boardRepository.findByUserId(first.userId) shouldHaveSize 1
+                    boardRepository.findByUserId(first.userId.value) shouldHaveSize 1
                 }
             }
         }
@@ -112,7 +113,11 @@ class AuthDomainIntegrationTest(
                 Then("계정과 기본 보드를 각각 한 번만 생성한다") {
                     users.map { it.userId }.distinct() shouldHaveSize 1
                     users.count { it.isNewUser } shouldBe 1
-                    boardRepository.findByUserId(users.first().userId) shouldHaveSize 1
+                    boardRepository.findByUserId(
+                        users
+                            .first()
+                            .userId.value,
+                    ) shouldHaveSize 1
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
                         ?.id shouldBe users.first().userId
@@ -149,7 +154,7 @@ class AuthDomainIntegrationTest(
                     .fetchOne()!!
 
             When("로그인용 미동의 약관을 조회하면") {
-                val pending = authTermsPort.findPendingTerms(user.userId).single { it.id == term.id }
+                val pending = authTermsPort.findPendingTerms(user.userId).single { it.id.value == term.id }
 
                 Then("terms 결과를 auth 응답 dto로 명시적으로 변환한다") {
                     pending.code shouldBe code
@@ -184,7 +189,7 @@ class AuthSignupRollbackIntegrationTest(
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
                         .shouldBeNull()
-                    boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 0
+                    boardRepository.findByUserId(loginEffects.userId!!.value) shouldHaveSize 0
                     loginEffects.tokenIssueCount shouldBe 0
                     loginEffects.tokenSaveCount shouldBe 0
                 }
@@ -214,7 +219,7 @@ class AuthSignupRollbackIntegrationTest(
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.APPLE, providerUserId)
                         .shouldBeNull()
-                    boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 0
+                    boardRepository.findByUserId(loginEffects.userId!!.value) shouldHaveSize 0
                     loginEffects.tokenIssueCount shouldBe 0
                     loginEffects.tokenSaveCount shouldBe 0
                 }
@@ -235,7 +240,7 @@ class AuthSignupRollbackIntegrationTest(
                     loginEffects.termsLookupInTransaction shouldBe true
                     loginEffects.tokenIssueInTransaction shouldBe false
                     loginEffects.tokenSaveInTransaction shouldBe false
-                    boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 1
+                    boardRepository.findByUserId(loginEffects.userId!!.value) shouldHaveSize 1
                 }
             }
         }
@@ -325,7 +330,7 @@ class SignupRollbackAuthTestConfig {
                 AuthUserPort { profile ->
                     authUserPort.findOrCreate(profile).also {
                         loginEffects.userId = it.userId
-                        loginEffects.boardCountInTransaction = boardRepository.findByUserId(it.userId).size
+                        loginEffects.boardCountInTransaction = boardRepository.findByUserId(it.userId.value).size
                     }
                 },
             authTermsPort = TrackingTermsPort(loginEffects, authTermsPort),
@@ -334,7 +339,7 @@ class SignupRollbackAuthTestConfig {
 }
 
 class LoginEffects {
-    var userId: UUID? = null
+    var userId: UserId? = null
     var failTerms: Boolean = true
     var providerCallInTransaction: Boolean = false
     var termsLookupInTransaction: Boolean = false
@@ -392,7 +397,7 @@ private class TrackingTermsPort(
     private val loginEffects: LoginEffects,
     private val delegate: AuthTermsPort,
 ) : AuthTermsPort {
-    override fun findPendingTerms(userId: UUID): List<PendingTerm> {
+    override fun findPendingTerms(userId: UserId): List<PendingTerm> {
         loginEffects.termsLookupInTransaction = isActualTransactionActive()
         check(!loginEffects.failTerms) { "약관 조회 실패" }
         return delegate.findPendingTerms(userId)
@@ -402,33 +407,33 @@ private class TrackingTermsPort(
 private class TrackingTokenProvider(
     private val loginEffects: LoginEffects,
 ) : TokenProvider {
-    override fun issue(userId: UUID): TokenPair {
+    override fun issue(userId: UserId): TokenPair {
         loginEffects.tokenIssueInTransaction = isActualTransactionActive()
         loginEffects.tokenIssueCount += 1
         return TokenPair("access-$userId", "refresh-$userId", 3_600)
     }
 
-    override fun verifyAccessToken(accessToken: String): UUID = UUID.fromString(accessToken)
+    override fun verifyAccessToken(accessToken: String): UserId = UserId(UUID.fromString(accessToken))
 }
 
 private class TrackingRefreshTokenStore(
     private val loginEffects: LoginEffects,
 ) : RefreshTokenStore {
     override fun save(
-        userId: UUID,
+        userId: UserId,
         refreshToken: String,
     ) {
         loginEffects.tokenSaveInTransaction = isActualTransactionActive()
         loginEffects.tokenSaveCount += 1
     }
 
-    override fun findUserId(refreshToken: String): UUID? = null
+    override fun findUserId(refreshToken: String): UserId? = null
 
     override fun rotate(
-        userId: UUID,
+        userId: UserId,
         currentRefreshToken: String,
         newRefreshToken: String,
     ): Boolean = false
 
-    override fun delete(userId: UUID) = Unit
+    override fun delete(userId: UserId) = Unit
 }

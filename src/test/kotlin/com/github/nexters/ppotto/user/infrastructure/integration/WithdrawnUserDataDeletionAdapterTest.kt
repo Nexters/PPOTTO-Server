@@ -28,6 +28,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
+import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.terms.application.TermsService
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
@@ -74,7 +75,7 @@ class WithdrawnUserDataDeletionAdapterTest(
         Given("모든 도메인 데이터를 가진 탈퇴 사용자가 유예기간을 지났을 때") {
             objectStorageCleaner.clear()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
+            val board = boardRepository.save(user.rawId)
             val drawing =
                 drawingRepository
                     .upsertAll(
@@ -90,7 +91,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                             ),
                         ),
                     ).single()
-            val analysis = analysisRepository.save(user.id, board.id)
+            val analysis = analysisRepository.save(user.rawId, board.id)
             val photo =
                 photoRepository
                     .saveAll(
@@ -103,7 +104,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                 analysisResultSaveService
                     .save(
                         SaveAnalysisResultCommand(
-                            userId = user.id,
+                            userId = user.rawId,
                             analysisId = analysis.id,
                             boardId = board.id,
                             stickers =
@@ -144,7 +145,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                     .filter { it.isRequired }
                     .map { it.id },
             )
-            dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id)) shouldBe true
+            dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id.value)) shouldBe true
             userRepository.withdraw(user.withdraw(Instant.parse("2026-07-01T00:00:00Z")))!!
 
             When("탈퇴 사용자 정리 배치를 실행하면") {
@@ -165,8 +166,8 @@ class WithdrawnUserDataDeletionAdapterTest(
                     dslContext.fetchExists(PHOTOS, PHOTOS.ID.eq(photo.id)) shouldBe false
                     dslContext.fetchExists(ANALYSIS, ANALYSIS.ID.eq(analysis.id)) shouldBe false
                     dslContext.fetchExists(BOARDS, BOARDS.ID.eq(board.id)) shouldBe false
-                    dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id)) shouldBe false
-                    dslContext.fetchExists(USERS, USERS.ID.eq(user.id)) shouldBe false
+                    dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id.value)) shouldBe false
+                    dslContext.fetchExists(USERS, USERS.ID.eq(user.id.value)) shouldBe false
                 }
             }
         }
@@ -181,7 +182,7 @@ class WithdrawnUserDataDeletionAdapterTest(
 
                 Then("두 번째 실행은 대상이 없어 멱등하게 끝난다") {
                     second.deletedUserIds.contains(user.id) shouldBe false
-                    dslContext.fetchExists(USERS, USERS.ID.eq(user.id)) shouldBe false
+                    dslContext.fetchExists(USERS, USERS.ID.eq(user.id.value)) shouldBe false
                 }
             }
         }

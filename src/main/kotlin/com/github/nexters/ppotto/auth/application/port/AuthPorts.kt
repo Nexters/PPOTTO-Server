@@ -6,7 +6,7 @@ import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.PendingTerm
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.UserId
 
 interface OAuthClient {
     val provider: OAuthProvider
@@ -17,26 +17,26 @@ interface OAuthClient {
 }
 
 interface TokenProvider {
-    fun issue(userId: UUID): TokenPair
+    fun issue(userId: UserId): TokenPair
 
-    fun verifyAccessToken(accessToken: String): UUID
+    fun verifyAccessToken(accessToken: String): UserId
 }
 
 interface RefreshTokenStore {
     fun save(
-        userId: UUID,
+        userId: UserId,
         refreshToken: String,
     )
 
-    fun findUserId(refreshToken: String): UUID?
+    fun findUserId(refreshToken: String): UserId?
 
     fun rotate(
-        userId: UUID,
+        userId: UserId,
         currentRefreshToken: String,
         newRefreshToken: String,
     ): Boolean
 
-    fun delete(userId: UUID)
+    fun delete(userId: UserId)
 }
 
 fun interface AuthUserPort {
@@ -44,9 +44,9 @@ fun interface AuthUserPort {
 }
 
 fun interface AuthTermsPort {
-    fun findPendingTerms(userId: UUID): List<PendingTerm>
+    fun findPendingTerms(userId: UserId): List<PendingTerm>
 }
 
 fun interface AuthActiveUserPort {
-    fun isActive(userId: UUID): Boolean
+    fun isActive(userId: UserId): Boolean
 }

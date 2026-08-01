@@ -37,7 +37,7 @@ class UserControllerTest(
                 )
             val authentication =
                 UsernamePasswordAuthenticationToken.authenticated(
-                    registered.user.id,
+                    registered.user.id.value,
                     null,
                     emptyList(),
                 )

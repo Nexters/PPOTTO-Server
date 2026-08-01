@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -29,7 +30,7 @@ class StickerRepositoryTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("분석과 사진이 등록된 상태에서 스티커 리캡을 저장하면") {
-            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val board = boardRepository.save(userRepository.saveTestUser().rawId)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(
@@ -96,10 +97,10 @@ class StickerRepositoryTest(
         Given("두 보드에 스티커가 등록된 상태에서") {
             val firstUser = userRepository.saveTestUser()
             val secondUser = userRepository.saveTestUser()
-            val firstBoard = boardRepository.save(firstUser.id)
-            val secondBoard = boardRepository.save(secondUser.id)
-            val firstAnalysis = analysisRepository.save(firstUser.id, firstBoard.id)
-            val secondAnalysis = analysisRepository.save(secondUser.id, secondBoard.id)
+            val firstBoard = boardRepository.save(firstUser.rawId)
+            val secondBoard = boardRepository.save(secondUser.rawId)
+            val firstAnalysis = analysisRepository.save(firstUser.rawId, firstBoard.id)
+            val secondAnalysis = analysisRepository.save(secondUser.rawId, secondBoard.id)
             val firstSticker =
                 stickerRepository.save(
                     firstAnalysis.id,
@@ -122,7 +123,7 @@ class StickerRepositoryTest(
         }
 
         Given("한 분석에 스티커가 6개 저장된 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val board = boardRepository.save(userRepository.saveTestUser().rawId)
             val analysis = analysisRepository.save(board.userId, board.id)
             repeat(6) {
                 stickerRepository.save(analysis.id, board.id, textCreation("스티커 $it"))

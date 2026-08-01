@@ -11,6 +11,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -30,7 +31,7 @@ class StickerCommandServiceTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("사용자 보드에 스티커가 등록된 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val board = boardRepository.save(userRepository.saveTestUser().rawId)
             val analysis = analysisRepository.save(board.userId, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
 
@@ -80,7 +81,7 @@ class StickerCommandServiceTest(
 
                 Then("스티커 없음 예외로 소유권을 숨긴다") {
                     shouldThrow<NotFoundException> {
-                        service.rename(otherUser.id, sticker.id, "침범")
+                        service.rename(otherUser.rawId, sticker.id, "침범")
                     }
                 }
             }
@@ -104,7 +105,7 @@ class StickerCommandServiceTest(
         }
 
         Given("드로잉 삭제 port가 없는 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val board = boardRepository.save(userRepository.saveTestUser().rawId)
             val analysis = analysisRepository.save(board.userId, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             val serviceWithoutPort =

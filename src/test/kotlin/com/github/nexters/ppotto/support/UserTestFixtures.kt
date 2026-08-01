@@ -15,4 +15,4 @@ fun UserRepository.saveTestUser(): User =
     }
 
 val User.rawId: UUID
-    get() = id
+    get() = id.value

@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.auth.domain
 
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.TermId
+import com.github.nexters.ppotto.global.identifier.UserId
 
 data class SocialProfile(
     val provider: OAuthProvider,
@@ -17,12 +18,12 @@ data class TokenPair(
 )
 
 data class AuthUser(
-    val userId: UUID,
+    val userId: UserId,
     val isNewUser: Boolean,
 )
 
 data class PendingTerm(
-    val id: UUID,
+    val id: TermId,
     val code: String,
     val version: String,
     val isRequired: Boolean,

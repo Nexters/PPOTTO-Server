@@ -27,7 +27,7 @@ data class TermResponse(
     companion object {
         fun from(result: TermResult) =
             TermResponse(
-                id = result.id,
+                id = result.id.value,
                 code = result.code,
                 version = result.version,
                 isRequired = result.isRequired,

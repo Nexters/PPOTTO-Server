@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto
 
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
@@ -245,7 +246,7 @@ class UserJourneyIntegrationTest(
 
                     cleanupService
                         .cleanup(deletedBefore = Instant.now().plusSeconds(1), batchSize = 10)
-                        .deletedUserIds shouldContainExactly listOf(userId)
+                        .deletedUserIds shouldContainExactly listOf(UserId(userId))
 
                     dslContext.fetchExists(STICKERS, STICKERS.BOARD_ID.eq(boardId)) shouldBe false
                     dslContext.fetchExists(PHOTOS, PHOTOS.ANALYSIS_ID.eq(analysisId)) shouldBe false

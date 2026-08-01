@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.assertSoftly
@@ -37,8 +38,8 @@ class BoardLayoutConcurrencyTest(
 ) : IntegrationTest({
         Given("삭제 가능한 보드의 레이아웃 검증이 끝난 상태에서") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.id)
-            boardRepository.save(user.id)
+            val board = boardRepository.save(user.rawId)
+            boardRepository.save(user.rawId)
             val drawingId = uuidV7()
             val layoutCommand =
                 BoardLayoutUpdateCommand(
@@ -64,7 +65,7 @@ class BoardLayoutConcurrencyTest(
                     executor.submit(
                         Callable {
                             runCatching {
-                                boardLayoutService.update(board.id, user.id, layoutCommand)
+                                boardLayoutService.update(board.id, user.rawId, layoutCommand)
                             }
                         },
                     )
@@ -74,7 +75,7 @@ class BoardLayoutConcurrencyTest(
                         Callable {
                             deleteStarted.countDown()
                             runCatching {
-                                boardCommandService.delete(board.id, user.id)
+                                boardCommandService.delete(board.id, user.rawId)
                             }
                         },
                     )
@@ -90,7 +91,7 @@ class BoardLayoutConcurrencyTest(
                         deleteReachedStickerPortBeforeRelease shouldBe false
                         layoutResult.isSuccess shouldBe true
                         deleteResult.isSuccess shouldBe true
-                        boardRepository.findOwnedById(board.id, user.id).shouldBeNull()
+                        boardRepository.findOwnedById(board.id, user.rawId).shouldBeNull()
                         drawingRepository.findByBoardId(board.id).shouldBeEmpty()
                     }
                 }

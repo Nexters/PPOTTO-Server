@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 import com.github.nexters.ppotto.jooq.tables.references.USERS
@@ -9,7 +10,6 @@ import com.github.nexters.ppotto.user.domain.User
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 import java.time.Instant
-import java.util.UUID
 
 @Repository
 class UserRepository(
@@ -37,10 +37,10 @@ class UserRepository(
             .fetchOne()!!
             .toDomain()
 
-    fun findById(id: UUID): User? =
+    fun findById(id: UserId): User? =
         dslContext
             .selectFrom(USERS)
-            .where(USERS.ID.eq(id))
+            .where(USERS.ID.eq(id.value))
             .and(USERS.DELETED_AT.isNull)
             .and(USERS.PROVIDER.isNotNull)
             .and(USERS.PROVIDER_USER_ID.isNotNull)
@@ -61,7 +61,7 @@ class UserRepository(
             ?.toDomain()
 
     fun updateSocialProfile(
-        id: UUID,
+        id: UserId,
         email: String,
         providerRefreshToken: EncryptedProviderRefreshToken?,
     ): User? =
@@ -72,7 +72,7 @@ class UserRepository(
                 providerRefreshToken?.let {
                     set(USERS.PROVIDER_REFRESH_TOKEN, it.value)
                 }
-            }.where(USERS.ID.eq(id))
+            }.where(USERS.ID.eq(id.value))
             .and(USERS.DELETED_AT.isNull)
             .returning()
             .fetchOne()
@@ -84,7 +84,7 @@ class UserRepository(
             .set(USERS.EMAIL, user.email)
             .setNull(USERS.PROVIDER_REFRESH_TOKEN)
             .set(USERS.DELETED_AT, user.deletedAt)
-            .where(USERS.ID.eq(user.id))
+            .where(USERS.ID.eq(user.id.value))
             .and(USERS.DELETED_AT.isNull)
             .returning()
             .fetchOne()
@@ -103,17 +103,17 @@ class UserRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun hardDelete(id: UUID): Boolean =
+    fun hardDelete(id: UserId): Boolean =
         dslContext
             .deleteFrom(USERS)
-            .where(USERS.ID.eq(id))
+            .where(USERS.ID.eq(id.value))
             .and(USERS.DELETED_AT.isNotNull)
             .execute() == 1
 }
 
 internal fun UsersRecord.toDomain() =
     User(
-        id = id!!,
+        id = UserId(id!!),
         provider = provider!!.toDomain(),
         providerUserId = providerUserId!!,
         email = email!!,

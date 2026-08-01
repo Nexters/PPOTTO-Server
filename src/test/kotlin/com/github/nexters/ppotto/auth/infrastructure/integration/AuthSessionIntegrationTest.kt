@@ -12,6 +12,7 @@ import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.application.UserService
 import io.kotest.assertions.throwables.shouldThrow
@@ -100,20 +101,20 @@ class AuthSessionTestConfig {
 }
 
 class SessionRefreshTokenStore : RefreshTokenStore {
-    private val tokens = mutableMapOf<String, UUID>()
+    private val tokens = mutableMapOf<String, UserId>()
     var rotationCount: Int = 0
 
     override fun save(
-        userId: UUID,
+        userId: UserId,
         refreshToken: String,
     ) {
         tokens[refreshToken] = userId
     }
 
-    override fun findUserId(refreshToken: String): UUID? = tokens[refreshToken]
+    override fun findUserId(refreshToken: String): UserId? = tokens[refreshToken]
 
     override fun rotate(
-        userId: UUID,
+        userId: UserId,
         currentRefreshToken: String,
         newRefreshToken: String,
     ): Boolean {
@@ -123,7 +124,7 @@ class SessionRefreshTokenStore : RefreshTokenStore {
         return true
     }
 
-    override fun delete(userId: UUID) {
+    override fun delete(userId: UserId) {
         tokens.entries.removeIf { it.value == userId }
     }
 
@@ -136,12 +137,12 @@ class SessionRefreshTokenStore : RefreshTokenStore {
 class SessionTokenProvider : TokenProvider {
     var issueCount: Int = 0
 
-    override fun issue(userId: UUID): TokenPair {
+    override fun issue(userId: UserId): TokenPair {
         issueCount += 1
         return TokenPair("access-$userId", "refresh-$userId", 3_600)
     }
 
-    override fun verifyAccessToken(accessToken: String): UUID = UUID.fromString(accessToken)
+    override fun verifyAccessToken(accessToken: String): UserId = UserId(UUID.fromString(accessToken))
 
     fun reset() {
         issueCount = 0

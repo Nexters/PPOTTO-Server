@@ -12,6 +12,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -31,7 +32,7 @@ class StickerQueryServiceTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("이미지 스티커와 리캡 데이터가 등록된 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val board = boardRepository.save(userRepository.saveTestUser().rawId)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(
@@ -111,7 +112,7 @@ class StickerQueryServiceTest(
         }
 
         Given("업로드가 완료되지 않은 사진이 리캡에 연결된 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val board = boardRepository.save(userRepository.saveTestUser().rawId)
             val analysis = analysisRepository.save(board.userId, board.id)
             val pendingPhoto =
                 photoRepository

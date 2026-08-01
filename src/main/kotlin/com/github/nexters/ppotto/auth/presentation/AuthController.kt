@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.RefreshRequest
 import com.github.nexters.ppotto.auth.presentation.dto.TokenPairResponse
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import jakarta.validation.Valid
@@ -36,6 +37,6 @@ class AuthController(
         @AuthenticatedUser userId: UUID,
     ): ApiResponse<Unit> =
         authService
-            .logout(userId)
+            .logout(UserId(userId))
             .let { ApiResponse.success() }
 }
