@@ -1,12 +1,12 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
-import java.util.UUID
 
 @Service
 class StickerWithdrawalService(
@@ -16,7 +16,7 @@ class StickerWithdrawalService(
     private val imageStoragePorts: List<StickerImageStoragePort>,
     private val transactionTemplate: TransactionTemplate,
 ) {
-    fun deleteAllByBoardIds(boardIds: Collection<UUID>) {
+    fun deleteAllByBoardIds(boardIds: Collection<BoardId>) {
         stickerRepository
             .findDeletionTargetsByBoardIds(boardIds)
             .takeIf { it.isNotEmpty() }

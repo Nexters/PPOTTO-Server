@@ -26,6 +26,7 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 
 ## Rules
 
+- Typed identifiers (`StickerId`, `AnalysisId`, `BoardId`, `PhotoId`, `UserId` from `global/identifier/`) flow through domain models, repository public signatures, application services, and the `application/port/` contracts. Raw `UUID` survives only inside jOOQ DSL bindings (`.value` out, wrap in `toDomain`), in presentation DTO fields (controllers wrap the principal and path variables, DTO mappers unwrap), and on `StickerPhoto.id`/`RecapComment.id` — child-row ids that never cross a query boundary as lookup keys, so they stay raw by the `global/identifier/` rule.
 - `Sticker` is soft-deleted through `stickers.deleted_at`.
 - A recap has exactly one one-line summary and it lives on `stickers.summary`, not in `recap_comments`. It is LLM-written only — no API updates it, so `Sticker.summary` is a read-only `val` while `title` stays mutable through `rename`. `GET /stickers/{id}` returns it as the top-level `summary` field, outside the `sticker` object, because the board sticker list has no use for it.
 - `recap_comments` has no type column. The two kinds are told apart by coordinates alone: `pos_x`/`pos_y` set means a speech bubble floating around the sticker, both null means a bottom `테마 분석` keyword chip. `chk_recap_comment_position` enforces that the pair is all-or-nothing and `RecapCommentCreation` rejects a half-filled pair before any write. Never reintroduce a boolean flag for this — it duplicates the coordinates and lets the two disagree.

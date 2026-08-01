@@ -13,5 +13,5 @@ class BoardAnalysisActivityAdapter(
     override fun hasActiveAnalysis(
         boardId: BoardId,
         userId: UserId,
-    ): Boolean = analysisQueryService.hasActiveAnalysis(boardId.value, userId.value)
+    ): Boolean = analysisQueryService.hasActiveAnalysis(boardId, userId)
 }

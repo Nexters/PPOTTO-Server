@@ -1,6 +1,10 @@
 package com.github.nexters.ppotto.sticker.domain
 
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -57,7 +61,7 @@ class StickerTest :
                             type = StickerType.IMAGE,
                             title = "이미지",
                             summary = "한 줄 요약",
-                            sourcePhotoId = UUID.randomUUID(),
+                            sourcePhotoId = PhotoId(UUID.randomUUID()),
                             imageKey = null,
                             textContent = null,
                             layout = layout(),
@@ -118,14 +122,14 @@ class StickerTest :
 
 private fun imageSticker() =
     Sticker(
-        id = UUID.randomUUID(),
-        analysisId = UUID.randomUUID(),
-        boardId = UUID.randomUUID(),
+        id = StickerId(UUID.randomUUID()),
+        analysisId = AnalysisId(UUID.randomUUID()),
+        boardId = BoardId(UUID.randomUUID()),
         type = StickerType.IMAGE,
         title = "이미지",
         summary = "웃기고 귀여우면 일단 주워요",
         viewedAt = null,
-        sourcePhotoId = UUID.randomUUID(),
+        sourcePhotoId = PhotoId(UUID.randomUUID()),
         imageKey = "stickers/image.png",
         textContent = null,
         posX = 0.0,

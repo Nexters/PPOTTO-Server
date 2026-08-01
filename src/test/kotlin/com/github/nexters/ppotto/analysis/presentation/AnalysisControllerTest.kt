@@ -8,7 +8,6 @@ import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.jooq.DSLContext
@@ -187,7 +186,8 @@ class AnalysisControllerTest(
         }
 
         Given("존재하지 않는 boardId로") {
-            val userId = userRepository.saveTestUser().rawId
+            val requester = userRepository.saveTestUser()
+            val userId = requester.id.value
 
             When("분석 생성을 요청하면") {
                 Then("404 응답과 BOARD-002를 반환한다") {
@@ -211,7 +211,8 @@ class AnalysisControllerTest(
         }
 
         Given("존재하지 않는 analysisId로") {
-            val userId = userRepository.saveTestUser().rawId
+            val requester = userRepository.saveTestUser()
+            val userId = requester.id.value
 
             When("업로드 완료를 통보하면") {
                 Then("404 응답을 반환한다") {
@@ -223,7 +224,8 @@ class AnalysisControllerTest(
         }
 
         Given("활성 분석이 없는 사용자로") {
-            val userId = userRepository.saveTestUser().rawId
+            val requester = userRepository.saveTestUser()
+            val userId = requester.id.value
 
             When("진행 중 분석을 조회하면") {
                 Then("200 응답과 null data를 반환한다") {
@@ -320,7 +322,8 @@ class AnalysisControllerTest(
         Given("다른 사용자의 analysisId로") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(ownerBoard.userId.value, ownerBoard.id.value)
-            val otherUserId = userRepository.saveTestUser().rawId
+            val otherUser = userRepository.saveTestUser()
+            val otherUserId = otherUser.id.value
 
             When("분석 상태를 조회하면") {
                 Then("404 응답과 ANALYSIS-005를 반환한다") {
@@ -371,7 +374,8 @@ class AnalysisControllerTest(
 
         Given("다른 사용자의 Board가 등록된 상태에서") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
-            val otherUserId = userRepository.saveTestUser().rawId
+            val otherUser = userRepository.saveTestUser()
+            val otherUserId = otherUser.id.value
 
             When("분석 생성을 요청하면") {
                 Then("404 응답과 BOARD-002를 반환한다") {
@@ -399,7 +403,8 @@ class AnalysisControllerTest(
             val photos =
                 (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             val created = analysisService.createAnalysis(ownerBoard.userId.value, ownerBoard.id.value, photos)
-            val otherUserId = userRepository.saveTestUser().rawId
+            val otherUser = userRepository.saveTestUser()
+            val otherUserId = otherUser.id.value
 
             When("업로드 완료를 통보하면") {
                 Then("404 응답을 반환한다") {

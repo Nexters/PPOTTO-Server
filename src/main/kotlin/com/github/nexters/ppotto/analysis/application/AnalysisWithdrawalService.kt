@@ -4,9 +4,10 @@ import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisWithdrawalRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
-import java.util.UUID
 
 @Service
 class AnalysisWithdrawalService(
@@ -15,13 +16,13 @@ class AnalysisWithdrawalService(
     private val photoStorage: PhotoStorage,
     private val transactionTemplate: TransactionTemplate,
 ) {
-    fun deleteAllByUserId(userId: UUID) {
+    fun deleteAllByUserId(userId: UserId) {
         analysisWithdrawalRepository
             .findAllIdsByUserId(userId)
-            .onEach { photoStorage.deleteByPrefix(PhotoObjectKeys.prefixFor(it)) }
+            .onEach { photoStorage.deleteByPrefix(PhotoObjectKeys.prefixFor(it.value)) }
             .let { analysisIds ->
                 transactionTemplate.executeWithoutResult {
-                    photoRepository.hardDeleteAllByAnalysisIds(analysisIds)
+                    photoRepository.hardDeleteAllByAnalysisIds(analysisIds.map(AnalysisId::value))
                     analysisWithdrawalRepository.hardDeleteAllByUserId(userId)
                 }
             }

@@ -27,7 +27,7 @@ data class RecapDetailResponse(
                     },
                 photos =
                     result.photos.map {
-                        RecapPhotoResponse(it.id, it.imageUrl, it.takenAt)
+                        RecapPhotoResponse(it.id.value, it.imageUrl, it.takenAt)
                     },
             )
     }

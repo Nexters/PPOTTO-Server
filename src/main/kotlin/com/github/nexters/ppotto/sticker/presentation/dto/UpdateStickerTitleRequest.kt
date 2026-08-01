@@ -23,6 +23,6 @@ data class UpdateStickerTitleResponse(
     val title: String,
 ) {
     companion object {
-        fun from(result: StickerTitleResult) = UpdateStickerTitleResponse(result.id, result.title)
+        fun from(result: StickerTitleResult) = UpdateStickerTitleResponse(result.id.value, result.title)
     }
 }

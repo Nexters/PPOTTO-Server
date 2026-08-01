@@ -1,15 +1,15 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
-import java.util.UUID
 
 data class StickerTitleResult(
-    val id: UUID,
+    val id: StickerId,
     val title: String,
 )
 
 data class StickerLayoutCommand(
-    val id: UUID,
+    val id: StickerId,
     val title: String? = null,
     val posX: Double,
     val posY: Double,

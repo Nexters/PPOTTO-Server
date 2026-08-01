@@ -5,12 +5,13 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -43,19 +44,19 @@ class StickerRepositoryTest(
                 )
             val saved =
                 stickerRepository.save(
-                    analysis.id,
-                    board.id.value,
+                    AnalysisId(analysis.id),
+                    board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "여름 사진",
                         summary = "여름 내내 바다만 찍었어요",
-                        sourcePhotoId = photos.first().id,
+                        sourcePhotoId = PhotoId(photos.first().id),
                         imageKey = "stickers/summer.png",
                         textContent = null,
                         layout = layout(),
                     ),
                 )
-            stickerRecapRepository.savePhotos(saved.id, photos.map { it.id })
+            stickerRecapRepository.savePhotos(saved.id, photos.map { PhotoId(it.id) })
             stickerRecapRepository.saveComments(
                 saved.id,
                 listOf(
@@ -72,7 +73,7 @@ class StickerRepositoryTest(
                 Then("저장한 aggregate 데이터를 반환한다") {
                     sticker?.title shouldBe "여름 사진"
                     sticker?.summary shouldBe "여름 내내 바다만 찍었어요"
-                    photoIds shouldContainExactly photos.map { it.id }
+                    photoIds shouldContainExactly photos.map { PhotoId(it.id) }
                     comments.map { it.content } shouldContainExactly listOf("키워드 칩", "말풍선")
                 }
             }
@@ -99,25 +100,25 @@ class StickerRepositoryTest(
             val secondUser = userRepository.saveTestUser()
             val firstBoard = boardRepository.save(firstUser.id)
             val secondBoard = boardRepository.save(secondUser.id)
-            val firstAnalysis = analysisRepository.save(firstUser.rawId, firstBoard.id.value)
-            val secondAnalysis = analysisRepository.save(secondUser.rawId, secondBoard.id.value)
+            val firstAnalysis = analysisRepository.save(firstUser.id.value, firstBoard.id.value)
+            val secondAnalysis = analysisRepository.save(secondUser.id.value, secondBoard.id.value)
             val firstSticker =
                 stickerRepository.save(
-                    firstAnalysis.id,
-                    firstBoard.id.value,
+                    AnalysisId(firstAnalysis.id),
+                    firstBoard.id,
                     textCreation("첫 스티커"),
                 )
             val secondSticker =
                 stickerRepository.save(
-                    secondAnalysis.id,
-                    secondBoard.id.value,
+                    AnalysisId(secondAnalysis.id),
+                    secondBoard.id,
                     textCreation("둘째 스티커"),
                 )
 
             When("첫 보드의 스티커 소유 여부를 검증하면") {
                 Then("첫 보드 스티커만 통과한다") {
-                    stickerRepository.validateOwnedByBoard(firstBoard.id.value, listOf(firstSticker.id)) shouldBe true
-                    stickerRepository.validateOwnedByBoard(firstBoard.id.value, listOf(secondSticker.id)) shouldBe false
+                    stickerRepository.validateOwnedByBoard(firstBoard.id, listOf(firstSticker.id)) shouldBe true
+                    stickerRepository.validateOwnedByBoard(firstBoard.id, listOf(secondSticker.id)) shouldBe false
                 }
             }
         }
@@ -126,15 +127,15 @@ class StickerRepositoryTest(
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId.value, board.id.value)
             repeat(6) {
-                stickerRepository.save(analysis.id, board.id.value, textCreation("스티커 $it"))
+                stickerRepository.save(AnalysisId(analysis.id), board.id, textCreation("스티커 $it"))
             }
 
             When("일곱 번째 스티커를 직접 저장하면") {
                 Then("DB 제약이 저장을 거부한다") {
                     shouldThrow<DataIntegrityViolationException> {
-                        stickerRepository.save(analysis.id, board.id.value, textCreation("일곱 번째"))
+                        stickerRepository.save(AnalysisId(analysis.id), board.id, textCreation("일곱 번째"))
                     }
-                    stickerRepository.findAllByAnalysisId(analysis.id).size shouldBe 6
+                    stickerRepository.findAllByAnalysisId(AnalysisId(analysis.id)).size shouldBe 6
                 }
             }
         }

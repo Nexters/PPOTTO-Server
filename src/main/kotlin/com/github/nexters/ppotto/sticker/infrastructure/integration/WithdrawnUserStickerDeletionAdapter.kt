@@ -9,6 +9,5 @@ import org.springframework.stereotype.Component
 class WithdrawnUserStickerDeletionAdapter(
     private val stickerWithdrawalService: StickerWithdrawalService,
 ) : WithdrawnUserStickerDeletionPort {
-    override fun deleteAllByBoardIds(boardIds: Collection<BoardId>): Unit =
-        stickerWithdrawalService.deleteAllByBoardIds(boardIds.map(BoardId::value))
+    override fun deleteAllByBoardIds(boardIds: Collection<BoardId>): Unit = stickerWithdrawalService.deleteAllByBoardIds(boardIds)
 }

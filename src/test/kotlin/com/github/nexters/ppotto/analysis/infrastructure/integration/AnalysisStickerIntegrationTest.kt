@@ -7,6 +7,8 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
@@ -88,18 +90,18 @@ class AnalysisStickerIntegrationTest(
                 val saved =
                     analysisResultSaveService.save(
                         SaveAnalysisResultCommand(
-                            userId = board.userId.value,
-                            analysisId = analysis.id,
-                            boardId = board.id.value,
-                            stickers = listOf(stickerResult(photos.first().id, photos.map { it.id }, stickerKey)),
+                            userId = board.userId,
+                            analysisId = AnalysisId(analysis.id),
+                            boardId = board.id,
+                            stickers = listOf(stickerResult(PhotoId(photos.first().id), photos.map { PhotoId(it.id) }, stickerKey)),
                         ),
                     )
-                val recap = stickerQueryService.getRecap(board.userId.value, saved.stickerIds.single())
+                val recap = stickerQueryService.getRecap(board.userId, saved.stickerIds.single())
 
                 Then("파이프라인이 만든 스티커 오브젝트 키를 그대로 읽기용 signed URL로 서명한다") {
                     recap.sticker.id shouldBe saved.stickerIds.single()
                     recap.comments.map { it.content } shouldContainExactly listOf("리캡 코멘트")
-                    recap.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
+                    recap.photos.map { it.id } shouldContainExactly photos.reversed().map { PhotoId(it.id) }
                     requireNotNull(recap.sticker.imageUrl)
                         .shouldStartWith("https://storage.googleapis.com/ppotto-test-bucket/$stickerKey?")
                     recap.photos.first().imageUrl.shouldStartWith(
@@ -141,17 +143,17 @@ class AnalysisStickerIntegrationTest(
                     shouldThrow<NotFoundException> {
                         analysisResultSaveService.save(
                             SaveAnalysisResultCommand(
-                                userId = ownerBoard.userId.value,
-                                analysisId = ownerAnalysis.id,
-                                boardId = ownerBoard.id.value,
+                                userId = ownerBoard.userId,
+                                analysisId = AnalysisId(ownerAnalysis.id),
+                                boardId = ownerBoard.id,
                                 stickers =
                                     listOf(
-                                        stickerResult(ownerPhoto.id, listOf(ownerPhoto.id, otherPhoto.id)),
+                                        stickerResult(PhotoId(ownerPhoto.id), listOf(PhotoId(ownerPhoto.id), PhotoId(otherPhoto.id))),
                                     ),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
                 }
             }
 
@@ -160,14 +162,14 @@ class AnalysisStickerIntegrationTest(
                     shouldThrow<NotFoundException> {
                         analysisResultSaveService.save(
                             SaveAnalysisResultCommand(
-                                userId = ownerBoard.userId.value,
-                                analysisId = ownerAnalysis.id,
-                                boardId = ownerBoard.id.value,
-                                stickers = listOf(stickerResult(ownerPhoto.id, listOf(UUID.randomUUID()))),
+                                userId = ownerBoard.userId,
+                                analysisId = AnalysisId(ownerAnalysis.id),
+                                boardId = ownerBoard.id,
+                                stickers = listOf(stickerResult(PhotoId(ownerPhoto.id), listOf(PhotoId(UUID.randomUUID())))),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
                 }
             }
         }
@@ -193,25 +195,28 @@ class AnalysisStickerIntegrationTest(
                     shouldThrow<NotFoundException> {
                         analysisResultSaveService.save(
                             SaveAnalysisResultCommand(
-                                userId = board.userId.value,
-                                analysisId = analysis.id,
-                                boardId = board.id.value,
+                                userId = board.userId,
+                                analysisId = AnalysisId(analysis.id),
+                                boardId = board.id,
                                 stickers =
                                     listOf(
-                                        stickerResult(completedPhoto.id, listOf(completedPhoto.id, pendingPhoto.id)),
+                                        stickerResult(
+                                            PhotoId(completedPhoto.id),
+                                            listOf(PhotoId(completedPhoto.id), PhotoId(pendingPhoto.id)),
+                                        ),
                                     ),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(board.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
                 }
             }
         }
     })
 
 private fun stickerResult(
-    sourcePhotoId: UUID,
-    photoIds: List<UUID>,
+    sourcePhotoId: PhotoId,
+    photoIds: List<PhotoId>,
     imageKey: String = "stickers/result.png",
 ) = AnalysisStickerResult(
     type = StickerType.IMAGE,

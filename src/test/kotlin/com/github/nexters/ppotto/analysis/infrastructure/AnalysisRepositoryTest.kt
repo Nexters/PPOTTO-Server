@@ -4,7 +4,6 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -150,13 +149,13 @@ class AnalysisRepositoryTest(
             val board = boardRepository.save(user.id)
 
             Then("초기에는 활성 분석이 없다") {
-                analysisRepository.findActiveByUserId(user.rawId).shouldBeNull()
+                analysisRepository.findActiveByUserId(user.id.value).shouldBeNull()
             }
 
-            val analysis = analysisRepository.save(user.rawId, board.id.value)
+            val analysis = analysisRepository.save(user.id.value, board.id.value)
 
             Then("UPLOADING 상태에서는 활성 분석이 있다") {
-                analysisRepository.findActiveByUserId(user.rawId)?.id shouldBe analysis.id
+                analysisRepository.findActiveByUserId(user.id.value)?.id shouldBe analysis.id
             }
 
             dslContext
@@ -166,7 +165,7 @@ class AnalysisRepositoryTest(
                 .execute()
 
             Then("ANALYZING 상태에서도 활성 분석이 있다") {
-                analysisRepository.findActiveByUserId(user.rawId)?.id shouldBe analysis.id
+                analysisRepository.findActiveByUserId(user.id.value)?.id shouldBe analysis.id
             }
 
             dslContext
@@ -176,7 +175,7 @@ class AnalysisRepositoryTest(
                 .execute()
 
             Then("COMPLETED 상태에서는 활성 분석이 없다") {
-                analysisRepository.findActiveByUserId(user.rawId).shouldBeNull()
+                analysisRepository.findActiveByUserId(user.id.value).shouldBeNull()
             }
 
             dslContext
@@ -186,18 +185,18 @@ class AnalysisRepositoryTest(
                 .execute()
 
             Then("FAILED 상태에서도 활성 분석이 없다") {
-                analysisRepository.findActiveByUserId(user.rawId).shouldBeNull()
+                analysisRepository.findActiveByUserId(user.id.value).shouldBeNull()
             }
         }
 
         Given("사용자 소유 분석을 조회할 때") {
             val owner = userRepository.saveTestUser()
             val board = boardRepository.save(owner.id)
-            val analysis = analysisRepository.save(owner.rawId, board.id.value)
+            val analysis = analysisRepository.save(owner.id.value, board.id.value)
             val otherUser = userRepository.saveTestUser()
 
             When("소유자 아이디로 조회하면") {
-                val found = analysisRepository.findByIdAndUserId(analysis.id, owner.rawId)
+                val found = analysisRepository.findByIdAndUserId(analysis.id, owner.id.value)
 
                 Then("분석을 반환한다") {
                     found?.id shouldBe analysis.id
@@ -205,7 +204,7 @@ class AnalysisRepositoryTest(
             }
 
             When("다른 사용자 아이디로 조회하면") {
-                val found = analysisRepository.findByIdAndUserId(analysis.id, otherUser.rawId)
+                val found = analysisRepository.findByIdAndUserId(analysis.id, otherUser.id.value)
 
                 Then("null을 반환한다") {
                     found.shouldBeNull()
@@ -216,12 +215,12 @@ class AnalysisRepositoryTest(
         Given("부분 유니크 인덱스 uk_analysis_active 제약 검증") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
-            analysisRepository.save(user.rawId, board.id.value)
+            analysisRepository.save(user.id.value, board.id.value)
 
             When("동일 사용자로 활성 상태의 분석을 다시 생성하려 하면") {
                 Then("DataIntegrityViolationException이 발생한다") {
                     shouldThrow<DataIntegrityViolationException> {
-                        analysisRepository.save(user.rawId, board.id.value)
+                        analysisRepository.save(user.id.value, board.id.value)
                     }
                 }
             }

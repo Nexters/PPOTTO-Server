@@ -5,6 +5,8 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
@@ -12,7 +14,6 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.hamcrest.Matchers.containsString
@@ -59,19 +60,19 @@ class StickerControllerTest(
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val sticker =
                 stickerRepository.save(
-                    analysis.id,
-                    board.id.value,
+                    AnalysisId(analysis.id),
+                    board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "원래 제목",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = photo.id,
+                        sourcePhotoId = PhotoId(photo.id),
                         imageKey = "stickers/controller.png",
                         textContent = null,
                         layout = defaultStickerLayout(),
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, listOf(photo.id))
+            stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(photo.id)))
             stickerRecapRepository.saveComments(
                 sticker.id,
                 listOf(
@@ -143,7 +144,8 @@ class StickerControllerTest(
             }
 
             When("다른 사용자가 리캡을 조회하면") {
-                authenticate(userRepository.saveTestUser().rawId)
+                val otherUser = userRepository.saveTestUser()
+                authenticate(otherUser.id.value)
 
                 Then("404 응답을 반환한다") {
                     mockMvc

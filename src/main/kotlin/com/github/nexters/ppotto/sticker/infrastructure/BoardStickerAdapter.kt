@@ -22,7 +22,7 @@ class BoardStickerAdapter(
     BoardStickerCommandPort {
     override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> =
         stickerQueryService
-            .getByBoardId(boardId.value)
+            .getByBoardId(boardId)
             .map { it.toBoardItem() }
 
     override fun validateOwnedByBoard(
@@ -30,7 +30,7 @@ class BoardStickerAdapter(
         stickerIds: Set<StickerId>,
     ) {
         stickerCommandService
-            .validateOwnedByBoard(boardId.value, stickerIds.map(StickerId::value))
+            .validateOwnedByBoard(boardId, stickerIds)
             .takeIf { it }
             ?: throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
     }
@@ -41,13 +41,13 @@ class BoardStickerAdapter(
     ): Unit =
         layouts
             .map { it.toStickerCommand() }
-            .let { stickerCommandService.updateLayouts(boardId.value, it) }
+            .let { stickerCommandService.updateLayouts(boardId, it) }
 
-    override fun deleteAllByBoardId(boardId: BoardId): Unit = stickerCommandService.deleteAllByBoardId(boardId.value)
+    override fun deleteAllByBoardId(boardId: BoardId): Unit = stickerCommandService.deleteAllByBoardId(boardId)
 
     private fun StickerItemResult.toBoardItem() =
         BoardStickerItem(
-            id = StickerId(id),
+            id = id,
             title = title,
             isNew = isNew,
             type = type.name,
@@ -65,7 +65,7 @@ class BoardStickerAdapter(
 
     private fun BoardStickerLayoutCommand.toStickerCommand() =
         StickerLayoutCommand(
-            id = id.value,
+            id = id,
             title = title,
             posX = posX,
             posY = posY,

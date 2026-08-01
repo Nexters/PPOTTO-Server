@@ -4,6 +4,10 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -15,9 +19,9 @@ class AnalysisQueryService(
 ) {
     @Transactional(readOnly = true)
     fun hasActiveAnalysis(
-        boardId: UUID,
-        userId: UUID,
-    ): Boolean = analysisRepository.existsActiveByBoardIdAndUserId(boardId, userId)
+        boardId: BoardId,
+        userId: UserId,
+    ): Boolean = analysisRepository.existsActiveByBoardIdAndUserId(boardId.value, userId.value)
 
     @Transactional(readOnly = true)
     fun getActiveAnalysis(userId: UUID): AnalysisStatusResult? =
@@ -37,14 +41,14 @@ class AnalysisQueryService(
 
     @Transactional(readOnly = true)
     fun ownsAnalysisPhotos(
-        userId: UUID,
-        boardId: UUID,
-        analysisId: UUID,
-        photoIds: Set<UUID>,
+        userId: UserId,
+        boardId: BoardId,
+        analysisId: AnalysisId,
+        photoIds: Set<PhotoId>,
     ): Boolean =
         analysisRepository
-            .findById(analysisId)
-            ?.takeIf { it.userId == userId && it.boardId == boardId }
-            ?.let { photoRepository.countOwnedByAnalysis(analysisId, boardId, photoIds) == photoIds.size }
+            .findById(analysisId.value)
+            ?.takeIf { it.userId == userId.value && it.boardId == boardId.value }
+            ?.let { photoRepository.countOwnedByAnalysis(analysisId.value, boardId.value, photoIds.map(PhotoId::value)) == photoIds.size }
             ?: false
 }

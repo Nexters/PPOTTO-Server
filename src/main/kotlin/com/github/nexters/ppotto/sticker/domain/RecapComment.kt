@@ -1,12 +1,13 @@
 package com.github.nexters.ppotto.sticker.domain
 
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.StickerId
 import java.time.Instant
 import java.util.UUID
 
 data class RecapComment(
     val id: UUID,
-    val stickerId: UUID,
+    val stickerId: StickerId,
     val content: String,
     val posX: Double?,
     val posY: Double?,

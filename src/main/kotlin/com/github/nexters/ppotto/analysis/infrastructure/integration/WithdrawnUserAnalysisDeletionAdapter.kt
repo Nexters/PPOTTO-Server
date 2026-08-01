@@ -9,5 +9,5 @@ import org.springframework.stereotype.Component
 class WithdrawnUserAnalysisDeletionAdapter(
     private val analysisWithdrawalService: AnalysisWithdrawalService,
 ) : WithdrawnUserAnalysisDeletionPort {
-    override fun deleteAllByUserId(userId: UserId): Unit = analysisWithdrawalService.deleteAllByUserId(userId.value)
+    override fun deleteAllByUserId(userId: UserId): Unit = analysisWithdrawalService.deleteAllByUserId(userId)
 }

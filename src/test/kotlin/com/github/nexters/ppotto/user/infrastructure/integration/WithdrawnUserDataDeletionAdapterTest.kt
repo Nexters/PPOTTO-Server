@@ -10,7 +10,9 @@ import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
@@ -29,7 +31,6 @@ import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.terms.application.TermsService
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
@@ -92,7 +93,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                             ),
                         ),
                     ).single()
-            val analysis = analysisRepository.save(user.rawId, board.id.value)
+            val analysis = analysisRepository.save(user.id.value, board.id.value)
             val photo =
                 photoRepository
                     .saveAll(
@@ -105,16 +106,16 @@ class WithdrawnUserDataDeletionAdapterTest(
                 analysisResultSaveService
                     .save(
                         SaveAnalysisResultCommand(
-                            userId = user.rawId,
-                            analysisId = analysis.id,
-                            boardId = board.id.value,
+                            userId = user.id,
+                            analysisId = AnalysisId(analysis.id),
+                            boardId = board.id,
                             stickers =
                                 listOf(
                                     AnalysisStickerResult(
                                         type = StickerType.IMAGE,
                                         title = "분석 결과",
                                         summary = "웃기고 귀여우면 일단 주워요",
-                                        sourcePhotoId = photo.id,
+                                        sourcePhotoId = PhotoId(photo.id),
                                         imageKey = STICKER_IMAGE_KEY,
                                         textContent = null,
                                         layout =
@@ -128,7 +129,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                                                 badgeOffsetY = 0.0,
                                                 badgeRotation = 0.0,
                                             ),
-                                        photoIds = listOf(photo.id),
+                                        photoIds = listOf(PhotoId(photo.id)),
                                         comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
                                     ),
                                 ),
@@ -160,9 +161,9 @@ class WithdrawnUserDataDeletionAdapterTest(
                     result.deletedUserIds shouldContainExactly listOf(user.id)
                     objectStorageCleaner.deletedPrefixes shouldContain PhotoObjectKeys.prefixFor(analysis.id)
                     objectStorageCleaner.deletedObjectKeys shouldContain STICKER_IMAGE_KEY
-                    dslContext.fetchExists(RECAP_COMMENTS, RECAP_COMMENTS.STICKER_ID.eq(stickerId)) shouldBe false
-                    dslContext.fetchExists(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID.eq(stickerId)) shouldBe false
-                    dslContext.fetchExists(STICKERS, STICKERS.ID.eq(stickerId)) shouldBe false
+                    dslContext.fetchExists(RECAP_COMMENTS, RECAP_COMMENTS.STICKER_ID.eq(stickerId.value)) shouldBe false
+                    dslContext.fetchExists(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID.eq(stickerId.value)) shouldBe false
+                    dslContext.fetchExists(STICKERS, STICKERS.ID.eq(stickerId.value)) shouldBe false
                     dslContext.fetchExists(DRAWINGS, DRAWINGS.ID.eq(drawing.id.value)) shouldBe false
                     dslContext.fetchExists(PHOTOS, PHOTOS.ID.eq(photo.id)) shouldBe false
                     dslContext.fetchExists(ANALYSIS, ANALYSIS.ID.eq(analysis.id)) shouldBe false

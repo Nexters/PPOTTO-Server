@@ -8,6 +8,8 @@ import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
@@ -22,7 +24,6 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.springframework.dao.DataIntegrityViolationException
 import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -50,12 +51,12 @@ class AnalysisResultSaveServiceTest(
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val command =
                 SaveAnalysisResultCommand(
-                    userId = board.userId.value,
-                    analysisId = analysis.id,
-                    boardId = board.id.value,
+                    userId = board.userId,
+                    analysisId = AnalysisId(analysis.id),
+                    boardId = board.id,
                     stickers =
                         listOf(
-                            imageResult(photo.id),
+                            imageResult(PhotoId(photo.id)),
                             textResult(),
                         ),
                 )
@@ -65,8 +66,8 @@ class AnalysisResultSaveServiceTest(
 
                 Then("스티커와 자식 데이터를 한 트랜잭션으로 저장한다") {
                     result.stickerIds.size shouldBe 2
-                    stickerRepository.findAllByBoardId(board.id.value).map { it.id } shouldContainExactly result.stickerIds
-                    stickerRecapRepository.findPhotoIds(result.stickerIds.first()) shouldContainExactly listOf(photo.id)
+                    stickerRepository.findAllByBoardId(board.id).map { it.id } shouldContainExactly result.stickerIds
+                    stickerRecapRepository.findPhotoIds(result.stickerIds.first()) shouldContainExactly listOf(PhotoId(photo.id))
                     stickerRecapRepository.findComments(result.stickerIds.first()).map { it.content } shouldContainExactly
                         listOf("말풍선", "키워드 칩")
                 }
@@ -78,9 +79,9 @@ class AnalysisResultSaveServiceTest(
             val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val command =
                 SaveAnalysisResultCommand(
-                    board.userId.value,
-                    analysis.id,
-                    board.id.value,
+                    board.userId,
+                    AnalysisId(analysis.id),
+                    board.id,
                     List(7) { textResult() },
                 )
 
@@ -89,7 +90,7 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<InvalidInputException> {
                         service.save(command)
                     }
-                    stickerRepository.findAllByBoardId(board.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
                 }
             }
         }
@@ -105,21 +106,21 @@ class AnalysisResultSaveServiceTest(
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
-            val invalidResult = imageResult(photo.id).copy(photoIds = listOf(photo.id, photo.id))
+            val invalidResult = imageResult(PhotoId(photo.id)).copy(photoIds = listOf(PhotoId(photo.id), PhotoId(photo.id)))
 
             When("자식 저장 중 DB 제약 위반이 발생하면") {
                 Then("스티커 저장도 롤백한다") {
                     shouldThrow<DataIntegrityViolationException> {
                         service.save(
                             SaveAnalysisResultCommand(
-                                board.userId.value,
-                                analysis.id,
-                                board.id.value,
+                                board.userId,
+                                AnalysisId(analysis.id),
+                                board.id,
                                 listOf(invalidResult),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(board.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
                 }
             }
         }
@@ -129,9 +130,9 @@ class AnalysisResultSaveServiceTest(
             val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val command =
                 SaveAnalysisResultCommand(
-                    board.userId.value,
-                    analysis.id,
-                    board.id.value,
+                    board.userId,
+                    AnalysisId(analysis.id),
+                    board.id,
                     listOf(textResult(), textResult()),
                 )
 
@@ -141,7 +142,7 @@ class AnalysisResultSaveServiceTest(
 
                 Then("최초 저장 결과를 반환하고 스티커를 추가하지 않는다") {
                     second.stickerIds shouldContainExactly first.stickerIds
-                    stickerRepository.findAllByAnalysisId(analysis.id).map { it.id } shouldContainExactly first.stickerIds
+                    stickerRepository.findAllByAnalysisId(AnalysisId(analysis.id)).map { it.id } shouldContainExactly first.stickerIds
                 }
             }
         }
@@ -151,9 +152,9 @@ class AnalysisResultSaveServiceTest(
             val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val command =
                 SaveAnalysisResultCommand(
-                    board.userId.value,
-                    analysis.id,
-                    board.id.value,
+                    board.userId,
+                    AnalysisId(analysis.id),
+                    board.id,
                     List(6) { textResult() },
                 )
 
@@ -178,7 +179,7 @@ class AnalysisResultSaveServiceTest(
 
                 Then("두 요청이 같은 6개를 반환하고 추가 저장하지 않는다") {
                     results[1].stickerIds shouldContainExactly results[0].stickerIds
-                    stickerRepository.findAllByAnalysisId(analysis.id).size shouldBe 6
+                    stickerRepository.findAllByAnalysisId(AnalysisId(analysis.id)).size shouldBe 6
                 }
             }
         }
@@ -211,50 +212,50 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<NotFoundException> {
                         service.save(
                             SaveAnalysisResultCommand(
-                                ownerBoard.userId.value,
-                                otherAnalysis.id,
-                                ownerBoard.id.value,
+                                ownerBoard.userId,
+                                AnalysisId(otherAnalysis.id),
+                                ownerBoard.id,
                                 listOf(textResult()),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
                 }
             }
 
             When("다른 사용자의 사진을 sourcePhotoId로 저장하면") {
-                val result = imageResult(ownerPhoto.id).copy(sourcePhotoId = otherPhoto.id)
+                val result = imageResult(PhotoId(ownerPhoto.id)).copy(sourcePhotoId = PhotoId(otherPhoto.id))
 
                 Then("저장 전에 거부한다") {
                     shouldThrow<NotFoundException> {
                         service.save(
                             SaveAnalysisResultCommand(
-                                ownerBoard.userId.value,
-                                ownerAnalysis.id,
-                                ownerBoard.id.value,
+                                ownerBoard.userId,
+                                AnalysisId(ownerAnalysis.id),
+                                ownerBoard.id,
                                 listOf(result),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
                 }
             }
 
             When("다른 사용자의 사진을 리캡 photoIds로 저장하면") {
-                val result = imageResult(ownerPhoto.id).copy(photoIds = listOf(otherPhoto.id))
+                val result = imageResult(PhotoId(ownerPhoto.id)).copy(photoIds = listOf(PhotoId(otherPhoto.id)))
 
                 Then("저장 전에 거부한다") {
                     shouldThrow<NotFoundException> {
                         service.save(
                             SaveAnalysisResultCommand(
-                                ownerBoard.userId.value,
-                                ownerAnalysis.id,
-                                ownerBoard.id.value,
+                                ownerBoard.userId,
+                                AnalysisId(ownerAnalysis.id),
+                                ownerBoard.id,
                                 listOf(result),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
                 }
             }
         }
@@ -275,20 +276,20 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<IllegalStateException> {
                         serviceWithoutPort.save(
                             SaveAnalysisResultCommand(
-                                board.userId.value,
-                                analysis.id,
-                                board.id.value,
+                                board.userId,
+                                AnalysisId(analysis.id),
+                                board.id,
                                 listOf(textResult()),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(board.id.value).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
                 }
             }
         }
     })
 
-private fun imageResult(photoId: UUID) =
+private fun imageResult(photoId: PhotoId) =
     AnalysisStickerResult(
         type = StickerType.IMAGE,
         title = "이미지 스티커",

@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.sticker.presentation
 
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
@@ -23,7 +25,7 @@ class StickerController(
         @PathVariable stickerId: UUID,
     ): ApiResponse<RecapDetailResponse> =
         stickerQueryService
-            .getRecap(userId, stickerId)
+            .getRecap(UserId(userId), StickerId(stickerId))
             .let(RecapDetailResponse::from)
             .let { ApiResponse.success(it) }
 
@@ -33,7 +35,7 @@ class StickerController(
         @Valid @RequestBody request: UpdateStickerTitleRequest,
     ): ApiResponse<UpdateStickerTitleResponse> =
         stickerCommandService
-            .rename(userId, stickerId, request.title)
+            .rename(UserId(userId), StickerId(stickerId), request.title)
             .let(UpdateStickerTitleResponse::from)
             .let { ApiResponse.success(it) }
 
@@ -42,7 +44,7 @@ class StickerController(
         @PathVariable stickerId: UUID,
     ): ApiResponse<Unit> =
         stickerCommandService
-            .delete(userId, stickerId)
+            .delete(UserId(userId), StickerId(stickerId))
             .let { ApiResponse.success() }
 
     override fun markViewed(
@@ -50,6 +52,6 @@ class StickerController(
         @PathVariable stickerId: UUID,
     ): ApiResponse<Unit> =
         stickerCommandService
-            .markViewed(userId, stickerId)
+            .markViewed(UserId(userId), StickerId(stickerId))
             .let { ApiResponse.success() }
 }

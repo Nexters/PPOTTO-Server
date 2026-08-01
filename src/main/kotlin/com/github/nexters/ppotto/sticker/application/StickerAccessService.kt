@@ -2,13 +2,12 @@ package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.NotFoundException
-import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 @Service
 class StickerAccessService(
@@ -16,14 +15,14 @@ class StickerAccessService(
     private val boardAccessService: BoardAccessService,
 ) {
     fun getOwned(
-        userId: UUID,
-        stickerId: UUID,
+        userId: UserId,
+        stickerId: StickerId,
     ): Sticker =
         (stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND))
             .also { sticker ->
                 boardAccessService
-                    .getById(BoardId(sticker.boardId))
-                    .takeIf { it.userId == UserId(userId) }
+                    .getById(sticker.boardId)
+                    .takeIf { it.userId == userId }
                     ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
             }
 }

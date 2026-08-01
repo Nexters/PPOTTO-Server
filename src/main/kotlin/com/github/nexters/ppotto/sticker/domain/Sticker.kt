@@ -1,18 +1,21 @@
 package com.github.nexters.ppotto.sticker.domain
 
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import java.time.Instant
-import java.util.UUID
 
 class Sticker(
-    val id: UUID,
-    val analysisId: UUID,
-    val boardId: UUID,
+    val id: StickerId,
+    val analysisId: AnalysisId,
+    val boardId: BoardId,
     val type: StickerType,
     title: String,
     val summary: String,
     viewedAt: Instant?,
-    val sourcePhotoId: UUID?,
+    val sourcePhotoId: PhotoId?,
     val imageKey: String?,
     val textContent: String?,
     posX: Double,
@@ -105,7 +108,7 @@ class Sticker(
 
         fun validateContent(
             type: StickerType,
-            sourcePhotoId: UUID?,
+            sourcePhotoId: PhotoId?,
             imageKey: String?,
             textContent: String?,
         ) {
@@ -122,7 +125,7 @@ data class StickerCreation(
     val type: StickerType,
     val title: String,
     val summary: String,
-    val sourcePhotoId: UUID?,
+    val sourcePhotoId: PhotoId?,
     val imageKey: String?,
     val textContent: String?,
     val layout: StickerLayout,

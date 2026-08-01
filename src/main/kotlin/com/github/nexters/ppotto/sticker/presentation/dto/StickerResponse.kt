@@ -45,7 +45,7 @@ data class StickerResponse(
     companion object {
         fun from(result: StickerItemResult) =
             StickerResponse(
-                id = result.id,
+                id = result.id.value,
                 title = result.title,
                 isNew = result.isNew,
                 type = result.type,

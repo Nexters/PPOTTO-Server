@@ -1,5 +1,9 @@
 package com.github.nexters.ppotto.sticker.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.records.StickersRecord
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.sticker.domain.Sticker
@@ -7,10 +11,9 @@ import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
-import java.util.UUID
 
 data class StickerDeletionTarget(
-    val id: UUID,
+    val id: StickerId,
     val imageKey: String?,
 )
 
@@ -19,8 +22,8 @@ class StickerRepository(
     private val dslContext: DSLContext,
 ) {
     fun save(
-        analysisId: UUID,
-        boardId: UUID,
+        analysisId: AnalysisId,
+        boardId: BoardId,
         creation: StickerCreation,
     ): Sticker =
         dslContext
@@ -43,12 +46,12 @@ class StickerRepository(
                 STICKERS.BADGE_OFFSET_Y,
                 STICKERS.BADGE_ROTATION,
             ).values(
-                analysisId,
-                boardId,
+                analysisId.value,
+                boardId.value,
                 creation.type.name,
                 creation.title,
                 creation.summary,
-                creation.sourcePhotoId,
+                creation.sourcePhotoId?.value,
                 creation.imageKey,
                 creation.textContent,
                 creation.layout.posX,
@@ -63,76 +66,76 @@ class StickerRepository(
             .fetchSingle()
             .toDomain()
 
-    fun findById(id: UUID): Sticker? =
+    fun findById(id: StickerId): Sticker? =
         dslContext
             .selectFrom(STICKERS)
-            .where(STICKERS.ID.eq(id))
+            .where(STICKERS.ID.eq(id.value))
             .and(STICKERS.DELETED_AT.isNull)
             .fetchOne()
             ?.toDomain()
 
-    fun findAllByBoardId(boardId: UUID): List<Sticker> =
+    fun findAllByBoardId(boardId: BoardId): List<Sticker> =
         dslContext
             .selectFrom(STICKERS)
-            .where(STICKERS.BOARD_ID.eq(boardId))
+            .where(STICKERS.BOARD_ID.eq(boardId.value))
             .and(STICKERS.DELETED_AT.isNull)
             .orderBy(STICKERS.Z_INDEX.asc(), STICKERS.ID.asc())
             .fetch()
             .map { it.toDomain() }
 
-    fun findAllByAnalysisId(analysisId: UUID): List<Sticker> =
+    fun findAllByAnalysisId(analysisId: AnalysisId): List<Sticker> =
         dslContext
             .selectFrom(STICKERS)
-            .where(STICKERS.ANALYSIS_ID.eq(analysisId))
+            .where(STICKERS.ANALYSIS_ID.eq(analysisId.value))
             .orderBy(STICKERS.ID.asc())
             .fetch()
             .map { it.toDomain() }
 
-    fun lockAnalysisResult(analysisId: UUID) {
+    fun lockAnalysisResult(analysisId: AnalysisId) {
         dslContext.execute(
             "SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0))",
-            analysisId,
+            analysisId.value,
         )
     }
 
     fun validateOwnedByBoard(
-        boardId: UUID,
-        stickerIds: Collection<UUID>,
+        boardId: BoardId,
+        stickerIds: Collection<StickerId>,
     ): Boolean =
         stickerIds.toSet().let { uniqueIds ->
             uniqueIds.isEmpty() ||
                 dslContext
                     .selectCount()
                     .from(STICKERS)
-                    .where(STICKERS.BOARD_ID.eq(boardId))
-                    .and(STICKERS.ID.`in`(uniqueIds))
+                    .where(STICKERS.BOARD_ID.eq(boardId.value))
+                    .and(STICKERS.ID.`in`(uniqueIds.map(StickerId::value)))
                     .and(STICKERS.DELETED_AT.isNull)
                     .fetchSingle(0, Int::class.java) == uniqueIds.size
         }
 
-    fun findDeletionTargetsByBoardIds(boardIds: Collection<UUID>): List<StickerDeletionTarget> =
+    fun findDeletionTargetsByBoardIds(boardIds: Collection<BoardId>): List<StickerDeletionTarget> =
         boardIds
             .toSet()
             .takeIf { it.isNotEmpty() }
-            ?.let {
+            ?.let { uniqueIds ->
                 dslContext
                     .select(STICKERS.ID, STICKERS.IMAGE_KEY)
                     .from(STICKERS)
-                    .where(STICKERS.BOARD_ID.`in`(it))
+                    .where(STICKERS.BOARD_ID.`in`(uniqueIds.map(BoardId::value)))
                     .fetch()
-                    .map { record -> StickerDeletionTarget(record.value1()!!, record.value2()) }
+                    .map { record -> StickerDeletionTarget(StickerId(record.value1()!!), record.value2()) }
             } ?: emptyList()
 
     private fun StickersRecord.toDomain() =
         Sticker(
-            id = id!!,
-            analysisId = analysisId,
-            boardId = boardId,
+            id = StickerId(id!!),
+            analysisId = AnalysisId(analysisId),
+            boardId = BoardId(boardId),
             type = StickerType.valueOf(type),
             title = title,
             summary = summary,
             viewedAt = viewedAt,
-            sourcePhotoId = sourcePhotoId,
+            sourcePhotoId = sourcePhotoId?.let(::PhotoId),
             imageKey = imageKey,
             textContent = textContent,
             posX = posX,

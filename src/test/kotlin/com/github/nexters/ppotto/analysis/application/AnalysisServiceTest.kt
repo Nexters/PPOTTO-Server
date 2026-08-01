@@ -14,12 +14,13 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -181,6 +182,8 @@ class AnalysisServiceTest(
         Given("존재하지 않는 boardId로") {
             When("분석 생성을 요청하면") {
                 Then("NotFoundException(BOARD-002)이 발생한다") {
+                    val stranger = userRepository.saveTestUser()
+                    val strangerId = stranger.id.value
                     val photos =
                         (0 until 90)
                             .map { i ->
@@ -191,7 +194,7 @@ class AnalysisServiceTest(
                             }
                     val exception =
                         shouldThrow<NotFoundException> {
-                            analysisService.createAnalysis(userRepository.saveTestUser().rawId, UUID.randomUUID(), photos)
+                            analysisService.createAnalysis(strangerId, UUID.randomUUID(), photos)
                         }
                     exception.errorCode.code shouldBe "BOARD-002"
                 }
@@ -200,7 +203,8 @@ class AnalysisServiceTest(
 
         Given("다른 사용자의 Board로") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
-            val otherUserId = userRepository.saveTestUser().rawId
+            val otherUser = userRepository.saveTestUser()
+            val otherUserId = otherUser.id.value
             val photos =
                 (0 until 90)
                     .map { i ->
@@ -320,16 +324,16 @@ class AnalysisServiceTest(
                         analysis.status shouldBe AnalysisStatus.COMPLETED
                         analysis.progress shouldBe 100
 
-                        val sticker = stickerRepository.findAllByAnalysisId(created.analysisId).single()
+                        val sticker = stickerRepository.findAllByAnalysisId(AnalysisId(created.analysisId)).single()
                         sticker.type shouldBe StickerType.IMAGE
                         sticker.title shouldBe "여행하루"
-                        sticker.sourcePhotoId shouldBe sourcePhotoId
+                        sticker.sourcePhotoId shouldBe PhotoId(sourcePhotoId)
                         sticker.imageKey shouldBe
                             "stickers/${created.analysisId}/0-$sourcePhotoId.png"
 
                         sticker.summary shouldBe "바다와 산책이 함께 남은 여행 리캡입니다."
 
-                        stickerRecapRepository.findPhotoIds(sticker.id) shouldContainExactly themePhotoIds
+                        stickerRecapRepository.findPhotoIds(sticker.id) shouldContainExactly themePhotoIds.map(::PhotoId)
                         stickerRecapRepository.findComments(sticker.id).shouldBeEmpty()
                     }
                 }
@@ -423,7 +427,8 @@ class AnalysisServiceTest(
             val photos =
                 (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
             val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos)
-            val otherUserId = userRepository.saveTestUser().rawId
+            val otherUser = userRepository.saveTestUser()
+            val otherUserId = otherUser.id.value
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
@@ -442,8 +447,10 @@ class AnalysisServiceTest(
         Given("존재하지 않는 analysisId로") {
             When("업로드 완료를 통보하면") {
                 Then("NotFoundException이 발생한다") {
+                    val strangerUser = userRepository.saveTestUser()
+                    val strangerUserId = strangerUser.id.value
                     shouldThrow<NotFoundException> {
-                        analysisService.startUpload(userRepository.saveTestUser().rawId, UUID.randomUUID())
+                        analysisService.startUpload(strangerUserId, UUID.randomUUID())
                     }
                 }
             }

@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
@@ -12,7 +13,6 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
-import java.util.UUID
 
 @Service
 class StickerCommandService(
@@ -24,8 +24,8 @@ class StickerCommandService(
 ) {
     @Transactional
     fun rename(
-        userId: UUID,
-        stickerId: UUID,
+        userId: UserId,
+        stickerId: StickerId,
         title: String,
     ): StickerTitleResult =
         stickerAccessService
@@ -37,8 +37,8 @@ class StickerCommandService(
 
     @Transactional
     fun markViewed(
-        userId: UUID,
-        stickerId: UUID,
+        userId: UserId,
+        stickerId: StickerId,
     ) {
         stickerAccessService
             .getOwned(userId, stickerId)
@@ -53,8 +53,8 @@ class StickerCommandService(
 
     @Transactional
     fun delete(
-        userId: UUID,
-        stickerId: UUID,
+        userId: UserId,
+        stickerId: StickerId,
     ): Unit =
         stickerAccessService.getOwned(userId, stickerId).let { sticker ->
             drawingCommandPort().let { drawingCommandPort ->
@@ -62,7 +62,7 @@ class StickerCommandService(
                     .apply { delete(Instant.now()) }
                     .takeIf { stickerCommandRepository.softDelete(it.id, checkNotNull(it.deletedAt)) }
                     ?.also {
-                        drawingCommandPort.deleteByStickerIds(BoardId(it.boardId), listOf(StickerId(it.id)))
+                        drawingCommandPort.deleteByStickerIds(it.boardId, listOf(it.id))
                     }.let {
                         it ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
                     }.let {
@@ -72,13 +72,13 @@ class StickerCommandService(
         }
 
     fun validateOwnedByBoard(
-        boardId: UUID,
-        stickerIds: Collection<UUID>,
+        boardId: BoardId,
+        stickerIds: Collection<StickerId>,
     ): Boolean = stickerRepository.validateOwnedByBoard(boardId, stickerIds)
 
     @Transactional
     fun updateLayouts(
-        boardId: UUID,
+        boardId: BoardId,
         layouts: List<StickerLayoutCommand>,
     ): Unit =
         (
@@ -97,7 +97,7 @@ class StickerCommandService(
             }
 
     @Transactional
-    fun deleteAllByBoardId(boardId: UUID): Unit =
+    fun deleteAllByBoardId(boardId: BoardId): Unit =
         stickerRepository
             .findAllByBoardId(boardId)
             .takeIf { it.isNotEmpty() }
@@ -111,7 +111,7 @@ class StickerCommandService(
                                     .takeIf { sticker -> stickerCommandRepository.softDelete(sticker.id, deletedAt) }
                                     ?: throw InvalidInputException(message = "삭제할 수 없는 스티커가 포함되어 있습니다.")
                             }.map { it.id }
-                            .also { drawingCommandPort.deleteByStickerIds(BoardId(boardId), it.map(::StickerId)) }
+                            .also { drawingCommandPort.deleteByStickerIds(boardId, it) }
                             .let(stickerRecapRepository::deleteByStickerIds)
                     }
                 }

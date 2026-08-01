@@ -1,5 +1,9 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoMetadata
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
@@ -7,7 +11,6 @@ import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 @Service
 class StickerQueryService(
@@ -17,11 +20,11 @@ class StickerQueryService(
     private val recapPhotoQueryPorts: List<RecapPhotoQueryPort>,
     private val stickerImageStoragePorts: List<StickerImageStoragePort>,
 ) {
-    fun getByBoardId(boardId: UUID): List<StickerItemResult> = stickerRepository.findAllByBoardId(boardId).let(::toResults)
+    fun getByBoardId(boardId: BoardId): List<StickerItemResult> = stickerRepository.findAllByBoardId(boardId).let(::toResults)
 
     fun getRecap(
-        userId: UUID,
-        stickerId: UUID,
+        userId: UserId,
+        stickerId: StickerId,
     ): StickerRecapResult =
         stickerAccessService.getOwned(userId, stickerId).let { sticker ->
             stickerRecapRepository
@@ -35,7 +38,7 @@ class StickerQueryService(
                             photoQueryPort()
                                 .getByIds(sticker.analysisId, sticker.boardId, photoIds)
                                 .also { checkPhotoContract(photoIds, it) }
-                                .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id })
+                                .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id.value })
                                 .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }
                         }.orEmpty()
                         .let { StickerRecapResult(toResults(listOf(sticker)).single(), sticker.summary, comments, it) }
@@ -76,7 +79,7 @@ class StickerQueryService(
         stickerImageStoragePorts.singleOrNull() ?: error("스티커 이미지 저장소 application port 구현이 필요합니다.")
 
     private fun checkPhotoContract(
-        requestedIds: Collection<UUID>,
+        requestedIds: Collection<PhotoId>,
         photos: List<RecapPhotoMetadata>,
     ): Unit =
         check(photos.map { it.id }.toSet() == requestedIds.toSet()) {

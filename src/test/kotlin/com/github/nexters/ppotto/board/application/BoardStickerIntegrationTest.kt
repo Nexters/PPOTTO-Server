@@ -11,6 +11,7 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.global.error.ConflictException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
@@ -50,8 +51,8 @@ class BoardStickerIntegrationTest(
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id, "연동 보드")
             val analysis = analysisRepository.save(user.id.value, board.id.value)
-            val sticker = stickerRepository.save(analysis.id, board.id.value, textStickerCreation())
-            val drawing = newDrawing(boardId = board.id, stickerId = StickerId(sticker.id))
+            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
+            val drawing = newDrawing(boardId = board.id, stickerId = sticker.id)
             drawingRepository.upsertAll(listOf(drawing))
 
             When("보드 상세를 조회하면") {
@@ -66,7 +67,7 @@ class BoardStickerIntegrationTest(
                     detail.name shouldBe "연동 보드"
                     detail.drawings.map { it.id } shouldContainExactly listOf(drawing.id)
                     detail.stickers.single().let {
-                        it.id.value shouldBe sticker.id
+                        it.id shouldBe sticker.id
                         it.title shouldBe sticker.title
                         it.isNew shouldBe true
                         it.type shouldBe StickerType.TEXT.name
@@ -89,15 +90,15 @@ class BoardStickerIntegrationTest(
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id.value, board.id.value)
-            val sticker = stickerRepository.save(analysis.id, board.id.value, textStickerCreation())
-            val drawing = newDrawing(boardId = board.id, stickerId = StickerId(sticker.id))
+            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
+            val drawing = newDrawing(boardId = board.id, stickerId = sticker.id)
 
             When("스티커 배치와 드로잉을 함께 저장하면") {
                 boardLayoutService.update(
                     board.id,
                     user.id,
                     BoardLayoutUpdateCommand(
-                        stickers = listOf(updatedLayout(StickerId(sticker.id))),
+                        stickers = listOf(updatedLayout(sticker.id)),
                         createdDrawings =
                             listOf(
                                 DrawingCreateCommand(
@@ -134,8 +135,8 @@ class BoardStickerIntegrationTest(
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id.value, board.id.value)
-            val sticker = stickerRepository.save(analysis.id, board.id.value, textStickerCreation())
-            val stickerDrawing = newDrawing(boardId = board.id, stickerId = StickerId(sticker.id))
+            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
+            val stickerDrawing = newDrawing(boardId = board.id, stickerId = sticker.id)
             val boardDrawing = newDrawing(boardId = board.id)
             drawingRepository.upsertAll(listOf(stickerDrawing, boardDrawing))
             stickerRecapRepository.saveComments(
@@ -144,7 +145,7 @@ class BoardStickerIntegrationTest(
             )
 
             When("스티커를 삭제하면") {
-                stickerCommandService.delete(user.id.value, sticker.id)
+                stickerCommandService.delete(user.id, sticker.id)
 
                 Then("해당 스티커의 드로잉과 리캡만 정리한다") {
                     stickerRepository.findById(sticker.id).shouldBeNull()
@@ -164,9 +165,9 @@ class BoardStickerIntegrationTest(
                 .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
                 .where(ANALYSIS.ID.eq(analysis.id))
                 .execute()
-            val sticker = stickerRepository.save(analysis.id, board.id.value, textStickerCreation())
+            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
             drawingRepository.upsertAll(
-                listOf(newDrawing(boardId = board.id, stickerId = StickerId(sticker.id)), newDrawing(boardId = board.id)),
+                listOf(newDrawing(boardId = board.id, stickerId = sticker.id), newDrawing(boardId = board.id)),
             )
             stickerRecapRepository.saveComments(
                 sticker.id,

@@ -13,6 +13,3 @@ fun UserRepository.saveTestUser(): User =
             email = "test-$it@example.com",
         )
     }
-
-val User.rawId: UUID
-    get() = id.value
