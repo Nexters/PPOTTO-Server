@@ -31,6 +31,9 @@ photo/
 - Cross-domain access goes through the other domain's application Service only. Never touch another domain's Repository or jOOQ tables directly.
 - Reads: QueryService may project directly to dto with jOOQ. Writes go through the domain model.
 - Never expose jOOQ-generated POJOs/Records in API responses. Always map to dto.
+- Typed identifiers (`global/identifier/Ids.kt`, e.g. `UserId`) are used in domain models, repository public signatures, application services, and cross-domain ports.
+- Raw `UUID` remains only at boundaries: jOOQ DSL bindings inside repositories, presentation DTOs/path variables/security principal, and external representations (JWT, Redis) inside adapters.
+- New id types are added only for ids crossing method boundaries; purely internal ids stay `UUID` (see `src/main/kotlin/com/github/nexters/ppotto/global/identifier/AGENTS.md`).
 
 ## Spec-Driven Development
 

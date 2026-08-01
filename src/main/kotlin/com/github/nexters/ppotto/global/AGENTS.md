@@ -8,6 +8,7 @@ Shared module used by all domains. Contains no business logic.
 |-----------|---------|
 | `config/` | Spring configuration beans (see `config/AGENTS.md`) |
 | `error/` | Error codes, exceptions, global handler (see `error/AGENTS.md`) |
+| `identifier/` | `@JvmInline` typed UUID identifiers shared across domains (see `identifier/AGENTS.md`) |
 | `jooq/` | Custom jOOQ converters used by codegen `forcedType` |
 | `logging/` | Request logging filter (see `logging/AGENTS.md`) |
 | `openapi/` | Reusable Swagger error response annotations, the documentation-only failure envelope schema, and the type-safe example registry that injects real DTO instances into the OpenAPI document (see `openapi/AGENTS.md`) |
