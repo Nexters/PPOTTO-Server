@@ -9,9 +9,10 @@ import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class BoardCommandService(
@@ -22,11 +23,11 @@ class BoardCommandService(
     private val stickerCommandPort: BoardStickerCommandPort,
 ) {
     @Transactional
-    fun createDefault(userId: UUID): Board = create(userId, null)
+    fun createDefault(userId: UserId): Board = create(userId, null)
 
     @Transactional
     fun create(
-        userId: UUID,
+        userId: UserId,
         name: String?,
     ): Board =
         (
@@ -41,8 +42,8 @@ class BoardCommandService(
 
     @Transactional
     fun rename(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
         name: String,
     ): Board =
         name
@@ -52,8 +53,8 @@ class BoardCommandService(
 
     @Transactional
     fun delete(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
     ): Unit =
         boardRepository
             .lockCommandsByUserId(userId)
@@ -65,8 +66,8 @@ class BoardCommandService(
             .let { check(boardRepository.softDelete(it, userId)) }
 
     private fun validateDeletable(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
     ) {
         boardRepository
             .countByUserId(userId)

@@ -18,9 +18,9 @@ data class BoardResponse(
     val name: String,
 ) {
     companion object {
-        fun from(board: Board): BoardResponse = BoardResponse(board.id, board.name)
+        fun from(board: Board): BoardResponse = BoardResponse(board.id.value, board.name)
 
-        fun from(board: BoardSummary): BoardResponse = BoardResponse(board.id, board.name)
+        fun from(board: BoardSummary): BoardResponse = BoardResponse(board.id.value, board.name)
     }
 }
 
@@ -38,7 +38,7 @@ data class BoardDetailResponse(
     companion object {
         fun from(board: BoardDetail): BoardDetailResponse =
             BoardDetailResponse(
-                id = board.id,
+                id = board.id.value,
                 name = board.name,
                 stickers = board.stickers.map(StickerResponse::from),
                 drawings = board.drawings.map(DrawingResponse::from),
@@ -85,7 +85,7 @@ data class StickerResponse(
     companion object {
         fun from(sticker: BoardStickerItem): StickerResponse =
             StickerResponse(
-                id = sticker.id,
+                id = sticker.id.value,
                 title = sticker.title,
                 isNew = sticker.isNew,
                 type = sticker.type,
@@ -124,9 +124,9 @@ data class DrawingResponse(
     companion object {
         fun from(drawing: Drawing): DrawingResponse =
             DrawingResponse(
-                id = drawing.id,
+                id = drawing.id.value,
                 scope = drawing.scope,
-                stickerId = drawing.stickerId,
+                stickerId = drawing.stickerId?.value,
                 stroke = drawing.stroke,
                 color = drawing.color,
                 strokeWidth = drawing.strokeWidth,

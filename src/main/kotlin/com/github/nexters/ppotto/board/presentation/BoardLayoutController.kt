@@ -2,6 +2,8 @@ package com.github.nexters.ppotto.board.presentation
 
 import com.github.nexters.ppotto.board.application.BoardLayoutService
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutRequest
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import jakarta.validation.Valid
@@ -20,6 +22,6 @@ class BoardLayoutController(
         @Valid @RequestBody request: BoardLayoutRequest,
     ): ApiResponse<Unit> =
         boardLayoutService
-            .update(boardId, userId, request.toCommand())
+            .update(BoardId(boardId), UserId(userId), request.toCommand())
             .let { ApiResponse.success() }
 }

@@ -14,7 +14,6 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -39,21 +38,21 @@ class AnalysisResultSaveServiceTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("분석 결과에 스티커와 리캡이 포함된 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photo =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id,
+                        board.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val command =
                 SaveAnalysisResultCommand(
-                    userId = board.userId,
+                    userId = board.userId.value,
                     analysisId = analysis.id,
-                    boardId = board.id,
+                    boardId = board.id.value,
                     stickers =
                         listOf(
                             imageResult(photo.id),
@@ -66,7 +65,7 @@ class AnalysisResultSaveServiceTest(
 
                 Then("스티커와 자식 데이터를 한 트랜잭션으로 저장한다") {
                     result.stickerIds.size shouldBe 2
-                    stickerRepository.findAllByBoardId(board.id).map { it.id } shouldContainExactly result.stickerIds
+                    stickerRepository.findAllByBoardId(board.id.value).map { it.id } shouldContainExactly result.stickerIds
                     stickerRecapRepository.findPhotoIds(result.stickerIds.first()) shouldContainExactly listOf(photo.id)
                     stickerRecapRepository.findComments(result.stickerIds.first()).map { it.content } shouldContainExactly
                         listOf("말풍선", "키워드 칩")
@@ -75,13 +74,13 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("분석 결과 스티커가 7개인 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val command =
                 SaveAnalysisResultCommand(
-                    board.userId,
+                    board.userId.value,
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     List(7) { textResult() },
                 )
 
@@ -90,19 +89,19 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<InvalidInputException> {
                         service.save(command)
                     }
-                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(board.id.value).shouldBeEmpty()
                 }
             }
         }
 
         Given("중복 사진 연결이 포함된 분석 결과에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photo =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id,
+                        board.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
@@ -113,26 +112,26 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<DataIntegrityViolationException> {
                         service.save(
                             SaveAnalysisResultCommand(
-                                board.userId,
+                                board.userId.value,
                                 analysis.id,
-                                board.id,
+                                board.id.value,
                                 listOf(invalidResult),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(board.id.value).shouldBeEmpty()
                 }
             }
         }
 
         Given("동일한 분석 결과 저장 요청이 반복될 때") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val command =
                 SaveAnalysisResultCommand(
-                    board.userId,
+                    board.userId.value,
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     listOf(textResult(), textResult()),
                 )
 
@@ -148,13 +147,13 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("동일한 분석 결과 저장 요청이 동시에 도착할 때") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val command =
                 SaveAnalysisResultCommand(
-                    board.userId,
+                    board.userId.value,
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     List(6) { textResult() },
                 )
 
@@ -185,22 +184,22 @@ class AnalysisResultSaveServiceTest(
         }
 
         Given("다른 사용자의 분석과 사진이 존재하는 상태에서") {
-            val ownerBoard = boardRepository.save(userRepository.saveTestUser().rawId)
-            val ownerAnalysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val ownerAnalysis = analysisRepository.save(ownerBoard.userId.value, ownerBoard.id.value)
             val ownerPhoto =
                 photoRepository
                     .saveAll(
                         ownerAnalysis.id,
-                        ownerBoard.id,
+                        ownerBoard.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
-            val otherBoard = boardRepository.save(userRepository.saveTestUser().rawId)
-            val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val otherAnalysis = analysisRepository.save(otherBoard.userId.value, otherBoard.id.value)
             val otherPhoto =
                 photoRepository
                     .saveAll(
                         otherAnalysis.id,
-                        otherBoard.id,
+                        otherBoard.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(
@@ -212,14 +211,14 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<NotFoundException> {
                         service.save(
                             SaveAnalysisResultCommand(
-                                ownerBoard.userId,
+                                ownerBoard.userId.value,
                                 otherAnalysis.id,
-                                ownerBoard.id,
+                                ownerBoard.id.value,
                                 listOf(textResult()),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
                 }
             }
 
@@ -230,14 +229,14 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<NotFoundException> {
                         service.save(
                             SaveAnalysisResultCommand(
-                                ownerBoard.userId,
+                                ownerBoard.userId.value,
                                 ownerAnalysis.id,
-                                ownerBoard.id,
+                                ownerBoard.id.value,
                                 listOf(result),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
                 }
             }
 
@@ -248,21 +247,21 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<NotFoundException> {
                         service.save(
                             SaveAnalysisResultCommand(
-                                ownerBoard.userId,
+                                ownerBoard.userId.value,
                                 ownerAnalysis.id,
-                                ownerBoard.id,
+                                ownerBoard.id.value,
                                 listOf(result),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
                 }
             }
         }
 
         Given("분석과 사진 소유권 port가 없는 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val serviceWithoutPort =
                 AnalysisResultSaveService(
                     stickerRepository,
@@ -276,14 +275,14 @@ class AnalysisResultSaveServiceTest(
                     shouldThrow<IllegalStateException> {
                         serviceWithoutPort.save(
                             SaveAnalysisResultCommand(
-                                board.userId,
+                                board.userId.value,
                                 analysis.id,
-                                board.id,
+                                board.id.value,
                                 listOf(textResult()),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(board.id.value).shouldBeEmpty()
                 }
             }
         }

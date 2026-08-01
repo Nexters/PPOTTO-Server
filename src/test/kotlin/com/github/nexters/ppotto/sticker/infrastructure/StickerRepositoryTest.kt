@@ -30,12 +30,12 @@ class StickerRepositoryTest(
     userRepository: UserRepository,
 ) : IntegrationTest({
         Given("분석과 사진이 등록된 상태에서 스티커 리캡을 저장하면") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     listOf(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
                         PhotoCreate(PhotoContentType.PNG, Instant.parse("2026-07-02T00:00:00Z")),
@@ -44,7 +44,7 @@ class StickerRepositoryTest(
             val saved =
                 stickerRepository.save(
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "여름 사진",
@@ -97,42 +97,42 @@ class StickerRepositoryTest(
         Given("두 보드에 스티커가 등록된 상태에서") {
             val firstUser = userRepository.saveTestUser()
             val secondUser = userRepository.saveTestUser()
-            val firstBoard = boardRepository.save(firstUser.rawId)
-            val secondBoard = boardRepository.save(secondUser.rawId)
-            val firstAnalysis = analysisRepository.save(firstUser.rawId, firstBoard.id)
-            val secondAnalysis = analysisRepository.save(secondUser.rawId, secondBoard.id)
+            val firstBoard = boardRepository.save(firstUser.id)
+            val secondBoard = boardRepository.save(secondUser.id)
+            val firstAnalysis = analysisRepository.save(firstUser.rawId, firstBoard.id.value)
+            val secondAnalysis = analysisRepository.save(secondUser.rawId, secondBoard.id.value)
             val firstSticker =
                 stickerRepository.save(
                     firstAnalysis.id,
-                    firstBoard.id,
+                    firstBoard.id.value,
                     textCreation("첫 스티커"),
                 )
             val secondSticker =
                 stickerRepository.save(
                     secondAnalysis.id,
-                    secondBoard.id,
+                    secondBoard.id.value,
                     textCreation("둘째 스티커"),
                 )
 
             When("첫 보드의 스티커 소유 여부를 검증하면") {
                 Then("첫 보드 스티커만 통과한다") {
-                    stickerRepository.validateOwnedByBoard(firstBoard.id, listOf(firstSticker.id)) shouldBe true
-                    stickerRepository.validateOwnedByBoard(firstBoard.id, listOf(secondSticker.id)) shouldBe false
+                    stickerRepository.validateOwnedByBoard(firstBoard.id.value, listOf(firstSticker.id)) shouldBe true
+                    stickerRepository.validateOwnedByBoard(firstBoard.id.value, listOf(secondSticker.id)) shouldBe false
                 }
             }
         }
 
         Given("한 분석에 스티커가 6개 저장된 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             repeat(6) {
-                stickerRepository.save(analysis.id, board.id, textCreation("스티커 $it"))
+                stickerRepository.save(analysis.id, board.id.value, textCreation("스티커 $it"))
             }
 
             When("일곱 번째 스티커를 직접 저장하면") {
                 Then("DB 제약이 저장을 거부한다") {
                     shouldThrow<DataIntegrityViolationException> {
-                        stickerRepository.save(analysis.id, board.id, textCreation("일곱 번째"))
+                        stickerRepository.save(analysis.id, board.id.value, textCreation("일곱 번째"))
                     }
                     stickerRepository.findAllByAnalysisId(analysis.id).size shouldBe 6
                 }

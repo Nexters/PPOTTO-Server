@@ -16,6 +16,8 @@ import com.github.nexters.ppotto.global.config.GcsProperties
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
@@ -41,7 +43,7 @@ class AnalysisService(
         photos: List<PhotoUploadItemRequest>,
     ): AnalysisCreationResult {
         validatePhotoCount(photos.size)
-        boardAccessService.getOwnedByIdForUpdate(boardId, userId)
+        boardAccessService.getOwnedByIdForUpdate(BoardId(boardId), UserId(userId))
         validateNoActiveAnalysis(userId)
         val analysis = saveAnalysisWithConstraintFallback(userId, boardId)
 

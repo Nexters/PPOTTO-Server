@@ -11,8 +11,9 @@ import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -20,7 +21,6 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.springframework.context.annotation.Import
-import java.util.UUID
 
 @Import(BoardTestConfig::class)
 class BoardLayoutServiceTest(
@@ -33,8 +33,8 @@ class BoardLayoutServiceTest(
         Given("보드 배경 드로잉을 저장한 사용자가") {
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
-            val drawingId = uuidV7()
+            val board = boardRepository.save(user.id)
+            val drawingId = DrawingId(uuidV7())
             val command =
                 BoardLayoutUpdateCommand(
                     stickers = emptyList(),
@@ -51,12 +51,12 @@ class BoardLayoutServiceTest(
                         ),
                     deletedDrawingIds = emptyList(),
                 )
-            boardLayoutService.update(board.id, user.rawId, command)
+            boardLayoutService.update(board.id, user.id, command)
 
             When("같은 드로잉 아이디로 재시도하면") {
                 boardLayoutService.update(
                     board.id,
-                    user.rawId,
+                    user.id,
                     command.copy(
                         createdDrawings =
                             command.createdDrawings.map {
@@ -77,20 +77,20 @@ class BoardLayoutServiceTest(
         Given("스티커 범위 드로잉과 스티커 배치를 함께 저장하는 사용자가") {
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
             val sticker = boardStickerItem()
             stickerPort.stickersByBoardId[board.id] = listOf(sticker)
 
             When("레이아웃 저장을 요청하면") {
                 boardLayoutService.update(
                     board.id,
-                    user.rawId,
+                    user.id,
                     BoardLayoutUpdateCommand(
                         stickers = listOf(stickerLayout(sticker.id)),
                         createdDrawings =
                             listOf(
                                 DrawingCreateCommand(
-                                    id = uuidV7(),
+                                    id = DrawingId(uuidV7()),
                                     scope = DrawingScope.STICKER,
                                     stickerId = sticker.id,
                                     stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
@@ -115,11 +115,11 @@ class BoardLayoutServiceTest(
         Given("다른 보드의 드로잉 아이디가 삭제 목록에 섞인 경우") {
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
-            val otherBoard = boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
+            val otherBoard = boardRepository.save(user.id)
             val foreignDrawing =
                 NewDrawing(
-                    id = uuidV7(),
+                    id = DrawingId(uuidV7()),
                     boardId = otherBoard.id,
                     stickerId = null,
                     scope = DrawingScope.BOARD,
@@ -135,7 +135,7 @@ class BoardLayoutServiceTest(
                         shouldThrow<InvalidInputException> {
                             boardLayoutService.update(
                                 board.id,
-                                user.rawId,
+                                user.id,
                                 BoardLayoutUpdateCommand(
                                     stickers = emptyList(),
                                     createdDrawings = emptyList(),
@@ -153,7 +153,7 @@ class BoardLayoutServiceTest(
         Given("소유하지 않은 스티커를 참조하는 드로잉이 있는 경우") {
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
 
             When("레이아웃 저장을 요청하면") {
                 Then("BOARD-001로 거부하고 드로잉을 저장하지 않는다") {
@@ -161,15 +161,15 @@ class BoardLayoutServiceTest(
                         shouldThrow<InvalidInputException> {
                             boardLayoutService.update(
                                 board.id,
-                                user.rawId,
+                                user.id,
                                 BoardLayoutUpdateCommand(
                                     stickers = emptyList(),
                                     createdDrawings =
                                         listOf(
                                             DrawingCreateCommand(
-                                                id = uuidV7(),
+                                                id = DrawingId(uuidV7()),
                                                 scope = DrawingScope.STICKER,
-                                                stickerId = uuidV7(),
+                                                stickerId = StickerId(uuidV7()),
                                                 stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
                                                 color = "#FFFFFF",
                                                 strokeWidth = 2.0,
@@ -186,7 +186,7 @@ class BoardLayoutServiceTest(
         }
     })
 
-private fun stickerLayout(id: UUID) =
+private fun stickerLayout(id: StickerId) =
     BoardStickerLayoutCommand(
         id = id,
         title = "새 제목",

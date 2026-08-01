@@ -7,10 +7,12 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutComman
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
-import java.util.UUID
 
 @TestConfiguration
 class BoardTestConfig {
@@ -24,11 +26,11 @@ class BoardTestConfig {
 }
 
 class FakeBoardAnalysisActivityPort : BoardAnalysisActivityPort {
-    val activeBoardIds = mutableSetOf<UUID>()
+    val activeBoardIds = mutableSetOf<BoardId>()
 
     override fun hasActiveAnalysis(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
     ): Boolean = boardId in activeBoardIds
 
     fun reset() {
@@ -39,16 +41,16 @@ class FakeBoardAnalysisActivityPort : BoardAnalysisActivityPort {
 class FakeBoardStickerPort :
     BoardStickerQueryPort,
     BoardStickerCommandPort {
-    val stickersByBoardId = mutableMapOf<UUID, List<BoardStickerItem>>()
-    val validatedStickerIds = mutableListOf<Set<UUID>>()
+    val stickersByBoardId = mutableMapOf<BoardId, List<BoardStickerItem>>()
+    val validatedStickerIds = mutableListOf<Set<StickerId>>()
     val updatedLayouts = mutableListOf<List<BoardStickerLayoutCommand>>()
-    val deletedBoardIds = mutableListOf<UUID>()
+    val deletedBoardIds = mutableListOf<BoardId>()
 
-    override fun getByBoardId(boardId: UUID): List<BoardStickerItem> = stickersByBoardId[boardId].orEmpty()
+    override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = stickersByBoardId[boardId].orEmpty()
 
     override fun validateOwnedByBoard(
-        boardId: UUID,
-        stickerIds: Set<UUID>,
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
     ) {
         val ownedIds =
             stickersByBoardId[boardId]
@@ -62,14 +64,14 @@ class FakeBoardStickerPort :
     }
 
     override fun updateLayouts(
-        boardId: UUID,
+        boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
     ) {
         validateOwnedByBoard(boardId, layouts.map { it.id }.toSet())
         updatedLayouts += layouts
     }
 
-    override fun deleteAllByBoardId(boardId: UUID) {
+    override fun deleteAllByBoardId(boardId: BoardId) {
         stickersByBoardId.remove(boardId)
         deletedBoardIds += boardId
     }

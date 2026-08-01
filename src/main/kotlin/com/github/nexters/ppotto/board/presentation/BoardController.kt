@@ -6,6 +6,8 @@ import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import jakarta.validation.Valid
@@ -23,7 +25,7 @@ class BoardController(
         @AuthenticatedUser userId: UUID,
     ): ApiResponse<List<BoardResponse>> =
         boardQueryService
-            .list(userId)
+            .list(UserId(userId))
             .map(BoardResponse::from)
             .let { ApiResponse.success(it) }
 
@@ -32,7 +34,7 @@ class BoardController(
         @Valid @RequestBody request: CreateBoardRequest,
     ): ApiResponse<BoardResponse> =
         boardCommandService
-            .create(userId, request.name)
+            .create(UserId(userId), request.name)
             .let(BoardResponse::from)
             .let { ApiResponse.success(it) }
 
@@ -41,7 +43,7 @@ class BoardController(
         @PathVariable boardId: UUID,
     ): ApiResponse<BoardDetailResponse> =
         boardQueryService
-            .getDetail(boardId, userId)
+            .getDetail(BoardId(boardId), UserId(userId))
             .let(BoardDetailResponse::from)
             .let { ApiResponse.success(it) }
 
@@ -51,7 +53,7 @@ class BoardController(
         @Valid @RequestBody request: RenameBoardRequest,
     ): ApiResponse<BoardResponse> =
         boardCommandService
-            .rename(boardId, userId, request.name)
+            .rename(BoardId(boardId), UserId(userId), request.name)
             .let(BoardResponse::from)
             .let { ApiResponse.success(it) }
 
@@ -60,6 +62,6 @@ class BoardController(
         @PathVariable boardId: UUID,
     ): ApiResponse<Unit> =
         boardCommandService
-            .delete(boardId, userId)
+            .delete(BoardId(boardId), UserId(userId))
             .let { ApiResponse.success() }
 }

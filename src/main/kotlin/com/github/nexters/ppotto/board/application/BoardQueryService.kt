@@ -6,9 +6,10 @@ import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class BoardQueryService(
@@ -18,11 +19,11 @@ class BoardQueryService(
     private val stickerQueryPort: BoardStickerQueryPort,
 ) {
     @Transactional(readOnly = true)
-    fun list(userId: UUID): List<BoardSummary> = boardRepository.findByUserId(userId).map(BoardSummary::from)
+    fun list(userId: UserId): List<BoardSummary> = boardRepository.findByUserId(userId).map(BoardSummary::from)
 
     fun getDetail(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
     ): BoardDetail =
         boardAccessService.getOwnedById(boardId, userId).let {
             BoardDetail(
@@ -35,7 +36,7 @@ class BoardQueryService(
 }
 
 data class BoardSummary(
-    val id: UUID,
+    val id: BoardId,
     val name: String,
 ) {
     companion object {
@@ -44,7 +45,7 @@ data class BoardSummary(
 }
 
 data class BoardDetail(
-    val id: UUID,
+    val id: BoardId,
     val name: String,
     val stickers: List<BoardStickerItem>,
     val drawings: List<Drawing>,

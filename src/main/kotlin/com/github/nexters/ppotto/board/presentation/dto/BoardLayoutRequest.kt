@@ -6,6 +6,8 @@ import com.github.nexters.ppotto.board.application.BoardLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.DrawingCreateCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -30,7 +32,11 @@ data class BoardLayoutRequest(
                     ?.created
                     .orEmpty()
                     .map(DrawingCreateRequest::toCommand),
-            deletedDrawingIds = drawings?.deletedIds.orEmpty(),
+            deletedDrawingIds =
+                drawings
+                    ?.deletedIds
+                    .orEmpty()
+                    .map(::DrawingId),
         )
 }
 
@@ -61,7 +67,7 @@ data class StickerLayoutRequest(
 ) {
     fun toCommand(): BoardStickerLayoutCommand =
         BoardStickerLayoutCommand(
-            id = id,
+            id = StickerId(id),
             title = title,
             posX = posX,
             posY = posY,
@@ -111,9 +117,9 @@ data class DrawingCreateRequest(
 ) {
     fun toCommand(): DrawingCreateCommand =
         DrawingCreateCommand(
-            id = id,
+            id = DrawingId(id),
             scope = scope,
-            stickerId = stickerId,
+            stickerId = stickerId?.let(::StickerId),
             stroke = stroke,
             color = color,
             strokeWidth = strokeWidth,

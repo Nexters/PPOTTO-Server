@@ -12,8 +12,8 @@ import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -35,24 +35,24 @@ class BoardCommandServiceTest(
             val user = userRepository.saveTestUser()
 
             When("기본 보드를 생성하면") {
-                val board = boardCommandService.createDefault(user.rawId)
+                val board = boardCommandService.createDefault(user.id)
 
                 Then("Board 1 이름으로 저장된다") {
                     board.name shouldBe "Board 1"
-                    boardRepository.findOwnedById(board.id, user.rawId)?.name shouldBe "Board 1"
+                    boardRepository.findOwnedById(board.id, user.id)?.name shouldBe "Board 1"
                 }
             }
         }
 
         Given("활성 보드가 100개인 사용자가") {
             val user = userRepository.saveTestUser()
-            repeat(Board.MAX_COUNT) { boardRepository.save(user.rawId, Board.defaultName(it + 1)) }
+            repeat(Board.MAX_COUNT) { boardRepository.save(user.id, Board.defaultName(it + 1)) }
 
             When("보드를 하나 더 생성하면") {
                 Then("BOARD-003 오류가 발생한다") {
                     val exception =
                         shouldThrow<InvalidInputException> {
-                            boardCommandService.create(user.rawId, null)
+                            boardCommandService.create(user.id, null)
                         }
                     exception.errorCode shouldBe BoardErrorCode.COUNT_LIMIT_EXCEEDED
                 }
@@ -61,13 +61,13 @@ class BoardCommandServiceTest(
 
         Given("보드가 하나만 남은 사용자가") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
 
             When("마지막 보드를 삭제하면") {
                 Then("BOARD-004 오류가 발생한다") {
                     val exception =
                         shouldThrow<ConflictException> {
-                            boardCommandService.delete(board.id, user.rawId)
+                            boardCommandService.delete(board.id, user.id)
                         }
                     exception.errorCode shouldBe BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED
                 }
@@ -77,18 +77,18 @@ class BoardCommandServiceTest(
         Given("분석이 진행 중인 보드가 있는 사용자가") {
             analysisActivityPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
-            boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
+            boardRepository.save(user.id)
             analysisActivityPort.activeBoardIds += board.id
 
             When("해당 보드를 삭제하면") {
                 Then("BOARD-005 오류가 발생하고 보드는 유지된다") {
                     val exception =
                         shouldThrow<ConflictException> {
-                            boardCommandService.delete(board.id, user.rawId)
+                            boardCommandService.delete(board.id, user.id)
                         }
                     exception.errorCode shouldBe BoardErrorCode.ACTIVE_ANALYSIS_EXISTS
-                    boardRepository.findOwnedById(board.id, user.rawId)?.id shouldBe board.id
+                    boardRepository.findOwnedById(board.id, user.id)?.id shouldBe board.id
                 }
             }
         }
@@ -97,12 +97,12 @@ class BoardCommandServiceTest(
             analysisActivityPort.reset()
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
-            boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
+            boardRepository.save(user.id)
             drawingRepository.upsertAll(
                 listOf(
                     NewDrawing(
-                        id = uuidV7(),
+                        id = DrawingId(uuidV7()),
                         boardId = board.id,
                         stickerId = null,
                         scope = DrawingScope.BOARD,
@@ -114,10 +114,10 @@ class BoardCommandServiceTest(
             )
 
             When("보드를 삭제하면") {
-                boardCommandService.delete(board.id, user.rawId)
+                boardCommandService.delete(board.id, user.id)
 
                 Then("보드와 드로잉을 숨기고 스티커 삭제를 위임한다") {
-                    boardRepository.findOwnedById(board.id, user.rawId).shouldBeNull()
+                    boardRepository.findOwnedById(board.id, user.id).shouldBeNull()
                     drawingRepository.findByBoardId(board.id).shouldBeEmpty()
                     stickerPort.deletedBoardIds shouldBe listOf(board.id)
                 }

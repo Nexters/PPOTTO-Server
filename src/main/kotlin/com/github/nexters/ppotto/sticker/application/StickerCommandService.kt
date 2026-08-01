@@ -2,6 +2,8 @@ package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
@@ -60,7 +62,7 @@ class StickerCommandService(
                     .apply { delete(Instant.now()) }
                     .takeIf { stickerCommandRepository.softDelete(it.id, checkNotNull(it.deletedAt)) }
                     ?.also {
-                        drawingCommandPort.deleteByStickerIds(it.boardId, listOf(it.id))
+                        drawingCommandPort.deleteByStickerIds(BoardId(it.boardId), listOf(StickerId(it.id)))
                     }.let {
                         it ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
                     }.let {
@@ -109,7 +111,7 @@ class StickerCommandService(
                                     .takeIf { sticker -> stickerCommandRepository.softDelete(sticker.id, deletedAt) }
                                     ?: throw InvalidInputException(message = "삭제할 수 없는 스티커가 포함되어 있습니다.")
                             }.map { it.id }
-                            .also { drawingCommandPort.deleteByStickerIds(boardId, it) }
+                            .also { drawingCommandPort.deleteByStickerIds(BoardId(boardId), it.map(::StickerId)) }
                             .let(stickerRecapRepository::deleteByStickerIds)
                     }
                 }

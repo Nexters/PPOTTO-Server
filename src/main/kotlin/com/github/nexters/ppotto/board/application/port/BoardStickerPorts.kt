@@ -1,27 +1,28 @@
 package com.github.nexters.ppotto.board.application.port
 
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.StickerId
 
 fun interface BoardStickerQueryPort {
-    fun getByBoardId(boardId: UUID): List<BoardStickerItem>
+    fun getByBoardId(boardId: BoardId): List<BoardStickerItem>
 }
 
 interface BoardStickerCommandPort {
     fun validateOwnedByBoard(
-        boardId: UUID,
-        stickerIds: Set<UUID>,
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
     )
 
     fun updateLayouts(
-        boardId: UUID,
+        boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
     )
 
-    fun deleteAllByBoardId(boardId: UUID)
+    fun deleteAllByBoardId(boardId: BoardId)
 }
 
 data class BoardStickerItem(
-    val id: UUID,
+    val id: StickerId,
     val title: String,
     val isNew: Boolean,
     val type: String,
@@ -38,7 +39,7 @@ data class BoardStickerItem(
 )
 
 data class BoardStickerLayoutCommand(
-    val id: UUID,
+    val id: StickerId,
     val title: String?,
     val posX: Double,
     val posY: Double,

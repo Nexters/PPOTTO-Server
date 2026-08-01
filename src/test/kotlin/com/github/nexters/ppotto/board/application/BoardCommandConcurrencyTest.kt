@@ -9,7 +9,6 @@ import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.runConcurrently
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -30,16 +29,16 @@ class BoardCommandConcurrencyTest(
         Given("활성 보드가 99개인 사용자가") {
             val user = userRepository.saveTestUser()
             repeat(Board.MAX_COUNT - 1) {
-                boardRepository.save(user.rawId, Board.defaultName(it + 1))
+                boardRepository.save(user.id, Board.defaultName(it + 1))
             }
 
             When("기본 보드와 이름 있는 보드를 동시에 여러 개 생성하면") {
                 val results =
                     runConcurrently(12) { index ->
                         if (index % 2 == 0) {
-                            boardCommandService.createDefault(user.rawId)
+                            boardCommandService.createDefault(user.id)
                         } else {
-                            boardCommandService.create(user.rawId, "동시 $index")
+                            boardCommandService.create(user.id, "동시 $index")
                         }
                     }
 
@@ -52,7 +51,7 @@ class BoardCommandConcurrencyTest(
                             val exception = it.shouldBeInstanceOf<InvalidInputException>()
                             exception.errorCode shouldBe BoardErrorCode.COUNT_LIMIT_EXCEEDED
                         }
-                        boardRepository.countByUserId(user.rawId) shouldBe Board.MAX_COUNT
+                        boardRepository.countByUserId(user.id) shouldBe Board.MAX_COUNT
                     }
                 }
             }
@@ -62,12 +61,12 @@ class BoardCommandConcurrencyTest(
             analysisActivityPort.reset()
             stickerPort.reset()
             val user = userRepository.saveTestUser()
-            val boards = List(2) { boardRepository.save(user.rawId) }
+            val boards = List(2) { boardRepository.save(user.id) }
 
             When("두 보드를 동시에 삭제하면") {
                 val results =
                     runConcurrently(boards.size) { index ->
-                        boardCommandService.delete(boards[index].id, user.rawId)
+                        boardCommandService.delete(boards[index].id, user.id)
                     }
 
                 Then("한 보드는 남기고 다른 삭제 요청을 거부한다") {
@@ -77,7 +76,7 @@ class BoardCommandConcurrencyTest(
                         failures shouldHaveSize 1
                         val exception = failures.single().shouldBeInstanceOf<ConflictException>()
                         exception.errorCode shouldBe BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED
-                        boardRepository.findByUserId(user.rawId) shouldHaveSize 1
+                        boardRepository.findByUserId(user.id) shouldHaveSize 1
                     }
                 }
             }

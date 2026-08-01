@@ -10,10 +10,7 @@ import org.springframework.stereotype.Component
 class WithdrawnUserBoardDeletionAdapter(
     private val boardWithdrawalService: BoardWithdrawalService,
 ) : WithdrawnUserBoardDeletionPort {
-    override fun findAllBoardIds(userId: UserId): List<BoardId> =
-        boardWithdrawalService
-            .findAllBoardIds(userId.value)
-            .map(::BoardId)
+    override fun findAllBoardIds(userId: UserId): List<BoardId> = boardWithdrawalService.findAllBoardIds(userId)
 
-    override fun deleteAllByUserId(userId: UserId): Unit = boardWithdrawalService.deleteAllByUserId(userId.value)
+    override fun deleteAllByUserId(userId: UserId): Unit = boardWithdrawalService.deleteAllByUserId(userId)
 }

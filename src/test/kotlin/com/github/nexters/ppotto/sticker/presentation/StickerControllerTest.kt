@@ -47,20 +47,20 @@ class StickerControllerTest(
         }
 
         Given("사용자 보드에 이미지 스티커와 리캡이 등록된 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photo =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id,
+                        board.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val sticker =
                 stickerRepository.save(
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "원래 제목",
@@ -81,7 +81,7 @@ class StickerControllerTest(
             )
 
             When("리캡 상세를 요청하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("스티커와 한 줄 요약과 코멘트와 사진을 응답한다") {
                     mockMvc
@@ -105,7 +105,7 @@ class StickerControllerTest(
             }
 
             When("제목을 수정하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("변경한 제목을 응답한다") {
                     mockMvc
@@ -120,7 +120,7 @@ class StickerControllerTest(
             }
 
             When("빈 제목으로 수정하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("400 응답을 반환한다") {
                     mockMvc
@@ -134,7 +134,7 @@ class StickerControllerTest(
             }
 
             When("리캡을 열람 처리하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("여러 번 호출해도 성공한다") {
                     mockMvc.perform(post("/stickers/${sticker.id}/view")).andExpect(status().isOk)
@@ -154,7 +154,7 @@ class StickerControllerTest(
             }
 
             When("스티커를 삭제하면") {
-                authenticate(board.userId)
+                authenticate(board.userId.value)
 
                 Then("성공 응답을 반환한다") {
                     mockMvc

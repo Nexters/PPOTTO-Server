@@ -1,12 +1,14 @@
 package com.github.nexters.ppotto.board.domain
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import java.time.Instant
-import java.util.UUID
 
 data class Drawing(
-    val id: UUID,
-    val boardId: UUID,
-    val stickerId: UUID?,
+    val id: DrawingId,
+    val boardId: BoardId,
+    val stickerId: StickerId?,
     val scope: DrawingScope,
     val stroke: Map<String, Any?>,
     val color: String,
@@ -16,9 +18,9 @@ data class Drawing(
 )
 
 data class NewDrawing(
-    val id: UUID,
-    val boardId: UUID,
-    val stickerId: UUID?,
+    val id: DrawingId,
+    val boardId: BoardId,
+    val stickerId: StickerId?,
     val scope: DrawingScope,
     val stroke: Map<String, Any?>,
     val color: String,

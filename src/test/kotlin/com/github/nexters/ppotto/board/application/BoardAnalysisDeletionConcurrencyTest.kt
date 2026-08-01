@@ -9,9 +9,10 @@ import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.assertSoftly
@@ -25,7 +26,6 @@ import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -47,20 +47,20 @@ class BoardAnalysisDeletionConcurrencyTest(
 
         Given("보드 삭제가 진행 중 분석 확인을 통과하고 스티커 정리 단계에 머문 상태에서") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
-            boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
+            boardRepository.save(user.id)
             val photos = photoRequests()
 
             When("같은 보드를 대상으로 분석 생성을 동시에 요청하면") {
                 val executor = Executors.newFixedThreadPool(2)
                 val deleteFuture =
                     executor.submit(
-                        Callable { runCatching { boardCommandService.delete(board.id, user.rawId) } },
+                        Callable { runCatching { boardCommandService.delete(board.id, user.id) } },
                     )
                 check(stickerPort.awaitDeleteInvocation())
                 val createFuture =
                     executor.submit(
-                        Callable { runCatching { analysisService.createAnalysis(user.rawId, board.id, photos) } },
+                        Callable { runCatching { analysisService.createAnalysis(user.id.value, board.id.value, photos) } },
                     )
                 val createBlockedBeforeRelease = runCatching { createFuture.get(1, TimeUnit.SECONDS) }.isFailure
                 stickerPort.releaseDelete()
@@ -76,8 +76,8 @@ class BoardAnalysisDeletionConcurrencyTest(
                             .exceptionOrNull()
                             .shouldBeInstanceOf<NotFoundException>()
                             .errorCode shouldBe BoardErrorCode.NOT_FOUND
-                        boardRepository.findOwnedById(board.id, user.rawId).shouldBeNull()
-                        dslContext.fetchCount(ANALYSIS, ANALYSIS.BOARD_ID.eq(board.id)) shouldBe 0
+                        boardRepository.findOwnedById(board.id, user.id).shouldBeNull()
+                        dslContext.fetchCount(ANALYSIS, ANALYSIS.BOARD_ID.eq(board.id.value)) shouldBe 0
                     }
                 }
             }
@@ -85,8 +85,8 @@ class BoardAnalysisDeletionConcurrencyTest(
 
         Given("분석 생성이 대상 보드 행을 잠근 채 커밋 전에 머문 상태에서") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
-            boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
+            boardRepository.save(user.id)
             val photos = photoRequests()
 
             When("같은 보드를 대상으로 보드 삭제를 동시에 요청하면") {
@@ -99,7 +99,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                         Callable {
                             runCatching {
                                 transactionTemplate.executeWithoutResult {
-                                    analysisService.createAnalysis(user.rawId, board.id, photos)
+                                    analysisService.createAnalysis(user.id.value, board.id.value, photos)
                                     createLocked.countDown()
                                     check(createCommitAllowed.await(10, TimeUnit.SECONDS))
                                 }
@@ -109,7 +109,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                 check(createLocked.await(30, TimeUnit.SECONDS))
                 val deleteFuture =
                     executor.submit(
-                        Callable { runCatching { boardCommandService.delete(board.id, user.rawId) } },
+                        Callable { runCatching { boardCommandService.delete(board.id, user.id) } },
                     )
                 val deleteBlockedBeforeCommit = runCatching { deleteFuture.get(1, TimeUnit.SECONDS) }.isFailure
                 createCommitAllowed.countDown()
@@ -125,8 +125,8 @@ class BoardAnalysisDeletionConcurrencyTest(
                             .exceptionOrNull()
                             .shouldBeInstanceOf<ConflictException>()
                             .errorCode shouldBe BoardErrorCode.ACTIVE_ANALYSIS_EXISTS
-                        boardRepository.findOwnedById(board.id, user.rawId)?.id shouldBe board.id
-                        dslContext.fetchCount(ANALYSIS, ANALYSIS.BOARD_ID.eq(board.id)) shouldBe 1
+                        boardRepository.findOwnedById(board.id, user.id)?.id shouldBe board.id
+                        dslContext.fetchCount(ANALYSIS, ANALYSIS.BOARD_ID.eq(board.id.value)) shouldBe 1
                     }
                 }
             }
@@ -151,16 +151,16 @@ class BlockingBoardStickerCommandPort : BoardStickerCommandPort {
     private var deleteRelease = CountDownLatch(1)
 
     override fun validateOwnedByBoard(
-        boardId: UUID,
-        stickerIds: Set<UUID>,
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
     ) = Unit
 
     override fun updateLayouts(
-        boardId: UUID,
+        boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
     ) = Unit
 
-    override fun deleteAllByBoardId(boardId: UUID) {
+    override fun deleteAllByBoardId(boardId: BoardId) {
         deleteInvocation.countDown()
         check(deleteRelease.await(10, TimeUnit.SECONDS))
     }

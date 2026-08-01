@@ -91,7 +91,7 @@ class AuthDomainIntegrationTest(
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.APPLE, providerUserId)
                         ?.id shouldBe first.userId
-                    boardRepository.findByUserId(first.userId.value) shouldHaveSize 1
+                    boardRepository.findByUserId(first.userId) shouldHaveSize 1
                 }
             }
         }
@@ -116,7 +116,7 @@ class AuthDomainIntegrationTest(
                     boardRepository.findByUserId(
                         users
                             .first()
-                            .userId.value,
+                            .userId,
                     ) shouldHaveSize 1
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
@@ -189,7 +189,7 @@ class AuthSignupRollbackIntegrationTest(
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
                         .shouldBeNull()
-                    boardRepository.findByUserId(loginEffects.userId!!.value) shouldHaveSize 0
+                    boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 0
                     loginEffects.tokenIssueCount shouldBe 0
                     loginEffects.tokenSaveCount shouldBe 0
                 }
@@ -219,7 +219,7 @@ class AuthSignupRollbackIntegrationTest(
                     userRepository
                         .findBySocialAccount(UserOAuthProvider.APPLE, providerUserId)
                         .shouldBeNull()
-                    boardRepository.findByUserId(loginEffects.userId!!.value) shouldHaveSize 0
+                    boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 0
                     loginEffects.tokenIssueCount shouldBe 0
                     loginEffects.tokenSaveCount shouldBe 0
                 }
@@ -240,7 +240,7 @@ class AuthSignupRollbackIntegrationTest(
                     loginEffects.termsLookupInTransaction shouldBe true
                     loginEffects.tokenIssueInTransaction shouldBe false
                     loginEffects.tokenSaveInTransaction shouldBe false
-                    boardRepository.findByUserId(loginEffects.userId!!.value) shouldHaveSize 1
+                    boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 1
                 }
             }
         }
@@ -303,7 +303,7 @@ open class FailingBoardCommandService(
     analysisActivityPort: BoardAnalysisActivityPort,
     stickerCommandPort: BoardStickerCommandPort,
 ) : BoardCommandService(boardRepository, boardAccessService, drawingCommandService, analysisActivityPort, stickerCommandPort) {
-    override fun createDefault(userId: UUID): Board = error("기본 보드 생성 실패")
+    override fun createDefault(userId: UserId): Board = error("기본 보드 생성 실패")
 }
 
 @TestConfiguration(proxyBeanMethods = false)
@@ -330,7 +330,7 @@ class SignupRollbackAuthTestConfig {
                 AuthUserPort { profile ->
                     authUserPort.findOrCreate(profile).also {
                         loginEffects.userId = it.userId
-                        loginEffects.boardCountInTransaction = boardRepository.findByUserId(it.userId.value).size
+                        loginEffects.boardCountInTransaction = boardRepository.findByUserId(it.userId).size
                     }
                 },
             authTermsPort = TrackingTermsPort(loginEffects, authTermsPort),

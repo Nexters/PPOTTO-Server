@@ -20,7 +20,6 @@ import com.github.nexters.ppotto.sticker.infrastructure.GcsStickerImageStorage
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
@@ -71,12 +70,12 @@ class AnalysisStickerIntegrationTest(
         }
 
         Given("업로드된 사진을 가진 분석이 있는 상태에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     listOf(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
                         PhotoCreate(PhotoContentType.PNG, Instant.parse("2026-07-01T00:00:00Z")),
@@ -89,13 +88,13 @@ class AnalysisStickerIntegrationTest(
                 val saved =
                     analysisResultSaveService.save(
                         SaveAnalysisResultCommand(
-                            userId = board.userId,
+                            userId = board.userId.value,
                             analysisId = analysis.id,
-                            boardId = board.id,
+                            boardId = board.id.value,
                             stickers = listOf(stickerResult(photos.first().id, photos.map { it.id }, stickerKey)),
                         ),
                     )
-                val recap = stickerQueryService.getRecap(board.userId, saved.stickerIds.single())
+                val recap = stickerQueryService.getRecap(board.userId.value, saved.stickerIds.single())
 
                 Then("파이프라인이 만든 스티커 오브젝트 키를 그대로 읽기용 signed URL로 서명한다") {
                     recap.sticker.id shouldBe saved.stickerIds.single()
@@ -115,22 +114,22 @@ class AnalysisStickerIntegrationTest(
         }
 
         Given("서로 다른 사용자의 분석과 사진이 있는 상태에서") {
-            val ownerBoard = boardRepository.save(userRepository.saveTestUser().rawId)
-            val ownerAnalysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val ownerAnalysis = analysisRepository.save(ownerBoard.userId.value, ownerBoard.id.value)
             val ownerPhoto =
                 photoRepository
                     .saveAll(
                         ownerAnalysis.id,
-                        ownerBoard.id,
+                        ownerBoard.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
-            val otherBoard = boardRepository.save(userRepository.saveTestUser().rawId)
-            val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val otherAnalysis = analysisRepository.save(otherBoard.userId.value, otherBoard.id.value)
             val otherPhoto =
                 photoRepository
                     .saveAll(
                         otherAnalysis.id,
-                        otherBoard.id,
+                        otherBoard.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(
@@ -142,9 +141,9 @@ class AnalysisStickerIntegrationTest(
                     shouldThrow<NotFoundException> {
                         analysisResultSaveService.save(
                             SaveAnalysisResultCommand(
-                                userId = ownerBoard.userId,
+                                userId = ownerBoard.userId.value,
                                 analysisId = ownerAnalysis.id,
-                                boardId = ownerBoard.id,
+                                boardId = ownerBoard.id.value,
                                 stickers =
                                     listOf(
                                         stickerResult(ownerPhoto.id, listOf(ownerPhoto.id, otherPhoto.id)),
@@ -152,7 +151,7 @@ class AnalysisStickerIntegrationTest(
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
                 }
             }
 
@@ -161,25 +160,25 @@ class AnalysisStickerIntegrationTest(
                     shouldThrow<NotFoundException> {
                         analysisResultSaveService.save(
                             SaveAnalysisResultCommand(
-                                userId = ownerBoard.userId,
+                                userId = ownerBoard.userId.value,
                                 analysisId = ownerAnalysis.id,
-                                boardId = ownerBoard.id,
+                                boardId = ownerBoard.id.value,
                                 stickers = listOf(stickerResult(ownerPhoto.id, listOf(UUID.randomUUID()))),
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(ownerBoard.id.value).shouldBeEmpty()
                 }
             }
         }
 
         Given("업로드가 완료되지 않은 사진이 남아 있는 분석에서") {
-            val board = boardRepository.save(userRepository.saveTestUser().rawId)
-            val analysis = analysisRepository.save(board.userId, board.id)
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id,
+                    board.id.value,
                     listOf(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
@@ -194,9 +193,9 @@ class AnalysisStickerIntegrationTest(
                     shouldThrow<NotFoundException> {
                         analysisResultSaveService.save(
                             SaveAnalysisResultCommand(
-                                userId = board.userId,
+                                userId = board.userId.value,
                                 analysisId = analysis.id,
-                                boardId = board.id,
+                                boardId = board.id.value,
                                 stickers =
                                     listOf(
                                         stickerResult(completedPhoto.id, listOf(completedPhoto.id, pendingPhoto.id)),
@@ -204,7 +203,7 @@ class AnalysisStickerIntegrationTest(
                             ),
                         )
                     }
-                    stickerRepository.findAllByBoardId(board.id).shouldBeEmpty()
+                    stickerRepository.findAllByBoardId(board.id.value).shouldBeEmpty()
                 }
             }
         }

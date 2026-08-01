@@ -36,6 +36,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 
 ## Rules
 
+- Typed identifiers (`BoardId`, `UserId`, `DrawingId`, `StickerId` from `global/identifier/`) flow through domain models, repository public signatures, application services, and the `application/port/` contracts. Raw `UUID` survives only inside jOOQ DSL bindings (`.value` out, wrap in `toDomain`) and in presentation DTO fields; controllers wrap the `@AuthenticatedUser` UUID principal and path variables, and DTO mapping functions wrap request ids / unwrap response ids.
 - Same DB-generated column convention as `user/`: board `id`/`createdAt`/`updatedAt` come back via `RETURNING`, never set client-side.
 - Drawing IDs are client-generated UUIDv7 values and are upserted for retry idempotency.
 - Soft-deleted boards and drawings never appear in active queries.

@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.infrastructure
 
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
+import com.github.nexters.ppotto.global.identifier.BoardId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -17,7 +18,7 @@ class BoardExternalPortFallbackConfigurationTest :
                 Then("연동 누락 오류를 던진다") {
                     val exception =
                         shouldThrow<IllegalStateException> {
-                            queryPort.getByBoardId(UUID.randomUUID())
+                            queryPort.getByBoardId(BoardId(UUID.randomUUID()))
                         }
                     exception.message shouldBe "StickerQueryService 연동이 필요합니다."
                 }
@@ -26,7 +27,7 @@ class BoardExternalPortFallbackConfigurationTest :
 
         Given("스티커 command adapter가 없는 standalone 구성에서") {
             val commandPort = configuration.boardStickerCommandPort()
-            val boardId = UUID.randomUUID()
+            val boardId = BoardId(UUID.randomUUID())
 
             When("빈 스티커 소유권을 검증해도") {
                 Then("연동 누락 오류를 던진다") {

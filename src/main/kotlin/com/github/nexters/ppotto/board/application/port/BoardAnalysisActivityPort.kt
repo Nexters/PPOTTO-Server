@@ -1,10 +1,11 @@
 package com.github.nexters.ppotto.board.application.port
 
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 
 fun interface BoardAnalysisActivityPort {
     fun hasActiveAnalysis(
-        boardId: UUID,
-        userId: UUID,
+        boardId: BoardId,
+        userId: UserId,
     ): Boolean
 }

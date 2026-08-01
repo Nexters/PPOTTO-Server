@@ -3,6 +3,8 @@ package com.github.nexters.ppotto.sticker.application
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipPort
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipScope
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
@@ -69,8 +71,8 @@ class AnalysisResultSaveService(
         command
             .also {
                 boardAccessService
-                    .getById(it.boardId)
-                    .takeIf { board -> board.userId == it.userId }
+                    .getById(BoardId(it.boardId))
+                    .takeIf { board -> board.userId == UserId(it.userId) }
                     ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
             }.stickers
             .flatMap { sticker -> sticker.photoIds + listOfNotNull(sticker.sourcePhotoId) }

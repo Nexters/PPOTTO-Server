@@ -1,11 +1,12 @@
 package com.github.nexters.ppotto.board.domain
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import java.time.Instant
-import java.util.UUID
 
 data class Board(
-    val id: UUID,
-    val userId: UUID,
+    val id: BoardId,
+    val userId: UserId,
     val name: String,
     val createdAt: Instant,
     val updatedAt: Instant,

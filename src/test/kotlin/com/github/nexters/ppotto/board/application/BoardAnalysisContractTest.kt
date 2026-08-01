@@ -10,7 +10,6 @@ import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.support.rawId
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.assertSoftly
@@ -69,16 +68,16 @@ class BoardAnalysisContractTest(
         AnalysisStatus.ACTIVE.forEach { status ->
             Given("$status 분석이 대상인 삭제 가능한 보드에서") {
                 val user = userRepository.saveTestUser()
-                val board = boardRepository.save(user.rawId)
-                boardRepository.save(user.rawId)
-                analysisRepository.save(user.rawId, board.id).also { changeStatus(dslContext, it.id, status) }
+                val board = boardRepository.save(user.id)
+                boardRepository.save(user.id)
+                analysisRepository.save(user.id.value, board.id.value).also { changeStatus(dslContext, it.id, status) }
 
                 When("보드를 삭제하면") {
                     Then("실제 어댑터가 BOARD-005로 거부하고 보드를 유지한다") {
                         shouldThrow<ConflictException> {
-                            boardCommandService.delete(board.id, user.rawId)
+                            boardCommandService.delete(board.id, user.id)
                         }.errorCode shouldBe BoardErrorCode.ACTIVE_ANALYSIS_EXISTS
-                        boardRepository.findOwnedById(board.id, user.rawId)?.id shouldBe board.id
+                        boardRepository.findOwnedById(board.id, user.id)?.id shouldBe board.id
                     }
                 }
             }
@@ -87,17 +86,17 @@ class BoardAnalysisContractTest(
         (AnalysisStatus.entries - AnalysisStatus.ACTIVE).forEach { status ->
             Given("$status 분석만 대상인 삭제 가능한 보드에서") {
                 val user = userRepository.saveTestUser()
-                val board = boardRepository.save(user.rawId)
-                boardRepository.save(user.rawId)
+                val board = boardRepository.save(user.id)
+                boardRepository.save(user.id)
                 val analysis =
-                    analysisRepository.save(user.rawId, board.id).also { changeStatus(dslContext, it.id, status) }
+                    analysisRepository.save(user.id.value, board.id.value).also { changeStatus(dslContext, it.id, status) }
 
                 When("보드를 삭제하면") {
-                    boardCommandService.delete(board.id, user.rawId)
+                    boardCommandService.delete(board.id, user.id)
 
                     Then("삭제를 허용하고 종료된 분석 이력은 그대로 남긴다") {
-                        boardRepository.findOwnedById(board.id, user.rawId).shouldBeNull()
-                        analysisRepository.findById(analysis.id)?.boardId shouldBe board.id
+                        boardRepository.findOwnedById(board.id, user.id).shouldBeNull()
+                        analysisRepository.findById(analysis.id)?.boardId shouldBe board.id.value
                     }
                 }
             }
@@ -105,13 +104,13 @@ class BoardAnalysisContractTest(
 
         Given("진행 중인 분석이 대상인 보드가 마지막 하나뿐인 사용자가") {
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
-            analysisRepository.save(user.rawId, board.id)
+            val board = boardRepository.save(user.id)
+            analysisRepository.save(user.id.value, board.id.value)
 
             When("그 보드를 삭제하면") {
                 Then("분석 확인보다 먼저 BOARD-004로 거부한다") {
                     shouldThrow<ConflictException> {
-                        boardCommandService.delete(board.id, user.rawId)
+                        boardCommandService.delete(board.id, user.id)
                     }.errorCode shouldBe BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED
                 }
             }
@@ -119,15 +118,15 @@ class BoardAnalysisContractTest(
 
         Given("다른 사용자의 보드에 진행 중인 분석이 있을 때") {
             val owner = userRepository.saveTestUser()
-            val board = boardRepository.save(owner.rawId)
-            boardRepository.save(owner.rawId)
-            analysisRepository.save(owner.rawId, board.id)
+            val board = boardRepository.save(owner.id)
+            boardRepository.save(owner.id)
+            analysisRepository.save(owner.id.value, board.id.value)
             val stranger = userRepository.saveTestUser()
 
             When("소유자가 아닌 사용자가 삭제를 요청하면") {
                 Then("분석 확인보다 먼저 BOARD-002로 거부한다") {
                     shouldThrow<NotFoundException> {
-                        boardCommandService.delete(board.id, stranger.rawId)
+                        boardCommandService.delete(board.id, stranger.id)
                     }.errorCode shouldBe BoardErrorCode.NOT_FOUND
                 }
             }

@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
@@ -75,13 +76,13 @@ class WithdrawnUserDataDeletionAdapterTest(
         Given("모든 도메인 데이터를 가진 탈퇴 사용자가 유예기간을 지났을 때") {
             objectStorageCleaner.clear()
             val user = userRepository.saveTestUser()
-            val board = boardRepository.save(user.rawId)
+            val board = boardRepository.save(user.id)
             val drawing =
                 drawingRepository
                     .upsertAll(
                         listOf(
                             NewDrawing(
-                                id = uuidV7(),
+                                id = DrawingId(uuidV7()),
                                 boardId = board.id,
                                 stickerId = null,
                                 scope = DrawingScope.BOARD,
@@ -91,12 +92,12 @@ class WithdrawnUserDataDeletionAdapterTest(
                             ),
                         ),
                     ).single()
-            val analysis = analysisRepository.save(user.rawId, board.id)
+            val analysis = analysisRepository.save(user.rawId, board.id.value)
             val photo =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id,
+                        board.id.value,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
@@ -106,7 +107,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                         SaveAnalysisResultCommand(
                             userId = user.rawId,
                             analysisId = analysis.id,
-                            boardId = board.id,
+                            boardId = board.id.value,
                             stickers =
                                 listOf(
                                     AnalysisStickerResult(
@@ -162,10 +163,10 @@ class WithdrawnUserDataDeletionAdapterTest(
                     dslContext.fetchExists(RECAP_COMMENTS, RECAP_COMMENTS.STICKER_ID.eq(stickerId)) shouldBe false
                     dslContext.fetchExists(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID.eq(stickerId)) shouldBe false
                     dslContext.fetchExists(STICKERS, STICKERS.ID.eq(stickerId)) shouldBe false
-                    dslContext.fetchExists(DRAWINGS, DRAWINGS.ID.eq(drawing.id)) shouldBe false
+                    dslContext.fetchExists(DRAWINGS, DRAWINGS.ID.eq(drawing.id.value)) shouldBe false
                     dslContext.fetchExists(PHOTOS, PHOTOS.ID.eq(photo.id)) shouldBe false
                     dslContext.fetchExists(ANALYSIS, ANALYSIS.ID.eq(analysis.id)) shouldBe false
-                    dslContext.fetchExists(BOARDS, BOARDS.ID.eq(board.id)) shouldBe false
+                    dslContext.fetchExists(BOARDS, BOARDS.ID.eq(board.id.value)) shouldBe false
                     dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id.value)) shouldBe false
                     dslContext.fetchExists(USERS, USERS.ID.eq(user.id.value)) shouldBe false
                 }
