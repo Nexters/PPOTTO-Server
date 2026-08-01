@@ -4,7 +4,9 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.UserIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.indexes.UK_USERS_PROVIDER_UID
@@ -15,7 +17,6 @@ import com.github.nexters.ppotto.jooq.tables.Terms.TermsPath
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 
 import java.time.Instant
-import java.util.UUID
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -85,7 +86,7 @@ open class Users(
     /**
      * The column <code>public.users.id</code>.
      */
-    val ID: TableField<UsersRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "")
+    val ID: TableField<UsersRecord, UserId?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "", UserIdConverter())
 
     /**
      * The column <code>public.users.created_at</code>.

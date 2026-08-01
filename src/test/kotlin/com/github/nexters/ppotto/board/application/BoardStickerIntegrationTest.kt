@@ -163,7 +163,7 @@ class BoardStickerIntegrationTest(
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
-                .where(ANALYSIS.ID.eq(analysis.id))
+                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
                 .execute()
             val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
             drawingRepository.upsertAll(

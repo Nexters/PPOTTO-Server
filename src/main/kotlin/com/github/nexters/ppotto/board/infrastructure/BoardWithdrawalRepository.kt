@@ -14,15 +14,14 @@ class BoardWithdrawalRepository(
         dslContext
             .select(BOARDS.ID)
             .from(BOARDS)
-            .where(BOARDS.USER_ID.eq(userId.value))
+            .where(BOARDS.USER_ID.eq(userId))
             .orderBy(BOARDS.ID)
             .fetch(BOARDS.ID)
             .filterNotNull()
-            .map(::BoardId)
 
     fun hardDeleteAllByUserId(userId: UserId): Int =
         dslContext
             .deleteFrom(BOARDS)
-            .where(BOARDS.USER_ID.eq(userId.value))
+            .where(BOARDS.USER_ID.eq(userId))
             .execute()
 }

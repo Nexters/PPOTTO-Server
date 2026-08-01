@@ -1,7 +1,6 @@
 package com.github.nexters.ppotto.terms.application
 
 import com.github.nexters.ppotto.global.error.InvalidInputException
-import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
@@ -34,7 +33,6 @@ class TermsServiceTest(
                     "terms-service-$suffix@example.com",
                 ).returning(USERS.ID)
                 .fetchOne(USERS.ID)!!
-                .let(::UserId)
         }
 
         fun saveTerm(
@@ -61,7 +59,7 @@ class TermsServiceTest(
             val currentTerm = saveTerm(code, "2.0", Instant.now().minusSeconds(3_600), false)
             dslContext
                 .insertInto(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
-                .values(userId.value, oldTerm.id!!)
+                .values(userId, oldTerm.id!!)
                 .execute()
 
             When("현재 약관과 미동의 약관을 조회하면") {
@@ -75,8 +73,8 @@ class TermsServiceTest(
                         .filter { it.code == code }
 
                 Then("현재 버전은 미동의 상태이며 미동의 목록에 포함된다") {
-                    current.map { it.id to it.agreed } shouldContainExactly listOf(TermId(currentTerm.id!!) to false)
-                    pending.map { it.id } shouldContainExactly listOf(TermId(currentTerm.id!!))
+                    current.map { it.id to it.agreed } shouldContainExactly listOf(currentTerm.id!! to false)
+                    pending.map { it.id } shouldContainExactly listOf(currentTerm.id!!)
                 }
             }
         }
@@ -101,13 +99,13 @@ class TermsServiceTest(
             When("필수 약관 없이 동의를 요청하면") {
                 val exception =
                     shouldThrow<InvalidInputException> {
-                        termsService.agree(userId, listOf(TermId(optionalTerm.id!!)))
+                        termsService.agree(userId, listOf(optionalTerm.id!!))
                     }
 
                 Then("TERM-001 오류가 발생하고 동의 이력이 저장되지 않는다") {
                     exception.errorCode.code shouldBe "TERM-001"
                     dslContext
-                        .fetchCount(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(userId.value)) shouldBe 0
+                        .fetchCount(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(userId)) shouldBe 0
                 }
             }
 
@@ -119,13 +117,13 @@ class TermsServiceTest(
                         .map { it.id }
                 termsService.agree(userId, requiredTermIds)
                 termsService.agree(userId, requiredTermIds)
-                termsService.agree(userId, listOf(TermId(optionalTerm.id!!)))
+                termsService.agree(userId, listOf(optionalTerm.id!!))
 
                 Then("기존 필수 동의를 인정하고 각 약관 동의 이력을 한 건씩만 저장한다") {
                     dslContext
                         .select(TERM_AGREEMENTS.TERM_ID)
                         .from(TERM_AGREEMENTS)
-                        .where(TERM_AGREEMENTS.USER_ID.eq(userId.value))
+                        .where(TERM_AGREEMENTS.USER_ID.eq(userId))
                         .fetch(TERM_AGREEMENTS.TERM_ID)
                         .filterNotNull()
                         .filter { it == requiredTerm.id || it == optionalTerm.id } shouldContainExactlyInAnyOrder
@@ -160,7 +158,7 @@ class TermsServiceTest(
 
                 Then("잘못된 입력 오류가 발생한다") {
                     shouldThrow<InvalidInputException> {
-                        termsService.agree(userId, currentRequiredTermIds + TermId(futureTerm.id!!))
+                        termsService.agree(userId, currentRequiredTermIds + futureTerm.id!!)
                     }.errorCode.code shouldBe "COMMON-001"
                 }
             }

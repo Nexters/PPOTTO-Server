@@ -4,6 +4,9 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
+
 import java.io.Serializable
 import java.util.UUID
 
@@ -14,8 +17,8 @@ import java.util.UUID
 @Suppress("warnings")
 data class StickerPhotos(
     val id: UUID? = null,
-    val stickerId: UUID,
-    val photoId: UUID
+    val stickerId: StickerId,
+    val photoId: PhotoId
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {

@@ -154,7 +154,7 @@ class AuthDomainIntegrationTest(
                     .fetchOne()!!
 
             When("로그인용 미동의 약관을 조회하면") {
-                val pending = authTermsPort.findPendingTerms(user.userId).single { it.id.value == term.id }
+                val pending = authTermsPort.findPendingTerms(user.userId).single { it.id == term.id }
 
                 Then("terms 결과를 auth 응답 dto로 명시적으로 변환한다") {
                     pending.code shouldBe code

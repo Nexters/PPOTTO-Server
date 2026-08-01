@@ -4,6 +4,8 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.TermId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 
 import java.time.Instant
@@ -23,13 +25,13 @@ open class TermAgreementsRecord private constructor() : UpdatableRecordImpl<Term
         set(value): Unit = set(0, value)
         get(): UUID? = get(0) as UUID?
 
-    open var userId: UUID
+    open var userId: UserId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): UserId = get(1) as UserId
 
-    open var termId: UUID
+    open var termId: TermId
         set(value): Unit = set(2, value)
-        get(): UUID = get(2) as UUID
+        get(): TermId = get(2) as TermId
 
     open var agreedAt: Instant?
         set(value): Unit = set(3, value)
@@ -44,7 +46,7 @@ open class TermAgreementsRecord private constructor() : UpdatableRecordImpl<Term
     /**
      * Create a detached, initialised TermAgreementsRecord
      */
-    constructor(id: UUID? = null, userId: UUID, termId: UUID, agreedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, userId: UserId, termId: TermId, agreedAt: Instant? = null): this() {
         this.id = id
         this.userId = userId
         this.termId = termId

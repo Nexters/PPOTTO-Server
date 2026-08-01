@@ -23,11 +23,11 @@ class TermAgreementRepository(
                 dslContext
                     .select(TERM_AGREEMENTS.TERM_ID)
                     .from(TERM_AGREEMENTS)
-                    .where(TERM_AGREEMENTS.USER_ID.eq(userId.value))
-                    .and(TERM_AGREEMENTS.TERM_ID.`in`(ids.map(TermId::value)))
+                    .where(TERM_AGREEMENTS.USER_ID.eq(userId))
+                    .and(TERM_AGREEMENTS.TERM_ID.`in`(ids))
                     .fetch(TERM_AGREEMENTS.TERM_ID)
                     .filterNotNull()
-                    .mapTo(mutableSetOf(), ::TermId)
+                    .toSet()
             } ?: emptySet()
 
     fun saveAll(
@@ -40,7 +40,7 @@ class TermAgreementRepository(
             ?.let { ids ->
                 dslContext
                     .insertInto(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
-                    .valuesOfRows(ids.map { termId -> row(userId.value, termId.value) })
+                    .valuesOfRows(ids.map { termId -> row(userId, termId) })
                     .onConflict(TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
                     .doNothing()
                     .returning()
@@ -51,14 +51,14 @@ class TermAgreementRepository(
     fun deleteAllByUserId(userId: UserId): Int =
         dslContext
             .deleteFrom(TERM_AGREEMENTS)
-            .where(TERM_AGREEMENTS.USER_ID.eq(userId.value))
+            .where(TERM_AGREEMENTS.USER_ID.eq(userId))
             .execute()
 
     private fun TermAgreementsRecord.toDomain() =
         TermAgreement(
             id = id!!,
-            userId = UserId(userId),
-            termId = TermId(termId),
+            userId = userId,
+            termId = termId,
             agreedAt = agreedAt!!,
         )
 }

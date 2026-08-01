@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.infrastructure
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -161,7 +162,7 @@ class AnalysisRepositoryTest(
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
-                .where(ANALYSIS.ID.eq(analysis.id))
+                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
                 .execute()
 
             Then("ANALYZING 상태에서도 활성 분석이 있다") {
@@ -171,7 +172,7 @@ class AnalysisRepositoryTest(
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
-                .where(ANALYSIS.ID.eq(analysis.id))
+                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
                 .execute()
 
             Then("COMPLETED 상태에서는 활성 분석이 없다") {
@@ -181,7 +182,7 @@ class AnalysisRepositoryTest(
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.FAILED.name)
-                .where(ANALYSIS.ID.eq(analysis.id))
+                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
                 .execute()
 
             Then("FAILED 상태에서도 활성 분석이 없다") {

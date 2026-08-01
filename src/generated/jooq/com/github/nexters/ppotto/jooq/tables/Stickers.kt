@@ -4,7 +4,15 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.jooq.AnalysisIdConverter
+import com.github.nexters.ppotto.global.jooq.BoardIdConverter
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.PhotoIdConverter
+import com.github.nexters.ppotto.global.jooq.StickerIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_STICKER_ANALYSIS
 import com.github.nexters.ppotto.jooq.indexes.IX_STICKER_BOARD_Z
@@ -23,7 +31,6 @@ import com.github.nexters.ppotto.jooq.tables.StickerPhotos.StickerPhotosPath
 import com.github.nexters.ppotto.jooq.tables.records.StickersRecord
 
 import java.time.Instant
-import java.util.UUID
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -93,17 +100,17 @@ open class Stickers(
     /**
      * The column <code>public.stickers.id</code>.
      */
-    val ID: TableField<StickersRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "")
+    val ID: TableField<StickersRecord, StickerId?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "", StickerIdConverter())
 
     /**
      * The column <code>public.stickers.analysis_id</code>.
      */
-    val ANALYSIS_ID: TableField<StickersRecord, UUID?> = createField(DSL.name("analysis_id"), SQLDataType.UUID.nullable(false), this, "")
+    val ANALYSIS_ID: TableField<StickersRecord, AnalysisId?> = createField(DSL.name("analysis_id"), SQLDataType.UUID.nullable(false), this, "", AnalysisIdConverter())
 
     /**
      * The column <code>public.stickers.board_id</code>.
      */
-    val BOARD_ID: TableField<StickersRecord, UUID?> = createField(DSL.name("board_id"), SQLDataType.UUID.nullable(false), this, "")
+    val BOARD_ID: TableField<StickersRecord, BoardId?> = createField(DSL.name("board_id"), SQLDataType.UUID.nullable(false), this, "", BoardIdConverter())
 
     /**
      * The column <code>public.stickers.type</code>.
@@ -123,7 +130,7 @@ open class Stickers(
     /**
      * The column <code>public.stickers.source_photo_id</code>.
      */
-    val SOURCE_PHOTO_ID: TableField<StickersRecord, UUID?> = createField(DSL.name("source_photo_id"), SQLDataType.UUID, this, "")
+    val SOURCE_PHOTO_ID: TableField<StickersRecord, PhotoId?> = createField(DSL.name("source_photo_id"), SQLDataType.UUID, this, "", PhotoIdConverter())
 
     /**
      * The column <code>public.stickers.image_key</code>.

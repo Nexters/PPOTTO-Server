@@ -32,7 +32,7 @@ photo/
 - Reads: QueryService may project directly to dto with jOOQ. Writes go through the domain model.
 - Never expose jOOQ-generated POJOs/Records in API responses. Always map to dto.
 - Typed identifiers (`global/identifier/Ids.kt`, e.g. `UserId`) are used end to end: domain models, repository public signatures, application services, cross-domain ports, and presentation (DTO id fields, `@PathVariable`, `@AuthenticatedUser`/`@CurrentUser`). JSON and OpenAPI representations stay unwrapped plain uuid strings.
-- Raw `UUID` remains only at boundaries: jOOQ DSL bindings inside repositories, the SecurityContext principal, and external representations (JWT, Redis) inside adapters.
+- jOOQ id columns are generated as typed identifiers via codegen `forcedType` converters (`global/jooq/`), so DSL bindings and `toDomain` mappings take typed ids directly and column-level transposition fails to compile. Raw `UUID` remains only at boundaries: the SecurityContext principal, external representations (JWT, Redis) inside adapters, and the analysis-internal UUID surface, which wraps ids at DSL binding points.
 - New id types are added only for ids crossing method boundaries; purely internal ids stay `UUID` (see `src/main/kotlin/com/github/nexters/ppotto/global/identifier/AGENTS.md`).
 
 ## Spec-Driven Development

@@ -1,6 +1,5 @@
 package com.github.nexters.ppotto.terms.infrastructure
 
-import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.jooq.tables.records.TermsRecord
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.terms.domain.Term
@@ -23,7 +22,7 @@ class TermRepository(
 
     private fun TermsRecord.toDomain() =
         Term(
-            id = TermId(id!!),
+            id = id!!,
             code = code,
             version = version,
             isRequired = isRequired!!,

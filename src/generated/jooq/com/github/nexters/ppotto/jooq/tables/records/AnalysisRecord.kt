@@ -4,10 +4,12 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.Analysis
 
 import java.time.Instant
-import java.util.UUID
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -19,17 +21,17 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRecord>(Analysis.ANALYSIS) {
 
-    open var id: UUID?
+    open var id: AnalysisId?
         set(value): Unit = set(0, value)
-        get(): UUID? = get(0) as UUID?
+        get(): AnalysisId? = get(0) as AnalysisId?
 
-    open var userId: UUID
+    open var userId: UserId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): UserId = get(1) as UserId
 
-    open var boardId: UUID
+    open var boardId: BoardId
         set(value): Unit = set(2, value)
-        get(): UUID = get(2) as UUID
+        get(): BoardId = get(2) as BoardId
 
     open var status: String
         set(value): Unit = set(3, value)
@@ -63,12 +65,12 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
+    override fun key(): Record1<AnalysisId?> = super.key() as Record1<AnalysisId?>
 
     /**
      * Create a detached, initialised AnalysisRecord
      */
-    constructor(id: UUID? = null, userId: UUID, boardId: UUID, status: String, progress: Int? = null, failedReason: String? = null, startedAt: Instant? = null, completedAt: Instant? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: AnalysisId? = null, userId: UserId, boardId: BoardId, status: String, progress: Int? = null, failedReason: String? = null, startedAt: Instant? = null, completedAt: Instant? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.userId = userId
         this.boardId = boardId

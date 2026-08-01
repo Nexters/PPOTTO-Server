@@ -44,6 +44,7 @@ class TermsControllerTest(
                     "terms-controller-$suffix@example.com",
                 ).returning(USERS.ID)
                 .fetchOne(USERS.ID)!!
+                .value
         }
 
         fun saveTerm(
@@ -108,7 +109,7 @@ class TermsControllerTest(
                     dslContext.fetchCount(
                         TERM_AGREEMENTS,
                         TERM_AGREEMENTS.USER_ID
-                            .eq(userId)
+                            .eq(UserId(userId))
                             .and(TERM_AGREEMENTS.TERM_ID.eq(term.id)),
                     ) shouldBe 1
 

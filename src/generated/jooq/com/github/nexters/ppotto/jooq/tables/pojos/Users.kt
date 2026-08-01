@@ -4,11 +4,11 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 
 import java.io.Serializable
 import java.time.Instant
-import java.util.UUID
 
 
 /**
@@ -16,7 +16,7 @@ import java.util.UUID
  */
 @Suppress("warnings")
 data class Users(
-    val id: UUID? = null,
+    val id: UserId? = null,
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null,
     val provider: OauthProvider? = null,

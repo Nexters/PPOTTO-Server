@@ -4,6 +4,7 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.RecapComments
 
 import java.time.Instant
@@ -23,9 +24,9 @@ open class RecapCommentsRecord private constructor() : UpdatableRecordImpl<Recap
         set(value): Unit = set(0, value)
         get(): UUID? = get(0) as UUID?
 
-    open var stickerId: UUID
+    open var stickerId: StickerId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): StickerId = get(1) as StickerId
 
     open var content: String
         set(value): Unit = set(2, value)
@@ -56,7 +57,7 @@ open class RecapCommentsRecord private constructor() : UpdatableRecordImpl<Recap
     /**
      * Create a detached, initialised RecapCommentsRecord
      */
-    constructor(id: UUID? = null, stickerId: UUID, content: String, posX: Double? = null, posY: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, stickerId: StickerId, content: String, posX: Double? = null, posY: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.stickerId = stickerId
         this.content = content

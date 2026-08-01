@@ -39,9 +39,9 @@ class DrawingRepository(
         drawings.forEach { drawing ->
             insert =
                 insert.values(
-                    drawing.id.value,
-                    drawing.boardId.value,
-                    drawing.stickerId?.value,
+                    drawing.id,
+                    drawing.boardId,
+                    drawing.stickerId,
                     drawing.scope.name,
                     JSONB.jsonb(objectMapper.writeValueAsString(drawing.stroke)),
                     drawing.color,
@@ -68,7 +68,7 @@ class DrawingRepository(
     fun findByBoardId(boardId: BoardId): List<Drawing> =
         dslContext
             .selectFrom(DRAWINGS)
-            .where(DRAWINGS.BOARD_ID.eq(boardId.value))
+            .where(DRAWINGS.BOARD_ID.eq(boardId))
             .and(DRAWINGS.DELETED_AT.isNull)
             .orderBy(DRAWINGS.ID.asc())
             .fetch()
@@ -81,9 +81,9 @@ class DrawingRepository(
                 dslContext
                     .select(DRAWINGS.ID, DRAWINGS.BOARD_ID)
                     .from(DRAWINGS)
-                    .where(DRAWINGS.ID.`in`(drawingIds.map(DrawingId::value)))
+                    .where(DRAWINGS.ID.`in`(drawingIds))
                     .fetch()
-                    .associate { record -> DrawingId(record.value1()!!) to BoardId(record.value2()!!) }
+                    .associate { record -> record.value1()!! to record.value2()!! }
             } ?: emptyMap()
 
     fun findActiveIds(
@@ -96,11 +96,10 @@ class DrawingRepository(
                 dslContext
                     .select(DRAWINGS.ID)
                     .from(DRAWINGS)
-                    .where(DRAWINGS.BOARD_ID.eq(boardId.value))
-                    .and(DRAWINGS.ID.`in`(drawingIds.map(DrawingId::value)))
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.ID.`in`(drawingIds))
                     .and(DRAWINGS.DELETED_AT.isNull)
                     .mapNotNull { record -> record.value1() }
-                    .map(::DrawingId)
                     .toSet()
             } ?: emptySet()
 
@@ -114,8 +113,8 @@ class DrawingRepository(
                 dslContext
                     .update(DRAWINGS)
                     .set(DRAWINGS.DELETED_AT, Instant.now())
-                    .where(DRAWINGS.BOARD_ID.eq(boardId.value))
-                    .and(DRAWINGS.ID.`in`(drawingIds.map(DrawingId::value)))
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.ID.`in`(drawingIds))
                     .and(DRAWINGS.DELETED_AT.isNull)
                     .execute()
             } ?: 0
@@ -130,8 +129,8 @@ class DrawingRepository(
                 dslContext
                     .update(DRAWINGS)
                     .set(DRAWINGS.DELETED_AT, Instant.now())
-                    .where(DRAWINGS.BOARD_ID.eq(boardId.value))
-                    .and(DRAWINGS.STICKER_ID.`in`(ids.map(StickerId::value)))
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.STICKER_ID.`in`(ids))
                     .and(DRAWINGS.DELETED_AT.isNull)
                     .execute()
             } ?: 0
@@ -140,7 +139,7 @@ class DrawingRepository(
         dslContext
             .update(DRAWINGS)
             .set(DRAWINGS.DELETED_AT, Instant.now())
-            .where(DRAWINGS.BOARD_ID.eq(boardId.value))
+            .where(DRAWINGS.BOARD_ID.eq(boardId))
             .and(DRAWINGS.DELETED_AT.isNull)
             .execute()
 
@@ -151,15 +150,15 @@ class DrawingRepository(
             ?.let { ids ->
                 dslContext
                     .deleteFrom(DRAWINGS)
-                    .where(DRAWINGS.BOARD_ID.`in`(ids.map(BoardId::value)))
+                    .where(DRAWINGS.BOARD_ID.`in`(ids))
                     .execute()
             } ?: 0
 
     private fun DrawingsRecord.toDomain() =
         Drawing(
-            id = DrawingId(id!!),
-            boardId = BoardId(boardId),
-            stickerId = stickerId?.let(::StickerId),
+            id = id!!,
+            boardId = boardId,
+            stickerId = stickerId,
             scope = DrawingScope.valueOf(scope),
             stroke = objectMapper.readValue(stroke.data()),
             color = color,

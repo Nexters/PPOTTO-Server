@@ -4,7 +4,11 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.jooq.BoardIdConverter
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.UserIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_BOARD_USER_CREATED
 import com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY
@@ -13,7 +17,6 @@ import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 
 import java.time.Instant
-import java.util.UUID
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -83,12 +86,12 @@ open class Boards(
     /**
      * The column <code>public.boards.id</code>.
      */
-    val ID: TableField<BoardsRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "")
+    val ID: TableField<BoardsRecord, BoardId?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "", BoardIdConverter())
 
     /**
      * The column <code>public.boards.user_id</code>.
      */
-    val USER_ID: TableField<BoardsRecord, UUID?> = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "")
+    val USER_ID: TableField<BoardsRecord, UserId?> = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "", UserIdConverter())
 
     /**
      * The column <code>public.boards.created_at</code>.

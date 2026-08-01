@@ -2,6 +2,9 @@ package com.github.nexters.ppotto.analysis.infrastructure
 
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import org.jooq.DSLContext
@@ -19,7 +22,7 @@ class AnalysisRepository(
     ): Analysis =
         dslContext
             .insertInto(ANALYSIS, ANALYSIS.USER_ID, ANALYSIS.BOARD_ID, ANALYSIS.STATUS)
-            .values(userId, boardId, AnalysisStatus.UPLOADING.name)
+            .values(UserId(userId), BoardId(boardId), AnalysisStatus.UPLOADING.name)
             .returning()
             .fetchOne()!!
             .toDomain()
@@ -27,7 +30,7 @@ class AnalysisRepository(
     fun findById(id: UUID): Analysis? =
         dslContext
             .selectFrom(ANALYSIS)
-            .where(ANALYSIS.ID.eq(id))
+            .where(ANALYSIS.ID.eq(AnalysisId(id)))
             .fetchOne()
             ?.toDomain()
 
@@ -37,15 +40,15 @@ class AnalysisRepository(
     ): Analysis? =
         dslContext
             .selectFrom(ANALYSIS)
-            .where(ANALYSIS.ID.eq(id))
-            .and(ANALYSIS.USER_ID.eq(userId))
+            .where(ANALYSIS.ID.eq(AnalysisId(id)))
+            .and(ANALYSIS.USER_ID.eq(UserId(userId)))
             .fetchOne()
             ?.toDomain()
 
     fun findActiveByUserId(userId: UUID): Analysis? =
         dslContext
             .selectFrom(ANALYSIS)
-            .where(ANALYSIS.USER_ID.eq(userId))
+            .where(ANALYSIS.USER_ID.eq(UserId(userId)))
             .and(
                 ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }),
             ).orderBy(ANALYSIS.CREATED_AT.desc())
@@ -56,7 +59,7 @@ class AnalysisRepository(
     fun findByIdForUpdate(id: UUID): Analysis? =
         dslContext
             .selectFrom(ANALYSIS)
-            .where(ANALYSIS.ID.eq(id))
+            .where(ANALYSIS.ID.eq(AnalysisId(id)))
             .forUpdate()
             .fetchOne()
             ?.toDomain()
@@ -68,8 +71,8 @@ class AnalysisRepository(
         dslContext.fetchExists(
             dslContext
                 .selectFrom(ANALYSIS)
-                .where(ANALYSIS.BOARD_ID.eq(boardId))
-                .and(ANALYSIS.USER_ID.eq(userId))
+                .where(ANALYSIS.BOARD_ID.eq(BoardId(boardId)))
+                .and(ANALYSIS.USER_ID.eq(UserId(userId)))
                 .and(
                     ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }),
                 ),
@@ -84,7 +87,7 @@ class AnalysisRepository(
             .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
             .set(ANALYSIS.PROGRESS, ANALYZING_STARTED_PROGRESS)
             .set(ANALYSIS.STARTED_AT, startedAt)
-            .where(ANALYSIS.ID.eq(id))
+            .where(ANALYSIS.ID.eq(AnalysisId(id)))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.UPLOADING.name))
             .execute()
 
@@ -95,7 +98,7 @@ class AnalysisRepository(
         dslContext
             .update(ANALYSIS)
             .set(ANALYSIS.PROGRESS, progress.coerceIn(MIN_PROGRESS, MAX_IN_PROGRESS))
-            .where(ANALYSIS.ID.eq(id))
+            .where(ANALYSIS.ID.eq(AnalysisId(id)))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
             .execute()
 
@@ -108,7 +111,7 @@ class AnalysisRepository(
             .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
             .set(ANALYSIS.PROGRESS, COMPLETED_PROGRESS)
             .set(ANALYSIS.COMPLETED_AT, completedAt)
-            .where(ANALYSIS.ID.eq(id))
+            .where(ANALYSIS.ID.eq(AnalysisId(id)))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
             .execute()
 
@@ -120,15 +123,15 @@ class AnalysisRepository(
             .update(ANALYSIS)
             .set(ANALYSIS.STATUS, AnalysisStatus.FAILED.name)
             .set(ANALYSIS.FAILED_REASON, failedReason)
-            .where(ANALYSIS.ID.eq(id))
+            .where(ANALYSIS.ID.eq(AnalysisId(id)))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
             .execute()
 
     private fun AnalysisRecord.toDomain() =
         Analysis(
-            id = id!!,
-            userId = userId,
-            boardId = boardId,
+            id = id!!.value,
+            userId = userId.value,
+            boardId = boardId.value,
             status = AnalysisStatus.valueOf(status),
             progress = progress!!,
             failedReason = failedReason,

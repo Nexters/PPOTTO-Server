@@ -25,10 +25,10 @@ class StickerRecapRepository(
             ?.let { ids ->
                 dslContext
                     .insertInto(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID, STICKER_PHOTOS.PHOTO_ID)
-                    .valuesOfRows(ids.map { row(stickerId.value, it.value) })
+                    .valuesOfRows(ids.map { row(stickerId, it) })
                     .returning()
                     .fetch()
-                    .map { StickerPhoto(it.id!!, StickerId(it.stickerId), PhotoId(it.photoId)) }
+                    .map { StickerPhoto(it.id!!, it.stickerId, it.photoId) }
             } ?: emptyList()
 
     fun saveComments(
@@ -47,7 +47,7 @@ class StickerRecapRepository(
                         RECAP_COMMENTS.POS_Y,
                     ).valuesOfRows(
                         comments.map {
-                            row(stickerId.value, it.content, it.posX, it.posY)
+                            row(stickerId, it.content, it.posX, it.posY)
                         },
                     ).returning()
                     .fetch()
@@ -58,15 +58,14 @@ class StickerRecapRepository(
         dslContext
             .select(STICKER_PHOTOS.PHOTO_ID)
             .from(STICKER_PHOTOS)
-            .where(STICKER_PHOTOS.STICKER_ID.eq(stickerId.value))
+            .where(STICKER_PHOTOS.STICKER_ID.eq(stickerId))
             .fetch(STICKER_PHOTOS.PHOTO_ID)
             .filterNotNull()
-            .map(::PhotoId)
 
     fun findComments(stickerId: StickerId): List<RecapComment> =
         dslContext
             .selectFrom(RECAP_COMMENTS)
-            .where(RECAP_COMMENTS.STICKER_ID.eq(stickerId.value))
+            .where(RECAP_COMMENTS.STICKER_ID.eq(stickerId))
             .orderBy(RECAP_COMMENTS.ID.asc())
             .fetch()
             .map { it.toDomain() }
@@ -74,7 +73,6 @@ class StickerRecapRepository(
     fun deleteByStickerIds(stickerIds: Collection<StickerId>) {
         stickerIds
             .takeIf { it.isNotEmpty() }
-            ?.map(StickerId::value)
             ?.let { ids ->
                 dslContext
                     .deleteFrom(RECAP_COMMENTS)
@@ -92,7 +90,7 @@ class StickerRecapRepository(
     private fun RecapCommentsRecord.toDomain() =
         RecapComment(
             id = id!!,
-            stickerId = StickerId(stickerId),
+            stickerId = stickerId,
             content = content,
             posX = posX,
             posY = posY,

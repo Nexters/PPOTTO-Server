@@ -411,7 +411,7 @@ class AnalysisServiceTest(
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
-                .where(ANALYSIS.ID.eq(created.analysisId))
+                .where(ANALYSIS.ID.eq(AnalysisId(created.analysisId)))
                 .execute()
 
             When("업로드 완료를 통보하면") {
@@ -432,7 +432,7 @@ class AnalysisServiceTest(
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
-                .where(ANALYSIS.ID.eq(created.analysisId))
+                .where(ANALYSIS.ID.eq(AnalysisId(created.analysisId)))
                 .execute()
 
             When("업로드 완료를 통보하면") {
@@ -479,7 +479,7 @@ class AnalysisServiceTest(
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
-                .where(ANALYSIS.ID.eq(created.analysisId))
+                .where(ANALYSIS.ID.eq(AnalysisId(created.analysisId)))
                 .execute()
 
             When("새로운 분석 생성을 요청하면") {
@@ -498,7 +498,7 @@ class AnalysisServiceTest(
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.FAILED.name)
-                .where(ANALYSIS.ID.eq(created.analysisId))
+                .where(ANALYSIS.ID.eq(AnalysisId(created.analysisId)))
                 .execute()
 
             When("새로운 분석 생성을 요청하면") {

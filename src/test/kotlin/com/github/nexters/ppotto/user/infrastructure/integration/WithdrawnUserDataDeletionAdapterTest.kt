@@ -147,7 +147,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                     .filter { it.isRequired }
                     .map { it.id },
             )
-            dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id.value)) shouldBe true
+            dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id)) shouldBe true
             userRepository.withdraw(user.withdraw(Instant.parse("2026-07-01T00:00:00Z")))!!
 
             When("탈퇴 사용자 정리 배치를 실행하면") {
@@ -161,15 +161,15 @@ class WithdrawnUserDataDeletionAdapterTest(
                     result.deletedUserIds shouldContainExactly listOf(user.id)
                     objectStorageCleaner.deletedPrefixes shouldContain PhotoObjectKeys.prefixFor(analysis.id)
                     objectStorageCleaner.deletedObjectKeys shouldContain STICKER_IMAGE_KEY
-                    dslContext.fetchExists(RECAP_COMMENTS, RECAP_COMMENTS.STICKER_ID.eq(stickerId.value)) shouldBe false
-                    dslContext.fetchExists(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID.eq(stickerId.value)) shouldBe false
-                    dslContext.fetchExists(STICKERS, STICKERS.ID.eq(stickerId.value)) shouldBe false
-                    dslContext.fetchExists(DRAWINGS, DRAWINGS.ID.eq(drawing.id.value)) shouldBe false
-                    dslContext.fetchExists(PHOTOS, PHOTOS.ID.eq(photo.id)) shouldBe false
-                    dslContext.fetchExists(ANALYSIS, ANALYSIS.ID.eq(analysis.id)) shouldBe false
-                    dslContext.fetchExists(BOARDS, BOARDS.ID.eq(board.id.value)) shouldBe false
-                    dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id.value)) shouldBe false
-                    dslContext.fetchExists(USERS, USERS.ID.eq(user.id.value)) shouldBe false
+                    dslContext.fetchExists(RECAP_COMMENTS, RECAP_COMMENTS.STICKER_ID.eq(stickerId)) shouldBe false
+                    dslContext.fetchExists(STICKER_PHOTOS, STICKER_PHOTOS.STICKER_ID.eq(stickerId)) shouldBe false
+                    dslContext.fetchExists(STICKERS, STICKERS.ID.eq(stickerId)) shouldBe false
+                    dslContext.fetchExists(DRAWINGS, DRAWINGS.ID.eq(drawing.id)) shouldBe false
+                    dslContext.fetchExists(PHOTOS, PHOTOS.ID.eq(PhotoId(photo.id))) shouldBe false
+                    dslContext.fetchExists(ANALYSIS, ANALYSIS.ID.eq(AnalysisId(analysis.id))) shouldBe false
+                    dslContext.fetchExists(BOARDS, BOARDS.ID.eq(board.id)) shouldBe false
+                    dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(user.id)) shouldBe false
+                    dslContext.fetchExists(USERS, USERS.ID.eq(user.id)) shouldBe false
                 }
             }
         }
@@ -184,7 +184,7 @@ class WithdrawnUserDataDeletionAdapterTest(
 
                 Then("두 번째 실행은 대상이 없어 멱등하게 끝난다") {
                     second.deletedUserIds.contains(user.id) shouldBe false
-                    dslContext.fetchExists(USERS, USERS.ID.eq(user.id.value)) shouldBe false
+                    dslContext.fetchExists(USERS, USERS.ID.eq(user.id)) shouldBe false
                 }
             }
         }

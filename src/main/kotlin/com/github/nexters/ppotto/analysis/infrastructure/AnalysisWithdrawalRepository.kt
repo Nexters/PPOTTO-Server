@@ -14,15 +14,14 @@ class AnalysisWithdrawalRepository(
         dslContext
             .select(ANALYSIS.ID)
             .from(ANALYSIS)
-            .where(ANALYSIS.USER_ID.eq(userId.value))
+            .where(ANALYSIS.USER_ID.eq(userId))
             .orderBy(ANALYSIS.ID)
             .fetch(ANALYSIS.ID)
             .filterNotNull()
-            .map(::AnalysisId)
 
     fun hardDeleteAllByUserId(userId: UserId): Int =
         dslContext
             .deleteFrom(ANALYSIS)
-            .where(ANALYSIS.USER_ID.eq(userId.value))
+            .where(ANALYSIS.USER_ID.eq(userId))
             .execute()
 }

@@ -36,7 +36,7 @@ class UserRepositoryTest(
                     dslContext
                         .select(USERS.PROVIDER_REFRESH_TOKEN)
                         .from(USERS)
-                        .where(USERS.ID.eq(saved.id.value))
+                        .where(USERS.ID.eq(saved.id))
                         .fetchOne(USERS.PROVIDER_REFRESH_TOKEN)
 
                 Then("계정을 반환하고 토큰은 평문과 다르게 저장한다") {

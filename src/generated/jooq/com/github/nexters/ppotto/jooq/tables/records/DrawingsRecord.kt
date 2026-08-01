@@ -4,10 +4,12 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.Drawings
 
 import java.time.Instant
-import java.util.UUID
 
 import org.jooq.JSONB
 import org.jooq.Record1
@@ -20,17 +22,17 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRecord>(Drawings.DRAWINGS) {
 
-    open var id: UUID?
+    open var id: DrawingId?
         set(value): Unit = set(0, value)
-        get(): UUID? = get(0) as UUID?
+        get(): DrawingId? = get(0) as DrawingId?
 
-    open var boardId: UUID
+    open var boardId: BoardId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): BoardId = get(1) as BoardId
 
-    open var stickerId: UUID?
+    open var stickerId: StickerId?
         set(value): Unit = set(2, value)
-        get(): UUID? = get(2) as UUID?
+        get(): StickerId? = get(2) as StickerId?
 
     open var scope: String
         set(value): Unit = set(3, value)
@@ -64,12 +66,12 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
+    override fun key(): Record1<DrawingId?> = super.key() as Record1<DrawingId?>
 
     /**
      * Create a detached, initialised DrawingsRecord
      */
-    constructor(id: UUID? = null, boardId: UUID, stickerId: UUID? = null, scope: String, stroke: JSONB, color: String, strokeWidth: Double, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null): this() {
+    constructor(id: DrawingId? = null, boardId: BoardId, stickerId: StickerId? = null, scope: String, stroke: JSONB, color: String, strokeWidth: Double, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null): this() {
         this.id = id
         this.boardId = boardId
         this.stickerId = stickerId

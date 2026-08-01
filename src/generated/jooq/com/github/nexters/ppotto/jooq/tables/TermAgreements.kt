@@ -4,7 +4,11 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.TermId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.TermIdConverter
+import com.github.nexters.ppotto.global.jooq.UserIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_TERM_AGREEMENT_TERM
 import com.github.nexters.ppotto.jooq.keys.TERM_AGREEMENTS_PKEY
@@ -90,12 +94,12 @@ open class TermAgreements(
     /**
      * The column <code>public.term_agreements.user_id</code>.
      */
-    val USER_ID: TableField<TermAgreementsRecord, UUID?> = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "")
+    val USER_ID: TableField<TermAgreementsRecord, UserId?> = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "", UserIdConverter())
 
     /**
      * The column <code>public.term_agreements.term_id</code>.
      */
-    val TERM_ID: TableField<TermAgreementsRecord, UUID?> = createField(DSL.name("term_id"), SQLDataType.UUID.nullable(false), this, "")
+    val TERM_ID: TableField<TermAgreementsRecord, TermId?> = createField(DSL.name("term_id"), SQLDataType.UUID.nullable(false), this, "", TermIdConverter())
 
     /**
      * The column <code>public.term_agreements.agreed_at</code>.

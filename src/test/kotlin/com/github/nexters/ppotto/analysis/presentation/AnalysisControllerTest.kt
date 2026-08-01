@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -267,7 +268,7 @@ class AnalysisControllerTest(
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
                 .set(ANALYSIS.PROGRESS, 10)
                 .set(ANALYSIS.STARTED_AT, Instant.parse("2026-07-27T05:02:11Z"))
-                .where(ANALYSIS.ID.eq(analysis.id))
+                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
                 .execute()
 
             When("분석 상태를 조회하면") {
@@ -294,7 +295,7 @@ class AnalysisControllerTest(
                 .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
                 .set(ANALYSIS.PROGRESS, 100)
                 .set(ANALYSIS.COMPLETED_AT, Instant.parse("2026-07-27T05:03:38Z"))
-                .where(ANALYSIS.ID.eq(analysis.id))
+                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
                 .execute()
 
             When("진행 중 분석을 조회하면") {

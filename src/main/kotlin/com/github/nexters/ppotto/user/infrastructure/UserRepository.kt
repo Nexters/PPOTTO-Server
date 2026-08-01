@@ -40,7 +40,7 @@ class UserRepository(
     fun findById(id: UserId): User? =
         dslContext
             .selectFrom(USERS)
-            .where(USERS.ID.eq(id.value))
+            .where(USERS.ID.eq(id))
             .and(USERS.DELETED_AT.isNull)
             .and(USERS.PROVIDER.isNotNull)
             .and(USERS.PROVIDER_USER_ID.isNotNull)
@@ -72,7 +72,7 @@ class UserRepository(
                 providerRefreshToken?.let {
                     set(USERS.PROVIDER_REFRESH_TOKEN, it.value)
                 }
-            }.where(USERS.ID.eq(id.value))
+            }.where(USERS.ID.eq(id))
             .and(USERS.DELETED_AT.isNull)
             .returning()
             .fetchOne()
@@ -84,7 +84,7 @@ class UserRepository(
             .set(USERS.EMAIL, user.email)
             .setNull(USERS.PROVIDER_REFRESH_TOKEN)
             .set(USERS.DELETED_AT, user.deletedAt)
-            .where(USERS.ID.eq(user.id.value))
+            .where(USERS.ID.eq(user.id))
             .and(USERS.DELETED_AT.isNull)
             .returning()
             .fetchOne()
@@ -106,14 +106,14 @@ class UserRepository(
     fun hardDelete(id: UserId): Boolean =
         dslContext
             .deleteFrom(USERS)
-            .where(USERS.ID.eq(id.value))
+            .where(USERS.ID.eq(id))
             .and(USERS.DELETED_AT.isNotNull)
             .execute() == 1
 }
 
 internal fun UsersRecord.toDomain() =
     User(
-        id = UserId(id!!),
+        id = id!!,
         provider = provider!!.toDomain(),
         providerUserId = providerUserId!!,
         email = email!!,

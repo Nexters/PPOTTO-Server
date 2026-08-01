@@ -2,7 +2,6 @@ package com.github.nexters.ppotto.sticker.infrastructure
 
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
-import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.records.StickersRecord
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
@@ -46,12 +45,12 @@ class StickerRepository(
                 STICKERS.BADGE_OFFSET_Y,
                 STICKERS.BADGE_ROTATION,
             ).values(
-                analysisId.value,
-                boardId.value,
+                analysisId,
+                boardId,
                 creation.type.name,
                 creation.title,
                 creation.summary,
-                creation.sourcePhotoId?.value,
+                creation.sourcePhotoId,
                 creation.imageKey,
                 creation.textContent,
                 creation.layout.posX,
@@ -69,7 +68,7 @@ class StickerRepository(
     fun findById(id: StickerId): Sticker? =
         dslContext
             .selectFrom(STICKERS)
-            .where(STICKERS.ID.eq(id.value))
+            .where(STICKERS.ID.eq(id))
             .and(STICKERS.DELETED_AT.isNull)
             .fetchOne()
             ?.toDomain()
@@ -77,7 +76,7 @@ class StickerRepository(
     fun findAllByBoardId(boardId: BoardId): List<Sticker> =
         dslContext
             .selectFrom(STICKERS)
-            .where(STICKERS.BOARD_ID.eq(boardId.value))
+            .where(STICKERS.BOARD_ID.eq(boardId))
             .and(STICKERS.DELETED_AT.isNull)
             .orderBy(STICKERS.Z_INDEX.asc(), STICKERS.ID.asc())
             .fetch()
@@ -86,7 +85,7 @@ class StickerRepository(
     fun findAllByAnalysisId(analysisId: AnalysisId): List<Sticker> =
         dslContext
             .selectFrom(STICKERS)
-            .where(STICKERS.ANALYSIS_ID.eq(analysisId.value))
+            .where(STICKERS.ANALYSIS_ID.eq(analysisId))
             .orderBy(STICKERS.ID.asc())
             .fetch()
             .map { it.toDomain() }
@@ -107,8 +106,8 @@ class StickerRepository(
                 dslContext
                     .selectCount()
                     .from(STICKERS)
-                    .where(STICKERS.BOARD_ID.eq(boardId.value))
-                    .and(STICKERS.ID.`in`(uniqueIds.map(StickerId::value)))
+                    .where(STICKERS.BOARD_ID.eq(boardId))
+                    .and(STICKERS.ID.`in`(uniqueIds))
                     .and(STICKERS.DELETED_AT.isNull)
                     .fetchSingle(0, Int::class.java) == uniqueIds.size
         }
@@ -121,21 +120,21 @@ class StickerRepository(
                 dslContext
                     .select(STICKERS.ID, STICKERS.IMAGE_KEY)
                     .from(STICKERS)
-                    .where(STICKERS.BOARD_ID.`in`(uniqueIds.map(BoardId::value)))
+                    .where(STICKERS.BOARD_ID.`in`(uniqueIds))
                     .fetch()
-                    .map { record -> StickerDeletionTarget(StickerId(record.value1()!!), record.value2()) }
+                    .map { record -> StickerDeletionTarget(record.value1()!!, record.value2()) }
             } ?: emptyList()
 
     private fun StickersRecord.toDomain() =
         Sticker(
-            id = StickerId(id!!),
-            analysisId = AnalysisId(analysisId),
-            boardId = BoardId(boardId),
+            id = id!!,
+            analysisId = analysisId,
+            boardId = boardId,
             type = StickerType.valueOf(type),
             title = title,
             summary = summary,
             viewedAt = viewedAt,
-            sourcePhotoId = sourcePhotoId?.let(::PhotoId),
+            sourcePhotoId = sourcePhotoId,
             imageKey = imageKey,
             textContent = textContent,
             posX = posX,

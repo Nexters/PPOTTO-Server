@@ -4,7 +4,9 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.StickerIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_RECAP_STICKER
 import com.github.nexters.ppotto.jooq.keys.RECAP_COMMENTS_PKEY
@@ -88,7 +90,7 @@ open class RecapComments(
     /**
      * The column <code>public.recap_comments.sticker_id</code>.
      */
-    val STICKER_ID: TableField<RecapCommentsRecord, UUID?> = createField(DSL.name("sticker_id"), SQLDataType.UUID.nullable(false), this, "")
+    val STICKER_ID: TableField<RecapCommentsRecord, StickerId?> = createField(DSL.name("sticker_id"), SQLDataType.UUID.nullable(false), this, "", StickerIdConverter())
 
     /**
      * The column <code>public.recap_comments.content</code>.

@@ -8,6 +8,7 @@ import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -147,6 +148,6 @@ private fun changeStatus(
     dslContext
         .update(ANALYSIS)
         .set(ANALYSIS.STATUS, status.name)
-        .where(ANALYSIS.ID.eq(analysisId))
+        .where(ANALYSIS.ID.eq(AnalysisId(analysisId)))
         .execute()
 }

@@ -19,7 +19,7 @@ class StickerCommandRepository(
         dslContext
             .update(STICKERS)
             .set(STICKERS.TITLE, title)
-            .where(STICKERS.ID.eq(stickerId.value))
+            .where(STICKERS.ID.eq(stickerId))
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
@@ -30,7 +30,7 @@ class StickerCommandRepository(
         dslContext
             .update(STICKERS)
             .set(STICKERS.VIEWED_AT, DSL.coalesce(STICKERS.VIEWED_AT, viewedAt))
-            .where(STICKERS.ID.eq(stickerId.value))
+            .where(STICKERS.ID.eq(stickerId))
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
@@ -46,7 +46,7 @@ class StickerCommandRepository(
             .set(STICKERS.BADGE_OFFSET_X, sticker.badgeOffsetX)
             .set(STICKERS.BADGE_OFFSET_Y, sticker.badgeOffsetY)
             .set(STICKERS.BADGE_ROTATION, sticker.badgeRotation)
-            .where(STICKERS.ID.eq(sticker.id.value))
+            .where(STICKERS.ID.eq(sticker.id))
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
@@ -57,7 +57,7 @@ class StickerCommandRepository(
         dslContext
             .update(STICKERS)
             .set(STICKERS.DELETED_AT, deletedAt)
-            .where(STICKERS.ID.eq(stickerId.value))
+            .where(STICKERS.ID.eq(stickerId))
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
@@ -68,7 +68,7 @@ class StickerCommandRepository(
             ?.let { uniqueIds ->
                 dslContext
                     .deleteFrom(STICKERS)
-                    .where(STICKERS.ID.`in`(uniqueIds.map(StickerId::value)))
+                    .where(STICKERS.ID.`in`(uniqueIds))
                     .execute()
             } ?: 0
 }

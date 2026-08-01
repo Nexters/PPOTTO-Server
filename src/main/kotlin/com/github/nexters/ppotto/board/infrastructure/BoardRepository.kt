@@ -26,7 +26,7 @@ class BoardRepository(
     ): Board =
         dslContext
             .insertInto(BOARDS, BOARDS.USER_ID, BOARDS.NAME)
-            .values(userId.value, name)
+            .values(userId, name)
             .returning()
             .fetchOne()!!
             .toDomain()
@@ -34,7 +34,7 @@ class BoardRepository(
     fun findById(id: BoardId): Board? =
         dslContext
             .selectFrom(BOARDS)
-            .where(BOARDS.ID.eq(id.value))
+            .where(BOARDS.ID.eq(id))
             .and(BOARDS.DELETED_AT.isNull)
             .fetchOne()
             ?.toDomain()
@@ -45,8 +45,8 @@ class BoardRepository(
     ): Board? =
         dslContext
             .selectFrom(BOARDS)
-            .where(BOARDS.ID.eq(id.value))
-            .and(BOARDS.USER_ID.eq(userId.value))
+            .where(BOARDS.ID.eq(id))
+            .and(BOARDS.USER_ID.eq(userId))
             .and(BOARDS.DELETED_AT.isNull)
             .fetchOne()
             ?.toDomain()
@@ -57,8 +57,8 @@ class BoardRepository(
     ): Board? =
         dslContext
             .selectFrom(BOARDS)
-            .where(BOARDS.ID.eq(id.value))
-            .and(BOARDS.USER_ID.eq(userId.value))
+            .where(BOARDS.ID.eq(id))
+            .and(BOARDS.USER_ID.eq(userId))
             .and(BOARDS.DELETED_AT.isNull)
             .forUpdate()
             .fetchOne()
@@ -67,7 +67,7 @@ class BoardRepository(
     fun findByUserId(userId: UserId): List<Board> =
         dslContext
             .selectFrom(BOARDS)
-            .where(BOARDS.USER_ID.eq(userId.value))
+            .where(BOARDS.USER_ID.eq(userId))
             .and(BOARDS.DELETED_AT.isNull)
             .orderBy(BOARDS.ID.asc())
             .fetch()
@@ -79,7 +79,7 @@ class BoardRepository(
                 dslContext
                     .selectOne()
                     .from(BOARDS)
-                    .where(BOARDS.USER_ID.eq(userId.value))
+                    .where(BOARDS.USER_ID.eq(userId))
                     .and(BOARDS.DELETED_AT.isNull),
             )
 
@@ -91,8 +91,8 @@ class BoardRepository(
         dslContext
             .update(BOARDS)
             .set(BOARDS.NAME, name)
-            .where(BOARDS.ID.eq(id.value))
-            .and(BOARDS.USER_ID.eq(userId.value))
+            .where(BOARDS.ID.eq(id))
+            .and(BOARDS.USER_ID.eq(userId))
             .and(BOARDS.DELETED_AT.isNull)
             .returning()
             .fetchOne()
@@ -105,15 +105,15 @@ class BoardRepository(
         dslContext
             .update(BOARDS)
             .set(BOARDS.DELETED_AT, Instant.now())
-            .where(BOARDS.ID.eq(id.value))
-            .and(BOARDS.USER_ID.eq(userId.value))
+            .where(BOARDS.ID.eq(id))
+            .and(BOARDS.USER_ID.eq(userId))
             .and(BOARDS.DELETED_AT.isNull)
             .execute() == 1
 
     private fun BoardsRecord.toDomain() =
         Board(
-            id = BoardId(id!!),
-            userId = UserId(userId),
+            id = id!!,
+            userId = userId,
             name = name,
             createdAt = createdAt!!,
             updatedAt = updatedAt!!,

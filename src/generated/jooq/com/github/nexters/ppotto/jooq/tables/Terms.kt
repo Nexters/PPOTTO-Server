@@ -4,7 +4,9 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.TermIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_TERMS_CODE_EFFECTIVE
 import com.github.nexters.ppotto.jooq.keys.TERMS_PKEY
@@ -15,7 +17,6 @@ import com.github.nexters.ppotto.jooq.tables.Users.UsersPath
 import com.github.nexters.ppotto.jooq.tables.records.TermsRecord
 
 import java.time.Instant
-import java.util.UUID
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -84,7 +85,7 @@ open class Terms(
     /**
      * The column <code>public.terms.id</code>.
      */
-    val ID: TableField<TermsRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "")
+    val ID: TableField<TermsRecord, TermId?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuidv7()"), SQLDataType.UUID)), this, "", TermIdConverter())
 
     /**
      * The column <code>public.terms.code</code>.

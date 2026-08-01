@@ -1,6 +1,8 @@
 package com.github.nexters.ppotto
 
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
@@ -242,19 +244,19 @@ class UserJourneyIntegrationTest(
                         ).andExpect(status().isUnauthorized)
                         .andExpect(jsonPath("$.error.code").value("AUTH-002"))
 
-                    dslContext.fetchExists(STICKERS, STICKERS.BOARD_ID.eq(boardId)) shouldBe true
+                    dslContext.fetchExists(STICKERS, STICKERS.BOARD_ID.eq(BoardId(boardId))) shouldBe true
 
                     cleanupService
                         .cleanup(deletedBefore = Instant.now().plusSeconds(1), batchSize = 10)
                         .deletedUserIds shouldContainExactly listOf(UserId(userId))
 
-                    dslContext.fetchExists(STICKERS, STICKERS.BOARD_ID.eq(boardId)) shouldBe false
-                    dslContext.fetchExists(PHOTOS, PHOTOS.ANALYSIS_ID.eq(analysisId)) shouldBe false
-                    dslContext.fetchExists(PHOTOS, PHOTOS.ANALYSIS_ID.eq(secondAnalysisId)) shouldBe false
-                    dslContext.fetchExists(ANALYSIS, ANALYSIS.USER_ID.eq(userId)) shouldBe false
-                    dslContext.fetchExists(BOARDS, BOARDS.USER_ID.eq(userId)) shouldBe false
-                    dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(userId)) shouldBe false
-                    dslContext.fetchExists(USERS, USERS.ID.eq(userId)) shouldBe false
+                    dslContext.fetchExists(STICKERS, STICKERS.BOARD_ID.eq(BoardId(boardId))) shouldBe false
+                    dslContext.fetchExists(PHOTOS, PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId))) shouldBe false
+                    dslContext.fetchExists(PHOTOS, PHOTOS.ANALYSIS_ID.eq(AnalysisId(secondAnalysisId))) shouldBe false
+                    dslContext.fetchExists(ANALYSIS, ANALYSIS.USER_ID.eq(UserId(userId))) shouldBe false
+                    dslContext.fetchExists(BOARDS, BOARDS.USER_ID.eq(UserId(userId))) shouldBe false
+                    dslContext.fetchExists(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(UserId(userId))) shouldBe false
+                    dslContext.fetchExists(USERS, USERS.ID.eq(UserId(userId))) shouldBe false
                 }
             }
         }

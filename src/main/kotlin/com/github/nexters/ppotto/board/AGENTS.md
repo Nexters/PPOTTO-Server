@@ -36,7 +36,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 
 ## Rules
 
-- Typed identifiers (`BoardId`, `UserId`, `DrawingId`, `StickerId` from `global/identifier/`) flow end to end: domain models, repository public signatures, application services, the `application/port/` contracts, and presentation (`@AuthenticatedUser`/`@PathVariable` parameters and DTO id fields). Raw `UUID` survives only inside jOOQ DSL bindings (`.value` out, wrap in `toDomain`); JSON stays unwrapped uuid strings via Jackson value class serialization, with `@get:JsonProperty` + `@get:Schema` pinning springdoc property naming on id fields.
+- Typed identifiers (`BoardId`, `UserId`, `DrawingId`, `StickerId` from `global/identifier/`) flow end to end: domain models, repository public signatures, application services, the `application/port/` contracts, and presentation (`@AuthenticatedUser`/`@PathVariable` parameters and DTO id fields). jOOQ id columns are generated typed (codegen `forcedType`), so DSL bindings and `toDomain` pass typed ids straight through with no unwrapping; JSON stays unwrapped uuid strings via Jackson value class serialization, with `@get:JsonProperty` + `@get:Schema` pinning springdoc property naming on id fields.
 - Same DB-generated column convention as `user/`: board `id`/`createdAt`/`updatedAt` come back via `RETURNING`, never set client-side.
 - Drawing IDs are client-generated UUIDv7 values and are upserted for retry idempotency.
 - Soft-deleted boards and drawings never appear in active queries.

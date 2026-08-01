@@ -4,10 +4,12 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.jooq.tables.Photos
 
 import java.time.Instant
-import java.util.UUID
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -19,17 +21,17 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class PhotosRecord private constructor() : UpdatableRecordImpl<PhotosRecord>(Photos.PHOTOS) {
 
-    open var id: UUID?
+    open var id: PhotoId?
         set(value): Unit = set(0, value)
-        get(): UUID? = get(0) as UUID?
+        get(): PhotoId? = get(0) as PhotoId?
 
-    open var analysisId: UUID
+    open var analysisId: AnalysisId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): AnalysisId = get(1) as AnalysisId
 
-    open var boardId: UUID
+    open var boardId: BoardId
         set(value): Unit = set(2, value)
-        get(): UUID = get(2) as UUID
+        get(): BoardId = get(2) as BoardId
 
     open var contentType: String
         set(value): Unit = set(3, value)
@@ -59,12 +61,12 @@ open class PhotosRecord private constructor() : UpdatableRecordImpl<PhotosRecord
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
+    override fun key(): Record1<PhotoId?> = super.key() as Record1<PhotoId?>
 
     /**
      * Create a detached, initialised PhotosRecord
      */
-    constructor(id: UUID? = null, analysisId: UUID, boardId: UUID, contentType: String, uploadStatus: String? = null, uploadedAt: Instant? = null, takenAt: Instant, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: PhotoId? = null, analysisId: AnalysisId, boardId: BoardId, contentType: String, uploadStatus: String? = null, uploadedAt: Instant? = null, takenAt: Instant, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId

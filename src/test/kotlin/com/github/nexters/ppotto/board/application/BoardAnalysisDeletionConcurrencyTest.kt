@@ -77,7 +77,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                             .shouldBeInstanceOf<NotFoundException>()
                             .errorCode shouldBe BoardErrorCode.NOT_FOUND
                         boardRepository.findOwnedById(board.id, user.id).shouldBeNull()
-                        dslContext.fetchCount(ANALYSIS, ANALYSIS.BOARD_ID.eq(board.id.value)) shouldBe 0
+                        dslContext.fetchCount(ANALYSIS, ANALYSIS.BOARD_ID.eq(board.id)) shouldBe 0
                     }
                 }
             }
@@ -126,7 +126,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                             .shouldBeInstanceOf<ConflictException>()
                             .errorCode shouldBe BoardErrorCode.ACTIVE_ANALYSIS_EXISTS
                         boardRepository.findOwnedById(board.id, user.id)?.id shouldBe board.id
-                        dslContext.fetchCount(ANALYSIS, ANALYSIS.BOARD_ID.eq(board.id.value)) shouldBe 1
+                        dslContext.fetchCount(ANALYSIS, ANALYSIS.BOARD_ID.eq(board.id)) shouldBe 1
                     }
                 }
             }
