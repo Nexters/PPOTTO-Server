@@ -17,6 +17,7 @@ Project documentation for spec-driven development.
 - If API behavior changes, update `api-spec/api-spec.md` in the same change. This includes URI, HTTP method, headers/auth, request fields, response data, status codes, error codes, and examples.
 - Keep ERD source documents in DBML unless another format is explicitly required.
 - If database design or persistence behavior changes, update `erd/schema.dbml` in the same change. This includes tables, columns, enums, indexes, constraints, relationships, deletion policy, and status transitions.
+- When changing Flyway migrations, jOOQ generated schema, repositories, domain persistence models, or persistence behavior in any domain, explicitly compare the effective database shape with `erd/schema.dbml` before finishing and update it in the same change if they differ.
 - An implementation change is not complete while the related `docs/` contract or design document is stale.
 - Each API contract must include URI, HTTP method, required headers/auth, request fields, success response, failure responses, and examples.
 - Do not commit generated Swagger UI HTML here unless it is explicitly needed as a source artifact.
