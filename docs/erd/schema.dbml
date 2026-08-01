@@ -84,7 +84,7 @@ Table users {
   값을 확정하면 여기에 명시하고 설정 기본값을 맞춘다.
   배치는 user.withdrawn-cleanup.enabled 로 켜고 끄며 기본값은 꺼짐이다.
 
-  하드 삭제 순서는 FK 방향을 따른다.
+  하드 삭제 순서는 참조 및 애플리케이션 소유권 방향을 따른다.
   stickers(+ sticker_photos, recap_comments) -> photos -> analysis
   -> drawings -> boards -> term_agreements -> users.
   term_agreements 는 users 를 참조하는 유일한 FK 라 users 보다 먼저 지운다.
@@ -141,7 +141,7 @@ Table term_agreements {
 // ── 보드 ──────────────────────────────────
 Table boards {
   ~base_id
-  user_id uuid [not null, ref: > users.id]
+  user_id uuid [not null]
   name    text [not null, note: '최대 10자. 미지정 시 서버가 기본 이름 부여, 사용자가 변경 가능']
   ~timestamps
   ~soft_delete
@@ -162,8 +162,8 @@ Table boards {
 // ── 분석 ─────────────────────────────────
 Table analysis {
   ~base_id
-  user_id       uuid           [not null, ref: > users.id]
-  board_id      uuid           [not null, ref: > boards.id, note: '분석 결과 스티커가 붙을 보드']
+  user_id       uuid           [not null]
+  board_id      uuid           [not null, note: '분석 결과 스티커가 붙을 보드']
   status        analysis_status [not null, default: 'UPLOADING']
   progress      int            [not null, default: 0, note: '0~100. 로딩 화면 진행률']
   failed_reason text           [null]
@@ -203,8 +203,8 @@ Table analysis {
 // ── 사진 ──────────────────────────────────
 Table photos {
   ~base_id
-  analysis_id uuid        [not null, ref: > analysis.id, note: '소속 분석']
-  board_id    uuid        [not null, ref: > boards.id, note: '소유권 스코프 조회용. analysis 를 거치지 않고 보드 단위로 필터한다']
+  analysis_id uuid        [not null, note: '소속 분석']
+  board_id    uuid        [not null, note: '소유권 스코프 조회용. analysis 를 거치지 않고 보드 단위로 필터한다']
   content_type varchar(50) [not null, note: 'image/jpeg 등 MIME. GCS Content-Type 헤더와 오브젝트 키 확장자에 사용']
 
   upload_status photo_upload_status [not null, default: 'PENDING']
@@ -319,8 +319,8 @@ Table sticker_photos {
 
 Table drawings {
   ~base_id
-  board_id   uuid          [not null, ref: > boards.id]
-  sticker_id uuid          [null, ref: > stickers.id, note: 'scope=STICKER 일 때만 채운다']
+  board_id   uuid          [not null]
+  sticker_id uuid          [null, note: 'scope=STICKER 일 때만 채운다']
   scope      drawing_scope [not null]
 
   stroke       jsonb  [not null, note: '점 배열 등 선 데이터']
