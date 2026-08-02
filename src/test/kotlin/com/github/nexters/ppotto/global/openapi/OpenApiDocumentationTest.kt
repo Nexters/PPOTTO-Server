@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.global.openapi
 
 import com.github.nexters.ppotto.support.IntegrationTest
 import org.hamcrest.Matchers.hasItem
+import org.hamcrest.Matchers.hasItems
 import org.hamcrest.Matchers.hasSize
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.test.web.servlet.MockMvc
@@ -105,27 +106,29 @@ class OpenApiDocumentationTest(
                     .andExpect(
                         jsonPath(
                             "$['paths']['/auth/login']['post']['responses']['200']" +
-                                "['content']['*/*']['schema']['\$ref']",
+                                "['content']['application/json']['schema']['\$ref']",
                         ).value("#/components/schemas/ApiResponseLoginResponse"),
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/auth/login']['post']['responses']['200']" +
-                                "['content']['*/*']['examples']['신규 가입 - 약관 동의 필요']['value']['data']['isNewUser']",
+                                "['content']['application/json']['examples']['신규 가입 - 약관 동의 필요']" +
+                                "['value']['data']['isNewUser']",
                         ).value(true),
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/auth/login']['post']['responses']['200']" +
-                                "['content']['*/*']['examples']['재로그인 - 바로 보드 진입']['value']['data']['isNewUser']",
+                                "['content']['application/json']['examples']['재로그인 - 바로 보드 진입']" +
+                                "['value']['data']['isNewUser']",
                         ).value(false),
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/analysis/{analysisId}']['get']['responses']['200']" +
-                                "['content']['*/*']['examples']['완료']['value']['data']['status']",
+                                "['content']['application/json']['examples']['완료']['value']['data']['status']",
                         ).value("COMPLETED"),
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/users/me']['delete']['responses']['200']" +
-                                "['content']['*/*']['examples']['성공']['value']['success']",
+                                "['content']['application/json']['examples']['성공']['value']['success']",
                         ).value(true),
                     )
             }
@@ -135,23 +138,23 @@ class OpenApiDocumentationTest(
                     .andExpect(
                         jsonPath(
                             "$['paths']['/users/me']['get']['responses']['200']" +
-                                "['content']['*/*']['examples']['카카오 사용자']['value']['data']['createdAt']",
+                                "['content']['application/json']['examples']['카카오 사용자']['value']['data']['createdAt']",
                         ).value("2026-07-01T00:12:33Z"),
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/users/me']['get']['responses']['200']" +
-                                "['content']['*/*']['examples']['카카오 사용자']['value']['error']",
+                                "['content']['application/json']['examples']['카카오 사용자']['value']['error']",
                         ).doesNotExist(),
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/boards/{boardId}']['get']['responses']['200']" +
-                                "['content']['*/*']['examples']['스티커와 그림이 있는 보드']" +
+                                "['content']['application/json']['examples']['스티커와 그림이 있는 보드']" +
                                 "['value']['data']['stickers'][0]['posY']",
                         ).value(318.0),
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/analysis/active']['get']['responses']['200']" +
-                                "['content']['*/*']['examples']['진행 중 분석 없음']['value']['data']",
+                                "['content']['application/json']['examples']['진행 중 분석 없음']['value']['data']",
                         ).doesNotExist(),
                     )
             }
@@ -240,6 +243,46 @@ class OpenApiDocumentationTest(
                     ).andExpect(
                         jsonPath("$['components']['schemas']['ErrorResponse']['properties']['code']['example']")
                             .value("COMMON-001"),
+                    )
+            }
+
+            Then("Kotlin non-null 필드와 요청 제약을 스키마에 반영한다") {
+                result
+                    .andExpect(
+                        jsonPath("$['components']['schemas']['ApiResponseLoginResponse']['required']")
+                            .value(hasItems("success")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['ApiErrorResponse']['required']")
+                            .value(hasItems("success", "error")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['LoginResponse']['required']")
+                            .value(
+                                hasItems(
+                                    "accessToken",
+                                    "refreshToken",
+                                    "accessTokenExpiresIn",
+                                    "isNewUser",
+                                    "pendingTerms",
+                                ),
+                            ),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['AgreeTermsRequest']['required']")
+                            .value(hasItems("termIds")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['CreateAnalysisRequest']['required']")
+                            .value(hasItems("boardId", "photos")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['CreateAnalysisRequest']['properties']['photos']['minItems']")
+                            .value(90),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['CreateAnalysisRequest']['properties']['photos']['maxItems']")
+                            .value(100),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['DrawingCreateRequest']['required']")
+                            .value(hasItems("id", "scope", "stroke", "color", "strokeWidth")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['StickerLayoutRequest']['required']")
+                            .value(hasItems("id", "posX", "posY", "scale", "rotation", "zIndex")),
                     )
             }
         }

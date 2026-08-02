@@ -6,7 +6,7 @@ API response envelope.
 
 | File | Description |
 |------|-------------|
-| `ApiResponse.kt` | `{success, data, error}` envelope, Swagger-described so every generated `ApiResponseXxx` schema documents the wrapper. Controllers return `ApiResponse.success(data)`; failures are produced by `GlobalExceptionHandler` |
+| `ApiResponse.kt` | `{success, data, error}` envelope, Swagger-described so every generated `ApiResponseXxx` schema documents the wrapper; `required` comes from `KotlinRequiredModelConverter`. Controllers return `ApiResponse.success(data)`; failures are produced by `GlobalExceptionHandler` |
 | `PageResponse.kt` | Offset pagination payload: `items`, `page`, `size`, `totalCount`, `hasNext` |
 
 ## Rules
