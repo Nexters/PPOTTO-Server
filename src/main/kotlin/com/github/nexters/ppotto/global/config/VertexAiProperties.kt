@@ -10,10 +10,13 @@ import org.springframework.validation.annotation.Validated
 data class VertexAiProperties(
     @field:NotBlank
     val project: String,
+
     @field:NotBlank
     val location: String,
+
     @field:Positive
     val classifyTimeoutMs: Long,
+
     @field:Positive
     val stickerGenerationTimeoutMs: Long,
 )

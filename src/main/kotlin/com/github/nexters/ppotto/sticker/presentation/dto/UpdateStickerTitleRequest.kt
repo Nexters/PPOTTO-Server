@@ -21,6 +21,7 @@ data class UpdateStickerTitleResponse(
     @get:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
     @get:JsonProperty("id")
     val id: StickerId,
+
     @field:Schema(description = "변경된 제목", example = "고양이 모음집")
     val title: String,
 ) {

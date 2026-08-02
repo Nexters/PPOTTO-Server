@@ -10,15 +10,20 @@ data class TermResponse(
     @get:Schema(description = "약관 ID (uuidv7)", example = "01983f2a-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
     @get:JsonProperty("id")
     val id: TermId,
+
     @field:Schema(description = "약관 코드", example = "TOS")
     val code: String,
+
     @field:Schema(description = "약관 버전", example = "1.0")
     val version: String,
+
     @get:Schema(description = "필수 동의 여부", example = "true")
     @get:JsonProperty("isRequired")
     val isRequired: Boolean,
+
     @field:Schema(description = "노션 등 외부 문서 링크", example = "https://nexters.notion.site/ppotto-tos")
     val contentUrl: String?,
+
     @field:Schema(
         description = "요청 사용자의 동의 여부. 인증하지 않은 요청은 항상 false",
         example = "true",
