@@ -11,44 +11,55 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.javaField
 
-/**
- * springdoc은 Kotlin 타입의 nullability를 읽지 않으므로, 이 프로젝트 DTO의 non-null 프로퍼티를
- * 생성된 스키마의 `required`에 자동 반영한다. DTO마다 requiredMode 어노테이션을 반복하지 않기 위한 장치.
- */
 @Component
 class KotlinRequiredModelConverter : ModelConverter {
     override fun resolve(
         type: AnnotatedType,
         context: ModelConverterContext,
         chain: Iterator<ModelConverter>,
-    ): Schema<*>? {
-        val resolved = if (chain.hasNext()) chain.next().resolve(type, context, chain) else null
-        val rawClass =
-            runCatching {
-                Json
-                    .mapper()
-                    .constructType(type.type)
-                    .rawClass
-            }.getOrNull() ?: return resolved
-        if (!rawClass.packageName.startsWith(BASE_PACKAGE)) return resolved
-        val target = resolved?.let { schema -> schema.`$ref`?.let { context.definedModels[it.substringAfterLast('/')] } ?: schema }
-        val properties = target?.properties ?: return resolved
+    ): Schema<*>? =
+        (if (chain.hasNext()) chain.next().resolve(type, context, chain) else null)
+            .also { resolved ->
+                projectClassOf(type)?.let { markNonNullRequired(it, resolved.definitionIn(context)) }
+            }
+
+    private fun projectClassOf(type: AnnotatedType): Class<*>? =
+        runCatching {
+            Json
+                .mapper()
+                .constructType(type.type)
+                .rawClass
+        }.getOrNull()
+            ?.takeIf { it.packageName.startsWith(BASE_PACKAGE) }
+
+    private fun Schema<*>?.definitionIn(context: ModelConverterContext): Schema<*>? =
+        this?.let { schema ->
+            schema.`$ref`?.let { context.definedModels[it.substringAfterLast('/')] } ?: schema
+        }
+
+    private fun markNonNullRequired(
+        rawClass: Class<*>,
+        schema: Schema<*>?,
+    ) = schema?.properties?.let { properties ->
         rawClass.kotlin.memberProperties
             .filterNot { it.returnType.isMarkedNullable }
             .map(::jsonName)
-            .filter { it in properties && target.required?.contains(it) != true }
-            .forEach(target::addRequiredItem)
-        return resolved
+            .filter { it in properties && schema.required?.contains(it) != true }
+            .forEach(schema::addRequiredItem)
     }
 
-    private fun jsonName(property: KProperty1<*, *>): String {
-        val annotations = property.getter.annotations + (property.javaField?.annotations ?: emptyArray())
-        return annotations
+    private fun jsonName(property: KProperty1<*, *>): String =
+        property
+            .declaredAnnotations()
             .filterIsInstance<JsonProperty>()
             .firstOrNull()
             ?.value
             ?.takeIf(String::isNotBlank)
             ?: property.name
+
+    private fun KProperty1<*, *>.declaredAnnotations(): List<Annotation> {
+        val fieldAnnotations = javaField?.annotations.orEmpty()
+        return getter.annotations + fieldAnnotations
     }
 
     private companion object {
