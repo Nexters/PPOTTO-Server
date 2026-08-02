@@ -12,7 +12,7 @@ Sticker and recap domain. A sticker is the aggregate root; `StickerPhoto` and `R
 | `infrastructure/StickerRepository.kt` | Fluent jOOQ persistence for sticker roots, analysis-result locking, ownership validation, root lookups, and board-scoped deletion targets including soft-deleted rows |
 | `infrastructure/StickerCommandRepository.kt` | Field-specific atomic updates that never overwrite `deleted_at` from stale aggregate state, plus withdrawal hard deletion by id |
 | `infrastructure/StickerRecapRepository.kt` | Fluent jOOQ batch persistence and deletion for recap photo links and comments |
-| `infrastructure/BoardStickerAdapter.kt` | Expression-bodied board query/command port mappings backed by sticker application services |
+| `infrastructure/BoardStickerAdapter.kt` | Expression-bodied board query/command port mappings backed by sticker application services. `StickerType` is translated to board's `BoardStickerType` with an exhaustive `when`, which is what keeps the type conversion honest: adding a sticker form breaks this file instead of silently reaching the board API as an undocumented value |
 | `infrastructure/GcsStickerImageStorage.kt` | Read and deletion side of generated sticker images: production `StickerImageStoragePort` adapter delegating `stickers.image_key` read URL signing to the shared `global/storage/GcsReadUrlIssuer` and object deletion to `global/storage/ObjectStorageCleaner`. It does not upload — `analysis`'s `GcsStickerStorage` writes the object |
 | `infrastructure/integration/WithdrawnUserStickerDeletionAdapter.kt` | User-domain `WithdrawnUserStickerDeletionPort` adapter through `StickerWithdrawalService` |
 | `application/` | Fluent transactional analysis-result save plus sticker query, command, and withdrawal pipelines |

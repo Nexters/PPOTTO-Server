@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.board.application.BoardDetail
 import com.github.nexters.ppotto.board.application.BoardSummary
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.domain.Board
+import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -67,8 +68,8 @@ data class StickerResponse(
     @get:JsonProperty("isNew")
     val isNew: Boolean,
 
-    @field:Schema(description = "스티커 형식", example = "IMAGE", allowableValues = ["IMAGE", "TEXT"])
-    val type: String,
+    @field:Schema(description = "스티커 형식", example = "IMAGE")
+    val type: BoardStickerType,
 
     @field:Schema(
         description = "IMAGE 형의 누끼 PNG 읽기용 signed URL (만료 1시간)",

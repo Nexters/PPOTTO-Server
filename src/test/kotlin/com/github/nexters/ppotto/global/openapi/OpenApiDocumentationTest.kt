@@ -299,6 +299,12 @@ class OpenApiDocumentationTest(
                         jsonPath("$['components']['schemas']['DrawingCreateRequest']['properties']['scope']['enum']")
                             .value(hasItems("BOARD", "STICKER")),
                     ).andExpect(
+                        jsonPath("$['components']['schemas']['BoardStickerResponse']['properties']['type']['enum']")
+                            .value(hasItems("IMAGE", "TEXT")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['StickerResponse']['properties']['type']['enum']")
+                            .value(hasItems("IMAGE", "TEXT")),
+                    ).andExpect(
                         jsonPath(
                             "$['paths']['/analysis']['post']['requestBody']['content']['application/json']" +
                                 "['examples']['분석 생성 (지면상 3장, 실제 요청은 90~100장)']" +

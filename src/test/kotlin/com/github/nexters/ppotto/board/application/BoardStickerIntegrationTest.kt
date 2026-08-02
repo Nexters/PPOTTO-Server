@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
+import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.newDrawing
@@ -17,7 +18,6 @@ import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
@@ -70,7 +70,7 @@ class BoardStickerIntegrationTest(
                         it.id shouldBe sticker.id
                         it.title shouldBe sticker.title
                         it.isNew shouldBe true
-                        it.type shouldBe StickerType.TEXT.name
+                        it.type shouldBe BoardStickerType.TEXT
                         it.imageUrl.shouldBeNull()
                         it.textContent shouldBe sticker.textContent
                         it.posX shouldBe sticker.posX

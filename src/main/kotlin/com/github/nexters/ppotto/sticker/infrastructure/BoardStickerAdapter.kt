@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
+import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
@@ -12,6 +13,7 @@ import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.StickerItemResult
 import com.github.nexters.ppotto.sticker.application.StickerLayoutCommand
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
+import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.springframework.stereotype.Component
 
 @Component
@@ -50,7 +52,7 @@ class BoardStickerAdapter(
             id = id,
             title = title,
             isNew = isNew,
-            type = type.name,
+            type = type.toBoardType(),
             imageUrl = imageUrl,
             textContent = textContent,
             posX = posX,
@@ -62,6 +64,12 @@ class BoardStickerAdapter(
             badgeOffsetY = badgeOffsetY,
             badgeRotation = badgeRotation,
         )
+
+    private fun StickerType.toBoardType() =
+        when (this) {
+            StickerType.IMAGE -> BoardStickerType.IMAGE
+            StickerType.TEXT -> BoardStickerType.TEXT
+        }
 
     private fun BoardStickerLayoutCommand.toStickerCommand() =
         StickerLayoutCommand(

@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.support
 
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
+import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -36,7 +37,7 @@ fun boardStickerItem(id: StickerId = StickerId(UUID.randomUUID())): BoardSticker
         id = id,
         title = "스티커",
         isNew = true,
-        type = "TEXT",
+        type = BoardStickerType.TEXT,
         imageUrl = null,
         textContent = "내용",
         posX = 1.0,
