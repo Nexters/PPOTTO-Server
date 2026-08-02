@@ -1,4 +1,5 @@
 springdoc:
+  default-produces-media-type: application/json
   swagger-ui:
     path: /swagger-ui.html
     operations-sorter: method

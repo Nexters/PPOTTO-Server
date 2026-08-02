@@ -30,9 +30,7 @@ class ApiExampleOperationCustomizer(
         }
 
     private fun Content?.inject(examples: List<ApiExample>) {
-        this ?: return
-        remove("*/*")?.let { addMediaType("application/json", it) }
-        values.forEach { mediaType ->
+        this?.values?.forEach { mediaType ->
             examples.forEach { mediaType.addExamples(it.name, exampleFactory.create(it)) }
         }
     }

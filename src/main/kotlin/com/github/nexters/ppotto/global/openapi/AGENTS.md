@@ -13,7 +13,7 @@ Shared Swagger response contracts and the foundation for injecting type-safe exa
 | `ApiExampleRegistry.kt` | Collects every `ApiExampleProvider` into a map keyed by `KFunction.javaMethod`, and resolves a `HandlerMethod` back to its API interface method via `ClassUtils.getInterfaceMethodIfPossible`. Duplicate registrations for the same function fail fast at startup instead of silently overwriting each other |
 | `KotlinRequiredModelConverter.kt` | swagger-core `ModelConverter`. Marks non-nullable Kotlin properties of project (`com.github.nexters.ppotto`) schemas as `required`, honoring `@JsonProperty` renames, so DTOs never need `requiredMode` annotations. Nullable properties stay optional |
 | `ApiExampleFactory.kt` | Serializes example objects with the application `ObjectMapper` bean and wraps them in swagger-model `Example`s. Named examples also fill `description` with the name, matching swagger-core behavior |
-| `ApiExampleOperationCustomizer.kt` | springdoc `OperationCustomizer`. Normalizes inferred success response media types to `application/json`, then injects registry examples into the requestBody and each response code |
+| `ApiExampleOperationCustomizer.kt` | springdoc `OperationCustomizer`. Injects registry examples into the requestBody and into each response code's media type. Media types come out as `application/json` because `config/springdoc.yml` sets `default-produces-media-type` |
 | `ApiExamples.kt` | Domain-agnostic examples: empty success response, `COMMON-001` (with field errors), `COMMON-004`, `COMMON-006`. The `error`/`errorExample` helpers that keep failure examples short also live here |
 
 ## Rules
