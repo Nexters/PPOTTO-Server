@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.analysis.presentation
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
@@ -40,9 +41,9 @@ private val CREATE_ANALYSIS_REQUEST =
                 boardId = BOARD_ID,
                 photos =
                     listOf(
-                        PhotoUploadItem(takenAt = Instant.parse("2026-06-14T04:22:10Z"), contentType = "image/jpeg"),
-                        PhotoUploadItem(takenAt = Instant.parse("2026-06-14T04:24:02Z"), contentType = "image/heic"),
-                        PhotoUploadItem(takenAt = Instant.parse("2026-07-02T10:05:44Z"), contentType = "image/jpeg"),
+                        PhotoUploadItem(takenAt = Instant.parse("2026-06-14T04:22:10Z"), contentType = PhotoContentType.JPEG),
+                        PhotoUploadItem(takenAt = Instant.parse("2026-06-14T04:24:02Z"), contentType = PhotoContentType.HEIC),
+                        PhotoUploadItem(takenAt = Instant.parse("2026-07-02T10:05:44Z"), contentType = PhotoContentType.JPEG),
                     ),
             ),
     )

@@ -287,6 +287,26 @@ class OpenApiDocumentationTest(
                     )
             }
 
+            Then("enum 필드를 실제 전송 값으로 문서화한다") {
+                result
+                    .andExpect(
+                        jsonPath("$['components']['schemas']['PhotoUploadItem']['properties']['contentType']['enum']")
+                            .value(hasItems("image/jpeg", "image/png", "image/heic")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['PhotoUploadItem']['required']")
+                            .value(hasItems("takenAt", "contentType")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['DrawingCreateRequest']['properties']['scope']['enum']")
+                            .value(hasItems("BOARD", "STICKER")),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/analysis']['post']['requestBody']['content']['application/json']" +
+                                "['examples']['분석 생성 (지면상 3장, 실제 요청은 90~100장)']" +
+                                "['value']['photos'][0]['contentType']",
+                        ).value("image/jpeg"),
+                    )
+            }
+
             Then("nullable 필드는 required에 넣지 않는다") {
                 result
                     .andExpect(

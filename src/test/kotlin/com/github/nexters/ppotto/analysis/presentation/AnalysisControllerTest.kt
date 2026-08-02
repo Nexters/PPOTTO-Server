@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.analysis.presentation
 import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
@@ -146,7 +147,7 @@ class AnalysisControllerTest(
             }
 
             When("이미 활성 분석이 있는 상태에서 새 분석을 요청하면") {
-                val existingPhotos = (0 until 90).map { PhotoUploadItemRequest(Instant.now(), "image/jpeg") }
+                val existingPhotos = (0 until 90).map { PhotoUploadItemRequest(Instant.now(), PhotoContentType.JPEG) }
                 analysisService.createAnalysis(board.userId.value, board.id.value, existingPhotos)
 
                 Then("409 응답과 ANALYSIS-002을 반환한다") {
@@ -171,7 +172,7 @@ class AnalysisControllerTest(
             When("업로드 완료를 통보하면") {
                 val uploadBoard = boardRepository.save(userRepository.saveTestUser().id)
                 val photos =
-                    (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
+                    (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
                 val created = analysisService.createAnalysis(uploadBoard.userId.value, uploadBoard.id.value, photos)
 
                 Then("성공 응답에 업로드/실패 카운트가 담긴다") {
@@ -402,7 +403,7 @@ class AnalysisControllerTest(
         Given("다른 사용자의 analysisId로") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
-                (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), "image/jpeg") }
+                (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
             val created = analysisService.createAnalysis(ownerBoard.userId.value, ownerBoard.id.value, photos)
             val otherUser = userRepository.saveTestUser()
             val otherUserId = otherUser.id.value

@@ -55,6 +55,7 @@ photo/
 
 - No comments in code. No emojis anywhere. Documents, labels, and test names in Korean.
 - Dependency versions live only in `gradle/libs.versions.toml`. No version strings in build scripts.
+- A field whose value set is closed is typed as the domain enum, not `String` — at the DTO boundary too. When the transported value differs from the constant name, pin it with `@get:JsonValue` (see `PhotoContentType`) instead of restating the values in `@Schema(allowableValues = ...)`.
 - Error codes: `PREFIX-NNN` (`COMMON-001`, `PHOTO-001`). Each domain defines an enum implementing `ErrorCode`.
 - API responses use the `ApiResponse` envelope. Throw `BusinessException` subclasses; `GlobalExceptionHandler` converts them.
 - No default values in yml placeholders (`${VAR}` only). Defaults live only in `.env.template`.
