@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.support.IntegrationTest
 import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.hasItems
 import org.hamcrest.Matchers.hasSize
+import org.hamcrest.Matchers.not
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -283,6 +284,29 @@ class OpenApiDocumentationTest(
                     ).andExpect(
                         jsonPath("$['components']['schemas']['StickerLayoutRequest']['required']")
                             .value(hasItems("id", "posX", "posY", "scale", "rotation", "zIndex")),
+                    )
+            }
+
+            Then("nullable 필드는 required에 넣지 않는다") {
+                result
+                    .andExpect(
+                        jsonPath("$['components']['schemas']['ApiResponseLoginResponse']['required']")
+                            .value(not(hasItem("data"))),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['ApiResponseLoginResponse']['required']")
+                            .value(not(hasItem("error"))),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['ApiErrorResponse']['required']")
+                            .value(not(hasItem("data"))),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['StickerLayoutRequest']['required']")
+                            .value(not(hasItem("title"))),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['CreateBoardRequest']['required']")
+                            .doesNotExist(),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['BoardLayoutRequest']['required']")
+                            .doesNotExist(),
                     )
             }
         }
