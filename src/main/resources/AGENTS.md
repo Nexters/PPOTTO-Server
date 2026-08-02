@@ -14,7 +14,7 @@ Configuration and database migrations.
 | `config/jackson.yml` | JSON defaults (non_null, Asia/Seoul) |
 | `config/actuator.yml` | health/info only; local exposes all with details |
 | `config/logging.yml` | Console pattern with `[requestId]` MDC; local raises levels to debug |
-| `config/springdoc.yml` | Swagger UI options |
+| `config/springdoc.yml` | Swagger UI options plus `default-produces-media-type: application/json`, which keeps inferred response media types off `*/*` so generated clients see a single JSON content type |
 | `config/cors.yml` | `cors.allowed-origins` from `${CORS_ALLOWED_ORIGINS}` |
 | `config/security.yml` | Basic auth user for swagger from `${SWAGGER_USER}` / `${SWAGGER_PASSWORD}` |
 | `config/user.yml` | User-account provider refresh-token encryption key from `${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}` plus the `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron from `${USER_WITHDRAWN_CLEANUP_*}` |

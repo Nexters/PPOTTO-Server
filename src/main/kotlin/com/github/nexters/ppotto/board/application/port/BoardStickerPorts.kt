@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.board.application.port
 
+import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 
@@ -25,7 +26,7 @@ data class BoardStickerItem(
     val id: StickerId,
     val title: String,
     val isNew: Boolean,
-    val type: String,
+    val type: BoardStickerType,
     val imageUrl: String?,
     val textContent: String?,
     val posX: Double,

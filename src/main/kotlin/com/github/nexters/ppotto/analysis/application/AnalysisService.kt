@@ -3,7 +3,6 @@ package com.github.nexters.ppotto.analysis.application
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
-import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.PhotoUploadTarget
@@ -51,11 +50,7 @@ class AnalysisService(
             photoRepository.saveAll(
                 analysisId = analysis.id,
                 boardId = boardId,
-                items =
-                    photos.map {
-                        val contentType = PhotoContentType.fromMimeType(it.contentType)
-                        PhotoCreate(contentType, it.takenAt)
-                    },
+                items = photos.map { PhotoCreate(it.contentType, it.takenAt) },
             )
 
         val targets =
@@ -143,7 +138,7 @@ class AnalysisService(
     }
 
     private fun validatePhotoCount(size: Int) {
-        if (size !in 90..100) {
+        if (size !in MIN_PHOTO_COUNT..MAX_PHOTO_COUNT) {
             throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
         }
     }
@@ -164,5 +159,10 @@ class AnalysisService(
         e: DataIntegrityViolationException,
     ) {
         throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
+    }
+
+    companion object {
+        const val MIN_PHOTO_COUNT = 90
+        const val MAX_PHOTO_COUNT = 100
     }
 }

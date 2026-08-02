@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.board.presentation
 
+import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutRequest
@@ -140,7 +141,7 @@ private val BOARD_DETAIL_RESPONSE =
                                 id = STICKER_ID,
                                 title = "동물 밈 짤줍",
                                 isNew = false,
-                                type = "IMAGE",
+                                type = BoardStickerType.IMAGE,
                                 imageUrl =
                                     "https://storage.googleapis.com/ppotto-stickers/01983f2b.png" +
                                         "?X-Goog-Expires=3600&X-Goog-Signature=sample",
@@ -158,7 +159,7 @@ private val BOARD_DETAIL_RESPONSE =
                                 id = StickerId(UUID.fromString("01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
                                 title = "언제까지 일해요",
                                 isNew = true,
-                                type = "TEXT",
+                                type = BoardStickerType.TEXT,
                                 imageUrl = null,
                                 textContent = "whats in my mac",
                                 posX = 228.0,

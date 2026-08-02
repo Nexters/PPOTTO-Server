@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import java.time.Instant
 import java.util.UUID
@@ -18,7 +19,7 @@ data class PhotoUploadUrlItem(
 
 data class PhotoUploadItemRequest(
     val takenAt: Instant,
-    val contentType: String,
+    val contentType: PhotoContentType,
 )
 
 data class UploadVerificationResult(

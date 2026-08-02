@@ -8,10 +8,13 @@ import java.time.Instant
 data class ErrorResponse(
     @field:Schema(description = "클라이언트 분기 기준이 되는 에러 코드", example = "COMMON-001")
     val code: String,
+
     @field:Schema(description = "사용자 또는 개발자 확인용 메시지", example = "잘못된 입력입니다.")
     val message: String,
+
     @field:Schema(description = "요청 바디 검증 실패 시 필드별 오류. 그 외 빈 배열")
     val fieldErrors: List<FieldErrorDetail>,
+
     @field:Schema(description = "에러 발생 시각. UTC ISO-8601", example = "2026-07-27T05:02:11Z")
     val timestamp: Instant,
 ) {

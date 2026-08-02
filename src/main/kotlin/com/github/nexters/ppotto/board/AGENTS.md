@@ -9,6 +9,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `domain/Board.kt` | Pure Kotlin board model and board count/name policies |
 | `domain/Drawing.kt` | Pure Kotlin drawing and creation models |
 | `domain/DrawingScope.kt` | Drawing ownership scope: `STICKER` or `BOARD` |
+| `domain/BoardStickerType.kt` | Sticker form as this domain sees it: `IMAGE` or `TEXT`. Board owns the port contract, so it declares its own type instead of importing `sticker.domain.StickerType` — the adapter lives in sticker and referencing sticker types here would make board depend back on sticker and close the cycle. `BoardStickerAdapter` maps the two with an exhaustive `when`, so a new `StickerType` constant fails to compile until board decides how to expose it |
 | `domain/BoardErrorCode.kt` | `BOARD-001` through `BOARD-005` API errors |
 | `infrastructure/BoardRepository.kt` | Active-board CRUD, ownership filtering, row locking, user-scoped command advisory locking, and soft deletion |
 | `infrastructure/DrawingRepository.kt` | Single-statement multi-row JSONB drawing upsert (`excluded`-based `ON CONFLICT` update guarded per row by `board_id`, one stroke serialization per drawing, results re-ordered to input order), guarded lookup, ownership filtering, board/sticker-scoped soft deletion, and board-scoped hard deletion |
@@ -23,7 +24,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardQueryService.kt` | Fluent board list/detail composition through the sticker query port. Cross-domain ownership lookups belong to `BoardAccessService`, not here. `getDetail` is intentionally non-transactional so the sticker port's signed-URL issuing never holds a DB connection |
 | `application/BoardLayoutService.kt` | Expression-bodied user-serialized sticker/drawing guard chain and atomic changed-layout persistence |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis check contract for safe board deletion |
-| `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts |
+| `application/port/BoardStickerPorts.kt` | Sticker query, ownership validation, layout, and cascade-deletion contracts. `BoardStickerItem.type` is `BoardStickerType`, so the swagger enum on the board response comes from a type rather than a hand-written `allowableValues` list |
 | `presentation/BoardApi.kt` | `/boards` v1 CRUD mapping and Swagger contract |
 | `presentation/BoardController.kt` | Fluent Board CRUD API implementation with request binding and required typed user injection |
 | `presentation/BoardLayoutApi.kt` | `PATCH /boards/{boardId}/layout` v1 mapping and Swagger contract |
