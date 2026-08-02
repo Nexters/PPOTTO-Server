@@ -143,7 +143,7 @@ class AnalysisService(
     }
 
     private fun validatePhotoCount(size: Int) {
-        if (size !in 90..100) {
+        if (size !in MIN_PHOTO_COUNT..MAX_PHOTO_COUNT) {
             throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
         }
     }
@@ -164,5 +164,10 @@ class AnalysisService(
         e: DataIntegrityViolationException,
     ) {
         throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
+    }
+
+    companion object {
+        const val MIN_PHOTO_COUNT = 90
+        const val MAX_PHOTO_COUNT = 100
     }
 }

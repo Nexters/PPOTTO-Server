@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.presentation.dto
 
+import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
@@ -17,11 +18,10 @@ data class CreateAnalysisRequest(
         example = "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     )
     val boardId: UUID,
-    @field:NotNull
     @field:ArraySchema(
         arraySchema = Schema(description = "촬영 시각 오름차순으로 보내는 사진 90~100장"),
-        minItems = 90,
-        maxItems = 100,
+        minItems = AnalysisService.MIN_PHOTO_COUNT,
+        maxItems = AnalysisService.MAX_PHOTO_COUNT,
     )
     val photos: List<@Valid PhotoUploadItem>,
 )

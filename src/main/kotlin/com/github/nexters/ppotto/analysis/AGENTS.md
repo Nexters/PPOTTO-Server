@@ -38,7 +38,7 @@ Analysis domain. Owns both `Analysis` and `Photo` — a photo only ever exists a
 | `presentation/AnalysisController.kt` | Fluent Analysis API implementation with request binding, result mapping, and required UUID user injection |
 | `presentation/AnalysisNotFoundApiResponse.kt` | Composed annotation for the 404 `ANALYSIS-005` response shared by `start`/`get` |
 | `presentation/AnalysisApiExamples.kt` | `ApiExampleProvider` implementation. Defines analysis creation request/response, per-status (ANALYZING/COMPLETED/FAILED) polling responses, the no-analysis-in-progress response, the upload confirmation response, and the `ANALYSIS-001`/`002`/`003`/`005`/`008` plus propagated `BOARD-002` failure examples as real DTO instances. To respect the domain boundary, the `BOARD-002` example lives here via `ApiExamples.errorExample` instead of importing board presentation |
-| `presentation/dto/` | Swagger-described request/response schemas: `CreateAnalysisRequest` documents the service-enforced 90–100 photo count, `PhotoUploadItem` documents the required JPEG/PNG/HEIC content type, plus `CreateAnalysisResponse`, `AnalysisStatusResponse`, and `StartUploadResponse` |
+| `presentation/dto/` | Swagger-described request/response schemas: `CreateAnalysisRequest` documents the service-enforced photo count through `AnalysisService.MIN_PHOTO_COUNT`/`MAX_PHOTO_COUNT` so the schema bounds cannot drift from the validation, `PhotoUploadItem` documents the required JPEG/PNG/HEIC content type, plus `CreateAnalysisResponse`, `AnalysisStatusResponse`, and `StartUploadResponse` |
 
 ## Rules
 
