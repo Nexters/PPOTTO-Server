@@ -39,8 +39,9 @@ class AnalysisService(
     fun createAnalysis(
         userId: UUID,
         boardId: UUID,
-        photos: List<PhotoUploadItemRequest>,
+        photoGroups: List<PhotoUploadGroupRequest>,
     ): AnalysisCreationResult {
+        val photos = resolveBurstGroups(photoGroups)
         validatePhotoCount(photos.size)
         boardAccessService.getOwnedByIdForUpdate(BoardId(boardId), UserId(userId))
         validateNoActiveAnalysis(userId)
@@ -50,7 +51,10 @@ class AnalysisService(
             photoRepository.saveAll(
                 analysisId = analysis.id,
                 boardId = boardId,
-                items = photos.map { PhotoCreate(it.contentType, it.takenAt) },
+                items =
+                    photos.map {
+                        PhotoCreate(it.contentType, it.takenAt, it.burstGroupId, it.isRepresentative)
+                    },
             )
 
         val targets =
@@ -142,6 +146,19 @@ class AnalysisService(
             throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
         }
     }
+
+    private fun resolveBurstGroups(groups: List<PhotoUploadGroupRequest>): List<PhotoUploadItemRequest> =
+        groups.flatMap { group ->
+            if (group.items.size > 1) {
+                if (group.items.count { it.isRepresentative } != 1) {
+                    throw InvalidInputException(AnalysisErrorCode.INVALID_BURST_GROUP)
+                }
+                val burstGroupId = UUID.randomUUID()
+                group.items.map { it.copy(burstGroupId = burstGroupId) }
+            } else {
+                group.items.map { it.copy(burstGroupId = null, isRepresentative = true) }
+            }
+        }
 
     private fun validateNoActiveAnalysis(userId: UUID) {
         if (analysisRepository.findActiveByUserId(userId) != null) {

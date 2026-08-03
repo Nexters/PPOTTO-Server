@@ -14,4 +14,5 @@ enum class AnalysisErrorCode(
     ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND, "ANALYSIS-005", "분석을 찾을 수 없습니다."),
     INVALID_GEMINI_RESPONSE(HttpStatus.BAD_GATEWAY, "ANALYSIS-007", "Gemini 응답이 요청한 사진 목록과 일치하지 않습니다."),
     NO_UPLOADED_PHOTOS(HttpStatus.CONFLICT, "ANALYSIS-008", "업로드된 사진이 없습니다."),
+    INVALID_BURST_GROUP(HttpStatus.BAD_REQUEST, "ANALYSIS-009", "연사 그룹은 대표 사진을 정확히 1장 포함해야 합니다."),
 }

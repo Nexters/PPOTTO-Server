@@ -24,7 +24,7 @@ class AnalysisController(
         @Valid @RequestBody request: CreateAnalysisRequest,
     ): ApiResponse<CreateAnalysisResponse> =
         analysisService
-            .createAnalysis(userId, request.boardId, request.photos.map { it.toServiceRequest() })
+            .createAnalysis(userId, request.boardId, request.toServiceRequests())
             .let(CreateAnalysisResponse::from)
             .let { ApiResponse.success(it) }
 

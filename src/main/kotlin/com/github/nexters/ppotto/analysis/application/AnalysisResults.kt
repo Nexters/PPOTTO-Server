@@ -20,6 +20,12 @@ data class PhotoUploadUrlItem(
 data class PhotoUploadItemRequest(
     val takenAt: Instant,
     val contentType: PhotoContentType,
+    val burstGroupId: UUID? = null,
+    val isRepresentative: Boolean = true,
+)
+
+data class PhotoUploadGroupRequest(
+    val items: List<PhotoUploadItemRequest>,
 )
 
 data class UploadVerificationResult(

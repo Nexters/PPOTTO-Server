@@ -184,8 +184,16 @@ class OpenApiDocumentationTest(
             Then("실패 응답에 도메인 에러 코드와 메시지를 노출한다") {
                 result
                     .andExpect(
+                        jsonPath("$['paths']['/analysis']['post']['responses']['400']['description']")
+                            .value("요청 값이 올바르지 않음 (COMMON-001, ANALYSIS-001, ANALYSIS-009)"),
+                    ).andExpect(
                         jsonPath("$['paths']['/analysis']['post']['responses']['404']['description']")
                             .value("보드를 찾을 수 없음 (BOARD-002)"),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/analysis']['post']['responses']['400']" +
+                                "['content']['application/json']['examples']['ANALYSIS-009']['value']['error']['code']",
+                        ).value("ANALYSIS-009"),
                     ).andExpect(
                         jsonPath("$['paths']['/analysis/{analysisId}']['get']['responses']['404']['description']")
                             .value("분석을 찾을 수 없음 (ANALYSIS-005)"),
@@ -273,11 +281,8 @@ class OpenApiDocumentationTest(
                         jsonPath("$['components']['schemas']['CreateAnalysisRequest']['required']")
                             .value(hasItems("boardId", "photos")),
                     ).andExpect(
-                        jsonPath("$['components']['schemas']['CreateAnalysisRequest']['properties']['photos']['minItems']")
-                            .value(90),
-                    ).andExpect(
-                        jsonPath("$['components']['schemas']['CreateAnalysisRequest']['properties']['photos']['maxItems']")
-                            .value(100),
+                        jsonPath("$['components']['schemas']['PhotoUploadGroup']['properties']['items']['minItems']")
+                            .value(1),
                     ).andExpect(
                         jsonPath("$['components']['schemas']['DrawingCreateRequest']['required']")
                             .value(hasItems("id", "scope", "stroke", "color", "strokeWidth")),
@@ -294,7 +299,7 @@ class OpenApiDocumentationTest(
                             .value(hasItems("image/jpeg", "image/png", "image/heic")),
                     ).andExpect(
                         jsonPath("$['components']['schemas']['PhotoUploadItem']['required']")
-                            .value(hasItems("takenAt", "contentType")),
+                            .value(hasItems("takenAt", "contentType", "isRepresentative")),
                     ).andExpect(
                         jsonPath("$['components']['schemas']['DrawingCreateRequest']['properties']['scope']['enum']")
                             .value(hasItems("BOARD", "STICKER")),
@@ -307,9 +312,15 @@ class OpenApiDocumentationTest(
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/analysis']['post']['requestBody']['content']['application/json']" +
-                                "['examples']['분석 생성 (지면상 3장, 실제 요청은 90~100장)']" +
-                                "['value']['photos'][0]['contentType']",
+                                "['examples']['분석 생성 (지면상 3장, 실제 요청은 90~100장). 두 번째 그룹은 연사 2장 예시']" +
+                                "['value']['photos'][0]['items'][0]['contentType']",
                         ).value("image/jpeg"),
+                    ).andExpect(
+                        jsonPath(
+                            "$['paths']['/analysis']['post']['requestBody']['content']['application/json']" +
+                                "['examples']['분석 생성 (지면상 3장, 실제 요청은 90~100장). 두 번째 그룹은 연사 2장 예시']" +
+                                "['value']['photos'][1]['items'][1]['isRepresentative']",
+                        ).value(false),
                     )
             }
 

@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
+import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadGroup
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadItem
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadUrlItem
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
@@ -35,15 +36,47 @@ private val ANALYZING_STATUS =
 
 private val CREATE_ANALYSIS_REQUEST =
     ApiExample(
-        name = "분석 생성 (지면상 3장, 실제 요청은 90~100장)",
+        name = "분석 생성 (지면상 3장, 실제 요청은 90~100장). 두 번째 그룹은 연사 2장 예시",
         value =
             CreateAnalysisRequest(
                 boardId = BOARD_ID,
                 photos =
                     listOf(
-                        PhotoUploadItem(takenAt = Instant.parse("2026-06-14T04:22:10Z"), contentType = PhotoContentType.JPEG),
-                        PhotoUploadItem(takenAt = Instant.parse("2026-06-14T04:24:02Z"), contentType = PhotoContentType.HEIC),
-                        PhotoUploadItem(takenAt = Instant.parse("2026-07-02T10:05:44Z"), contentType = PhotoContentType.JPEG),
+                        PhotoUploadGroup(
+                            items =
+                                listOf(
+                                    PhotoUploadItem(
+                                        takenAt = Instant.parse("2026-06-14T04:22:10Z"),
+                                        contentType = PhotoContentType.JPEG,
+                                        isRepresentative = true,
+                                    ),
+                                ),
+                        ),
+                        PhotoUploadGroup(
+                            items =
+                                listOf(
+                                    PhotoUploadItem(
+                                        takenAt = Instant.parse("2026-06-14T04:24:02Z"),
+                                        contentType = PhotoContentType.HEIC,
+                                        isRepresentative = true,
+                                    ),
+                                    PhotoUploadItem(
+                                        takenAt = Instant.parse("2026-06-14T04:24:03Z"),
+                                        contentType = PhotoContentType.HEIC,
+                                        isRepresentative = false,
+                                    ),
+                                ),
+                        ),
+                        PhotoUploadGroup(
+                            items =
+                                listOf(
+                                    PhotoUploadItem(
+                                        takenAt = Instant.parse("2026-07-02T10:05:44Z"),
+                                        contentType = PhotoContentType.JPEG,
+                                        isRepresentative = true,
+                                    ),
+                                ),
+                        ),
                     ),
             ),
     )
@@ -133,6 +166,13 @@ private val PHOTO_COUNT_OUT_OF_RANGE =
         message = "사진은 90장에서 100장 사이여야 합니다.",
     )
 
+private val INVALID_BURST_GROUP =
+    ApiExamples.errorExample(
+        code = "ANALYSIS-009",
+        summary = "연사 그룹 내 대표 사진이 정확히 1장이 아님",
+        message = "연사 그룹은 대표 사진을 정확히 1장 포함해야 합니다.",
+    )
+
 private val ACTIVE_ANALYSIS_EXISTS =
     ApiExamples.errorExample(
         code = "ANALYSIS-002",
@@ -173,7 +213,7 @@ class AnalysisApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(CREATE_ANALYSIS_RESPONSE),
-                            "400" to listOf(ApiExamples.INVALID_INPUT, PHOTO_COUNT_OUT_OF_RANGE),
+                            "400" to listOf(ApiExamples.INVALID_INPUT, PHOTO_COUNT_OUT_OF_RANGE, INVALID_BURST_GROUP),
                             "404" to listOf(BOARD_NOT_FOUND),
                             "409" to listOf(ACTIVE_ANALYSIS_EXISTS),
                         ),

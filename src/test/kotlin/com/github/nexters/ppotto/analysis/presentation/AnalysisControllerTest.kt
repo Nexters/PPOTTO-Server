@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.analysis.presentation
 
 import com.github.nexters.ppotto.analysis.application.AnalysisService
+import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
@@ -39,11 +40,30 @@ class AnalysisControllerTest(
     dslContext: DSLContext,
 ) : IntegrationTest({
         fun createPhotosJson(count: Int): String {
-            val photos =
+            val groups =
                 (0 until count).joinToString(",") {
-                    """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/jpeg"}"""
+                    """{"items": [{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", """ +
+                        """"contentType": "image/jpeg", "isRepresentative": true}]}"""
                 }
-            return "[$photos]"
+            return "[$groups]"
+        }
+
+        fun createPhotosJsonWithBurstGroup(
+            standaloneCount: Int,
+            representativeValues: List<Boolean>,
+        ): String {
+            val standaloneGroups =
+                (0 until standaloneCount).map {
+                    """{"items": [{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", """ +
+                        """"contentType": "image/jpeg", "isRepresentative": true}]}"""
+                }
+            val burstItems =
+                representativeValues
+                    .mapIndexed { index, isRepresentative ->
+                        """{"takenAt": "2026-07-20T00:00:0${index}Z", """ +
+                            """"contentType": "image/jpeg", "isRepresentative": $isRepresentative}"""
+                    }.joinToString(",")
+            return (standaloneGroups + """{"items": [$burstItems]}""").joinToString(",", prefix = "[", postfix = "]")
         }
 
         fun authenticatedPost(
@@ -146,8 +166,49 @@ class AnalysisControllerTest(
                 }
             }
 
+            When("연사 그룹 내 대표 사진이 없으면") {
+                Then("400 응답과 ANALYSIS-009를 반환한다") {
+                    mockMvc
+                        .perform(
+                            authenticatedPost("/analysis", board.userId.value)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": ${createPhotosJsonWithBurstGroup(88, listOf(false, false))}
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-009"))
+                }
+            }
+
+            When("연사 그룹 내 대표 사진이 2장 이상이면") {
+                Then("400 응답과 ANALYSIS-009를 반환한다") {
+                    mockMvc
+                        .perform(
+                            authenticatedPost("/analysis", board.userId.value)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": ${createPhotosJsonWithBurstGroup(88, listOf(true, true))}
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-009"))
+                }
+            }
+
             When("이미 활성 분석이 있는 상태에서 새 분석을 요청하면") {
-                val existingPhotos = (0 until 90).map { PhotoUploadItemRequest(Instant.now(), PhotoContentType.JPEG) }
+                val existingPhotos =
+                    (0 until 90).map { PhotoUploadGroupRequest(listOf(PhotoUploadItemRequest(Instant.now(), PhotoContentType.JPEG))) }
                 analysisService.createAnalysis(board.userId.value, board.id.value, existingPhotos)
 
                 Then("409 응답과 ANALYSIS-002을 반환한다") {
@@ -172,7 +233,11 @@ class AnalysisControllerTest(
             When("업로드 완료를 통보하면") {
                 val uploadBoard = boardRepository.save(userRepository.saveTestUser().id)
                 val photos =
-                    (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+                    (0 until 90).map { i ->
+                        PhotoUploadGroupRequest(
+                            listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
+                        )
+                    }
                 val created = analysisService.createAnalysis(uploadBoard.userId.value, uploadBoard.id.value, photos)
 
                 Then("성공 응답에 업로드/실패 카운트가 담긴다") {
@@ -403,7 +468,11 @@ class AnalysisControllerTest(
         Given("다른 사용자의 analysisId로") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
-                (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+                (0 until 90).map { i ->
+                    PhotoUploadGroupRequest(
+                        listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
+                    )
+                }
             val created = analysisService.createAnalysis(ownerBoard.userId.value, ownerBoard.id.value, photos)
             val otherUser = userRepository.saveTestUser()
             val otherUserId = otherUser.id.value
@@ -425,7 +494,7 @@ class AnalysisControllerTest(
                 Then("400 응답을 반환한다") {
                     val photosJson =
                         (0 until 90).joinToString(",") {
-                            """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z"}"""
+                            """{"items": [{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "isRepresentative": true}]}"""
                         }
                     mockMvc
                         .perform(
@@ -454,7 +523,7 @@ class AnalysisControllerTest(
                                     """
                                     {
                                         "boardId": "${board.id}",
-                                        "photos": [{"takenAt": "2026-07-01T00:00:00Z", "contentType": null}]
+                                        "photos": [{"items": [{"takenAt": "2026-07-01T00:00:00Z", "contentType": null, "isRepresentative": true}]}]
                                     }
                                     """.trimIndent(),
                                 ),
@@ -468,9 +537,9 @@ class AnalysisControllerTest(
                     val photosJson =
                         (0 until 90).joinToString(",") {
                             if (it == 0) {
-                                """{"takenAt": "2026-07-01T00:00:00Z", "contentType": "image/gif"}"""
+                                """{"items": [{"takenAt": "2026-07-01T00:00:00Z", "contentType": "image/gif", "isRepresentative": true}]}"""
                             } else {
-                                """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/jpeg"}"""
+                                """{"items": [{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/jpeg", "isRepresentative": true}]}"""
                             }
                         }
                     mockMvc
@@ -494,7 +563,8 @@ class AnalysisControllerTest(
                 Then("성공 응답에 analysisId와 사진별 signed URL이 담긴다") {
                     val photosJson =
                         (0 until 90).joinToString(",") {
-                            """{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", "contentType": "image/heic"}"""
+                            """{"items": [{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", """ +
+                                """"contentType": "image/heic", "isRepresentative": true}]}"""
                         }
                     mockMvc
                         .perform(
