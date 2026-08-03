@@ -9,9 +9,11 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 class PhotoRepositoryTest(
     photoRepository: PhotoRepository,
@@ -100,6 +102,44 @@ class PhotoRepositoryTest(
 
                 Then("빈 목록을 반환한다") {
                     updated.shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("연사 그룹과 단독 사진을 함께 저장하면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val burstGroupId = UUID.randomUUID()
+            val items =
+                listOf(
+                    PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                    PhotoCreate(
+                        PhotoContentType.JPEG,
+                        Instant.parse("2026-07-02T00:00:00Z"),
+                        burstGroupId = burstGroupId,
+                        isRepresentative = true,
+                    ),
+                    PhotoCreate(
+                        PhotoContentType.JPEG,
+                        Instant.parse("2026-07-02T00:00:01Z"),
+                        burstGroupId = burstGroupId,
+                        isRepresentative = false,
+                    ),
+                )
+
+            val saved = photoRepository.saveAll(analysis.id, board.id.value, items)
+
+            When("저장된 Photo를 확인하면") {
+                Then("단독 사진은 burstGroupId가 없고 대표다") {
+                    val standalone = saved[0]
+                    standalone.burstGroupId.shouldBeNull()
+                    standalone.isRepresentative shouldBe true
+                }
+
+                Then("연사 그룹은 burstGroupId를 공유하고 대표가 정확히 1장이다") {
+                    val burstPhotos = saved.subList(1, 3)
+                    burstPhotos.map { it.burstGroupId } shouldBe listOf(burstGroupId, burstGroupId)
+                    burstPhotos.count { it.isRepresentative } shouldBe 1
                 }
             }
         }

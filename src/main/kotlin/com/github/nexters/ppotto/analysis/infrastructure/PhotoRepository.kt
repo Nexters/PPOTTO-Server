@@ -16,6 +16,8 @@ import java.util.UUID
 data class PhotoCreate(
     val contentType: PhotoContentType,
     val takenAt: Instant,
+    val burstGroupId: UUID? = null,
+    val isRepresentative: Boolean = true,
 )
 
 @Repository
@@ -31,9 +33,25 @@ class PhotoRepository(
 
         var insert =
             dslContext
-                .insertInto(PHOTOS, PHOTOS.ANALYSIS_ID, PHOTOS.BOARD_ID, PHOTOS.CONTENT_TYPE, PHOTOS.TAKEN_AT)
+                .insertInto(
+                    PHOTOS,
+                    PHOTOS.ANALYSIS_ID,
+                    PHOTOS.BOARD_ID,
+                    PHOTOS.CONTENT_TYPE,
+                    PHOTOS.TAKEN_AT,
+                    PHOTOS.BURST_GROUP_ID,
+                    PHOTOS.IS_REPRESENTATIVE,
+                )
         items.forEach { item ->
-            insert = insert.values(AnalysisId(analysisId), BoardId(boardId), item.contentType.mimeType, item.takenAt)
+            insert =
+                insert.values(
+                    AnalysisId(analysisId),
+                    BoardId(boardId),
+                    item.contentType.mimeType,
+                    item.takenAt,
+                    item.burstGroupId,
+                    item.isRepresentative,
+                )
         }
         return insert
             .returning()
@@ -145,6 +163,8 @@ class PhotoRepository(
             uploadStatus = UploadStatus.valueOf(uploadStatus!!),
             uploadedAt = uploadedAt,
             takenAt = takenAt,
+            burstGroupId = burstGroupId,
+            isRepresentative = isRepresentative!!,
             createdAt = createdAt!!,
             updatedAt = updatedAt!!,
         )

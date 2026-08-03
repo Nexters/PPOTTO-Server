@@ -11,6 +11,8 @@ class Photo(
     val uploadStatus: UploadStatus,
     val uploadedAt: Instant?,
     val takenAt: Instant?,
+    val burstGroupId: UUID?,
+    val isRepresentative: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

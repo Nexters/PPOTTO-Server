@@ -14,6 +14,8 @@ import com.github.nexters.ppotto.global.jooq.PhotoIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_PHOTOS_ANALYSIS_ID
 import com.github.nexters.ppotto.jooq.indexes.IDX_PHOTOS_BOARD_ID
+import com.github.nexters.ppotto.jooq.indexes.IDX_PHOTOS_BURST_GROUP_ID
+import com.github.nexters.ppotto.jooq.indexes.UK_PHOTOS_BURST_REPRESENTATIVE
 import com.github.nexters.ppotto.jooq.keys.PHOTOS_PKEY
 import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_SOURCE_PHOTO
 import com.github.nexters.ppotto.jooq.keys.STICKER_PHOTOS__FK_STICKER_PHOTOS_PHOTO
@@ -22,6 +24,7 @@ import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
 
 import java.time.Instant
+import java.util.UUID
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -132,6 +135,16 @@ open class Photos(
      */
     val UPDATED_AT: TableField<PhotosRecord, Instant?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
+    /**
+     * The column <code>public.photos.burst_group_id</code>.
+     */
+    val BURST_GROUP_ID: TableField<PhotosRecord, UUID?> = createField(DSL.name("burst_group_id"), SQLDataType.UUID, this, "")
+
+    /**
+     * The column <code>public.photos.is_representative</code>.
+     */
+    val IS_REPRESENTATIVE: TableField<PhotosRecord, Boolean?> = createField(DSL.name("is_representative"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("true"), SQLDataType.BOOLEAN)), this, "")
+
     private constructor(alias: Name, aliased: Table<PhotosRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<PhotosRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<PhotosRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
@@ -164,7 +177,7 @@ open class Photos(
         override fun `as`(alias: Table<*>): PhotosPath = PhotosPath(alias.qualifiedName, this)
     }
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_PHOTOS_ANALYSIS_ID, IDX_PHOTOS_BOARD_ID)
+    override fun getIndexes(): List<Index> = listOf(IDX_PHOTOS_ANALYSIS_ID, IDX_PHOTOS_BOARD_ID, IDX_PHOTOS_BURST_GROUP_ID, UK_PHOTOS_BURST_REPRESENTATIVE)
     override fun getPrimaryKey(): UniqueKey<PhotosRecord> = PHOTOS_PKEY
 
     private lateinit var _stickerPhotos: StickerPhotosPath
