@@ -33,6 +33,7 @@ class PhotoQueryService(
                         id = PhotoId(photo.id),
                         imageUrl = readUrls[objectKey] ?: error("사진 읽기 URL이 누락되었습니다."),
                         takenAt = photo.takenAt ?: error("사진 촬영 시각이 비어 있습니다."),
+                        isRepresentative = photo.isRepresentative,
                     )
                 }
             }

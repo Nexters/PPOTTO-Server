@@ -17,4 +17,5 @@ data class RecapPhotoMetadata(
     val id: PhotoId,
     val imageUrl: String,
     val takenAt: Instant,
+    val isRepresentative: Boolean,
 )

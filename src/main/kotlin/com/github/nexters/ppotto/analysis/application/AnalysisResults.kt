@@ -61,4 +61,5 @@ data class PhotoReadResult(
     val id: PhotoId,
     val imageUrl: String,
     val takenAt: Instant,
+    val isRepresentative: Boolean,
 )
