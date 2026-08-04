@@ -1,12 +1,17 @@
 package com.github.nexters.ppotto.analysis.presentation.dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.analysis.application.AnalysisService
+import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.util.UUID
 
@@ -20,12 +25,43 @@ data class CreateAnalysisRequest(
     val boardId: UUID,
 
     @field:ArraySchema(
-        arraySchema = Schema(description = "촬영 시각 오름차순으로 보내는 사진 90~100장"),
-        minItems = AnalysisService.MIN_PHOTO_COUNT,
-        maxItems = AnalysisService.MAX_PHOTO_COUNT,
+        arraySchema =
+            Schema(
+                description = "촬영 시각 오름차순으로 보내는 사진 그룹. 펼쳤을 때 총 90~100장이어야 한다.",
+            ),
     )
-    val photos: List<@Valid PhotoUploadItem>,
-)
+    val photos: List<@Valid PhotoUploadGroup>,
+) {
+    fun toServiceRequests(): List<PhotoUploadGroupRequest> =
+        photos
+            .also { validatePhotoCount(it) }
+            .map { it.toServiceRequest() }
+
+    private fun validatePhotoCount(groups: List<PhotoUploadGroup>) {
+        val photoCount = groups.sumOf { it.items.size }
+        if (photoCount !in AnalysisService.MIN_PHOTO_COUNT..AnalysisService.MAX_PHOTO_COUNT) {
+            throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
+        }
+    }
+}
+
+@Schema(description = "사진 그룹. 연사가 아니면 원소 1개, 연사면 여러 장")
+data class PhotoUploadGroup(
+    @field:Size(min = 1)
+    @field:ArraySchema(arraySchema = Schema(description = "그룹에 속한 사진들. 촬영 시각 오름차순"))
+    val items: List<@Valid PhotoUploadItem>,
+) {
+    fun toServiceRequest(): PhotoUploadGroupRequest =
+        PhotoUploadGroupRequest(
+            items.map {
+                PhotoUploadItemRequest(
+                    takenAt = it.takenAt,
+                    contentType = it.contentType,
+                    isRepresentative = it.isRepresentative,
+                )
+            },
+        )
+}
 
 @Schema(description = "업로드할 사진 정보")
 data class PhotoUploadItem(
@@ -36,6 +72,9 @@ data class PhotoUploadItem(
     @field:NotNull
     @field:Schema(description = "지원 형식. 업로드 시 Content-Type과 일치해야 함", example = "image/jpeg")
     val contentType: PhotoContentType,
-) {
-    fun toServiceRequest() = PhotoUploadItemRequest(takenAt, contentType)
-}
+
+    @field:NotNull
+    @get:JsonProperty("isRepresentative")
+    @get:Schema(description = "연사 그룹 내 대표 사진 여부")
+    val isRepresentative: Boolean,
+)

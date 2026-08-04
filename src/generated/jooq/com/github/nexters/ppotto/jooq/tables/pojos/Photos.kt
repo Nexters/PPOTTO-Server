@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.global.identifier.PhotoId
 
 import java.io.Serializable
 import java.time.Instant
+import java.util.UUID
 
 
 /**
@@ -25,7 +26,9 @@ data class Photos(
     val uploadedAt: Instant? = null,
     val takenAt: Instant,
     val createdAt: Instant? = null,
-    val updatedAt: Instant? = null
+    val updatedAt: Instant? = null,
+    val burstGroupId: UUID? = null,
+    val isRepresentative: Boolean? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -74,6 +77,18 @@ data class Photos(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
+        if (this.burstGroupId == null) {
+            if (o.burstGroupId != null)
+                return false
+        }
+        else if (this.burstGroupId != o.burstGroupId)
+            return false
+        if (this.isRepresentative == null) {
+            if (o.isRepresentative != null)
+                return false
+        }
+        else if (this.isRepresentative != o.isRepresentative)
+            return false
         return true
     }
 
@@ -89,6 +104,8 @@ data class Photos(
         result = prime * result + this.takenAt.hashCode()
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
+        result = prime * result + (if (this.burstGroupId == null) 0 else this.burstGroupId.hashCode())
+        result = prime * result + (if (this.isRepresentative == null) 0 else this.isRepresentative.hashCode())
         return result
     }
 
@@ -104,6 +121,8 @@ data class Photos(
         sb.append(", ").append(takenAt)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
+        sb.append(", ").append(burstGroupId)
+        sb.append(", ").append(isRepresentative)
 
         sb.append(")")
         return sb.toString()

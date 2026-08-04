@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.analysis.application.AnalysisService
+import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
@@ -134,8 +135,10 @@ class BoardAnalysisDeletionConcurrencyTest(
         }
     })
 
-private fun photoRequests(): List<PhotoUploadItemRequest> =
-    (0 until PHOTO_COUNT).map { PhotoUploadItemRequest(Instant.now().plusSeconds(it.toLong()), PhotoContentType.JPEG) }
+private fun photoRequests(): List<PhotoUploadGroupRequest> =
+    (0 until PHOTO_COUNT).map {
+        PhotoUploadGroupRequest(listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(it.toLong()), PhotoContentType.JPEG)))
+    }
 
 @TestConfiguration
 class BoardAnalysisDeletionConcurrencyTestConfiguration {

@@ -26,7 +26,7 @@ interface AnalysisApi {
     @PostMapping
     @Operation(
         summary = "분석 생성",
-        description = "보드를 지정하고 사진 90~100장의 업로드 URL(만료 15분)을 한 번에 발급함",
+        description = "보드를 지정하고 사진 그룹을 펼친 총 90~100장의 업로드 URL(만료 15분)을 한 번에 발급함",
         requestBody =
             OpenApiRequestBody(
                 required = true,
@@ -45,7 +45,7 @@ interface AnalysisApi {
     )
     @OpenApiResponse(
         responseCode = "400",
-        description = "요청 값이 올바르지 않음 (COMMON-001, ANALYSIS-001)",
+        description = "요청 값이 올바르지 않음 (COMMON-001, ANALYSIS-001, ANALYSIS-009)",
         content = [
             Content(
                 mediaType = "application/json",

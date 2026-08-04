@@ -6,6 +6,7 @@ Project ppotto {
   - partial unique 로 교체:
     uk_users_provider_uid -> WHERE deleted_at IS NULL
     uk_analysis_active -> WHERE status IN ('UPLOADING','ANALYZING')
+    uk_photos_burst_representative -> UNIQUE (burst_group_id) WHERE is_representative = true
   - CHECK 제약 (LLM 파이프라인이 직접 쓰는 경로라 API 검증이 닿지 않음):
     stickers: (type='IMAGE' AND image_key IS NOT NULL) OR (type='TEXT' AND text_content IS NOT NULL)
     drawings: (scope='STICKER') = (sticker_id IS NOT NULL)
@@ -212,6 +213,9 @@ Table photos {
 
   taken_at timestamptz [not null, note: '사진 시각. 클라가 준 값을 그대로 저장한다']
 
+  burst_group_id    uuid    [null, note: '연사 세트 식별자. 서버가 그룹 생성 시 발급. NULL이면 단독 사진']
+  is_representative boolean [not null, default: true, note: '화면에 보여줄 사진 여부. 단독 사진은 항상 true. 연사 그룹은 정확히 1장만 true']
+
   ~timestamps
 
   Note: '''
@@ -233,6 +237,16 @@ Table photos {
   정렬은 (taken_at, id). taken_at 이 같으면 uuidv7 이 발급 요청 배열 순서를
   보존하므로 별도 seq 컬럼을 두지 않는다.
 
+  [연사(burst) 그룹]
+  signed URL 발급 요청에서 클라가 사진을 그룹 단위로 묶어 보낸다(원소 1개면 단독,
+  2개 이상이면 연사). burst_group_id 값 자체는 클라가 만들지 않고, 서버가
+  연사 그룹마다 새 UUID를 발급해 그룹 내 모든 행에 부여한다.
+  is_representative 는 "여러 후보 중 고른 사진"이 아니라 "이 순간을 화면에
+  보여줄 사진"이라는 의미라서, 단독 사진도 기본값 true 다. burst_group_id 가
+  NULL 인 행끼리는 유니크 인덱스에서 서로 다르게 취급되므로 단독 사진이 여러 장
+  true여도 "그룹당 대표 1장" 제약과 충돌하지 않는다. 연사 그룹은 정확히 1장만
+  true여야 하며 이는 부분 유니크 인덱스(uk_photos_burst_representative)로 강제한다.
+
   [메타데이터 보관 기준]
   픽셀에서 읽어낼 수 있는 값(대표 색상, 피사체, 장소, 이미지 속 텍스트 등)은
   저장하지 않는다. 멀티모달 모델이 GCS 이미지를 직접 보고 판단한다.
@@ -242,8 +256,9 @@ Table photos {
   '''
 
   indexes {
-    analysis_id [name: 'idx_photos_analysis_id']
-    board_id    [name: 'idx_photos_board_id']
+    analysis_id    [name: 'idx_photos_analysis_id']
+    board_id       [name: 'idx_photos_board_id']
+    burst_group_id [name: 'idx_photos_burst_group_id']
   }
 }
 

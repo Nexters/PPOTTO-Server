@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.jooq.tables.Photos
 
 import java.time.Instant
+import java.util.UUID
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -57,6 +58,16 @@ open class PhotosRecord private constructor() : UpdatableRecordImpl<PhotosRecord
         set(value): Unit = set(8, value)
         get(): Instant? = get(8) as Instant?
 
+    open var burstGroupId: UUID?
+        set(value): Unit = set(9, value)
+        get(): UUID? = get(9) as UUID?
+
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @set:JvmName("setIsRepresentative")
+    open var isRepresentative: Boolean?
+        set(value): Unit = set(10, value)
+        get(): Boolean? = get(10) as Boolean?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -66,7 +77,7 @@ open class PhotosRecord private constructor() : UpdatableRecordImpl<PhotosRecord
     /**
      * Create a detached, initialised PhotosRecord
      */
-    constructor(id: PhotoId? = null, analysisId: AnalysisId, boardId: BoardId, contentType: String, uploadStatus: String? = null, uploadedAt: Instant? = null, takenAt: Instant, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: PhotoId? = null, analysisId: AnalysisId, boardId: BoardId, contentType: String, uploadStatus: String? = null, uploadedAt: Instant? = null, takenAt: Instant, createdAt: Instant? = null, updatedAt: Instant? = null, burstGroupId: UUID? = null, isRepresentative: Boolean? = null): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId
@@ -76,6 +87,8 @@ open class PhotosRecord private constructor() : UpdatableRecordImpl<PhotosRecord
         this.takenAt = takenAt
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.burstGroupId = burstGroupId
+        this.isRepresentative = isRepresentative
         resetTouchedOnNotNull()
     }
 
@@ -93,6 +106,8 @@ open class PhotosRecord private constructor() : UpdatableRecordImpl<PhotosRecord
             this.takenAt = value.takenAt
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.burstGroupId = value.burstGroupId
+            this.isRepresentative = value.isRepresentative
             resetTouchedOnNotNull()
         }
     }

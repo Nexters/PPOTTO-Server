@@ -269,5 +269,6 @@ private fun MockHttpServletRequestBuilder.authorized(accessToken: String): MockH
 private fun createAnalysisBody(boardId: UUID): String =
     (0 until PHOTO_COUNT)
         .joinToString(",") {
-            """{"takenAt":"${Instant.parse("2026-07-01T00:00:00Z").plusSeconds(it.toLong())}","contentType":"image/jpeg"}"""
+            """{"items":[{"takenAt":"${Instant.parse("2026-07-01T00:00:00Z").plusSeconds(it.toLong())}",""" +
+                """"contentType":"image/jpeg","isRepresentative":true}]}"""
         }.let { """{"boardId":"$boardId","photos":[$it]}""" }

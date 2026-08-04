@@ -1660,7 +1660,11 @@ Request example:
 | Field | Required | Type | Enum | Description |
 | --- | --- | --- | --- | --- |
 | boardId | Y | `string` | - | 결과 스티커가 붙을 보드 |
-| photos | Y | `object`[] | - | 촬영 시각 오름차순으로 보낸다 |
+| photos | Y | `object`[] | - | 촬영 시각 오름차순으로 보내는 사진 그룹. 펼친 사진 수는 총 90~100장 |
+| photos[].items | Y | `object`[] | - | 그룹에 속한 사진들. 원소 1개면 단독 사진, 2개 이상이면 연사 그룹 |
+| photos[].items[].takenAt | Y | `string` | - | 사진 촬영 시각 |
+| photos[].items[].contentType | Y | `string` | `image/jpeg`, `image/png`, `image/heic` | 지원 형식. 업로드 시 Content-Type과 일치해야 함 |
+| photos[].items[].isRepresentative | Y | `boolean` | - | 화면에 보여줄 대표 사진 여부. 단독 사진은 true로 처리되고, 연사 그룹은 정확히 1장만 true |
 
 Request example:
 ```json
@@ -1668,16 +1672,36 @@ Request example:
   "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
   "photos": [
     {
-      "takenAt": "2026-06-14T13:22:10+09:00",
-      "contentType": "image/jpeg"
+      "items": [
+        {
+          "takenAt": "2026-06-14T13:22:10+09:00",
+          "contentType": "image/jpeg",
+          "isRepresentative": true
+        }
+      ]
     },
     {
-      "takenAt": "2026-06-14T13:24:02+09:00",
-      "contentType": "image/heic"
+      "items": [
+        {
+          "takenAt": "2026-06-14T13:24:02+09:00",
+          "contentType": "image/heic",
+          "isRepresentative": true
+        },
+        {
+          "takenAt": "2026-06-14T13:24:03+09:00",
+          "contentType": "image/heic",
+          "isRepresentative": false
+        }
+      ]
     },
     {
-      "takenAt": "2026-07-02T19:05:44+09:00",
-      "contentType": "image/jpeg"
+      "items": [
+        {
+          "takenAt": "2026-07-02T19:05:44+09:00",
+          "contentType": "image/jpeg",
+          "isRepresentative": true
+        }
+      ]
     }
   ]
 }
@@ -1712,7 +1736,8 @@ Request example:
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | ANALYSIS-001 | 사진은 90장 이상 100장 이하로 보내야 합니다. | 사진 수 정책 위반 (90~100) |
+| 400 | ANALYSIS-001 | 사진은 90장에서 100장 사이여야 합니다. | 사진 수 정책 위반 (90~100) |
+| 400 | ANALYSIS-009 | 연사 그룹은 대표 사진을 정확히 1장 포함해야 합니다. | 연사 그룹의 대표 사진이 0장 또는 2장 이상 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드 없음 또는 소유자 불일치 |
 | 409 | ANALYSIS-002 | 이미 진행 중인 분석이 있습니다. | 진행 중인 분석 존재 |
@@ -1725,7 +1750,21 @@ Request example:
   "data": null,
   "error": {
     "code": "ANALYSIS-001",
-    "message": "사진은 90장 이상 100장 이하로 보내야 합니다.",
+    "message": "사진은 90장에서 100장 사이여야 합니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+400 ANALYSIS-009 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "ANALYSIS-009",
+    "message": "연사 그룹은 대표 사진을 정확히 1장 포함해야 합니다.",
     "fieldErrors": [],
     "timestamp": "2026-07-27T05:02:11Z"
   }
@@ -1789,7 +1828,16 @@ Request example:
 ```
 
 #### Notes
-- "이 사진으로 보드 만들기" 시점에 호출합니다. photos 행을 미리 만들고 사진별 업로드 URL(만료 15분)을 발급합니다. 결과 스티커(최대 6개)는 boardId 보드에 붙습니다.  - 클라이언트는 각 URL로 GCS에 직접 PUT 합니다. Content-Type은 요청값과 일치해야 합니다. - 업로드 URL에는 장당 15MB 크기 제한이 서명되어 있습니다 (x-goog-content-length-range). - 업로드된 사진은 전부 분석에 사용합니다. - 분석은 사용자당 하루 5회로 제한됩니다 (운영 설정값). 초과 시 429 ANALYSIS-006. - 진행 중인 분석이 있으면 409가 반환됩니다 (보드와 무관하게 유저당 1개).   `/analysis/active`로 복귀하거나 취소 후 다시 시도합니다. - 아래 예시는 지면상 3장만 표기했지만 실제 요청은 90~100장입니다.
+- "이 사진으로 보드 만들기" 시점에 호출합니다. photos 행을 미리 만들고 사진별 업로드 URL(만료 15분)을 발급합니다.
+- 클라이언트는 각 URL로 GCS에 직접 PUT 합니다. Content-Type은 요청값과 일치해야 합니다.
+- 업로드 URL에는 장당 15MB 크기 제한이 서명되어 있습니다 (x-goog-content-length-range).
+- 업로드된 사진은 전부 분석에 사용합니다.
+- `photos`는 사진 그룹 배열입니다. 그룹 원소 1개는 단독 사진, 2개 이상은 연사 그룹입니다.
+- `burstGroupId`는 클라이언트가 보내지 않고 서버가 연사 그룹마다 발급합니다.
+- 단독 사진은 항상 대표 사진으로 처리됩니다. 연사 그룹은 그룹 안에서 정확히 1장만 `isRepresentative=true`여야 합니다.
+- 분석은 사용자당 하루 5회로 제한됩니다 (운영 설정값). 초과 시 429 ANALYSIS-006.
+- 진행 중인 분석이 있으면 409가 반환됩니다 (보드와 무관하게 유저당 1개). `/analysis/active`로 복귀하거나 취소 후 다시 시도합니다.
+- 아래 예시는 지면상 3장만 표기했지만 실제 요청은 펼친 사진 수 기준 90~100장입니다.
 
 ### GET /analysis/active
 
