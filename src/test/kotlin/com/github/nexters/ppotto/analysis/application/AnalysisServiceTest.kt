@@ -550,6 +550,111 @@ class AnalysisServiceTest(
             }
         }
 
+        Given("UPLOADING 상태의 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+
+            When("분석을 취소하면") {
+                analysisService.cancelAnalysis(board.userId.value, created.analysisId)
+
+                Then("analysis는 FAILED/CANCELED로 닫히고 모든 photo는 FAILED가 된다") {
+                    val analysis = analysisRepository.findById(created.analysisId)
+                    analysis.shouldNotBeNull()
+                    analysis.status shouldBe AnalysisStatus.FAILED
+                    analysis.failedReason shouldBe "CANCELED"
+
+                    photoRepository
+                        .findAllByAnalysisId(created.analysisId)
+                        .map { it.uploadStatus }
+                        .toSet() shouldBe setOf(UploadStatus.FAILED)
+                }
+
+                Then("커밋 후 비동기로 사진 prefix가 정리된다") {
+                    eventually {
+                        photoStorage.deletedPrefixes shouldContainExactly listOf(photoObjectKeys.prefixFor(created.analysisId))
+                    }
+                }
+
+                Then("같은 사용자가 새로운 분석을 다시 생성할 수 있다") {
+                    val result = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+                    result.analysisId.shouldNotBeNull()
+                }
+            }
+        }
+
+        Given("ANALYZING 상태로 전이된 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
+                .where(ANALYSIS.ID.eq(AnalysisId(created.analysisId)))
+                .execute()
+
+            When("분석을 취소하면") {
+                Then("ConflictException(ANALYSIS-004)이 발생한다") {
+                    val exception =
+                        shouldThrow<ConflictException> {
+                            analysisService.cancelAnalysis(board.userId.value, created.analysisId)
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-004"
+                }
+            }
+        }
+
+        Given("COMPLETED 상태로 전이된 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
+                .where(ANALYSIS.ID.eq(AnalysisId(created.analysisId)))
+                .execute()
+
+            When("분석을 취소하면") {
+                Then("ConflictException(ANALYSIS-004)이 발생한다") {
+                    val exception =
+                        shouldThrow<ConflictException> {
+                            analysisService.cancelAnalysis(board.userId.value, created.analysisId)
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-004"
+                }
+            }
+        }
+
+        Given("존재하지 않는 analysisId로") {
+            When("취소를 요청하면") {
+                Then("NotFoundException(ANALYSIS-005)이 발생한다") {
+                    val stranger = userRepository.saveTestUser()
+                    val exception =
+                        shouldThrow<NotFoundException> {
+                            analysisService.cancelAnalysis(stranger.id.value, UUID.randomUUID())
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-005"
+                }
+            }
+        }
+
+        Given("다른 사용자의 UPLOADING 분석으로") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+            val otherUser = userRepository.saveTestUser()
+
+            When("취소를 요청하면") {
+                Then("NotFoundException(ANALYSIS-005)이 발생한다") {
+                    val exception =
+                        shouldThrow<NotFoundException> {
+                            analysisService.cancelAnalysis(otherUser.id.value, created.analysisId)
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-005"
+                }
+            }
+        }
+
         Given("기존 분석이 FAILED 상태인 사용자가") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }

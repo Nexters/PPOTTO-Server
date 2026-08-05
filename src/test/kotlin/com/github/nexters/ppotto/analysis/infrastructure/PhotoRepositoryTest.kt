@@ -144,6 +144,50 @@ class PhotoRepositoryTest(
             }
         }
 
+        Given("여러 상태로 섞인 Photo가 저장된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val photos =
+                photoRepository.saveAll(
+                    analysis.id,
+                    board.id.value,
+                    listOf(
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-03T00:00:00Z")),
+                    ),
+                )
+            photoRepository.markCompletedBatch(mapOf(photos[0].id to Instant.now()))
+            photoRepository.markFailedBatch(listOf(photos[1].id))
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val otherAnalysis = analysisRepository.save(otherBoard.userId.value, otherBoard.id.value)
+            val otherPhoto =
+                photoRepository
+                    .saveAll(
+                        otherAnalysis.id,
+                        otherBoard.id.value,
+                        listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-04T00:00:00Z"))),
+                    ).single()
+
+            When("markAllFailedByAnalysisId를 호출하면") {
+                val updatedCount = photoRepository.markAllFailedByAnalysisId(analysis.id)
+
+                Then("상태와 무관하게 해당 분석의 모든 Photo가 FAILED가 된다") {
+                    updatedCount shouldBe 3
+                    photoRepository
+                        .findAllByAnalysisId(analysis.id)
+                        .map { it.uploadStatus }
+                        .toSet() shouldBe setOf(UploadStatus.FAILED)
+                }
+
+                Then("다른 분석의 Photo는 영향받지 않는다") {
+                    val untouched = photoRepository.findAllByAnalysisId(otherAnalysis.id).single()
+                    untouched.id shouldBe otherPhoto.id
+                    untouched.uploadStatus shouldBe UploadStatus.PENDING
+                }
+            }
+        }
+
         Given("서로 다른 분석에 완료 사진과 대기 사진이 저장된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId.value, board.id.value)

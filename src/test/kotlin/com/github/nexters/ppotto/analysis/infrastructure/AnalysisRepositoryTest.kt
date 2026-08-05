@@ -213,6 +213,38 @@ class AnalysisRepositoryTest(
             }
         }
 
+        Given("UPLOADING 상태의 Analysis가 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val saved = analysisRepository.save(board.userId.value, board.id.value)
+
+            When("markFailed(취소 사유)를 호출하면") {
+                val updatedCount = analysisRepository.markFailed(saved.id, "CANCELED")
+
+                Then("UPLOADING에서도 FAILED로 전이되고 사유를 기록한다") {
+                    updatedCount shouldBe 1
+                    val found = analysisRepository.findById(saved.id)
+                    found?.status shouldBe AnalysisStatus.FAILED
+                    found?.failedReason shouldBe "CANCELED"
+                }
+            }
+        }
+
+        Given("이미 COMPLETED 상태로 전이된 Analysis가 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val saved = analysisRepository.save(board.userId.value, board.id.value)
+            analysisRepository.markAnalyzing(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
+            analysisRepository.markCompleted(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
+
+            When("markFailed를 호출하면") {
+                val updatedCount = analysisRepository.markFailed(saved.id, "CANCELED")
+
+                Then("이미 종료된 분석은 변경하지 않는다") {
+                    updatedCount shouldBe 0
+                    analysisRepository.findById(saved.id)?.status shouldBe AnalysisStatus.COMPLETED
+                }
+            }
+        }
+
         Given("부분 유니크 인덱스 uk_analysis_active 제약 검증") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
