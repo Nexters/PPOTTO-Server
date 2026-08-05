@@ -68,6 +68,7 @@
 | stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 | 200 | 401, 404 | Y |
 | stickers | PATCH | /stickers/{stickerId} | 스티커 제목 수정 | 200 | 400, 401, 404 | Y |
 | stickers | DELETE | /stickers/{stickerId} | 스티커 묶음 삭제 | 200 | 401, 404 | Y |
+| stickers | POST | /stickers/{stickerId}/regenerate | 스티커 이미지 재생성 | 200 | 400, 401, 404, 409 | Y |
 | stickers | POST | /stickers/{stickerId}/view | 리캡 열람 처리 (빨간 점 제거) | 200 | 401, 404 | Y |
 | analysis | POST | /analysis | 분석 생성 + 업로드 URL 일괄 발급 | 200 | 400, 401, 404, 409, 429 | Y |
 | analysis | GET | /analysis/active | 진행 중 분석 조회 (앱 재진입 복구) | 200 | 401 | Y |
@@ -1582,6 +1583,158 @@ Request example:
 
 #### Notes
 - 스티커 묶음을 삭제합니다. 연결된 드로잉과 리캡(코멘트, 사진 연결)도 함께 삭제됩니다.
+
+### POST /stickers/{stickerId}/regenerate
+
+- Operation ID: `regenerate`
+- Summary: 스티커 이미지 재생성
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | stickerId | Y | `string` | 01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f | - |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 재생성 완료 | `sticker`, `summary`, `comments`, `photos` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "sticker": {
+      "id": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "title": "동물 밈 짤줍",
+      "isNew": false,
+      "type": "IMAGE",
+      "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-1a2b.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=8f3a...",
+      "textContent": null,
+      "posX": 62.5,
+      "posY": 318,
+      "scale": 0.8,
+      "rotation": -12,
+      "zIndex": 3,
+      "badgeOffsetX": -24,
+      "badgeOffsetY": 96,
+      "badgeRotation": 0
+    },
+    "summary": "웃기고 귀여우면 일단 주워요",
+    "comments": [
+      {
+        "id": "01983f2d-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+        "content": "야옹~",
+        "posX": -96,
+        "posY": -150
+      },
+      {
+        "id": "01983f2d-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
+        "content": "또 주웠네!",
+        "posX": -104,
+        "posY": 62
+      },
+      {
+        "id": "01983f2d-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+        "content": "복슬복슬",
+        "posX": 98,
+        "posY": 18
+      },
+      {
+        "id": "01983f2d-4d5e-7f6a-b7c8-9d0e1f2a3b4c",
+        "content": "냥집사"
+      }
+    ],
+    "photos": [
+      {
+        "id": "01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+        "imageUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-1a2b.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=1c9b...",
+        "takenAt": "2026-06-14T13:22:10+09:00"
+      },
+      {
+        "id": "01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
+        "imageUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-2b3c.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=7d2e...",
+        "takenAt": "2026-07-02T19:05:44+09:00"
+      }
+    ]
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | COMMON-001 | 잘못된 입력입니다. | 이미지형 스티커가 아니거나 재생성 가능한 사진 구성이 없음 |
+| 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
+| 404 | STICKER-001 | 스티커를 찾을 수 없습니다. | 스티커 없음 또는 소유자 불일치 |
+| 409 | STICKER-002 | 이미 재생성이 진행 중입니다. | 같은 스티커에 대한 재생성이 이미 진행 중 |
+
+400 COMMON-001 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "COMMON-001",
+    "message": "잘못된 입력입니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+401 COMMON-004 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "COMMON-004",
+    "message": "인증이 필요합니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+404 STICKER-001 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "STICKER-001",
+    "message": "스티커를 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+409 STICKER-002 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "STICKER-002",
+    "message": "이미 재생성이 진행 중입니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 이미지형 스티커만 재생성할 수 있습니다. 텍스트 스티커는 400 `COMMON-001`을 반환합니다.
+- 기존 리캡의 사진 구성은 유지하고, 서버가 그 사진들 중 새 원본 사진과 피사체를 선택해 스티커 이미지와 `sourcePhotoId`만 교체합니다.
+- `title`, `summary`, `comments`, 보드 배치값, 빨간 점 상태는 변경하지 않습니다. 응답은 재생성 후 리캡 상세와 같은 형태입니다.
+- 같은 스티커에 대한 재생성은 동시에 하나만 진행됩니다. 진행 중에 다시 요청하면 409 `STICKER-002`를 반환하며, 성공적으로 끝난 직후에는 쿨다운 없이 바로 다음 재생성을 요청할 수 있습니다.
 
 ### POST /stickers/{stickerId}/view
 

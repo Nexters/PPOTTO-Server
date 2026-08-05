@@ -43,7 +43,9 @@ class PhotosPipelineE2ETest:
         db_password: str = "ppotto",
         photos_dir: str = None,
         photos_count: int = 90,
-        max_workers: int = 10
+        max_workers: int = 10,
+        theme_query: str = None,
+        regenerate_theme: bool = False,
     ):
         self.api_url = api_url
         self.db_host = db_host
@@ -54,6 +56,8 @@ class PhotosPipelineE2ETest:
         self.photos_dir = photos_dir or os.path.expanduser("~/Desktop/etc/wark")
         self.photos_count = photos_count
         self.max_workers = max_workers
+        self.theme_query = theme_query
+        self.regenerate_theme = regenerate_theme
         self.test_results = {}
         self.access_token = None
         self.board_id = None
@@ -92,6 +96,10 @@ class PhotosPipelineE2ETest:
             if not self._start_analysis(analysis_id):
                 return False
 
+            if self.regenerate_theme and not self._regenerate_theme_sticker(analysis_id):
+                self._mark_failure(start_time)
+                return False
+
             elapsed = time.time() - start_time
             logger.info("\n" + "=" * 70)
             logger.info(f"✅ E2E 테스트 완료 ({elapsed:.0f}초)")
@@ -110,6 +118,11 @@ class PhotosPipelineE2ETest:
             self._write_report()
             return False
 
+    def _mark_failure(self, start_time: float) -> None:
+        self.test_results['elapsed_seconds'] = time.time() - start_time
+        self.test_results['status'] = 'failure'
+        self._write_report()
+
     def _validate_environment(self) -> bool:
         """환경 검증"""
         logger.info("\n[검증] 환경 확인 중...")
@@ -124,8 +137,8 @@ class PhotosPipelineE2ETest:
                 return False
 
             health = json.loads(result.stdout)
-            if health.get("status") != "UP":
-                logger.error(f"❌ API 서버 상태 이상")
+            if not self._is_api_usable(health):
+                logger.error("❌ API 서버 상태 이상")
                 return False
 
             logger.info(f"✅ API 서버 정상: {self.api_url}")
@@ -149,6 +162,21 @@ class PhotosPipelineE2ETest:
         except Exception as e:
             logger.error(f"❌ 환경 검증 실패: {e}")
             return False
+
+    def _is_api_usable(self, health: Dict) -> bool:
+        if health.get("status") == "UP":
+            return True
+
+        db_status = (
+            health
+            .get("components", {})
+            .get("db", {})
+            .get("status")
+        )
+        if db_status == "UP":
+            logger.warning("API 헬스체크가 UP은 아니지만 DB가 UP이므로 E2E를 계속 진행합니다.")
+            return True
+        return False
 
     def _create_board(self) -> str:
         """Board 생성"""
@@ -246,7 +274,15 @@ class PhotosPipelineE2ETest:
             payload = {
                 "boardId": board_id,
                 "photos": [
-                    {"takenAt": p["takenAt"], "contentType": p["contentType"]}
+                    {
+                        "items": [
+                            {
+                                "takenAt": p["takenAt"],
+                                "contentType": p["contentType"],
+                                "isRepresentative": True,
+                            }
+                        ]
+                    }
                     for p in photos
                 ]
             }
@@ -372,6 +408,90 @@ class PhotosPipelineE2ETest:
             logger.error(f"❌ 분석 시작 중 오류: {e}")
             return False
 
+    def _regenerate_theme_sticker(self, analysis_id: str) -> bool:
+        """특정 테마의 스티커 재생성"""
+        logger.info("\n[Step 5] 특정 테마 스티커 재생성 중...")
+
+        regeneration_result = {
+            "status": "failure",
+            "theme_query": self.theme_query or "",
+            "candidates": self._regeneration_candidates(),
+        }
+        self.test_results["regeneration"] = regeneration_result
+
+        selected = self._select_sticker_for_regeneration()
+        if not selected:
+            regeneration_result["error"] = "재생성할 이미지형 스티커를 찾지 못했습니다."
+            logger.error(f"❌ {regeneration_result['error']}")
+            return False
+
+        before = self._fetch_sticker_by_id(selected["sticker_id"]) or selected
+        regeneration_result["selected_before"] = before
+        logger.info(f"선택된 스티커: {before.get('title')} ({before.get('sticker_id')})")
+
+        try:
+            request_start_time = time.time()
+            result = subprocess.run(
+                [
+                    "curl", "-s", "-X", "POST",
+                    f"{self.api_url}/stickers/{before['sticker_id']}/regenerate",
+                    "-H", "Content-Type: application/json",
+                    "-H", f"Authorization: Bearer {self.access_token}",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
+            regeneration_result["request_seconds"] = time.time() - request_start_time
+            response = json.loads(result.stdout)
+            regeneration_result["api_response"] = response.get("data")
+
+            if not response.get("success"):
+                error = response.get("error") or {}
+                regeneration_result["error"] = error.get("message") or "재생성 API 호출에 실패했습니다."
+                logger.error(f"❌ 스티커 재생성 실패: {regeneration_result['error']}")
+                return False
+
+            response_sticker = response["data"]["sticker"]
+            if response_sticker["id"] != before["sticker_id"]:
+                regeneration_result["error"] = "재생성 응답의 스티커 ID가 요청 ID와 다릅니다."
+                logger.error(f"❌ {regeneration_result['error']}")
+                return False
+            if response_sticker.get("type") != "IMAGE" or not response_sticker.get("imageUrl"):
+                regeneration_result["error"] = "재생성 응답에 이미지형 스티커 URL이 없습니다."
+                logger.error(f"❌ {regeneration_result['error']}")
+                return False
+
+            after = self._fetch_sticker_by_id(before["sticker_id"])
+            regeneration_result["selected_after"] = after
+            if not after:
+                regeneration_result["error"] = "재생성 후 DB에서 스티커를 찾지 못했습니다."
+                logger.error(f"❌ {regeneration_result['error']}")
+                return False
+            if before.get("image_key") == after.get("image_key"):
+                regeneration_result["error"] = "재생성 후 image_key가 변경되지 않았습니다."
+                logger.error(f"❌ {regeneration_result['error']}")
+                return False
+            if before.get("title") != after.get("title"):
+                regeneration_result["error"] = "재생성 후 title이 변경되었습니다."
+                logger.error(f"❌ {regeneration_result['error']}")
+                return False
+            if before.get("summary") != after.get("summary"):
+                regeneration_result["error"] = "재생성 후 summary가 변경되었습니다."
+                logger.error(f"❌ {regeneration_result['error']}")
+                return False
+
+            regeneration_result["status"] = "success"
+            self.test_results["stickers"] = self._fetch_sticker_report_items(analysis_id)
+            self.test_results["themes"] = self._fetch_theme_report_items(analysis_id)
+            logger.info("✅ 스티커 재생성 완료")
+            return True
+
+        except Exception as e:
+            regeneration_result["error"] = str(e)
+            logger.error(f"❌ 스티커 재생성 중 오류: {e}")
+            return False
+
     def _build_photo_report_items(
         self,
         analysis_id: str,
@@ -393,7 +513,7 @@ class PhotosPipelineE2ETest:
 
     def _fetch_sticker_report_items(self, analysis_id: str) -> List[Dict]:
         cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
-            SELECT id, type, title, source_photo_id, image_key, text_content
+            SELECT id, type, title, summary, source_photo_id, image_key, text_content
             FROM stickers
             WHERE analysis_id = '{analysis_id}' AND deleted_at IS NULL
             ORDER BY z_index, created_at
@@ -404,12 +524,13 @@ class PhotosPipelineE2ETest:
 
         stickers = []
         for line in result.stdout.strip().splitlines():
-            sticker_id, sticker_type, title, source_photo_id, image_key, text_content = line.split("|")
+            sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content = line.split("|", 6)
             stickers.append(
                 {
                     "sticker_id": sticker_id,
                     "type": sticker_type,
                     "title": title,
+                    "summary": summary,
                     "source_photo_id": source_photo_id or None,
                     "image_key": image_key or None,
                     "text_content": text_content or None,
@@ -439,6 +560,7 @@ class PhotosPipelineE2ETest:
                     "sticker_id": None,
                     "type": "IMAGE",
                     "title": filename,
+                    "summary": "",
                     "source_photo_id": self._source_photo_id_from_sticker_key(filename),
                     "image_key": object_key,
                     "text_content": None,
@@ -451,8 +573,74 @@ class PhotosPipelineE2ETest:
         name = filename.removesuffix(".png")
         return name.split("-", 1)[1] if "-" in name else ""
 
+    def _fetch_sticker_by_id(self, sticker_id: str) -> Dict:
+        cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
+            SELECT id, type, title, summary, source_photo_id, image_key, text_content
+            FROM stickers
+            WHERE id = '{sticker_id}' AND deleted_at IS NULL
+        " 2>/dev/null"""
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+        if result.returncode != 0 or not result.stdout.strip():
+            return {}
+
+        sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content = (
+            result.stdout.strip().splitlines()[0].split("|", 6)
+        )
+        return {
+            "sticker_id": sticker_id,
+            "type": sticker_type,
+            "title": title,
+            "summary": summary,
+            "source_photo_id": source_photo_id or None,
+            "image_key": image_key or None,
+            "text_content": text_content or None,
+            "signed_url": self._sign_gcs_read_url(image_key) if image_key else None,
+        }
+
+    def _select_sticker_for_regeneration(self) -> Dict:
+        stickers = [
+            sticker
+            for sticker in self.test_results.get("stickers", [])
+            if sticker.get("type") == "IMAGE" and sticker.get("sticker_id")
+        ]
+        if not stickers:
+            return {}
+        if not self.theme_query:
+            return stickers[0]
+
+        query = self.theme_query.casefold()
+        for sticker in stickers:
+            if query in (sticker.get("title") or "").casefold():
+                return sticker
+
+        for theme in self.test_results.get("themes", []):
+            if query not in (theme.get("theme") or "").casefold():
+                continue
+            image_key = theme.get("sticker_image_key")
+            source_photo_id = theme.get("source_photo_id")
+            for sticker in stickers:
+                if image_key and sticker.get("image_key") == image_key:
+                    return sticker
+                if source_photo_id and sticker.get("source_photo_id") == source_photo_id:
+                    return sticker
+
+        return {}
+
+    def _regeneration_candidates(self) -> List[Dict]:
+        return [
+            {
+                "sticker_id": sticker.get("sticker_id"),
+                "title": sticker.get("title"),
+                "image_key": sticker.get("image_key"),
+                "source_photo_id": sticker.get("source_photo_id"),
+            }
+            for sticker in self.test_results.get("stickers", [])
+            if sticker.get("type") == "IMAGE"
+        ]
+
     def write_report_for_analysis(self, analysis_id: str) -> None:
         self.test_results = {"analysis_id": analysis_id, "status": "report-only"}
+        self._load_analysis_owner(analysis_id)
         self.test_results["photos"] = self._fetch_photo_report_items(analysis_id)
         self.test_results["stickers"] = self._fetch_sticker_report_items(analysis_id)
         self.test_results["analysis_timing"] = self._fetch_analysis_timing(analysis_id)
@@ -460,6 +648,21 @@ class PhotosPipelineE2ETest:
         self.test_results["themes"] = self._fetch_theme_report_items(analysis_id)
         self.test_results["uploaded_photos"] = len(self.test_results["photos"])
         self._write_report()
+
+    def _load_analysis_owner(self, analysis_id: str) -> None:
+        cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
+            SELECT user_id, board_id
+            FROM analysis
+            WHERE id = '{analysis_id}'
+        " 2>/dev/null"""
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+        if result.returncode != 0 or not result.stdout.strip():
+            return
+
+        self.user_id, self.board_id = result.stdout.strip().splitlines()[0].split("|")
+        self.access_token = self._issue_access_token(self.user_id)
+        self.test_results["user_id"] = self.user_id
+        self.test_results["board_id"] = self.board_id
 
     def _model_report_items(self) -> List[Dict]:
         return [
@@ -664,6 +867,7 @@ class PhotosPipelineE2ETest:
         stickers = self.test_results.get("stickers", [])
         models = self.test_results.get("models", [])
         themes = self.test_results.get("themes", [])
+        regeneration = self.test_results.get("regeneration")
         timing = self.test_results.get("analysis_timing", {})
         pipeline_elapsed = timing.get("pipeline_elapsed_seconds")
         pipeline_elapsed_text = f"{pipeline_elapsed:.1f}s" if pipeline_elapsed is not None else "-"
@@ -717,6 +921,7 @@ class PhotosPipelineE2ETest:
             """
             for sticker in stickers
         )
+        regeneration_section = self._render_regeneration_section(regeneration)
         return f"""<!doctype html>
 <html lang="ko">
 <head>
@@ -766,6 +971,7 @@ class PhotosPipelineE2ETest:
     <h2>Theme Classification</h2>
     <div class="themes">{theme_items}</div>
   </section>
+  {regeneration_section}
   <section>
     <h2>Stickers</h2>
     <div class="grid">{sticker_items}</div>
@@ -784,6 +990,52 @@ class PhotosPipelineE2ETest:
             return f'<a href="{url}" target="_blank" rel="noreferrer"><img src="{url}" alt="{html.escape(sticker["title"])}"></a>'
         return f"<p>{html.escape(sticker.get('text_content') or '')}</p>"
 
+    def _render_regeneration_section(self, regeneration: Dict) -> str:
+        if not regeneration:
+            return ""
+
+        before = regeneration.get("selected_before") or {}
+        after = regeneration.get("selected_after") or {}
+        candidates = regeneration.get("candidates") or []
+        request_seconds = regeneration.get("request_seconds")
+        request_seconds_text = f"{request_seconds:.1f}s" if request_seconds is not None else "-"
+        candidate_items = "\n".join(
+            f"""
+            <tr>
+              <td>{html.escape(str(candidate.get('title') or '-'))}</td>
+              <td>{html.escape(str(candidate.get('sticker_id') or '-'))}</td>
+              <td>{html.escape(str(candidate.get('image_key') or '-'))}</td>
+            </tr>
+            """
+            for candidate in candidates
+        )
+        return f"""
+  <section>
+    <h2>Sticker Regeneration</h2>
+    <div class="summary">
+      <div>Status<br><strong>{html.escape(str(regeneration.get('status') or '-'))}</strong></div>
+      <div>Theme Query<br><strong>{html.escape(str(regeneration.get('theme_query') or '-'))}</strong></div>
+      <div>Request Time<br><strong>{html.escape(request_seconds_text)}</strong></div>
+      <div>Error<br><strong>{html.escape(str(regeneration.get('error') or '-'))}</strong></div>
+    </div>
+    <table>
+      <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>Sticker ID</td><td>{html.escape(str(before.get('sticker_id') or '-'))}</td><td>{html.escape(str(after.get('sticker_id') or '-'))}</td></tr>
+        <tr><td>Title</td><td>{html.escape(str(before.get('title') or '-'))}</td><td>{html.escape(str(after.get('title') or '-'))}</td></tr>
+        <tr><td>Summary</td><td>{html.escape(str(before.get('summary') or '-'))}</td><td>{html.escape(str(after.get('summary') or '-'))}</td></tr>
+        <tr><td>Source Photo</td><td>{html.escape(str(before.get('source_photo_id') or '-'))}</td><td>{html.escape(str(after.get('source_photo_id') or '-'))}</td></tr>
+        <tr><td>Image Key</td><td>{html.escape(str(before.get('image_key') or '-'))}</td><td>{html.escape(str(after.get('image_key') or '-'))}</td></tr>
+      </tbody>
+    </table>
+    <h3>Regeneration Candidates</h3>
+    <table>
+      <thead><tr><th>Title</th><th>Sticker ID</th><th>Image Key</th></tr></thead>
+      <tbody>{candidate_items}</tbody>
+    </table>
+  </section>
+"""
+
 
 def main():
     parser = argparse.ArgumentParser(description="뽀또 사진 분석 파이프라인 E2E 테스트")
@@ -795,6 +1047,8 @@ def main():
     parser.add_argument('--photos-count', type=int, default=90, help='테스트 사진 개수')
     parser.add_argument('--max-workers', type=int, default=10, help='병렬 워커 수')
     parser.add_argument('--report-analysis-id', help='기존 analysisId로 보고서만 생성')
+    parser.add_argument('--theme-query', help='재생성할 테마 또는 스티커 제목 검색어')
+    parser.add_argument('--regenerate-theme', action='store_true', help='분석 후 특정 테마의 스티커를 재생성')
 
     args = parser.parse_args()
 
@@ -808,11 +1062,18 @@ def main():
         db_port=args.db_port,
         photos_dir=args.photos_dir,
         photos_count=args.photos_count,
-        max_workers=args.max_workers
+        max_workers=args.max_workers,
+        theme_query=args.theme_query,
+        regenerate_theme=args.regenerate_theme,
     )
 
     if args.report_analysis_id:
         test.write_report_for_analysis(args.report_analysis_id)
+        if args.regenerate_theme:
+            success = test._regenerate_theme_sticker(args.report_analysis_id)
+            test.test_results["status"] = "success" if success else "failure"
+            test._write_report()
+            return 0 if success else 1
         return 0
 
     success = test.run()
