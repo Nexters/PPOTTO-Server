@@ -202,6 +202,11 @@ open class Stickers(
      */
     val SUMMARY: TableField<StickersRecord, String?> = createField(DSL.name("summary"), SQLDataType.CLOB.nullable(false), this, "")
 
+    /**
+     * The column <code>public.stickers.regeneration_locked_until</code>.
+     */
+    val REGENERATION_LOCKED_UNTIL: TableField<StickersRecord, Instant?> = createField(DSL.name("regeneration_locked_until"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
+
     private constructor(alias: Name, aliased: Table<StickersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
