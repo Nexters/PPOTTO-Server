@@ -42,8 +42,8 @@ class AnalysisService(
         boardId: UUID,
         photoGroups: List<PhotoUploadGroupRequest>,
     ): AnalysisCreationResult {
+        validateGroupCount(photoGroups.size)
         val photos = resolveBurstGroups(photoGroups)
-        validatePhotoCount(photos.size)
         boardAccessService.getOwnedByIdForUpdate(BoardId(boardId), UserId(userId))
         validateNoActiveAnalysis(userId)
         val analysis = saveAnalysisWithConstraintFallback(userId, boardId)
@@ -158,14 +158,17 @@ class AnalysisService(
         }
     }
 
-    private fun validatePhotoCount(size: Int) {
-        if (size !in MIN_PHOTO_COUNT..MAX_PHOTO_COUNT) {
-            throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
+    private fun validateGroupCount(size: Int) {
+        if (size !in MIN_GROUP_COUNT..MAX_GROUP_COUNT) {
+            throw InvalidInputException(AnalysisErrorCode.GROUP_COUNT_OUT_OF_RANGE)
         }
     }
 
     private fun resolveBurstGroups(groups: List<PhotoUploadGroupRequest>): List<PhotoUploadItemRequest> =
         groups.flatMap { group ->
+            if (group.items.size > MAX_BURST_GROUP_SIZE) {
+                throw InvalidInputException(AnalysisErrorCode.BURST_GROUP_SIZE_EXCEEDED)
+            }
             if (group.items.size > 1) {
                 if (group.items.count { it.isRepresentative } != 1) {
                     throw InvalidInputException(AnalysisErrorCode.INVALID_BURST_GROUP)
@@ -196,7 +199,8 @@ class AnalysisService(
     }
 
     companion object {
-        const val MIN_PHOTO_COUNT = 90
-        const val MAX_PHOTO_COUNT = 100
+        const val MIN_GROUP_COUNT = 20
+        const val MAX_GROUP_COUNT = 100
+        const val MAX_BURST_GROUP_SIZE = 10
     }
 }
