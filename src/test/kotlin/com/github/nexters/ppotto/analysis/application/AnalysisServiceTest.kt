@@ -40,6 +40,7 @@ import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.thread
 
 @Import(AnalysisTestConfig::class)
+@Suppress("LargeClass")
 class AnalysisServiceTest(
     private val analysisService: AnalysisService,
     private val analysisRepository: AnalysisRepository,
@@ -64,10 +65,10 @@ class AnalysisServiceTest(
             photoStorage.clear()
         }
 
-        Given("사진이 89장으로(하한 미만) 요청되면") {
+        Given("사진 그룹이 19개로(하한 미만) 요청되면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
-                (0 until 89).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+                (0 until 19).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
             val photoGroups = photos.asGroups()
 
             When("분석 생성을 요청하면") {
@@ -81,7 +82,7 @@ class AnalysisServiceTest(
             }
         }
 
-        Given("사진이 101장으로(상한 초과) 요청되면") {
+        Given("사진 그룹이 101개로(상한 초과) 요청되면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val photos =
                 (0 until 101).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
@@ -94,6 +95,59 @@ class AnalysisServiceTest(
                             analysisService.createAnalysis(board.userId.value, board.id.value, photoGroups)
                         }
                     exception.errorCode.code shouldBe "ANALYSIS-001"
+                }
+            }
+        }
+
+        Given("연사 그룹의 사진이 11장으로(그룹당 상한 초과) 요청되면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val standaloneItems =
+                (0 until 19).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val burstItems =
+                (0 until 11).map { i ->
+                    PhotoUploadItemRequest(
+                        Instant.now().plusSeconds(19 + i.toLong()),
+                        PhotoContentType.JPEG,
+                        isRepresentative = i == 0,
+                    )
+                }
+            val photoGroups = standaloneItems.asGroups() + PhotoUploadGroupRequest(burstItems)
+
+            When("분석 생성을 요청하면") {
+                Then("InvalidInputException(ANALYSIS-010)이 발생한다") {
+                    val exception =
+                        shouldThrow<InvalidInputException> {
+                            analysisService.createAnalysis(board.userId.value, board.id.value, photoGroups)
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-010"
+                }
+            }
+        }
+
+        Given("사진 그룹이 20개(하한 경계값)로 요청되면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos =
+                (0 until 20).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val photoGroups = photos.asGroups()
+
+            When("분석 생성을 요청하면") {
+                Then("정상 생성된다") {
+                    val result = analysisService.createAnalysis(board.userId.value, board.id.value, photoGroups)
+                    result.uploads shouldHaveSize 20
+                }
+            }
+        }
+
+        Given("사진 그룹이 100개(상한 경계값)로 요청되면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos =
+                (0 until 100).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val photoGroups = photos.asGroups()
+
+            When("분석 생성을 요청하면") {
+                Then("정상 생성된다") {
+                    val result = analysisService.createAnalysis(board.userId.value, board.id.value, photoGroups)
+                    result.uploads shouldHaveSize 100
                 }
             }
         }
