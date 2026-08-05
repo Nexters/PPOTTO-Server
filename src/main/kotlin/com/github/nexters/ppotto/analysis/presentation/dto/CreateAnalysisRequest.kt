@@ -27,25 +27,24 @@ data class CreateAnalysisRequest(
     @field:ArraySchema(
         arraySchema =
             Schema(
-                description = "촬영 시각 오름차순으로 보내는 사진 그룹. 펼쳤을 때 총 90~100장이어야 한다.",
+                description = "촬영 시각 오름차순으로 보내는 사진 그룹. 그룹은 20~100개, 그룹당 사진은 1~10장이어야 한다.",
             ),
     )
     val photos: List<@Valid PhotoUploadGroup>,
 ) {
     fun toServiceRequests(): List<PhotoUploadGroupRequest> =
         photos
-            .also { validatePhotoCount(it) }
+            .also { validateGroupCount(it) }
             .map { it.toServiceRequest() }
 
-    private fun validatePhotoCount(groups: List<PhotoUploadGroup>) {
-        val photoCount = groups.sumOf { it.items.size }
-        if (photoCount !in AnalysisService.MIN_PHOTO_COUNT..AnalysisService.MAX_PHOTO_COUNT) {
-            throw InvalidInputException(AnalysisErrorCode.PHOTO_COUNT_OUT_OF_RANGE)
+    private fun validateGroupCount(groups: List<PhotoUploadGroup>) {
+        if (groups.size !in AnalysisService.MIN_GROUP_COUNT..AnalysisService.MAX_GROUP_COUNT) {
+            throw InvalidInputException(AnalysisErrorCode.GROUP_COUNT_OUT_OF_RANGE)
         }
     }
 }
 
-@Schema(description = "사진 그룹. 연사가 아니면 원소 1개, 연사면 여러 장")
+@Schema(description = "사진 그룹. 연사가 아니면 원소 1개, 연사면 여러 장(최대 10장)")
 data class PhotoUploadGroup(
     @field:Size(min = 1)
     @field:ArraySchema(arraySchema = Schema(description = "그룹에 속한 사진들. 촬영 시각 오름차순"))

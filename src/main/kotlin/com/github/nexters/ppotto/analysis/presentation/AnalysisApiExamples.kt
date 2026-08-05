@@ -36,7 +36,7 @@ private val ANALYZING_STATUS =
 
 private val CREATE_ANALYSIS_REQUEST =
     ApiExample(
-        name = "분석 생성 (지면상 3장, 실제 요청은 90~100장). 두 번째 그룹은 연사 2장 예시",
+        name = "분석 생성 (지면상 3그룹, 실제 요청은 20~100그룹). 두 번째 그룹은 연사 2장 예시",
         value =
             CreateAnalysisRequest(
                 boardId = BOARD_ID,
@@ -159,11 +159,11 @@ private val BOARD_NOT_FOUND =
         message = "보드를 찾을 수 없습니다.",
     )
 
-private val PHOTO_COUNT_OUT_OF_RANGE =
+private val GROUP_COUNT_OUT_OF_RANGE =
     ApiExamples.errorExample(
         code = "ANALYSIS-001",
-        summary = "사진 수 정책 위반 (90~100장)",
-        message = "사진은 90장에서 100장 사이여야 합니다.",
+        summary = "사진 그룹 수 정책 위반 (20~100개)",
+        message = "사진 그룹은 20개에서 100개 사이여야 합니다.",
     )
 
 private val INVALID_BURST_GROUP =
@@ -171,6 +171,13 @@ private val INVALID_BURST_GROUP =
         code = "ANALYSIS-009",
         summary = "연사 그룹 내 대표 사진이 정확히 1장이 아님",
         message = "연사 그룹은 대표 사진을 정확히 1장 포함해야 합니다.",
+    )
+
+private val BURST_GROUP_SIZE_EXCEEDED =
+    ApiExamples.errorExample(
+        code = "ANALYSIS-010",
+        summary = "그룹당 사진이 10장을 초과함",
+        message = "그룹당 사진은 최대 10장까지 가능합니다.",
     )
 
 private val ACTIVE_ANALYSIS_EXISTS =
@@ -220,7 +227,13 @@ class AnalysisApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(CREATE_ANALYSIS_RESPONSE),
-                            "400" to listOf(ApiExamples.INVALID_INPUT, PHOTO_COUNT_OUT_OF_RANGE, INVALID_BURST_GROUP),
+                            "400" to
+                                listOf(
+                                    ApiExamples.INVALID_INPUT,
+                                    GROUP_COUNT_OUT_OF_RANGE,
+                                    INVALID_BURST_GROUP,
+                                    BURST_GROUP_SIZE_EXCEEDED,
+                                ),
                             "404" to listOf(BOARD_NOT_FOUND),
                             "409" to listOf(ACTIVE_ANALYSIS_EXISTS),
                         ),

@@ -312,13 +312,13 @@ class OpenApiDocumentationTest(
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/analysis']['post']['requestBody']['content']['application/json']" +
-                                "['examples']['분석 생성 (지면상 3장, 실제 요청은 90~100장). 두 번째 그룹은 연사 2장 예시']" +
+                                "['examples']['분석 생성 (지면상 3그룹, 실제 요청은 20~100그룹). 두 번째 그룹은 연사 2장 예시']" +
                                 "['value']['photos'][0]['items'][0]['contentType']",
                         ).value("image/jpeg"),
                     ).andExpect(
                         jsonPath(
                             "$['paths']['/analysis']['post']['requestBody']['content']['application/json']" +
-                                "['examples']['분석 생성 (지면상 3장, 실제 요청은 90~100장). 두 번째 그룹은 연사 2장 예시']" +
+                                "['examples']['분석 생성 (지면상 3그룹, 실제 요청은 20~100그룹). 두 번째 그룹은 연사 2장 예시']" +
                                 "['value']['photos'][1]['items'][1]['isRepresentative']",
                         ).value(false),
                     )

@@ -32,6 +32,7 @@ import java.util.UUID
 
 @AutoConfigureMockMvc
 @Import(AnalysisTestConfig::class)
+@Suppress("LargeClass")
 class AnalysisControllerTest(
     @Autowired val mockMvc: MockMvc,
     boardRepository: BoardRepository,
@@ -61,7 +62,7 @@ class AnalysisControllerTest(
             val burstItems =
                 representativeValues
                     .mapIndexed { index, isRepresentative ->
-                        """{"takenAt": "2026-07-20T00:00:0${index}Z", """ +
+                        """{"takenAt": "2026-07-20T00:00:${index.toString().padStart(2, '0')}Z", """ +
                             """"contentType": "image/jpeg", "isRepresentative": $isRepresentative}"""
                     }.joinToString(",")
             return (standaloneGroups + """{"items": [$burstItems]}""").joinToString(",", prefix = "[", postfix = "]")
@@ -138,7 +139,7 @@ class AnalysisControllerTest(
                 }
             }
 
-            When("사진이 89장으로(하한 미만) 요청하면") {
+            When("사진 그룹이 19개로(하한 미만) 요청하면") {
                 Then("400 응답과 ANALYSIS-001을 반환한다") {
                     mockMvc
                         .perform(
@@ -148,7 +149,7 @@ class AnalysisControllerTest(
                                     """
                                     {
                                         "boardId": "${board.id}",
-                                        "photos": ${createPhotosJson(89)}
+                                        "photos": ${createPhotosJson(19)}
                                     }
                                     """.trimIndent(),
                                 ),
@@ -158,7 +159,7 @@ class AnalysisControllerTest(
                 }
             }
 
-            When("사진이 101장으로(상한 초과) 요청하면") {
+            When("사진 그룹이 101개로(상한 초과) 요청하면") {
                 Then("400 응답과 ANALYSIS-001을 반환한다") {
                     mockMvc
                         .perform(
@@ -215,6 +216,27 @@ class AnalysisControllerTest(
                         ).andExpect(status().isBadRequest)
                         .andExpect(jsonPath("$.success").value(false))
                         .andExpect(jsonPath("$.error.code").value("ANALYSIS-009"))
+                }
+            }
+
+            When("그룹당 사진이 11장으로(그룹당 상한 초과) 요청하면") {
+                Then("400 응답과 ANALYSIS-010을 반환한다") {
+                    val representativeValues = listOf(true) + List(10) { false }
+                    mockMvc
+                        .perform(
+                            authenticatedPost("/analysis", board.userId.value)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {
+                                        "boardId": "${board.id}",
+                                        "photos": ${createPhotosJsonWithBurstGroup(19, representativeValues)}
+                                    }
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-010"))
                 }
             }
 
