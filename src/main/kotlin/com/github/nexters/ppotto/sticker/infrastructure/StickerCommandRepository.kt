@@ -50,6 +50,37 @@ class StickerCommandRepository(
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
+    fun tryClaimRegenerationLock(
+        stickerId: StickerId,
+        now: Instant,
+        lockUntil: Instant,
+    ): Boolean =
+        dslContext
+            .update(STICKERS)
+            .set(STICKERS.REGENERATION_LOCKED_UNTIL, lockUntil)
+            .where(STICKERS.ID.eq(stickerId))
+            .and(STICKERS.DELETED_AT.isNull)
+            .and(
+                STICKERS.REGENERATION_LOCKED_UNTIL.isNull
+                    .or(STICKERS.REGENERATION_LOCKED_UNTIL.lt(now)),
+            ).execute() == 1
+
+    fun releaseRegenerationLock(stickerId: StickerId): Boolean =
+        dslContext
+            .update(STICKERS)
+            .setNull(STICKERS.REGENERATION_LOCKED_UNTIL)
+            .where(STICKERS.ID.eq(stickerId))
+            .execute() == 1
+
+    fun updateStickerImage(sticker: Sticker): Boolean =
+        dslContext
+            .update(STICKERS)
+            .set(STICKERS.SOURCE_PHOTO_ID, sticker.sourcePhotoId)
+            .set(STICKERS.IMAGE_KEY, sticker.imageKey)
+            .where(STICKERS.ID.eq(sticker.id))
+            .and(STICKERS.DELETED_AT.isNull)
+            .execute() == 1
+
     fun softDelete(
         stickerId: StickerId,
         deletedAt: Instant,

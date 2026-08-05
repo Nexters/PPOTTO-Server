@@ -15,8 +15,8 @@ class Sticker(
     title: String,
     val summary: String,
     viewedAt: Instant?,
-    val sourcePhotoId: PhotoId?,
-    val imageKey: String?,
+    sourcePhotoId: PhotoId?,
+    imageKey: String?,
     val textContent: String?,
     posX: Double,
     posY: Double,
@@ -52,6 +52,10 @@ class Sticker(
         private set
     var deletedAt: Instant? = deletedAt
         private set
+    var sourcePhotoId: PhotoId? = sourcePhotoId
+        private set
+    var imageKey: String? = imageKey
+        private set
 
     init {
         title
@@ -83,6 +87,16 @@ class Sticker(
                 badgeOffsetY = it.badgeOffsetY
                 badgeRotation = it.badgeRotation
             }.let { it.title?.let(::rename) ?: Unit }
+
+    fun regenerateSticker(
+        sourcePhotoId: PhotoId,
+        imageKey: String,
+    ): Unit =
+        validateContent(type, sourcePhotoId, imageKey, textContent)
+            .let {
+                this.sourcePhotoId = sourcePhotoId
+                this.imageKey = imageKey
+            }
 
     fun delete(deletedAt: Instant): Unit =
         deletedAt

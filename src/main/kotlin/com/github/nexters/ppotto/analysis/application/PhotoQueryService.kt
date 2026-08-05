@@ -1,9 +1,11 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.Photo
+import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.global.config.GcsProperties
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service
 class PhotoQueryService(
     private val photoRepository: PhotoRepository,
     private val photoStorage: PhotoStorage,
+    private val gcsProperties: GcsProperties,
 ) {
     fun getReadablePhotos(
         analysisId: AnalysisId,
@@ -23,6 +26,21 @@ class PhotoQueryService(
             .findCompletedByIds(analysisId.value, boardId.value, photoIds.map(PhotoId::value))
             .map { it to it.objectKey() }
             .let(::signReadUrls)
+
+    fun getPhotoRefs(
+        analysisId: AnalysisId,
+        boardId: BoardId,
+        photoIds: Collection<PhotoId>,
+    ): List<PhotoRef> =
+        photoRepository
+            .findCompletedByIds(analysisId.value, boardId.value, photoIds.map(PhotoId::value))
+            .map {
+                PhotoRef(
+                    photoId = it.id,
+                    gcsUri = "gs://${gcsProperties.bucket}/${it.objectKey()}",
+                    mimeType = it.contentType.mimeType,
+                )
+            }
 
     private fun signReadUrls(keyedPhotos: List<Pair<Photo, String>>): List<PhotoReadResult> =
         photoStorage

@@ -18,7 +18,17 @@ class AsyncConfig {
                 .factory(),
         )
 
+    @Bean(STICKER_IMAGE_CLEANUP_TASK_EXECUTOR)
+    fun stickerImageCleanupTaskExecutor(): Executor =
+        SimpleAsyncTaskExecutor(
+            Thread
+                .ofVirtual()
+                .name("sticker-image-cleanup-", 0)
+                .factory(),
+        )
+
     companion object {
         const val ANALYSIS_CLEANUP_TASK_EXECUTOR = "analysisCleanupTaskExecutor"
+        const val STICKER_IMAGE_CLEANUP_TASK_EXECUTOR = "stickerImageCleanupTaskExecutor"
     }
 }

@@ -116,6 +116,15 @@ private val STICKER_NOT_FOUND_RESPONSE =
         ),
     )
 
+private val STICKER_REGENERATION_IN_PROGRESS_RESPONSE =
+    listOf(
+        ApiExamples.errorExample(
+            code = "STICKER-002",
+            summary = "재생성 진행 중",
+            message = "이미 재생성이 진행 중입니다.",
+        ),
+    )
+
 @Component
 class StickerApiExamples : ApiExampleProvider {
     override val examples: Map<KFunction<*>, OperationExamples> =
@@ -136,6 +145,16 @@ class StickerApiExamples : ApiExampleProvider {
                             "200" to listOf(UPDATE_STICKER_TITLE_RESPONSE),
                             "400" to ApiExamples.INVALID_INPUT_RESPONSE,
                             "404" to STICKER_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            StickerApi::regenerate to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to listOf(RECAP_DETAIL_RESPONSE),
+                            "400" to ApiExamples.INVALID_INPUT_RESPONSE,
+                            "404" to STICKER_NOT_FOUND_RESPONSE,
+                            "409" to STICKER_REGENERATION_IN_PROGRESS_RESPONSE,
                         ),
                 ),
             StickerApi::delete to
