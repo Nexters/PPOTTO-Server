@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.support
 
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
@@ -14,6 +15,22 @@ fun defaultStickerLayout(): StickerLayout =
         badgeOffsetX = 0.0,
         badgeOffsetY = 0.0,
         badgeRotation = 0.0,
+    )
+
+fun imageStickerCreation(
+    sourcePhotoId: PhotoId,
+    imageKey: String = "stickers/original.png",
+    title: String = "원래 제목",
+    summary: String = "한 줄 요약",
+): StickerCreation =
+    StickerCreation(
+        type = StickerType.IMAGE,
+        title = title,
+        summary = summary,
+        sourcePhotoId = sourcePhotoId,
+        imageKey = imageKey,
+        textContent = null,
+        layout = defaultStickerLayout(),
     )
 
 fun textStickerCreation(
