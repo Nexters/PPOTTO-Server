@@ -1374,6 +1374,9 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 }
 ```
 
+#### Notes
+- `photos`는 연사(버스트) 그룹으로 촬영된 사진이라도 그룹당 대표 사진(`is_representative = true`) 1장만 포함합니다. 단독으로 촬영된 사진은 항상 포함됩니다.
+
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |

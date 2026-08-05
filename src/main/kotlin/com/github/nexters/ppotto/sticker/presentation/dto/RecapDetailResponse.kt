@@ -18,7 +18,7 @@ data class RecapDetailResponse(
     @field:Schema(description = "분석 코멘트. id(uuidv7) 오름차순")
     val comments: List<RecapCommentResponse>,
 
-    @field:Schema(description = "리캡 사진. takenAt, id 오름차순")
+    @field:Schema(description = "리캡 사진. takenAt, id 오름차순. 연사 그룹은 대표 사진 1장만 포함")
     val photos: List<RecapPhotoResponse>,
 ) {
     companion object {

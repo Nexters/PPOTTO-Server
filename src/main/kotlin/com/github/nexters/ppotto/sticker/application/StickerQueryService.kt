@@ -38,6 +38,7 @@ class StickerQueryService(
                             photoQueryPort()
                                 .getByIds(sticker.analysisId, sticker.boardId, photoIds)
                                 .also { checkPhotoContract(photoIds, it) }
+                                .filter { it.isRepresentative }
                                 .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id.value })
                                 .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }
                         }.orEmpty()

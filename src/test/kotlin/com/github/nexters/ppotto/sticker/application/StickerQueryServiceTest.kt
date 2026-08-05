@@ -22,6 +22,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
 import java.time.Instant
+import java.util.UUID
 
 class StickerQueryServiceTest(
     service: StickerQueryService,
@@ -108,6 +109,56 @@ class StickerQueryServiceTest(
                         )
                         it.imageUrl.shouldContain("X-Goog-Expires=3600")
                     }
+                }
+            }
+        }
+
+        Given("연사 그룹 사진이 리캡에 연결된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val burstGroupId = UUID.randomUUID()
+            val photos =
+                photoRepository.saveAll(
+                    analysis.id,
+                    board.id.value,
+                    listOf(
+                        PhotoCreate(
+                            PhotoContentType.JPEG,
+                            Instant.parse("2026-07-01T00:00:00Z"),
+                            burstGroupId = burstGroupId,
+                            isRepresentative = true,
+                        ),
+                        PhotoCreate(
+                            PhotoContentType.JPEG,
+                            Instant.parse("2026-07-01T00:00:01Z"),
+                            burstGroupId = burstGroupId,
+                            isRepresentative = false,
+                        ),
+                    ),
+                )
+            photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
+            val representativePhoto = photos.single { it.isRepresentative }
+            val sticker =
+                stickerRepository.save(
+                    AnalysisId(analysis.id),
+                    board.id,
+                    StickerCreation(
+                        type = StickerType.IMAGE,
+                        title = "리캡",
+                        summary = "웃기고 귀여우면 일단 주워요",
+                        sourcePhotoId = PhotoId(representativePhoto.id),
+                        imageKey = "stickers/recap.png",
+                        textContent = null,
+                        layout = defaultStickerLayout(),
+                    ),
+                )
+            stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
+
+            When("리캡 상세를 조회하면") {
+                val result = service.getRecap(board.userId, sticker.id)
+
+                Then("연사 그룹의 대표 사진만 반환한다") {
+                    result.photos.map { it.id } shouldContainExactly listOf(PhotoId(representativePhoto.id))
                 }
             }
         }
