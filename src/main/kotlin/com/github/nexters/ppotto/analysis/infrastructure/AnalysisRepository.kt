@@ -124,7 +124,7 @@ class AnalysisRepository(
             .set(ANALYSIS.STATUS, AnalysisStatus.FAILED.name)
             .set(ANALYSIS.FAILED_REASON, failedReason)
             .where(ANALYSIS.ID.eq(AnalysisId(id)))
-            .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
+            .and(ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }))
             .execute()
 
     private fun AnalysisRecord.toDomain() =
@@ -144,6 +144,7 @@ class AnalysisRepository(
     companion object {
         const val ANALYZING_STARTED_PROGRESS = 10
         const val COMPLETED_PROGRESS = 100
+        const val FAILED_REASON_CANCELED = "CANCELED"
         private const val MIN_PROGRESS = 0
         private const val MAX_IN_PROGRESS = 99
     }

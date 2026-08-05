@@ -22,6 +22,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -82,6 +83,17 @@ class AnalysisControllerTest(
             userId: UUID,
         ): MockHttpServletRequestBuilder =
             get(url)
+                .with(
+                    authentication(
+                        UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList()),
+                    ),
+                )
+
+        fun authenticatedDelete(
+            url: String,
+            userId: UUID,
+        ): MockHttpServletRequestBuilder =
+            delete(url)
                 .with(
                     authentication(
                         UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList()),
@@ -483,6 +495,78 @@ class AnalysisControllerTest(
                         .perform(authenticatedPost("/analysis/${created.analysisId}/start", otherUserId))
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.success").value(false))
+                }
+            }
+        }
+
+        Given("UPLOADING 상태의 분석이 있으면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos =
+                (0 until 90).map { i ->
+                    PhotoUploadGroupRequest(
+                        listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
+                    )
+                }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos)
+
+            When("취소를 요청하면") {
+                Then("200 응답과 null data를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedDelete("/analysis/${created.analysisId}", board.userId.value))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data").doesNotExist())
+                }
+            }
+        }
+
+        Given("ANALYZING 상태로 전이된 분석이 있으면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
+                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
+                .execute()
+
+            When("취소를 요청하면") {
+                Then("409 응답과 ANALYSIS-004를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedDelete("/analysis/${analysis.id}", board.userId.value))
+                        .andExpect(status().isConflict)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-004"))
+                }
+            }
+        }
+
+        Given("다른 사용자의 analysisId로") {
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(ownerBoard.userId.value, ownerBoard.id.value)
+            val otherUser = userRepository.saveTestUser()
+
+            When("취소를 요청하면") {
+                Then("404 응답과 ANALYSIS-005를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedDelete("/analysis/${analysis.id}", otherUser.id.value))
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
+                }
+            }
+        }
+
+        Given("인증되지 않은 요청으로") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+
+            When("취소를 요청하면") {
+                Then("401 응답과 COMMON-004를 반환한다") {
+                    mockMvc
+                        .perform(delete("/analysis/${analysis.id}"))
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
                 }
             }
         }

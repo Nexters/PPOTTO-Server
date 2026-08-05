@@ -103,6 +103,13 @@ class PhotoRepository(
         }
     }
 
+    fun markAllFailedByAnalysisId(analysisId: UUID): Int =
+        dslContext
+            .update(PHOTOS)
+            .set(PHOTOS.UPLOAD_STATUS, UploadStatus.FAILED.name)
+            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
+            .execute()
+
     fun findCompletedByIds(
         analysisId: UUID,
         boardId: UUID,

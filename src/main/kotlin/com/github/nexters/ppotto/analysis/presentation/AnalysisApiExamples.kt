@@ -194,6 +194,13 @@ private val NO_UPLOADED_PHOTOS =
         message = "업로드된 사진이 없습니다.",
     )
 
+private val CANCEL_NOT_ALLOWED =
+    ApiExamples.errorExample(
+        code = "ANALYSIS-004",
+        summary = "UPLOADING이 아닌 분석은 취소 불가",
+        message = "분석이 시작되어 취소할 수 없습니다.",
+    )
+
 private val ANALYSIS_NOT_FOUND_RESPONSE =
     listOf(
         ApiExamples.errorExample(
@@ -238,6 +245,15 @@ class AnalysisApiExamples : ApiExampleProvider {
                             "200" to
                                 listOf(ANALYZING_DETAIL_RESPONSE, COMPLETED_STATUS_RESPONSE, FAILED_STATUS_RESPONSE),
                             "404" to ANALYSIS_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            AnalysisApi::cancel to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to ApiExamples.EMPTY_SUCCESS,
+                            "404" to ANALYSIS_NOT_FOUND_RESPONSE,
+                            "409" to listOf(CANCEL_NOT_ALLOWED),
                         ),
                 ),
         )
