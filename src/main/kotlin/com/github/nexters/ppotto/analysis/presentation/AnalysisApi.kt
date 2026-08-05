@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
+import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -146,4 +148,33 @@ interface AnalysisApi {
         userId: UUID,
         analysisId: UUID,
     ): ApiResponse<AnalysisStatusResponse>
+
+    @DeleteMapping("/{analysisId}")
+    @Operation(
+        summary = "분석 취소",
+        description = "업로드 중(UPLOADING)인 분석을 취소함. 분석과 사진 상태를 FAILED로 닫고, 업로드된 원본 이미지는 커밋 후 비동기로 정리함",
+        parameters = [
+            Parameter(
+                name = "analysisId",
+                description = "취소할 분석 ID (uuidv7)",
+                example = "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+            ),
+        ],
+    )
+    @EmptySuccessApiResponse
+    @AnalysisNotFoundApiResponse
+    @OpenApiResponse(
+        responseCode = "409",
+        description = "취소할 수 없는 상태의 분석임 (ANALYSIS-004)",
+        content = [
+            Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ApiErrorResponse::class),
+            ),
+        ],
+    )
+    fun cancel(
+        userId: UUID,
+        analysisId: UUID,
+    ): ApiResponse<Unit>
 }

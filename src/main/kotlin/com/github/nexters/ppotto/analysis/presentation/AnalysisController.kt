@@ -53,4 +53,12 @@ class AnalysisController(
             .getAnalysis(analysisId, userId)
             .let(AnalysisStatusResponse::from)
             .let { ApiResponse.success(it) }
+
+    override fun cancel(
+        @AuthenticatedUser userId: UUID,
+        @PathVariable analysisId: UUID,
+    ): ApiResponse<Unit> =
+        analysisService
+            .cancelAnalysis(userId, analysisId)
+            .let { ApiResponse.success() }
 }

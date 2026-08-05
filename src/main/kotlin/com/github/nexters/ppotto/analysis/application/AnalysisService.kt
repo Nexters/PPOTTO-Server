@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisCanceledEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
@@ -78,6 +79,22 @@ class AnalysisService(
         validateAnalysisOwner(analysis.userId, userId)
         validateUploading(analysis.status)
         return performUploadVerification(analysisId)
+    }
+
+    @Transactional
+    fun cancelAnalysis(
+        userId: UUID,
+        analysisId: UUID,
+    ) {
+        val locked = analysisRepository.findByIdForUpdate(analysisId)
+        if (locked == null || locked.userId != userId) throw NotFoundException(AnalysisErrorCode.ANALYSIS_NOT_FOUND)
+        if (locked.status != AnalysisStatus.UPLOADING) {
+            throw ConflictException(AnalysisErrorCode.CANCEL_NOT_ALLOWED)
+        }
+
+        analysisRepository.markFailed(analysisId, AnalysisRepository.FAILED_REASON_CANCELED)
+        photoRepository.markAllFailedByAnalysisId(analysisId)
+        eventPublisher.publishEvent(AnalysisCanceledEvent(analysisId))
     }
 
     private fun performUploadVerification(analysisId: UUID): UploadVerificationResult {
