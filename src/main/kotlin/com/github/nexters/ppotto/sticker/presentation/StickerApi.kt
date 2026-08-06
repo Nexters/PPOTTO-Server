@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.sticker.presentation
 
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
@@ -103,6 +104,41 @@ interface StickerApi {
         userId: UserId,
         stickerId: StickerId,
     ): ApiResponse<Unit>
+
+    @PostMapping("/{stickerId}/regenerate")
+    @Operation(
+        operationId = "regenerate",
+        summary = "스티커 이미지 재생성",
+        description = "고정된 사진 구성은 유지한 채 스티커 이미지(피사체)만 다시 생성함. 리캡 문구(title, summary)는 바뀌지 않음",
+        parameters = [
+            Parameter(
+                name = "stickerId",
+                description = "재생성할 스티커 ID (uuidv7)",
+                example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+            ),
+        ],
+    )
+    @OpenApiResponse(
+        responseCode = "200",
+        useReturnTypeSchema = true,
+        description = "재생성 완료",
+    )
+    @InvalidInputApiResponse
+    @StickerNotFoundApiResponse
+    @OpenApiResponse(
+        responseCode = "409",
+        description = "같은 스티커에 대한 재생성이 이미 진행 중임 (STICKER-002)",
+        content = [
+            Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ApiErrorResponse::class),
+            ),
+        ],
+    )
+    fun regenerate(
+        userId: UserId,
+        stickerId: StickerId,
+    ): ApiResponse<RecapDetailResponse>
 
     @PostMapping("/{stickerId}/view")
     @Operation(

@@ -6,7 +6,7 @@ API contract source documents.
 
 | File | Description |
 |------|---------|
-| `api-spec.md` | Source API contract for spec-driven development, including public optional-auth terms lookup and analysis status APIs |
+| `api-spec.md` | Source API contract for spec-driven development, including terms, boards, stickers/recaps, analysis, auth, user, and report APIs |
 
 ## Rules
 

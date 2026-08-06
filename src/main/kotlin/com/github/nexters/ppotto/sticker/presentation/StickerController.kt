@@ -46,6 +46,16 @@ class StickerController(
             .delete(userId, stickerId)
             .let { ApiResponse.success() }
 
+    override fun regenerate(
+        @AuthenticatedUser userId: UserId,
+        @PathVariable stickerId: StickerId,
+    ): ApiResponse<RecapDetailResponse> =
+        stickerCommandService
+            .regenerate(userId, stickerId)
+            .let { stickerQueryService.getRecap(userId, stickerId) }
+            .let(RecapDetailResponse::from)
+            .let { ApiResponse.success(it) }
+
     override fun markViewed(
         @AuthenticatedUser userId: UserId,
         @PathVariable stickerId: StickerId,

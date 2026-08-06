@@ -31,6 +31,7 @@
 - GCS(Google Cloud Storage) 통합 검증
 - Vertex AI Gemini 분석 모델 통합 검증
 - 배지/스티커 생성 검증
+- 특정 테마 스티커 재생성 검증
 
 ### 테스트 환경
 - **언어:** Python 3.8+
@@ -47,7 +48,8 @@
 | 2 | 클라우드 통합 검증 | GCS 업로드, Signed URL |
 | 3 | AI 분석 검증 | Gemini 분류, 배지 생성 |
 | 4 | 성능 검증 | 전체 소요 시간, 병렬 처리 |
-| 5 | 오류 처리 검증 | 타임아웃, 실패 케이스 |
+| 5 | 스티커 재생성 검증 | 테마 선택, image_key 교체, 리캡 문구 유지 |
+| 6 | 오류 처리 검증 | 타임아웃, 실패 케이스 |
 
 ---
 
@@ -57,6 +59,7 @@
 - 100개 사진 업로드 (실제 GCS)
 - Gemini 2.5 Flash 분류 모델 호출
 - Gemini 2.5 Flash-Image 스티커 생성 모델 호출
+- POST /stickers/{stickerId}/regenerate 스티커 재생성 호출
 - 배지 및 설명문 생성
 - 데이터베이스 상태 관리
 
@@ -76,6 +79,7 @@
 [API Server] (localhost:8080)
     ├─ POST /analysis (Signed URL 발급)
     ├─ POST /analysis/{id}/start (분석 시작)
+    ├─ POST /stickers/{id}/regenerate (스티커 재생성)
     └─ GET /analysis/{id} (상태 조회)
     ↓
 [PostgreSQL DB] (localhost:54782)
@@ -97,9 +101,10 @@
 
 ```
 Step 0: 환경 검증
-  └─ API 서버 정상
+  └─ API 서버 접근 가능
   └─ DB 접근 가능
   └─ 사진 파일 준비됨
+  └─ Redis health가 DOWN이어도 DB가 UP이면 로컬 E2E는 계속 진행
 
 Step 1: Board 생성
   └─ User → Board 생성 (DB)
@@ -116,7 +121,15 @@ Step 3: Signed URL 발급
   {
     "boardId": "...",
     "photos": [
-      {"takenAt": "2026-07-31T04:01:16Z", "contentType": "image/jpeg"},
+      {
+        "items": [
+          {
+            "takenAt": "2026-07-31T04:01:16Z",
+            "contentType": "image/jpeg",
+            "isRepresentative": true
+          }
+        ]
+      },
       ...
     ]
   }
@@ -156,7 +169,14 @@ Step 7: 스티커 생성 (동기)
   - Gemini 2.5 Flash-Image로 스티커 생성
   - 타임아웃: 120초/테마
 
-Step 8: 결과 로그 출력
+Step 8: 특정 테마 스티커 재생성 (선택)
+  - --regenerate-theme 옵션이 있을 때 실행
+  - --theme-query 값으로 스티커 title 또는 테마명 부분 매칭
+  - POST /stickers/{stickerId}/regenerate 호출
+  - 같은 stickerId의 image_key 변경 확인
+  - title, summary 유지 확인
+
+Step 9: 결과 로그 출력
   INFO AnalysisPipelineEventListener: analysis pipeline result for analysisId=...
   {
     "recapId": "...",
@@ -193,7 +213,7 @@ Step 8: 결과 로그 출력
 #### POST /analysis
 ```
 검증 항목:
-  ✓ Request body 형식 (boardId, photos[])
+  ✓ Request body 형식 (boardId, photos[].items[])
   ✓ Response status code (200)
   ✓ Response body 형식 (analysisId, uploads[])
   ✓ uploads[] 요소 수 = photos[] 요소 수
@@ -210,6 +230,19 @@ Step 8: 결과 로그 출력
   ✓ uploadedCount == 100 (모두 성공)
   ✓ failedCount == 0
   ✓ 응답 시간 (600초 이내, 동기 처리)
+```
+
+#### POST /stickers/{stickerId}/regenerate
+```
+검증 항목:
+  ✓ Request path parameter (stickerId UUID)
+  ✓ Response status code (200)
+  ✓ Response body 형식 (sticker, summary, comments, photos)
+  ✓ sticker.id == 요청 stickerId
+  ✓ sticker.type == IMAGE
+  ✓ sticker.imageUrl 존재
+  ✓ DB image_key 변경
+  ✓ DB title, summary 유지
 ```
 
 ### 데이터베이스 검증
@@ -249,6 +282,7 @@ Step 8: 결과 로그 출력
   ✓ Gemini 2.5 Flash-Image 스티커 생성
   ✓ 스티커 생성 타임아웃: 120초
   ✓ 스티커 저장 위치: gs://ppotto-bucket-dev/stickers/
+  ✓ 특정 테마 스티커 재생성 시 새 이미지 생성
 ```
 
 ### 성능 검증
@@ -283,11 +317,16 @@ Step 8: 결과 로그 출력
    - 각 테마별 배지/설명 생성
    - 로그에 AnalysisPipelineResult 기록
 
-4. **배지 생성**
+4. **배지/스티커 생성**
    - 최소 3/6 배지 이미지 생성 성공 (타임아웃 고려)
    - 모든 배지 gs:// 경로 저장됨
 
-5. **성능**
+5. **스티커 재생성**
+   - --regenerate-theme 사용 시 대상 스티커 선택 성공
+   - 재생성 후 image_key 변경
+   - title, summary 유지
+
+6. **성능**
    - 전체 소요시간 < 3분
 
 ### ❌ 실패 기준
@@ -308,7 +347,13 @@ Step 8: 결과 로그 출력
    - Gemini 호출 실패
    - 배지/스티커 생성 실패
 
-4. **성능**
+4. **스티커 재생성 오류**
+   - --theme-query에 매칭되는 이미지형 스티커 없음
+   - 재생성 API 실패
+   - 재생성 후 image_key 미변경
+   - 재생성 후 title 또는 summary 변경
+
+5. **성능**
    - 전체 소요시간 > 5분
    - API 응답 타임아웃
 
@@ -353,6 +398,15 @@ python3 e2e/test_photosanalysis_pipeline.py --api-url http://api.example.com:808
 # 병렬 워커 수 조정
 python3 e2e/test_photosanalysis_pipeline.py --max-workers 20
 
+# 특정 테마 스티커 재생성까지 실행
+python3 e2e/test_photosanalysis_pipeline.py --theme-query "동물" --regenerate-theme
+
+# 기존 분석 결과로 보고서와 재생성만 실행
+python3 e2e/test_photosanalysis_pipeline.py \
+  --report-analysis-id 01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f \
+  --theme-query "동물" \
+  --regenerate-theme
+
 # 전체 옵션
 python3 e2e/test_photosanalysis_pipeline.py \
   --api-url http://localhost:8080 \
@@ -360,7 +414,9 @@ python3 e2e/test_photosanalysis_pipeline.py \
   --db-port 54782 \
   --photos-dir ~/Desktop/etc/wark \
   --photos-count 100 \
-  --max-workers 10
+  --max-workers 10 \
+  --theme-query "동물" \
+  --regenerate-theme
 ```
 
 ### 결과 확인
@@ -386,6 +442,7 @@ grep "analysis pipeline result" bootRun.log
 - 모든 100개 사진 업로드 완료
 - Gemini 분석 성공
 - HTML 보고서에서 6개 테마, 모델명, signed URL, 전체 소요시간 확인
+- 재생성 옵션 사용 시 Sticker Regeneration 섹션에서 전후 image key와 title/summary 유지 확인
 
 ### 실패 시
 

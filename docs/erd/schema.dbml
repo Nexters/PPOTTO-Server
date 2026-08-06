@@ -277,6 +277,8 @@ Table stickers {
   image_key       text [null, note: '서버가 누끼 처리해 올린 스티커 PNG 키. 이미지형은 필수']
   text_content    text [null, note: '텍스트형일 때 문구']
 
+  regeneration_locked_until timestamptz [null, note: '이미지 재생성 진행 중 잠금 만료 시각. NULL이면 재생성 가능. 재생성 종료 시(성공/실패 무관) 즉시 NULL로 되돌린다 — 정상 흐름에서는 도달하지 않는 크래시 복구용 상한']
+
   // 보드 상 배치
   pos_x    double  [not null]
   pos_y    double  [not null]

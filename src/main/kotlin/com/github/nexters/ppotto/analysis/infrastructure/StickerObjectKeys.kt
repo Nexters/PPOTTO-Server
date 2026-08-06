@@ -12,4 +12,10 @@ object StickerObjectKeys {
         themeIndex: Int,
         sourcePhotoId: UUID,
     ): String = "${objectKeyGenerator.prefix(NAMESPACE, analysisId.toString())}$themeIndex-$sourcePhotoId.png"
+
+    fun keyForRegeneration(
+        stickerId: UUID,
+        sourcePhotoId: UUID,
+        regenerationId: UUID,
+    ): String = "${objectKeyGenerator.prefix(NAMESPACE, stickerId.toString())}$sourcePhotoId-$regenerationId.png"
 }

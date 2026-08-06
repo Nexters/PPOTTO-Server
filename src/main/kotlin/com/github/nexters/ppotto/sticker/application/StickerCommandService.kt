@@ -1,17 +1,25 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
+import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationPort
+import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
+import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
+import java.time.Duration
 import java.time.Instant
 
 @Service
@@ -21,6 +29,9 @@ class StickerCommandService(
     private val stickerRecapRepository: StickerRecapRepository,
     private val stickerAccessService: StickerAccessService,
     private val drawingCommandPorts: List<StickerDrawingCommandPort>,
+    private val stickerRegenerationPorts: List<StickerRegenerationPort>,
+    private val transactionTemplate: TransactionTemplate,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @Transactional
     fun rename(
@@ -70,6 +81,75 @@ class StickerCommandService(
                     }
             }
         }
+
+    fun regenerate(
+        userId: UserId,
+        stickerId: StickerId,
+    ): Sticker {
+        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val photoIds = validateRegeneratable(sticker, stickerId)
+        val previousSourcePhotoId = checkNotNull(sticker.sourcePhotoId) { "이미지형 스티커의 소스 사진이 비어 있습니다." }
+        val previousImageKey = sticker.imageKey
+
+        val now = Instant.now()
+        if (!stickerCommandRepository.tryClaimRegenerationLock(stickerId, now, now.plus(REGENERATION_LOCK_TTL))) {
+            throw ConflictException(StickerErrorCode.STICKER_REGENERATION_IN_PROGRESS)
+        }
+
+        try {
+            val regenerationPort =
+                stickerRegenerationPorts.singleOrNull()
+                    ?: error("스티커 재생성 application port 구현이 정확히 하나 필요합니다.")
+            val result =
+                regenerationPort.regenerate(
+                    analysisId = sticker.analysisId,
+                    boardId = sticker.boardId,
+                    stickerId = sticker.id,
+                    photoIds = photoIds,
+                    previousSourcePhotoId = previousSourcePhotoId,
+                )
+
+            runCatching {
+                transactionTemplate.execute {
+                    sticker.regenerateSticker(result.sourcePhotoId, result.imageKey)
+
+                    if (!stickerCommandRepository.updateStickerImage(sticker)) {
+                        throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+                    }
+                }
+            }.onFailure {
+                publishStickerImageDeletion(
+                    stickerId = stickerId,
+                    imageKeys = listOf(result.imageKey),
+                    reason = StickerImageDeletionReason.REGENERATED_IMAGE_DB_UPDATE_FAILED,
+                )
+            }.getOrThrow()
+
+            if (previousImageKey != null && previousImageKey != result.imageKey) {
+                publishStickerImageDeletion(
+                    stickerId = stickerId,
+                    imageKeys = listOf(previousImageKey),
+                    reason = StickerImageDeletionReason.REGENERATED_IMAGE_REPLACED,
+                )
+            }
+
+            return sticker
+        } finally {
+            stickerCommandRepository.releaseRegenerationLock(stickerId)
+        }
+    }
+
+    private fun validateRegeneratable(
+        sticker: Sticker,
+        stickerId: StickerId,
+    ): List<PhotoId> {
+        if (sticker.type != StickerType.IMAGE) {
+            throw InvalidInputException(message = "이미지형 스티커만 재생성할 수 있습니다.")
+        }
+        return stickerRecapRepository
+            .findPhotoIds(stickerId)
+            .ifEmpty { throw InvalidInputException(message = "재생성할 사진 구성이 없습니다.") }
+    }
 
     fun validateOwnedByBoard(
         boardId: BoardId,
@@ -122,4 +202,26 @@ class StickerCommandService(
     private fun drawingCommandPort(): StickerDrawingCommandPort =
         drawingCommandPorts.singleOrNull()
             ?: error("스티커 드로잉 삭제 application port 구현이 정확히 하나 필요합니다.")
+
+    private fun publishStickerImageDeletion(
+        stickerId: StickerId,
+        imageKeys: List<String>,
+        reason: StickerImageDeletionReason,
+    ) {
+        eventPublisher.publishEvent(
+            StickerImageDeletionRequestedEvent(
+                stickerId = stickerId,
+                imageKeys = imageKeys,
+                reason = reason,
+            ),
+        )
+    }
+
+    companion object {
+        // Gemini regenerateSticker(classify-timeout-ms) 60s + stickerGenerator.generate(sticker-generation-timeout-ms) 90s,
+        // 각각 HttpRetryOptions.attempts(2)로 최악 (60+90)*2 = 300s(5분)까지 걸릴 수 있음.
+        // 정상 흐름에서는 regenerate()가 끝나자마자 finally에서 즉시 해제되므로 이 값에 도달하지 않고,
+        // 프로세스가 죽어 해제되지 못했을 때만 발동하는 백스톱이다.
+        private val REGENERATION_LOCK_TTL: Duration = Duration.ofMinutes(5)
+    }
 }

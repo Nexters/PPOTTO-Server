@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.StickerGenerator
+import com.github.nexters.ppotto.analysis.domain.StickerRegenerationTarget
 import com.github.nexters.ppotto.analysis.domain.StickerStorage
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import io.kotest.core.spec.style.BehaviorSpec
@@ -74,6 +75,15 @@ private class FixedGeminiClassifier(
                 stickerSourcePhotoId = photo.photoId,
             )
         }
+
+    override fun regenerateSticker(
+        photos: List<PhotoRef>,
+        previousSourcePhotoId: UUID,
+    ): StickerRegenerationTarget =
+        StickerRegenerationTarget(
+            stickerTargetSubject = "재생성된 피사체",
+            stickerSourcePhotoId = photos.first().photoId,
+        )
 }
 
 private class FixedStickerGenerator : StickerGenerator {
