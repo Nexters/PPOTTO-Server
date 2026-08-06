@@ -43,8 +43,9 @@ class AuthSessionIntegrationTest(
                         provider = OAuthProvider.KAKAO,
                         providerUserId = "session-${UUID.randomUUID()}",
                         email = "session@example.com",
+                        name = "세션사용자",
                     ),
-                )
+                )!!
             val refreshToken = "refresh-${UUID.randomUUID()}"
             refreshTokenStore.save(user.userId, refreshToken)
 

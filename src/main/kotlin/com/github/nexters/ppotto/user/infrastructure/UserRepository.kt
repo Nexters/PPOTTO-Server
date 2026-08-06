@@ -19,6 +19,7 @@ class UserRepository(
         provider: OAuthProvider,
         providerUserId: String,
         email: String,
+        name: String,
         providerRefreshToken: EncryptedProviderRefreshToken? = null,
     ): User =
         dslContext
@@ -27,11 +28,13 @@ class UserRepository(
                 USERS.PROVIDER,
                 USERS.PROVIDER_USER_ID,
                 USERS.EMAIL,
+                USERS.NAME,
                 USERS.PROVIDER_REFRESH_TOKEN,
             ).values(
                 provider.toJooq(),
                 providerUserId,
                 email,
+                name,
                 providerRefreshToken?.value,
             ).returning()
             .fetchOne()!!
@@ -82,6 +85,7 @@ class UserRepository(
         dslContext
             .update(USERS)
             .set(USERS.EMAIL, user.email)
+            .set(USERS.NAME, user.name)
             .setNull(USERS.PROVIDER_REFRESH_TOKEN)
             .set(USERS.DELETED_AT, user.deletedAt)
             .where(USERS.ID.eq(user.id))
@@ -117,6 +121,7 @@ internal fun UsersRecord.toDomain() =
         provider = provider!!.toDomain(),
         providerUserId = providerUserId!!,
         email = email!!,
+        name = name!!,
         providerRefreshToken = providerRefreshToken?.let(::EncryptedProviderRefreshToken),
         createdAt = createdAt!!,
         updatedAt = updatedAt!!,

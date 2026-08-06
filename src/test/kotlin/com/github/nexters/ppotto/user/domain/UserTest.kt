@@ -17,6 +17,7 @@ class UserTest :
                     provider = OAuthProvider.APPLE,
                     providerUserId = "apple-user",
                     email = "user@example.com",
+                    name = "애플사용자",
                     providerRefreshToken = EncryptedProviderRefreshToken("encrypted"),
                     createdAt = Instant.parse("2026-07-01T00:00:00Z"),
                     updatedAt = Instant.parse("2026-07-01T00:00:00Z"),
@@ -29,6 +30,7 @@ class UserTest :
 
                 Then("개인 정보를 익명화하고 삭제 시각을 기록한다") {
                     withdrawn.email shouldBe "deleted+$id@users.invalid"
+                    withdrawn.name shouldBe "탈퇴한 사용자"
                     withdrawn.providerRefreshToken shouldBe null
                     withdrawn.deletedAt shouldBe withdrawnAt
                     withdrawn.updatedAt shouldBe withdrawnAt
@@ -45,6 +47,7 @@ class UserTest :
                     provider = OAuthProvider.KAKAO,
                     providerUserId = "kakao-user",
                     email = "deleted@users.invalid",
+                    name = "탈퇴한 사용자",
                     providerRefreshToken = null,
                     createdAt = at,
                     updatedAt = at,

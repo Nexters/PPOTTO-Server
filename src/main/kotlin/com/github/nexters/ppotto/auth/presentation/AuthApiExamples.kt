@@ -29,6 +29,7 @@ private val KAKAO_LOGIN_REQUEST =
                 identityToken = null,
                 authorizationCode = null,
                 rawNonce = null,
+                name = null,
             ),
     )
 
@@ -42,6 +43,7 @@ private val APPLE_FIRST_LOGIN_REQUEST =
                 identityToken = IDENTITY_TOKEN,
                 authorizationCode = "sample.0.srtwx.apple-authorization-code",
                 rawNonce = "4A7F0E2B-9C31-45D8-A6F2-8B0C3D9E1F52",
+                name = "뽀또",
             ),
     )
 
@@ -55,6 +57,7 @@ private val APPLE_RELOGIN_REQUEST =
                 identityToken = IDENTITY_TOKEN,
                 authorizationCode = "sample.0.mnpqr.apple-authorization-code",
                 rawNonce = "0F9E8D7C-6B5A-4938-A716-05F4E3D2C1B0",
+                name = null,
             ),
     )
 
@@ -140,6 +143,20 @@ private val KAKAO_EMAIL_CONSENT_REQUIRED =
         message = "이메일 제공에 동의해야 가입할 수 있습니다.",
     )
 
+private val KAKAO_NICKNAME_CONSENT_REQUIRED =
+    ApiExamples.errorExample(
+        code = "AUTH-005",
+        summary = "카카오 닉네임 동의 필요. profile_nickname 추가 동의 후 재시도",
+        message = "닉네임 제공에 동의해야 가입할 수 있습니다.",
+    )
+
+private val SIGNUP_NAME_REQUIRED =
+    ApiExamples.errorExample(
+        code = "AUTH-006",
+        summary = "애플 신규 가입인데 name 미전달. 최초 인가에서 받은 이름을 함께 보내야 함",
+        message = "가입에 필요한 이름이 전달되지 않았습니다.",
+    )
+
 private val INVALID_REFRESH_TOKEN =
     ApiExamples.errorExample(
         code = "AUTH-002",
@@ -157,9 +174,9 @@ class AuthApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(NEW_USER_LOGIN_RESPONSE, RETURNING_USER_LOGIN_RESPONSE),
-                            "400" to ApiExamples.INVALID_INPUT_RESPONSE,
+                            "400" to ApiExamples.INVALID_INPUT_RESPONSE + SIGNUP_NAME_REQUIRED,
                             "401" to listOf(SOCIAL_AUTHENTICATION_FAILED, APPLE_CODE_EXCHANGE_FAILED),
-                            "403" to listOf(KAKAO_EMAIL_CONSENT_REQUIRED),
+                            "403" to listOf(KAKAO_EMAIL_CONSENT_REQUIRED, KAKAO_NICKNAME_CONSENT_REQUIRED),
                         ),
                 ),
             AuthApi::refresh to

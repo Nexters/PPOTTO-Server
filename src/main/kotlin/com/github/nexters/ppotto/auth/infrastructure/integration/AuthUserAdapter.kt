@@ -18,20 +18,21 @@ class AuthUserAdapter(
     private val boardCommandService: BoardCommandService,
 ) : AuthUserPort {
     @Transactional
-    override fun findOrCreate(profile: SocialProfile): AuthUser =
+    override fun findOrCreate(profile: SocialProfile): AuthUser? =
         userService
             .findOrCreate(profile.toCommand())
-            .also {
+            ?.also {
                 it
                     .takeIf(UserRegistrationResult::isNewUser)
                     ?.let { newUser -> boardCommandService.createDefault(newUser.user.id) }
-            }.toAuthUser()
+            }?.toAuthUser()
 
     private fun SocialProfile.toCommand() =
         SocialUserCommand(
             provider = provider.toUserProvider(),
             providerUserId = providerUserId,
             email = email,
+            name = name,
             providerRefreshToken = providerRefreshToken,
         )
 

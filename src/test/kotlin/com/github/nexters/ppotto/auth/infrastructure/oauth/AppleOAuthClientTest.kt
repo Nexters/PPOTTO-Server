@@ -128,11 +128,12 @@ class AppleOAuthClientTest :
                 Then("sub, 이메일, revoke용 refresh token을 반환한다") {
                     val profile =
                         client.authenticate(
-                            LoginCommand.Apple(identityToken(rawNonce), "authorization-code", rawNonce),
+                            LoginCommand.Apple(identityToken(rawNonce), "authorization-code", rawNonce, "뽀또"),
                         )
 
                     profile.providerUserId shouldBe "apple-user-id"
                     profile.email shouldBe "relay@privaterelay.appleid.com"
+                    profile.name shouldBe "뽀또"
                     profile.providerRefreshToken shouldBe "apple-refresh-token"
                     profile.authorizationCodeExchangeFailed shouldBe false
                 }
@@ -153,7 +154,7 @@ class AppleOAuthClientTest :
                     val exception =
                         shouldThrow<UnauthorizedException> {
                             client.authenticate(
-                                LoginCommand.Apple(identityToken("original"), "authorization-code", "different"),
+                                LoginCommand.Apple(identityToken("original"), "authorization-code", "different", null),
                             )
                         }
                     exception.errorCode shouldBe AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED

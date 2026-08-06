@@ -12,6 +12,7 @@ import com.github.nexters.ppotto.auth.domain.LoginCommand
 import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.assertions.throwables.shouldThrow
@@ -79,6 +80,31 @@ class AuthServiceTest :
                             service.login(LoginCommand.Kakao("apple-command-placeholder"))
                         }
                     exception.errorCode shouldBe AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED
+                }
+            }
+        }
+
+        Given("가입에 필요한 이름 없이 신규 가입을 시도했을 때") {
+            val oauthClient = FakeOAuthClient()
+            val userPort = AuthUserPort { null }
+            val service =
+                AuthService(
+                    oauthClients = listOf(oauthClient),
+                    signupTransaction = noTransaction,
+                    tokenProvider = tokenProvider,
+                    refreshTokenStore = refreshStore,
+                    authUserPort = userPort,
+                    authTermsPort = termsPort,
+                    authActiveUserPort = activeUserPort,
+                )
+
+            When("로그인하면") {
+                Then("AUTH-006 예외가 발생한다") {
+                    val exception =
+                        shouldThrow<InvalidInputException> {
+                            service.login(LoginCommand.Kakao("kakao-token"))
+                        }
+                    exception.errorCode shouldBe AuthErrorCode.SIGNUP_NAME_REQUIRED
                 }
             }
         }
@@ -169,6 +195,7 @@ class AuthServiceTest :
                 provider,
                 "provider-user-id",
                 "user@example.com",
+                "테스트사용자",
                 authorizationCodeExchangeFailed = exchangeFailed,
             )
 

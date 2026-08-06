@@ -28,5 +28,34 @@ class AuthControllerIntegrationTest(
                         .andExpect(jsonPath("$.error.code").value("COMMON-001"))
                 }
             }
+
+            When("카카오 로그인 요청에 name을 담아 보내면") {
+                Then("서버가 닉네임을 직접 조회하므로 400을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""{"provider":"KAKAO","accessToken":"kakao-token","name":"뽀또"}"""),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-001"))
+                }
+            }
+
+            When("애플 로그인 요청의 name이 공백이면") {
+                Then("400을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/auth/login")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """
+                                    {"provider":"APPLE","identityToken":"identity-token",
+                                    "authorizationCode":"authorization-code","rawNonce":"raw-nonce","name":" "}
+                                    """.trimIndent(),
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-001"))
+                }
+            }
         }
     })

@@ -77,12 +77,13 @@ class AuthDomainIntegrationTest(
                     provider = OAuthProvider.APPLE,
                     providerUserId = providerUserId,
                     email = "existing@example.com",
+                    name = "애플사용자",
                     providerRefreshToken = "provider-refresh-token",
                 )
 
             When("사용자를 두 번 조회하거나 생성하면") {
-                val first = authUserPort.findOrCreate(profile)
-                val second = authUserPort.findOrCreate(profile)
+                val first = authUserPort.findOrCreate(profile)!!
+                val second = authUserPort.findOrCreate(profile)!!
 
                 Then("기존 사용자에게 기본 보드를 중복 생성하지 않는다") {
                     first.isNewUser shouldBe true
@@ -103,12 +104,13 @@ class AuthDomainIntegrationTest(
                     provider = OAuthProvider.KAKAO,
                     providerUserId = providerUserId,
                     email = "concurrent@example.com",
+                    name = "동시가입사용자",
                 )
 
             When("가입 port를 동시에 호출하면") {
                 val users =
                     runConcurrently(6) { authUserPort.findOrCreate(profile) }
-                        .map { it.getOrThrow() }
+                        .map { it.getOrThrow()!! }
 
                 Then("계정과 기본 보드를 각각 한 번만 생성한다") {
                     users.map { it.userId }.distinct() shouldHaveSize 1
@@ -132,8 +134,9 @@ class AuthDomainIntegrationTest(
                         provider = OAuthProvider.KAKAO,
                         providerUserId = "terms-${UUID.randomUUID()}",
                         email = "terms@example.com",
+                        name = "약관사용자",
                     ),
-                )
+                )!!
             val code = "AUTH-${UUID.randomUUID()}"
             val term =
                 dslContext
@@ -209,6 +212,7 @@ class AuthSignupRollbackIntegrationTest(
                                 identityToken = providerUserId,
                                 authorizationCode = "authorization-code",
                                 rawNonce = "raw-nonce",
+                                name = "애플롤백사용자",
                             ),
                         )
                     }
@@ -262,6 +266,7 @@ class AuthSignupBoardRollbackIntegrationTest(
                                 provider = OAuthProvider.KAKAO,
                                 providerUserId = providerUserId,
                                 email = "board-rollback@example.com",
+                                name = "보드롤백사용자",
                             ),
                         )
                     }
@@ -328,7 +333,7 @@ class SignupRollbackAuthTestConfig {
             refreshTokenStore = TrackingRefreshTokenStore(loginEffects),
             authUserPort =
                 AuthUserPort { profile ->
-                    authUserPort.findOrCreate(profile).also {
+                    authUserPort.findOrCreate(profile)?.also {
                         loginEffects.userId = it.userId
                         loginEffects.boardCountInTransaction = boardRepository.findByUserId(it.userId).size
                     }
@@ -373,6 +378,7 @@ private class TrackingOAuthClient(
             provider = provider,
             providerUserId = (command as LoginCommand.Kakao).accessToken,
             email = "rollback@example.com",
+            name = "롤백사용자",
         )
     }
 
@@ -387,6 +393,7 @@ private class ExchangeFailureAppleOAuthClient : OAuthClient {
             provider = provider,
             providerUserId = (command as LoginCommand.Apple).identityToken,
             email = "apple-rollback@example.com",
+            name = command.name,
             authorizationCodeExchangeFailed = true,
         )
 

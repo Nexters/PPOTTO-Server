@@ -27,10 +27,12 @@ class TermsServiceTest(
                     USERS.PROVIDER,
                     USERS.PROVIDER_USER_ID,
                     USERS.EMAIL,
+                    USERS.NAME,
                 ).values(
                     OauthProvider.KAKAO,
                     "terms-service-$suffix",
                     "terms-service-$suffix@example.com",
+                    "약관서비스사용자",
                 ).returning(USERS.ID)
                 .fetchOne(USERS.ID)!!
         }

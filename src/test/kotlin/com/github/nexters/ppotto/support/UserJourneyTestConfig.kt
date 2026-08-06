@@ -52,6 +52,7 @@ class StubKakaoOAuthClient : OAuthClient {
                 provider = provider,
                 providerUserId = it,
                 email = "$it@example.com",
+                name = "여정테스트사용자",
             )
         }
 

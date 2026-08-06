@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
 
 @Schema(description = "소셜 로그인 요청")
 data class LoginRequest(
@@ -36,15 +37,28 @@ data class LoginRequest(
         example = "4A7F0E2B-9C31-45D8-A6F2-8B0C3D9E1F52",
     )
     val rawNonce: String?,
+
+    @field:Size(max = 100)
+    @field:Schema(
+        description =
+            "사용자 이름. provider=APPLE 최초 인가에서 받은 fullName을 전달하며 신규 가입 시 필수, " +
+                "재로그인 시 생략. provider=KAKAO는 서버가 닉네임을 직접 조회하므로 보내면 400",
+        example = "뽀또",
+    )
+    val name: String?,
 ) {
     fun toCommand(): LoginCommand =
         when (provider) {
-            OAuthProvider.KAKAO -> LoginCommand.Kakao(accessToken.required())
+            OAuthProvider.KAKAO ->
+                name
+                    ?.let { throw InvalidInputException() }
+                    ?: LoginCommand.Kakao(accessToken.required())
             OAuthProvider.APPLE ->
                 LoginCommand.Apple(
                     identityToken.required(),
                     authorizationCode.required(),
                     rawNonce.required(),
+                    name?.let { it.takeIf(String::isNotBlank) ?: throw InvalidInputException() },
                 )
             null -> throw InvalidInputException()
         }

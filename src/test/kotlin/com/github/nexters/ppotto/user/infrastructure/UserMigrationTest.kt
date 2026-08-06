@@ -72,6 +72,30 @@ class UserMigrationTest(
                             }
                         }
                     }
+
+                    When("사용자 이름 추가 마이그레이션을 적용하면") {
+                        ScriptUtils.executeSqlScript(
+                            connection,
+                            ClassPathResource("db/migration/V20260807103000__add_user_name.sql"),
+                        )
+
+                        Then("기존 행 이름을 홍길동으로 채우고 이름 없는 행은 거부한다") {
+                            connection
+                                .prepareStatement("SELECT name FROM users WHERE id = ?")
+                                .use {
+                                    it.setObject(1, legacyUserId)
+                                    it.executeQuery().use { result ->
+                                        result.next() shouldBe true
+                                        result.getString("name") shouldBe "홍길동"
+                                    }
+                                }
+                            shouldThrow<SQLException> {
+                                connection.createStatement().use {
+                                    it.executeUpdate("INSERT INTO users (name) VALUES (NULL)")
+                                }
+                            }
+                        }
+                    }
                 } finally {
                     connection.createStatement().use {
                         it.execute("DROP SCHEMA $schema CASCADE")

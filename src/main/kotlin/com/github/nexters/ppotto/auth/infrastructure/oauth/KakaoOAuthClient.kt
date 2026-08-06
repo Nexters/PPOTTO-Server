@@ -24,7 +24,7 @@ internal class KakaoOAuthClient(
             fetchTokenInfo(kakaoCommand.accessToken).let { tokenInfo ->
                 fetchUserInfo(kakaoCommand.accessToken)
                     .also { validateIdentity(tokenInfo, it) }
-                    .let { SocialProfile(provider, it.id.toString(), requireEmail(it)) }
+                    .let { SocialProfile(provider, it.id.toString(), requireEmail(it), requireNickname(it)) }
             }
         }
 
@@ -64,6 +64,13 @@ internal class KakaoOAuthClient(
             ?.email
             ?.takeIf(String::isNotBlank)
             ?: throw ForbiddenException(AuthErrorCode.KAKAO_EMAIL_CONSENT_REQUIRED)
+
+    private fun requireNickname(userInfo: KakaoUserInfo): String =
+        userInfo.account
+            ?.profile
+            ?.nickname
+            ?.takeIf(String::isNotBlank)
+            ?: throw ForbiddenException(AuthErrorCode.KAKAO_NICKNAME_CONSENT_REQUIRED)
 
     private fun failAuthentication(cause: Exception? = null): Nothing =
         UnauthorizedException(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)

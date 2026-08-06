@@ -11,5 +11,6 @@ fun UserRepository.saveTestUser(): User =
             provider = OAuthProvider.KAKAO,
             providerUserId = "test-$it",
             email = "test-$it@example.com",
+            name = "테스트사용자",
         )
     }

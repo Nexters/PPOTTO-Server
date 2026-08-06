@@ -7,12 +7,14 @@ data class SocialUserCommand(
     val provider: OAuthProvider,
     val providerUserId: String,
     val email: String,
+    val name: String?,
     val providerRefreshToken: String?,
 ) {
     init {
         listOf(
             providerUserId.isNotBlank(),
             email.isNotBlank(),
+            name == null || name.isNotBlank(),
             providerRefreshToken == null || providerRefreshToken.isNotBlank(),
         ).all { it }
             .let { require(it) }

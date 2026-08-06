@@ -30,6 +30,7 @@ class WithdrawnUserCleanupServiceTest(
                         provider = OAuthProvider.KAKAO,
                         providerUserId = "cleanup-${UUID.randomUUID()}",
                         email = "cleanup@example.com",
+                        name = "정리대상사용자",
                     ).let { userRepository.withdraw(it.withdraw(withdrawnAt))!! }
 
             When("탈퇴 사용자 정리 배치를 실행하면") {
@@ -56,6 +57,7 @@ class WithdrawnUserCleanupServiceTest(
                         provider = OAuthProvider.APPLE,
                         providerUserId = "cleanup-failure-${UUID.randomUUID()}",
                         email = "failure@example.com",
+                        name = "정리실패사용자",
                     ).let { userRepository.withdraw(it.withdraw(Instant.parse("2026-07-03T00:00:00Z")))!! }
             dataDeletionPort.failingUserIds += withdrawn.id
 
