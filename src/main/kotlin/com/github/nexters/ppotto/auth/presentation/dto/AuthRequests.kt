@@ -49,10 +49,7 @@ data class LoginRequest(
 ) {
     fun toCommand(): LoginCommand =
         when (provider) {
-            OAuthProvider.KAKAO ->
-                name
-                    ?.let { throw InvalidInputException() }
-                    ?: LoginCommand.Kakao(accessToken.required())
+            OAuthProvider.KAKAO -> LoginCommand.Kakao(accessToken.required()).takeIf { name == null } ?: throw InvalidInputException()
             OAuthProvider.APPLE ->
                 LoginCommand.Apple(
                     identityToken.required(),
