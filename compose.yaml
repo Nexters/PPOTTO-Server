@@ -16,5 +16,19 @@ services:
       timeout: 3s
       retries: 10
 
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: ppotto-valkey
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - valkey-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   postgres-data:
+  valkey-data:
