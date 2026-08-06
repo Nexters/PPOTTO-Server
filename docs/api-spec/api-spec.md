@@ -103,7 +103,8 @@ Request example (애플 최초 로그인):
   "provider": "APPLE",
   "identityToken": "eyJraWQiOiJXNldjT0tCIiwiYWxnIjoiUlMyNTYifQ.eyJpc3MiOiJodHRwczovL2FwcGxlaWQuYXBwbGUuY29t...",
   "authorizationCode": "c8ef1d2a90b34c5d8e7f6a5b4c3d2e1f0.0.srtwx.k9J8h7G6f5E4d3C2b1A0",
-  "rawNonce": "4A7F0E2B-9C31-45D8-A6F2-8B0C3D9E1F52"
+  "rawNonce": "4A7F0E2B-9C31-45D8-A6F2-8B0C3D9E1F52",
+  "name": "뽀또"
 }
 ```
 
@@ -172,10 +173,12 @@ Request example (애플 재로그인 (refresh token 보관 중이면 교환 생�
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | COMMON-001 | 잘못된 입력입니다. | provider 별 필수 필드 누락 |
+| 400 | COMMON-001 | 잘못된 입력입니다. | provider 별 필수 필드 누락, 카카오 요청에 name 포함, 애플 name 공백 |
+| 400 | AUTH-006 | 가입에 필요한 이름이 전달되지 않았습니다. | 애플 신규 가입인데 name 미전달. 최초 인가에서 받은 이름을 함께 보내야 합니다. |
 | 401 | AUTH-001 | 소셜 로그인 검증에 실패했습니다. | provider 토큰 검증 실패 (만료, 위조, aud/app_id 불일치, nonce 불일치) |
 | 401 | AUTH-003 | 스웨거 예시 없음 | 애플 authorization code 교환 실패 (만료 또는 재사용, 최초 로그인만 치명) |
 | 403 | AUTH-004 | 이메일 제공에 동의해야 가입할 수 있습니다. | 카카오 이메일 동의 필요. 클라이언트는 account_email 추가 동의 후 재시도합니다. |
+| 403 | AUTH-005 | 닉네임 제공에 동의해야 가입할 수 있습니다. | 카카오 닉네임 동의 필요. 클라이언트는 profile_nickname 추가 동의 후 재시도합니다. |
 
 400 COMMON-001 example:
 ```json
@@ -233,8 +236,36 @@ Request example (애플 재로그인 (refresh token 보관 중이면 교환 생�
 }
 ```
 
+403 AUTH-005 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "AUTH-005",
+    "message": "닉네임 제공에 동의해야 가입할 수 있습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+400 AUTH-006 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "AUTH-006",
+    "message": "가입에 필요한 이름이 전달되지 않았습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
 #### Notes
-- 카카오 또는 애플 계정으로 로그인합니다. 처음 보는 계정이면 가입과 기본 보드 생성까지 한 번에 처리됩니다.  **카카오** - 클라이언트가 카카오 SDK로 받은 `accessToken`을 보내면, 서버가 먼저   `/v1/user/access_token_info`로 토큰의 `app_id`가 우리 앱인지 확인합니다   (다른 서비스에서 수집한 토큰으로 로그인하는 토큰 치환 공격 차단, 불일치 시 AUTH-001).   이후 `/v2/user/me`로 회원번호를 조회해 `providerUserId`로 사용합니다. - 이메일은 필수입니다. 동의하지 않았으면 403 `AUTH-004`로 거부되며,   클라이언트는 추가 동의(`account_email` 스코프)를 요청한 뒤 다시 로그인합니다.  **애플** - `identityToken`(JWT)을 애플 JWKS로 검증합니다 (iss / aud / exp / nonce).   `nonce` 클레임은 함께 보낸 `rawNonce`의 SHA-256 해시와 대조합니다. - 토큰의 `sub`를 `providerUserId`로 사용합니다. - `authorizationCode`는 5분 안에 refresh token으로 교환해 탈퇴(revoke)용으로   보관합니다. 앱스토어 심사 필수 사항이며, 재로그인 시에는 교환이 실패해도   로그인은 통과됩니다.  응답의 `pendingTerms`가 비어 있지 않으면 약관 동의 화면으로 이동합니다.
+- 카카오 또는 애플 계정으로 로그인합니다. 처음 보는 계정이면 가입과 기본 보드 생성까지 한 번에 처리됩니다.  **카카오** - 클라이언트가 카카오 SDK로 받은 `accessToken`을 보내면, 서버가 먼저   `/v1/user/access_token_info`로 토큰의 `app_id`가 우리 앱인지 확인합니다   (다른 서비스에서 수집한 토큰으로 로그인하는 토큰 치환 공격 차단, 불일치 시 AUTH-001).   이후 `/v2/user/me`로 회원번호를 조회해 `providerUserId`로 사용합니다. - 이메일은 필수입니다. 동의하지 않았으면 403 `AUTH-004`로 거부되며,   클라이언트는 추가 동의(`account_email` 스코프)를 요청한 뒤 다시 로그인합니다. - 닉네임도 필수입니다. 서버가 `/v2/user/me`의 `kakao_account.profile.nickname`을 이름으로 저장하며,   동의하지 않았으면 403 `AUTH-005`로 거부됩니다. 카카오 요청에 `name`을 보내면 400입니다.  **애플** - `identityToken`(JWT)을 애플 JWKS로 검증합니다 (iss / aud / exp / nonce).   `nonce` 클레임은 함께 보낸 `rawNonce`의 SHA-256 해시와 대조합니다. - 토큰의 `sub`를 `providerUserId`로 사용합니다. - `authorizationCode`는 5분 안에 refresh token으로 교환해 탈퇴(revoke)용으로   보관합니다. 앱스토어 심사 필수 사항이며, 재로그인 시에는 교환이 실패해도   로그인은 통과됩니다. - 이름은 애플이 최초 인가 1회에만 클라이언트에 내려주므로, 최초 로그인 시 `fullName`을 조합해   `name`으로 함께 보내야 합니다. 신규 가입인데 `name`이 없으면 400 `AUTH-006`으로 거부되고,   기존 사용자의 재로그인은 `name` 없이 통과하며 저장된 이름을 유지합니다.  응답의 `pendingTerms`가 비어 있지 않으면 약관 동의 화면으로 이동합니다.
 
 ### POST /auth/refresh
 
@@ -358,7 +389,7 @@ Request example:
 #### Success Spec
 | Status | Description | Data |
 | --- | --- | --- |
-| 200 | 내 정보 | `id`, `provider`, `email`, `createdAt` |
+| 200 | 내 정보 | `id`, `provider`, `email`, `name`, `createdAt` |
 
 200 example (카카오 유저):
 ```json
@@ -368,6 +399,7 @@ Request example:
     "id": "01983f2a-7c31-7b02-93d4-1f2e3d4c5b6a",
     "provider": "KAKAO",
     "email": "ppotto@kakao.com",
+    "name": "뽀또",
     "createdAt": "2026-07-01T09:12:33+09:00"
   },
   "error": null
@@ -382,6 +414,7 @@ Request example:
     "id": "01983f2a-6b20-7a01-82c3-0e1d2c3b4a59",
     "provider": "APPLE",
     "email": "mxq7r2v9td@privaterelay.appleid.com",
+    "name": "홍길동",
     "createdAt": "2026-07-15T21:40:05+09:00"
   },
   "error": null
