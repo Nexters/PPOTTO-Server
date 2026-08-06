@@ -81,6 +81,29 @@ class AnalysisService(
         return performUploadVerification(analysisId)
     }
 
+    fun reissueUploadUrls(
+        userId: UUID,
+        analysisId: UUID,
+    ): List<PhotoUploadUrlItem> {
+        val analysis = analysisRepository.findById(analysisId) ?: throw NotFoundException(AnalysisErrorCode.ANALYSIS_NOT_FOUND)
+        validateAnalysisOwner(analysis.userId, userId)
+        validateUploading(analysis.status)
+
+        val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
+        if (pendingPhotos.isEmpty()) return emptyList()
+
+        val targets =
+            pendingPhotos.map {
+                PhotoUploadTarget(PhotoObjectKeys.keyFor(analysisId, it.id, it.contentType), it.contentType.mimeType)
+            }
+        val uploadUrls = photoStorage.issueUploadUrls(targets)
+        check(uploadUrls.size == pendingPhotos.size) {
+            "issueUploadUrls가 요청한 개수(${pendingPhotos.size})와 다른 개수(${uploadUrls.size})의 URL을 반환했습니다."
+        }
+
+        return pendingPhotos.zip(uploadUrls) { photo, url -> PhotoUploadUrlItem(photo.id, url) }
+    }
+
     @Transactional
     fun cancelAnalysis(
         userId: UUID,
@@ -149,7 +172,7 @@ class AnalysisService(
         analysisUserId: UUID,
         userId: UUID,
     ) {
-        if (analysisUserId != userId) throw NotFoundException()
+        if (analysisUserId != userId) throw NotFoundException(AnalysisErrorCode.ANALYSIS_NOT_FOUND)
     }
 
     private fun validateUploading(status: AnalysisStatus) {
