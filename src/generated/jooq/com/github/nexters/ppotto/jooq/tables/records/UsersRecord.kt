@@ -52,6 +52,10 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
         set(value): Unit = set(7, value)
         get(): Instant? = get(7) as Instant?
 
+    open var name: String
+        set(value): Unit = set(8, value)
+        get(): String = get(8) as String
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -61,7 +65,7 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
     /**
      * Create a detached, initialised UsersRecord
      */
-    constructor(id: UserId? = null, createdAt: Instant? = null, updatedAt: Instant? = null, provider: OauthProvider? = null, providerUserId: String? = null, providerRefreshToken: String? = null, email: String? = null, deletedAt: Instant? = null): this() {
+    constructor(id: UserId? = null, createdAt: Instant? = null, updatedAt: Instant? = null, provider: OauthProvider? = null, providerUserId: String? = null, providerRefreshToken: String? = null, email: String? = null, deletedAt: Instant? = null, name: String): this() {
         this.id = id
         this.createdAt = createdAt
         this.updatedAt = updatedAt
@@ -70,6 +74,7 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
         this.providerRefreshToken = providerRefreshToken
         this.email = email
         this.deletedAt = deletedAt
+        this.name = name
         resetTouchedOnNotNull()
     }
 
@@ -86,6 +91,7 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
             this.providerRefreshToken = value.providerRefreshToken
             this.email = value.email
             this.deletedAt = value.deletedAt
+            this.name = value.name
             resetTouchedOnNotNull()
         }
     }

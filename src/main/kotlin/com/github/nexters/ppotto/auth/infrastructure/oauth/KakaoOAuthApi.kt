@@ -34,4 +34,9 @@ internal data class KakaoUserInfo(
 
 internal data class KakaoAccount(
     val email: String?,
+    val profile: KakaoProfile?,
+)
+
+internal data class KakaoProfile(
+    val nickname: String?,
 )

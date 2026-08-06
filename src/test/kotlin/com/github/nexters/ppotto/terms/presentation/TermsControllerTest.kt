@@ -38,10 +38,12 @@ class TermsControllerTest(
                     USERS.PROVIDER,
                     USERS.PROVIDER_USER_ID,
                     USERS.EMAIL,
+                    USERS.NAME,
                 ).values(
                     OauthProvider.KAKAO,
                     "terms-controller-$suffix",
                     "terms-controller-$suffix@example.com",
+                    "약관컨트롤러사용자",
                 ).returning(USERS.ID)
                 .fetchOne(USERS.ID)!!
                 .value

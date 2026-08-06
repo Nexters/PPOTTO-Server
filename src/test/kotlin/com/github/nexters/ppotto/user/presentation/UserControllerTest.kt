@@ -32,9 +32,10 @@ class UserControllerTest(
                         provider = OAuthProvider.KAKAO,
                         providerUserId = "controller-${UUID.randomUUID()}",
                         email = "me@example.com",
+                        name = "컨트롤러사용자",
                         providerRefreshToken = null,
                     ),
-                )
+                )!!
             val authentication =
                 UsernamePasswordAuthenticationToken.authenticated(
                     registered.user.id.value,
@@ -61,6 +62,7 @@ class UserControllerTest(
                             ),
                         ).andExpect(jsonPath("$.data.provider").value("KAKAO"))
                         .andExpect(jsonPath("$.data.email").value("me@example.com"))
+                        .andExpect(jsonPath("$.data.name").value("컨트롤러사용자"))
                         .andExpect(jsonPath("$.data.createdAt").exists())
                         .andExpect(jsonPath("$.data.providerUserId").doesNotExist())
                         .andExpect(jsonPath("$.data.providerRefreshToken").doesNotExist())

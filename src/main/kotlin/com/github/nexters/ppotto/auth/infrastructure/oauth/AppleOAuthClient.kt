@@ -50,6 +50,7 @@ internal class AppleOAuthClient(
                         provider = provider,
                         providerUserId = identity.subject,
                         email = identity.email,
+                        name = appleCommand.name,
                         providerRefreshToken = refreshToken,
                         authorizationCodeExchangeFailed = refreshToken == null,
                     )

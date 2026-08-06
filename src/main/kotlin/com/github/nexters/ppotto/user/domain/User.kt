@@ -8,6 +8,7 @@ data class User(
     val provider: OAuthProvider,
     val providerUserId: String,
     val email: String,
+    val name: String,
     val providerRefreshToken: EncryptedProviderRefreshToken?,
     val createdAt: Instant,
     val updatedAt: Instant,
@@ -21,6 +22,7 @@ data class User(
             .also { require(it.isActive) }
             .copy(
                 email = "deleted+$id@users.invalid",
+                name = "탈퇴한 사용자",
                 providerRefreshToken = null,
                 updatedAt = at,
                 deletedAt = at,

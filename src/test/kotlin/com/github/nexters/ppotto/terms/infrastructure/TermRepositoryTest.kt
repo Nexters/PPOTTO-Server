@@ -26,10 +26,12 @@ class TermRepositoryTest(
                     USERS.PROVIDER,
                     USERS.PROVIDER_USER_ID,
                     USERS.EMAIL,
+                    USERS.NAME,
                 ).values(
                     OauthProvider.KAKAO,
                     "term-repository-$suffix",
                     "term-repository-$suffix@example.com",
+                    "약관저장소사용자",
                 ).returning(USERS.ID)
                 .fetchOne(USERS.ID)!!
         }

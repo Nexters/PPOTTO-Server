@@ -27,6 +27,7 @@ class UserRepositoryTest(
                     provider = OAuthProvider.APPLE,
                     providerUserId = "apple-user-${UUID.randomUUID()}",
                     email = "apple@example.com",
+                    name = "애플사용자",
                     providerRefreshToken = encrypted,
                 )
 
@@ -54,6 +55,7 @@ class UserRepositoryTest(
                     provider = OAuthProvider.KAKAO,
                     providerUserId = providerUserId,
                     email = "before@example.com",
+                    name = "탈퇴전사용자",
                 )
             val withdrawnAt = Instant.now().minus(2, ChronoUnit.DAYS)
 
@@ -62,6 +64,7 @@ class UserRepositoryTest(
 
                 Then("활성 조회에서 제외하고 같은 소셜 계정으로 다시 가입할 수 있다") {
                     withdrawn?.email shouldBe "deleted+${saved.id}@users.invalid"
+                    withdrawn?.name shouldBe "탈퇴한 사용자"
                     withdrawn?.providerRefreshToken.shouldBeNull()
                     userRepository.findById(saved.id).shouldBeNull()
                     userRepository.findBySocialAccount(OAuthProvider.KAKAO, providerUserId).shouldBeNull()
@@ -71,6 +74,7 @@ class UserRepositoryTest(
                             provider = OAuthProvider.KAKAO,
                             providerUserId = providerUserId,
                             email = "after@example.com",
+                            name = "재가입사용자",
                         )
                     recreated.id shouldNotBe saved.id
                 }

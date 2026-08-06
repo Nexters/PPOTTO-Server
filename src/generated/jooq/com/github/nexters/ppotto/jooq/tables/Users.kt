@@ -123,6 +123,11 @@ open class Users(
      */
     val DELETED_AT: TableField<UsersRecord, Instant?> = createField(DSL.name("deleted_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
 
+    /**
+     * The column <code>public.users.name</code>.
+     */
+    val NAME: TableField<UsersRecord, String?> = createField(DSL.name("name"), SQLDataType.CLOB.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<UsersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<UsersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<UsersRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)

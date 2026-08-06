@@ -40,7 +40,7 @@ interface RefreshTokenStore {
 }
 
 fun interface AuthUserPort {
-    fun findOrCreate(profile: SocialProfile): AuthUser
+    fun findOrCreate(profile: SocialProfile): AuthUser?
 }
 
 fun interface AuthTermsPort {

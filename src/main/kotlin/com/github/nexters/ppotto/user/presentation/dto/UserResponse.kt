@@ -22,6 +22,12 @@ data class UserResponse(
     )
     val email: String,
 
+    @field:Schema(
+        description = "사용자 이름. 카카오는 닉네임, 애플은 최초 인가에서 전달받은 이름",
+        example = "뽀또",
+    )
+    val name: String,
+
     @field:Schema(description = "가입 시각", example = "2026-07-01T09:12:33+09:00")
     val createdAt: Instant,
 ) {
@@ -31,6 +37,7 @@ data class UserResponse(
                 id = user.id,
                 provider = user.provider,
                 email = user.email,
+                name = user.name,
                 createdAt = user.createdAt,
             )
     }

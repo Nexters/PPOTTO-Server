@@ -1,0 +1,5 @@
+ALTER TABLE users ADD COLUMN name TEXT;
+
+UPDATE users SET name = '홍길동';
+
+ALTER TABLE users ALTER COLUMN name SET NOT NULL;

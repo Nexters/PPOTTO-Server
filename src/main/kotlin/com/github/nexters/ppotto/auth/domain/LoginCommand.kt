@@ -13,6 +13,7 @@ sealed interface LoginCommand {
         val identityToken: String,
         val authorizationCode: String,
         val rawNonce: String,
+        val name: String?,
     ) : LoginCommand {
         override val provider = OAuthProvider.APPLE
     }

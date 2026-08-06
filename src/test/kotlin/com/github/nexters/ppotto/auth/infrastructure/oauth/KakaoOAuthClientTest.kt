@@ -19,7 +19,7 @@ class KakaoOAuthClientTest :
     BehaviorSpec({
         val server = HttpServer.create(InetSocketAddress(0), 0)
         var tokenInfoResponse = """{"id":12345,"app_id":9876}"""
-        var userInfoResponse = """{"id":12345,"kakao_account":{"email":"user@kakao.com"}}"""
+        var userInfoResponse = """{"id":12345,"kakao_account":{"email":"user@kakao.com","profile":{"nickname":"뽀또"}}}"""
         server.createContext("/token") { exchange ->
             val body = tokenInfoResponse.toByteArray()
             exchange.responseHeaders.add("Content-Type", "application/json")
@@ -50,11 +50,12 @@ class KakaoOAuthClientTest :
 
         Given("우리 앱에서 발급된 카카오 access token이 주어졌을 때") {
             When("카카오 사용자 정보를 검증하면") {
-                Then("회원번호와 이메일을 반환한다") {
+                Then("회원번호와 이메일과 닉네임을 반환한다") {
                     val profile = client.authenticate(LoginCommand.Kakao("valid-token"))
 
                     profile.providerUserId shouldBe "12345"
                     profile.email shouldBe "user@kakao.com"
+                    profile.name shouldBe "뽀또"
                 }
             }
         }
@@ -84,6 +85,20 @@ class KakaoOAuthClientTest :
                             client.authenticate(LoginCommand.Kakao("without-email"))
                         }
                     exception.errorCode shouldBe AuthErrorCode.KAKAO_EMAIL_CONSENT_REQUIRED
+                }
+            }
+        }
+
+        Given("닉네임 제공에 동의하지 않은 카카오 계정이 주어졌을 때") {
+            userInfoResponse = """{"id":12345,"kakao_account":{"email":"user@kakao.com"}}"""
+
+            When("카카오 사용자 정보를 검증하면") {
+                Then("AUTH-005 예외가 발생한다") {
+                    val exception =
+                        shouldThrow<ForbiddenException> {
+                            client.authenticate(LoginCommand.Kakao("without-nickname"))
+                        }
+                    exception.errorCode shouldBe AuthErrorCode.KAKAO_NICKNAME_CONSENT_REQUIRED
                 }
             }
         }

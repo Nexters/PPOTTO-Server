@@ -60,8 +60,7 @@ class AuthService(
 
     private fun signUp(profile: SocialProfile): AuthSignup =
         signupTransaction.execute {
-            authUserPort
-                .findOrCreate(profile)
+            (authUserPort.findOrCreate(profile) ?: throw InvalidInputException(AuthErrorCode.SIGNUP_NAME_REQUIRED))
                 .takeUnless { profile.authorizationCodeExchangeFailed && it.isNewUser }
                 ?.let { AuthSignup(it, authTermsPort.findPendingTerms(it.userId)) }
                 ?: throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)

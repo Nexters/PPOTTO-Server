@@ -23,7 +23,8 @@ data class Users(
     val providerUserId: String? = null,
     val providerRefreshToken: String? = null,
     val email: String? = null,
-    val deletedAt: Instant? = null
+    val deletedAt: Instant? = null,
+    val name: String
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -82,6 +83,8 @@ data class Users(
         }
         else if (this.deletedAt != o.deletedAt)
             return false
+        if (this.name != o.name)
+            return false
         return true
     }
 
@@ -96,6 +99,7 @@ data class Users(
         result = prime * result + (if (this.providerRefreshToken == null) 0 else this.providerRefreshToken.hashCode())
         result = prime * result + (if (this.email == null) 0 else this.email.hashCode())
         result = prime * result + (if (this.deletedAt == null) 0 else this.deletedAt.hashCode())
+        result = prime * result + this.name.hashCode()
         return result
     }
 
@@ -110,6 +114,7 @@ data class Users(
         sb.append(", ").append(providerRefreshToken)
         sb.append(", ").append(email)
         sb.append(", ").append(deletedAt)
+        sb.append(", ").append(name)
 
         sb.append(")")
         return sb.toString()

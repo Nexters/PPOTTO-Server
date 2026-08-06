@@ -31,9 +31,10 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 
 - `id`/`createdAt`/`updatedAt` are DB-generated (`uuidv7()` default, `now()` default, `set_updated_at()` trigger) and read back via `RETURNING`.
 - A provider refresh token crosses persistence only as `EncryptedProviderRefreshToken`; plaintext encryption/decryption belongs to an application port adapter.
-- Active account lookup always includes `deleted_at IS NULL`. Withdrawal anonymizes email and clears the provider refresh token before setting `deleted_at`.
+- Active account lookup always includes `deleted_at IS NULL`. Withdrawal anonymizes email and name and clears the provider refresh token before setting `deleted_at`.
 - Concurrent social signup uses the active-identity partial unique index as the conflict target, then reloads the winner instead of surfacing a unique violation.
-- Pre-social legacy rows remain nullable under the unvalidated completeness check and are excluded from application lookup until a real-identity backfill is completed. New social users always write provider, provider user id, and email together.
+- Pre-social legacy rows remain nullable under the unvalidated completeness check and are excluded from application lookup until a real-identity backfill is completed. New social users always write provider, provider user id, email, and name together.
+- `users.name` is NOT NULL with no application-level default. Rows existing before the name migration were backfilled with `홍길동`; `findOrCreate` without a name never creates a user and returns null so the caller decides the failure semantics.
 - Controllers consume the authenticated `UserId` through the shared `@AuthenticatedUser` contract; absence returns `COMMON-004` before controller execution.
 - `User.id`, repository public signatures, application services, every `application/port` contract, and presentation (handler parameters and `UserResponse.id`) use the typed `UserId`/`BoardId` from `global/identifier`; jOOQ id columns are generated typed (codegen `forcedType`), so repository bindings pass typed ids straight through with no unwrapping.
 - Missing auth adapters fail closed: provider-account or session revoke aborts withdrawal.

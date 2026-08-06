@@ -15,6 +15,7 @@ class SocialUserRepository(
         provider: OAuthProvider,
         providerUserId: String,
         email: String,
+        name: String,
         providerRefreshToken: EncryptedProviderRefreshToken? = null,
     ): User? =
         dslContext
@@ -23,11 +24,13 @@ class SocialUserRepository(
                 USERS.PROVIDER,
                 USERS.PROVIDER_USER_ID,
                 USERS.EMAIL,
+                USERS.NAME,
                 USERS.PROVIDER_REFRESH_TOKEN,
             ).values(
                 provider.toJooq(),
                 providerUserId,
                 email,
+                name,
                 providerRefreshToken?.value,
             ).onConflict(USERS.PROVIDER, USERS.PROVIDER_USER_ID)
             .where(USERS.DELETED_AT.isNull)

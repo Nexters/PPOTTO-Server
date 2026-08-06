@@ -66,6 +66,7 @@ Table users {
   provider_refresh_token text           [null, note: '애플 revoke API용. 만료 없음. 카카오는 NULL. 암호화 저장(마이그레이션 요건)']
 
   email citext [not null, note: '애플은 private relay 가능. 카카오는 미동의 시 로그인 거부']
+  name  text   [not null, note: '카카오는 닉네임, 애플은 최초 로그인 요청의 name. 기존 행은 홍길동으로 backfill']
 
   ~timestamps
   ~soft_delete

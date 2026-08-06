@@ -34,33 +34,59 @@ class UserServiceTest(
                     provider = OAuthProvider.APPLE,
                     providerUserId = providerUserId,
                     email = "first@example.com",
+                    name = "애플사용자",
                     providerRefreshToken = "first-refresh-token",
                 )
 
             When("사용자를 조회하거나 생성하면") {
-                val result = userService.findOrCreate(firstCommand)
+                val result = userService.findOrCreate(firstCommand)!!
 
                 Then("새 사용자를 생성한다") {
                     result.isNewUser shouldBe true
                     result.user.provider shouldBe OAuthProvider.APPLE
                     result.user.providerUserId shouldBe providerUserId
+                    result.user.name shouldBe "애플사용자"
                 }
             }
 
-            When("같은 소셜 계정으로 다시 로그인하면") {
-                val first = userService.findOrCreate(firstCommand)
+            When("같은 소셜 계정으로 이름 없이 다시 로그인하면") {
+                val first = userService.findOrCreate(firstCommand)!!
                 val second =
                     userService.findOrCreate(
                         firstCommand.copy(
                             email = "changed@example.com",
+                            name = null,
                             providerRefreshToken = "second-refresh-token",
                         ),
-                    )
+                    )!!
 
-                Then("기존 사용자의 프로필과 제공자 토큰을 갱신한다") {
+                Then("기존 사용자의 프로필과 제공자 토큰을 갱신하고 이름은 유지한다") {
                     second.isNewUser shouldBe false
                     second.user.id shouldBe first.user.id
                     second.user.email shouldBe "changed@example.com"
+                    second.user.name shouldBe "애플사용자"
+                }
+            }
+        }
+
+        Given("가입한 적 없는 소셜 계정이 이름 없이 로그인할 때") {
+            val command =
+                SocialUserCommand(
+                    provider = OAuthProvider.APPLE,
+                    providerUserId = "nameless-${UUID.randomUUID()}",
+                    email = "nameless@example.com",
+                    name = null,
+                    providerRefreshToken = null,
+                )
+
+            When("사용자를 조회하거나 생성하면") {
+                val result = userService.findOrCreate(command)
+
+                Then("사용자를 생성하지 않고 null을 반환한다") {
+                    result.shouldBeNull()
+                    userRepository
+                        .findBySocialAccount(OAuthProvider.APPLE, command.providerUserId)
+                        .shouldBeNull()
                 }
             }
         }
@@ -72,6 +98,7 @@ class UserServiceTest(
                     provider = OAuthProvider.KAKAO,
                     providerUserId = providerUserId,
                     email = "concurrent@example.com",
+                    name = "동시가입사용자",
                     providerRefreshToken = null,
                 )
             val requestCount = 8
@@ -79,7 +106,7 @@ class UserServiceTest(
             When("사용자를 동시에 조회하거나 생성하면") {
                 val results =
                     runConcurrently(requestCount) { userService.findOrCreate(command) }
-                        .map { it.getOrThrow() }
+                        .map { it.getOrThrow()!! }
 
                 Then("한 사용자만 저장하고 한 요청만 신규 가입으로 반환한다") {
                     results
@@ -107,9 +134,10 @@ class UserServiceTest(
                         provider = OAuthProvider.APPLE,
                         providerUserId = "withdraw-apple-${UUID.randomUUID()}",
                         email = "withdraw@example.com",
+                        name = "탈퇴예정사용자",
                         providerRefreshToken = "revoke-me",
                     ),
-                )
+                )!!
             val withdrawnAt = Instant.parse("2026-07-30T00:00:00Z")
 
             When("회원 탈퇴를 처리하면") {

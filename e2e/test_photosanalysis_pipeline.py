@@ -186,8 +186,8 @@ class PhotosPipelineE2ETest:
             suffix = int(time.time() * 1000)
             cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
                 WITH u AS (
-                    INSERT INTO users (provider, provider_user_id, email)
-                    VALUES ('KAKAO', 'e2e-{suffix}', 'e2e-{suffix}@example.com')
+                    INSERT INTO users (provider, provider_user_id, email, name)
+                    VALUES ('KAKAO', 'e2e-{suffix}', 'e2e-{suffix}@example.com', 'e2e사용자')
                     RETURNING id
                 )
                 INSERT INTO boards (user_id, name) SELECT id, 'E2E' FROM u RETURNING id, user_id
