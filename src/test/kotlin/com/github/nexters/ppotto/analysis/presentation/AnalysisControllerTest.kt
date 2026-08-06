@@ -593,6 +593,102 @@ class AnalysisControllerTest(
             }
         }
 
+        Given("UPLOADING 상태의 분석이 있으면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos =
+                (0 until 90).map { i ->
+                    PhotoUploadGroupRequest(
+                        listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
+                    )
+                }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos)
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("200 응답과 재발급된 URL 목록을 반환한다") {
+                    mockMvc
+                        .perform(authenticatedPost("/analysis/${created.analysisId}/reissue", board.userId.value))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.uploads.length()").value(90))
+                        .andExpect(jsonPath("$.data.uploads[0].photoId").exists())
+                        .andExpect(jsonPath("$.data.uploads[0].uploadUrl").exists())
+                }
+            }
+        }
+
+        Given("존재하지 않는 analysisId로") {
+            val requester = userRepository.saveTestUser()
+            val userId = requester.id.value
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("404 응답과 ANALYSIS-005를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedPost("/analysis/${UUID.randomUUID()}/reissue", userId))
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
+                }
+            }
+        }
+
+        Given("다른 사용자의 analysisId로") {
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val photos =
+                (0 until 90).map { i ->
+                    PhotoUploadGroupRequest(
+                        listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
+                    )
+                }
+            val created = analysisService.createAnalysis(ownerBoard.userId.value, ownerBoard.id.value, photos)
+            val otherUser = userRepository.saveTestUser()
+            val otherUserId = otherUser.id.value
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("404 응답과 ANALYSIS-005를 반환한다") {
+                    mockMvc
+                        .perform(authenticatedPost("/analysis/${created.analysisId}/reissue", otherUserId))
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
+                }
+            }
+        }
+
+        Given("ANALYZING 상태로 전이된 분석이 있으면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
+                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
+                .execute()
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("409 응답과 ANALYSIS-003을 반환한다") {
+                    mockMvc
+                        .perform(authenticatedPost("/analysis/${analysis.id}/reissue", board.userId.value))
+                        .andExpect(status().isConflict)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-003"))
+                }
+            }
+        }
+
+        Given("인증되지 않은 요청으로") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("401 응답과 COMMON-004를 반환한다") {
+                    mockMvc
+                        .perform(post("/analysis/${analysis.id}/reissue"))
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
+                }
+            }
+        }
+
         Given("Board가 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
 

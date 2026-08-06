@@ -564,10 +564,12 @@ class AnalysisServiceTest(
                 .execute()
 
             When("업로드 완료를 통보하면") {
-                Then("상태 검증보다 먼저 NotFoundException이 발생한다") {
-                    shouldThrow<NotFoundException> {
-                        analysisService.startUpload(otherUserId, created.analysisId)
-                    }
+                Then("상태 검증보다 먼저 NotFoundException(ANALYSIS-005)이 발생한다") {
+                    val exception =
+                        shouldThrow<NotFoundException> {
+                            analysisService.startUpload(otherUserId, created.analysisId)
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-005"
                 }
             }
         }
@@ -725,6 +727,119 @@ class AnalysisServiceTest(
                     val result = analysisService.createAnalysis(board.userId.value, board.id.value, photoGroups)
                     result.analysisId.shouldNotBeNull()
                     result.uploads shouldHaveSize 90
+                }
+            }
+        }
+
+        Given("UPLOADING 상태이고 모든 사진이 PENDING인 분석에") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("모든 사진에 대해 새 URL이 발급된다") {
+                    val reissued = analysisService.reissueUploadUrls(board.userId.value, created.analysisId)
+                    reissued shouldHaveSize 90
+                    reissued.map { it.photoId }.toSet() shouldBe
+                        created.uploads
+                            .map { it.photoId }
+                            .toSet()
+                }
+            }
+        }
+
+        Given("UPLOADING 상태이고 일부 사진만 업로드 완료(COMPLETED)된 분석에") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+            val completedPhotoIds =
+                created.uploads
+                    .take(3)
+                    .map { it.photoId }
+            photoRepository.markCompletedBatch(completedPhotoIds.associateWith { Instant.now() })
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("PENDING 사진에 대해서만 새 URL이 발급된다") {
+                    val reissued = analysisService.reissueUploadUrls(board.userId.value, created.analysisId)
+                    reissued shouldHaveSize 87
+                    reissued.map { it.photoId }.toSet() shouldBe
+                        (
+                            created.uploads
+                                .map { it.photoId }
+                                .toSet() - completedPhotoIds.toSet()
+                        )
+                }
+            }
+        }
+
+        Given("존재하지 않는 analysisId로") {
+            When("업로드 URL 재발급을 요청하면") {
+                Then("NotFoundException(ANALYSIS-005)이 발생한다") {
+                    val stranger = userRepository.saveTestUser()
+                    val exception =
+                        shouldThrow<NotFoundException> {
+                            analysisService.reissueUploadUrls(stranger.id.value, UUID.randomUUID())
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-005"
+                }
+            }
+        }
+
+        Given("다른 사용자의 UPLOADING 분석으로") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+            val otherUser = userRepository.saveTestUser()
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("NotFoundException(ANALYSIS-005)이 발생한다") {
+                    val exception =
+                        shouldThrow<NotFoundException> {
+                            analysisService.reissueUploadUrls(otherUser.id.value, created.analysisId)
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-005"
+                }
+            }
+        }
+
+        Given("ANALYZING 상태로 전이된 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
+                .where(ANALYSIS.ID.eq(AnalysisId(created.analysisId)))
+                .execute()
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("ConflictException(ANALYSIS-003)이 발생한다") {
+                    val exception =
+                        shouldThrow<ConflictException> {
+                            analysisService.reissueUploadUrls(board.userId.value, created.analysisId)
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-003"
+                }
+            }
+        }
+
+        Given("FAILED 상태로 전이된 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val photos = (0 until 90).map { i -> PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG) }
+            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos.asGroups())
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.FAILED.name)
+                .where(ANALYSIS.ID.eq(AnalysisId(created.analysisId)))
+                .execute()
+
+            When("업로드 URL 재발급을 요청하면") {
+                Then("ConflictException(ANALYSIS-003)이 발생한다") {
+                    val exception =
+                        shouldThrow<ConflictException> {
+                            analysisService.reissueUploadUrls(board.userId.value, created.analysisId)
+                        }
+                    exception.errorCode.code shouldBe "ANALYSIS-003"
                 }
             }
         }
