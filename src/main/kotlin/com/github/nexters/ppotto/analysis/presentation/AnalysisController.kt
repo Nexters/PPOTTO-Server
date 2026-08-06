@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
+import com.github.nexters.ppotto.analysis.presentation.dto.ReissueUploadUrlsResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
@@ -34,6 +35,15 @@ class AnalysisController(
         analysisQueryService
             .getActiveAnalysis(userId)
             ?.let(AnalysisStatusResponse::from)
+            .let { ApiResponse.success(it) }
+
+    override fun reissue(
+        @AuthenticatedUser userId: UUID,
+        @PathVariable analysisId: UUID,
+    ): ApiResponse<ReissueUploadUrlsResponse> =
+        analysisService
+            .reissueUploadUrls(userId, analysisId)
+            .let(ReissueUploadUrlsResponse::from)
             .let { ApiResponse.success(it) }
 
     override fun start(

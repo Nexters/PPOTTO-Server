@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.analysis.presentation
 import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
+import com.github.nexters.ppotto.analysis.presentation.dto.ReissueUploadUrlsResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
@@ -91,6 +92,41 @@ interface AnalysisApi {
         description = "진행 중 분석 또는 null",
     )
     fun getActive(userId: UUID): ApiResponse<AnalysisStatusResponse?>
+
+    @PostMapping("/{analysisId}/reissue")
+    @Operation(
+        summary = "업로드 URL 재발급",
+        description =
+            "분석 생성 응답을 유실했거나 업로드 URL(15분)이 만료됐을 때 호출함. " +
+                "PENDING 사진의 URL만 재발급하며 UPLOADING 상태에서만 사용 가능",
+        parameters = [
+            Parameter(
+                name = "analysisId",
+                description = "재발급할 분석 ID (uuidv7)",
+                example = "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+            ),
+        ],
+    )
+    @OpenApiResponse(
+        responseCode = "200",
+        useReturnTypeSchema = true,
+        description = "재발급된 URL 목록",
+    )
+    @AnalysisNotFoundApiResponse
+    @OpenApiResponse(
+        responseCode = "409",
+        description = "이미 시작되었거나 종료된 분석임 (ANALYSIS-003)",
+        content = [
+            Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ApiErrorResponse::class),
+            ),
+        ],
+    )
+    fun reissue(
+        userId: UUID,
+        analysisId: UUID,
+    ): ApiResponse<ReissueUploadUrlsResponse>
 
     @PostMapping("/{analysisId}/start")
     @ResponseStatus(HttpStatus.ACCEPTED)

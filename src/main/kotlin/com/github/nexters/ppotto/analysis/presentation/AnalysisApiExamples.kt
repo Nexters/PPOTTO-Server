@@ -8,6 +8,7 @@ import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRespons
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadGroup
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadItem
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadUrlItem
+import com.github.nexters.ppotto.analysis.presentation.dto.ReissueUploadUrlsResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
@@ -152,6 +153,23 @@ private val START_UPLOAD_RESPONSE =
             ),
     )
 
+private val REISSUE_UPLOAD_URLS_RESPONSE =
+    ApiExample(
+        name = "재발급된 업로드 URL",
+        value =
+            ApiResponse.success(
+                ReissueUploadUrlsResponse(
+                    uploads =
+                        listOf(
+                            PhotoUploadUrlItem(
+                                photoId = UUID.fromString("01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f"),
+                                uploadUrl = "https://storage.googleapis.com/ppotto-photos/01983f2e.jpg?X-Goog-Expires=900",
+                            ),
+                        ),
+                ),
+            ),
+    )
+
 private val BOARD_NOT_FOUND =
     ApiExamples.errorExample(
         code = "BOARD-002",
@@ -241,6 +259,15 @@ class AnalysisApiExamples : ApiExampleProvider {
             AnalysisApi::getActive to
                 OperationExamples(
                     responses = mapOf("200" to listOf(ANALYZING_STATUS_RESPONSE, NO_ACTIVE_ANALYSIS_RESPONSE)),
+                ),
+            AnalysisApi::reissue to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to listOf(REISSUE_UPLOAD_URLS_RESPONSE),
+                            "404" to ANALYSIS_NOT_FOUND_RESPONSE,
+                            "409" to listOf(ALREADY_STARTED_OR_FINISHED),
+                        ),
                 ),
             AnalysisApi::start to
                 OperationExamples(
