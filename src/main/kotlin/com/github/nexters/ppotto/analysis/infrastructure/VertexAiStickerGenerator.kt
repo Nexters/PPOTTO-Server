@@ -28,11 +28,12 @@ class VertexAiStickerGenerator(
                 Part.fromText(
                     """
                     Create a sticker image by isolating only this subject from the photo: '$targetSubject'.
-                    Preserve the subject's natural appeal from the original photo, including an attractive pose, expression, color, texture, and recognizable silhouette.
+                    Preserve the subject's natural appeal from the original photo, including its pose, expression, color, texture, and recognizable silhouette.
                     Make the cutout feel clean, polished, and visually appealing as a standalone sticker, but do not redraw, cartoonize, beautify unrealistically, or add new design elements.
-                    The output must be a PNG with a fully transparent alpha-channel background.
-                    Do not keep or generate any original background, white background, black background, solid-color background, checkerboard background, studio backdrop, shadow, outline, border, or decorative element.
-                    Every pixel outside the cutout subject must be transparent, and the subject edge should be clean and natural.
+
+                    Orientation: keep the subject's overall up-down axis exactly as gravity would place it in real life. This is only about that axis, not the subject's pose — a sitting, lying, or reclining pose is fine. Do not rotate, tilt, flip, or invert the image so the subject reads as sideways or upside down — for example, a potted plant must stand upright, not sideways or upside down, and a standing person must have feet down and head up, not appear to stand on the ceiling.
+
+                    Output format: the image must be a PNG cropped tightly to the subject's silhouette, with a genuine alpha-transparent background — every pixel outside the cutout must have alpha=0. Do not fill that area with white, gray, black, or any solid-color pixels, and do not bake in a gray/white checkerboard pattern as real pixels (that checkerboard is only an image-editor convention for showing transparency, never actual output content). Do not place the subject on any backdrop, canvas, frame, border, outline, drop shadow, or decorative element, and do not leave a large rectangular area of transparent padding around it as if it still sits inside the original photo's frame — the result should read as the sticker cutout itself, not a photo with its background removed.
                     """.trimIndent(),
                 ),
             )
