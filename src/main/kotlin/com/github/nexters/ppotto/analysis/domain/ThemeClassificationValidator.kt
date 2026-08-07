@@ -4,7 +4,7 @@ import com.github.nexters.ppotto.global.error.BusinessException
 import java.util.UUID
 
 object ThemeClassificationValidator {
-    const val MAX_THEME_COUNT = 6
+    const val MAX_THEME_COUNT = 4
     const val MIN_THEME_COUNT = 1
 
     fun validate(

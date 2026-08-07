@@ -109,7 +109,7 @@ grep "analysis pipeline result" <path-to-api-log>
 |------|-------|------|
 | Signed URL 발급 | ✅ | 90-100개 |
 | 사진 업로드 | ✅ | 100% 성공 |
-| Gemini 분석 | ✅ | 6개 테마 감지 |
+| Gemini 분석 | ✅ | 4개 테마 감지 |
 | 배지 생성 | ✅ 이상 | 3개 이상 (스티커 타임아웃 고려) |
 | 스티커 재생성 | ✅ | `--regenerate-theme` 사용 시 image key 변경, title/summary 유지 |
 | 소요시간 | < 3분 | API 동기 처리 |
@@ -191,7 +191,7 @@ docker exec ppotto-postgres psql -U ppotto -d ppotto -c "SELECT 1;"
 │  └─ Gemini 분류 시작 (동기)
 │
 ├─ 배지/스티커 생성
-│  └─ 6개 테마 감지
+│  └─ 4개 테마 감지
 │  └─ 배지 생성
 │  └─ 스티커 생성 (타임아웃)
 │
@@ -218,7 +218,7 @@ docker exec ppotto-postgres psql -U ppotto -d ppotto -c "SELECT 1;"
 
 ### Vertex AI
 - ✅ Gemini 2.5 Flash 호출
-- ✅ 6개 테마 분류
+- ✅ 4개 테마 분류
 - ✅ 배지/설명 생성
 - ✅ 스티커 생성 (120초 타임아웃)
 - ✅ 특정 테마 스티커 재생성 (선택)
