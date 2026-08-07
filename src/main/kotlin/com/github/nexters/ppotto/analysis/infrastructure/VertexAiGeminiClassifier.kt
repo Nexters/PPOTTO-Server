@@ -208,8 +208,12 @@ class VertexAiGeminiClassifier(
                             Schema
                                 .builder()
                                 .type(Type.Known.ARRAY)
-                                .items(Schema.builder().type(Type.Known.STRING).enum_(validPhotoIds))
-                                .build(),
+                                .items(
+                                    Schema
+                                        .builder()
+                                        .type(Type.Known.STRING)
+                                        .enum_(validPhotoIds),
+                                ).build(),
                         "recap" to RECAP_SCHEMA,
                         "sticker" to stickerSchema(validPhotoIds),
                     ),
