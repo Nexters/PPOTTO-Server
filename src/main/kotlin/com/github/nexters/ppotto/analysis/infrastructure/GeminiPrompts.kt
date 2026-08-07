@@ -6,13 +6,17 @@ import java.util.UUID
 object GeminiPrompts {
     fun stickerCutout(targetSubject: String): String =
         """
-        Create a sticker image by isolating only this subject from the photo: '$targetSubject'.
+        Perform a precise background removal (like a Photoshop "cutout" / "remove background" tool) on this photo, keeping only this subject: '$targetSubject'. This is NOT a printed die-cut sticker — do not apply any printed-sticker styling such as a white border, colored outline, or halo around the edge. Treat this purely as isolating the subject from its background, nothing more.
         Preserve the subject's natural appeal from the original photo, including its pose, expression, color, texture, and recognizable silhouette.
-        Make the cutout feel clean, polished, and visually appealing as a standalone sticker, but do not redraw, cartoonize, beautify unrealistically, or add new design elements.
+        Keep the cutout clean and polished, but do not redraw, cartoonize, beautify unrealistically, or add new design elements.
+
+        Background: unless the subject description above explicitly refers to a landscape, scenery, or wide view, treat everything else in the original photo as background and remove it completely — this includes walls, floors, furniture, other objects, other people, sky, ground, or any part of the scene not covered by the named subject itself. Only when the subject description itself is a landscape/scenery should a wider view remain, and even then only that described scene, not unrelated clutter around it.
 
         Orientation: keep the subject's overall up-down axis exactly as gravity would place it in real life. This is only about that axis, not the subject's pose — a sitting, lying, or reclining pose is fine. Do not rotate, tilt, flip, or invert the image so the subject reads as sideways or upside down — for example, a potted plant must stand upright, not sideways or upside down, and a standing person must have feet down and head up, not appear to stand on the ceiling.
 
-        Output format: the image must be a PNG cropped tightly to the subject's silhouette, with a genuine alpha-transparent background — every pixel outside the cutout must have alpha=0. Do not fill that area with white, gray, black, or any solid-color pixels, and do not bake in a gray/white checkerboard pattern as real pixels (that checkerboard is only an image-editor convention for showing transparency, never actual output content). Do not place the subject on any backdrop, canvas, frame, border, outline, drop shadow, or decorative element, and do not leave a large rectangular area of transparent padding around it as if it still sits inside the original photo's frame — the result should read as the sticker cutout itself, not a photo with its background removed.
+        Edges: absolutely no outline, border, stroke, halo, or colored line of any kind may trace the subject's silhouette — not white, not any color. The cutout boundary itself must be the only edge, exactly like a background-removal tool would produce, not like a printed sticker. This applies especially to people: their body, hair, and clothing edges must transition directly from subject to background with zero added line art.
+
+        Output format: the image must be a PNG cropped tightly to the subject's silhouette, with a genuine alpha-transparent background — every pixel outside the cutout must have alpha=0. Do not fill that area with white, gray, black, or any solid-color pixels, and do not bake in a gray/white checkerboard pattern as real pixels (that checkerboard is only an image-editor convention for showing transparency, never actual output content). Do not place the subject on any backdrop, canvas, frame, drop shadow, or decorative element, and do not leave a large rectangular area of transparent padding around it as if it still sits inside the original photo's frame — the result should read as a pure background-removed cutout, not a photo with a decorative border.
         """.trimIndent()
 
     fun themeClassification(photoIds: List<UUID>): String =
