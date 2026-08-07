@@ -425,8 +425,8 @@ python3 e2e/test_photosanalysis_pipeline.py \
 # 테스트 로그
 cat e2e_test.log
 
-# 최종 결과
-open e2e/reports/e2e_test_report.html
+# 최종 결과 (최신 리포트)
+open $(ls -t e2e/reports/e2e_test_report_*.html | head -1)
 
 # API 서버 로그에서 결과 추출
 grep "analysis pipeline result" bootRun.log

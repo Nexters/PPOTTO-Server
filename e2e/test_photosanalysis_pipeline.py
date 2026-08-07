@@ -63,7 +63,8 @@ class PhotosPipelineE2ETest:
         self.board_id = None
         self.user_id = None
         self.report_dir = "e2e/reports"
-        self.report_html_path = f"{self.report_dir}/e2e_test_report.html"
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        self.report_html_path = f"{self.report_dir}/e2e_test_report_{timestamp}.html"
 
     def run(self) -> bool:
         """전체 E2E 테스트 실행"""
