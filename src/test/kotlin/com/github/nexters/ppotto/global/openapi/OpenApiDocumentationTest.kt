@@ -344,6 +344,12 @@ class OpenApiDocumentationTest(
                     ).andExpect(
                         jsonPath("$['components']['schemas']['BoardLayoutRequest']['required']")
                             .doesNotExist(),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['StickerResponse']['required']")
+                            .value(not(hasItems("posX", "posY", "zIndex"))),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['BoardStickerResponse']['required']")
+                            .value(not(hasItems("posX", "posY", "zIndex"))),
                     )
             }
         }
