@@ -27,7 +27,6 @@ import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
@@ -118,17 +117,6 @@ class WithdrawnUserDataDeletionAdapterTest(
                                         sourcePhotoId = PhotoId(photo.id),
                                         imageKey = STICKER_IMAGE_KEY,
                                         textContent = null,
-                                        layout =
-                                            StickerLayout(
-                                                posX = 1.0,
-                                                posY = 2.0,
-                                                scale = 1.0,
-                                                rotation = 0.0,
-                                                zIndex = 0,
-                                                badgeOffsetX = 0.0,
-                                                badgeOffsetY = 0.0,
-                                                badgeRotation = 0.0,
-                                            ),
                                         photoIds = listOf(PhotoId(photo.id)),
                                         comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
                                     ),

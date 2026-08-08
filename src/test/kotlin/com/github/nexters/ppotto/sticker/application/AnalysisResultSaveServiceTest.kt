@@ -14,7 +14,6 @@ import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
-import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -297,7 +296,6 @@ private fun imageResult(photoId: PhotoId) =
         sourcePhotoId = photoId,
         imageKey = "stickers/image.png",
         textContent = null,
-        layout = defaultStickerLayout(),
         photoIds = listOf(photoId),
         comments =
             listOf(
@@ -314,7 +312,6 @@ private fun textResult() =
         sourcePhotoId = null,
         imageKey = null,
         textContent = "텍스트",
-        layout = defaultStickerLayout(),
         photoIds = emptyList(),
         comments = emptyList(),
     )

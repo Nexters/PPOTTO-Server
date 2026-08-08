@@ -30,7 +30,6 @@ fun imageStickerCreation(
         sourcePhotoId = sourcePhotoId,
         imageKey = imageKey,
         textContent = null,
-        layout = defaultStickerLayout(),
     )
 
 fun textStickerCreation(
@@ -45,5 +44,4 @@ fun textStickerCreation(
         sourcePhotoId = null,
         imageKey = null,
         textContent = textContent,
-        layout = defaultStickerLayout(),
     )

@@ -12,7 +12,6 @@ import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
-import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -69,7 +68,6 @@ class StickerControllerTest(
                         sourcePhotoId = PhotoId(photo.id),
                         imageKey = "stickers/controller.png",
                         textContent = null,
-                        layout = defaultStickerLayout(),
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(photo.id)))
@@ -97,6 +95,11 @@ class StickerControllerTest(
                         .andExpect(jsonPath("$.data.comments[1].content").value("키워드"))
                         .andExpect(jsonPath("$.data.comments[1].posX").doesNotExist())
                         .andExpect(jsonPath("$.data.comments[1].posY").doesNotExist())
+                        .andExpect(jsonPath("$.data.sticker.posX").doesNotExist())
+                        .andExpect(jsonPath("$.data.sticker.posY").doesNotExist())
+                        .andExpect(jsonPath("$.data.sticker.zIndex").doesNotExist())
+                        .andExpect(jsonPath("$.data.sticker.scale").value(1.0))
+                        .andExpect(jsonPath("$.data.sticker.rotation").value(0.0))
                         .andExpect(jsonPath("$.data.photos[0].id").value(photo.id.toString()))
                         .andExpect(
                             jsonPath("$.data.photos[0].imageUrl")
