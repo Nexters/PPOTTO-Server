@@ -12,7 +12,6 @@ import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
-import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -57,7 +56,6 @@ class StickerQueryServiceTest(
                         sourcePhotoId = PhotoId(photos.first().id),
                         imageKey = "stickers/recap.png",
                         textContent = null,
-                        layout = defaultStickerLayout(),
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
@@ -149,7 +147,6 @@ class StickerQueryServiceTest(
                         sourcePhotoId = PhotoId(representativePhoto.id),
                         imageKey = "stickers/recap.png",
                         textContent = null,
-                        layout = defaultStickerLayout(),
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
@@ -184,7 +181,6 @@ class StickerQueryServiceTest(
                         sourcePhotoId = PhotoId(pendingPhoto.id),
                         imageKey = "stickers/recap.png",
                         textContent = null,
-                        layout = defaultStickerLayout(),
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(pendingPhoto.id)))

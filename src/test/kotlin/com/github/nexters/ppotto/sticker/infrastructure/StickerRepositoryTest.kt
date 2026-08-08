@@ -9,7 +9,6 @@ import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -53,7 +52,6 @@ class StickerRepositoryTest(
                         sourcePhotoId = PhotoId(photos.first().id),
                         imageKey = "stickers/summer.png",
                         textContent = null,
-                        layout = layout(),
                     ),
                 )
             stickerRecapRepository.savePhotos(saved.id, photos.map { PhotoId(it.id) })
@@ -149,17 +147,4 @@ private fun textCreation(title: String) =
         sourcePhotoId = null,
         imageKey = null,
         textContent = "텍스트",
-        layout = layout(),
-    )
-
-private fun layout() =
-    StickerLayout(
-        posX = 10.0,
-        posY = 20.0,
-        scale = 1.0,
-        rotation = 0.0,
-        zIndex = 1,
-        badgeOffsetX = 0.0,
-        badgeOffsetY = 0.0,
-        badgeRotation = 0.0,
     )

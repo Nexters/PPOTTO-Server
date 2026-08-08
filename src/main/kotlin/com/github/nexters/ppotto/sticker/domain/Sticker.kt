@@ -18,11 +18,11 @@ class Sticker(
     sourcePhotoId: PhotoId?,
     imageKey: String?,
     val textContent: String?,
-    posX: Double,
-    posY: Double,
+    posX: Double?,
+    posY: Double?,
     scale: Double,
     rotation: Double,
-    zIndex: Int,
+    zIndex: Int?,
     badgeOffsetX: Double,
     badgeOffsetY: Double,
     badgeRotation: Double,
@@ -34,15 +34,15 @@ class Sticker(
         private set
     var viewedAt: Instant? = viewedAt
         private set
-    var posX: Double = posX
+    var posX: Double? = posX
         private set
-    var posY: Double = posY
+    var posY: Double? = posY
         private set
     var scale: Double = scale
         private set
     var rotation: Double = rotation
         private set
-    var zIndex: Int = zIndex
+    var zIndex: Int? = zIndex
         private set
     var badgeOffsetX: Double = badgeOffsetX
         private set
@@ -142,7 +142,6 @@ data class StickerCreation(
     val sourcePhotoId: PhotoId?,
     val imageKey: String?,
     val textContent: String?,
-    val layout: StickerLayout,
 ) {
     init {
         title

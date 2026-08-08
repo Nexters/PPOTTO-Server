@@ -145,12 +145,12 @@ open class Stickers(
     /**
      * The column <code>public.stickers.pos_x</code>.
      */
-    val POS_X: TableField<StickersRecord, Double?> = createField(DSL.name("pos_x"), SQLDataType.DOUBLE.nullable(false), this, "")
+    val POS_X: TableField<StickersRecord, Double?> = createField(DSL.name("pos_x"), SQLDataType.DOUBLE, this, "")
 
     /**
      * The column <code>public.stickers.pos_y</code>.
      */
-    val POS_Y: TableField<StickersRecord, Double?> = createField(DSL.name("pos_y"), SQLDataType.DOUBLE.nullable(false), this, "")
+    val POS_Y: TableField<StickersRecord, Double?> = createField(DSL.name("pos_y"), SQLDataType.DOUBLE, this, "")
 
     /**
      * The column <code>public.stickers.scale</code>.
@@ -165,7 +165,7 @@ open class Stickers(
     /**
      * The column <code>public.stickers.z_index</code>.
      */
-    val Z_INDEX: TableField<StickersRecord, Int?> = createField(DSL.name("z_index"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val Z_INDEX: TableField<StickersRecord, Int?> = createField(DSL.name("z_index"), SQLDataType.INTEGER, this, "")
 
     /**
      * The column <code>public.stickers.badge_offset_x</code>.

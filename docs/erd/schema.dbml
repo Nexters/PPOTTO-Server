@@ -281,11 +281,11 @@ Table stickers {
   regeneration_locked_until timestamptz [null, note: '이미지 재생성 진행 중 잠금 만료 시각. NULL이면 재생성 가능. 재생성 종료 시(성공/실패 무관) 즉시 NULL로 되돌린다 — 정상 흐름에서는 도달하지 않는 크래시 복구용 상한']
 
   // 보드 상 배치
-  pos_x    double  [not null]
-  pos_y    double  [not null]
+  pos_x    double  [null, note: '클라이언트가 배치를 정하기 전에는 NULL']
+  pos_y    double  [null, note: '클라이언트가 배치를 정하기 전에는 NULL']
   scale    double  [not null, default: 1]
   rotation double  [not null, default: 0, note: 'degree']
-  z_index  integer [not null, default: 0]
+  z_index  integer [null, note: '클라이언트가 배치를 정하기 전에는 NULL']
 
   // 제목 뱃지 (스티커에 1:1로 붙는다)
   badge_offset_x double [not null, default: 0, note: '스티커 기준 상대 좌표. 일정 범위 내로 제한']
@@ -306,6 +306,9 @@ Table stickers {
   제목을 수정해도 viewed_at 에는 영향을 주지 않는다.
   삭제하면 연결된 드로잉과 리캡 데이터도 함께 soft delete 한다.
   배치값은 편집 모드를 끌 때마다 서버에 저장한다.
+  생성 직후에는 pos_x/pos_y/z_index가 NULL이다. 이 값은 다른 스티커와 겹치지 않게 정해야 해서
+  보드 전체 상태를 아는 클라이언트가 계산해 레이아웃 수정 API로 채운다. scale/rotation은 생성 시
+  서버가 항상 1/0으로 채운다.
   '''
 
   indexes {

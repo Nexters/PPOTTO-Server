@@ -64,7 +64,6 @@ class StickerTest :
                             sourcePhotoId = PhotoId(UUID.randomUUID()),
                             imageKey = null,
                             textContent = null,
-                            layout = layout(),
                         )
                     }
                 }
@@ -80,7 +79,6 @@ class StickerTest :
                             sourcePhotoId = null,
                             imageKey = null,
                             textContent = "텍스트",
-                            layout = layout(),
                         )
                     }
                 }
@@ -96,7 +94,6 @@ class StickerTest :
                             sourcePhotoId = null,
                             imageKey = null,
                             textContent = "텍스트",
-                            layout = layout(),
                         )
                     }
                 }
@@ -112,7 +109,6 @@ class StickerTest :
                             sourcePhotoId = null,
                             imageKey = null,
                             textContent = "텍스트",
-                            layout = layout(),
                         )
                     }
                 }

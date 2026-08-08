@@ -20,7 +20,6 @@ import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.GcsStickerImageStorage
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
-import com.github.nexters.ppotto.sticker.support.defaultStickerLayout
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -225,7 +224,6 @@ private fun stickerResult(
     sourcePhotoId = sourcePhotoId,
     imageKey = imageKey,
     textContent = null,
-    layout = defaultStickerLayout(),
     photoIds = photoIds,
     comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
 )

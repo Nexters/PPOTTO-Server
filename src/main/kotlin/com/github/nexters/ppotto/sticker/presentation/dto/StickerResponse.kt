@@ -31,21 +31,21 @@ data class StickerResponse(
     @field:Schema(description = "TEXT 형 문구", example = "whats in my mac")
     val textContent: String?,
 
-    @field:Schema(description = "보드 좌표 X", example = "62.5")
-    val posX: Double,
+    @field:Schema(description = "보드 좌표 X. null이면 클라이언트가 아직 배치를 정하지 않은 스티커. 보드 상태를 보고 계산해 레이아웃 수정 API로 채워야 함", example = "62.5")
+    val posX: Double?,
 
-    @field:Schema(description = "보드 좌표 Y", example = "318")
-    val posY: Double,
+    @field:Schema(description = "보드 좌표 Y. null이면 클라이언트가 아직 배치를 정하지 않은 스티커. 보드 상태를 보고 계산해 레이아웃 수정 API로 채워야 함", example = "318")
+    val posY: Double?,
 
-    @field:Schema(description = "확대 비율", example = "0.8")
+    @field:Schema(description = "확대 비율. 1.0이 원본 크기 기준이며 0.8=80% 축소, 1.1=110% 확대처럼 사용. 0보다 큰 값만 허용", example = "0.8")
     val scale: Double,
 
     @field:Schema(description = "회전 각도(degree)", example = "-12")
     val rotation: Double,
 
-    @get:Schema(description = "겹침 순서", example = "3")
+    @get:Schema(description = "겹침 순서. null이면 클라이언트가 아직 배치를 정하지 않은 스티커. 보드 상태를 보고 계산해 레이아웃 수정 API로 채워야 함", example = "3")
     @get:JsonProperty("zIndex")
-    val zIndex: Int,
+    val zIndex: Int?,
 
     @field:Schema(description = "스티커 기준 뱃지 상대 좌표 X", example = "-24")
     val badgeOffsetX: Double,
