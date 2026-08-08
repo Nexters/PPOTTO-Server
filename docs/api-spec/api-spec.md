@@ -826,6 +826,19 @@ Request example:
         "badgeOffsetX": 12,
         "badgeOffsetY": -60,
         "badgeRotation": -4
+      },
+      {
+        "id": "01983f2b-5e6f-7a7b-c8d9-0e1f2a3b4c5d",
+        "title": "방금 만든 스티커",
+        "isNew": true,
+        "type": "IMAGE",
+        "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-5e6f.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=2a7c...",
+        "textContent": null,
+        "scale": 1,
+        "rotation": 0,
+        "badgeOffsetX": 0,
+        "badgeOffsetY": 0,
+        "badgeRotation": 0
       }
     ],
     "drawings": [
@@ -917,6 +930,7 @@ Request example:
 
 #### Notes
 - 보드, 스티커, 드로잉을 한 번에 반환합니다. isNew가 빨간 점 표시 여부입니다. imageUrl은 만료가 있으므로 보드에 진입할 때마다 새로 조회합니다.
+- 생성 직후라 아직 배치되지 않은 스티커는 `posX`/`posY`/`zIndex` 키 자체가 없습니다(서버가 null 필드를 직렬화하지 않음. 위 예시의 세 번째 스티커 참고). `scale`은 1, `rotation`은 0으로 채워져 있습니다. 클라이언트는 `posX` 키가 없으면 보드 상태를 보고 겹치지 않는 위치와 쌓임 순서를 계산해 `PATCH /boards/{boardId}/layout`로 채워야 합니다.
 
 ### PATCH /boards/{boardId}
 
@@ -1447,6 +1461,7 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 
 #### Notes
 - 리캡 화면에 필요한 데이터를 모두 반환합니다. 스티커 1개 = 리캡 1개입니다. photos는 takenAt, id 오름차순이며 기간 표시는 클라이언트가 계산합니다. 빨간 점 제거는 별도로 /view를 호출합니다.
+- 생성 직후라 아직 배치되지 않은 스티커라면 `sticker.posX`/`posY`/`zIndex` 키 자체가 없습니다(서버가 null 필드를 직렬화하지 않음). `sticker.scale`은 1, `sticker.rotation`은 0으로 채워져 있습니다. `GET /boards/{boardId}` Notes 참고.
 - `summary`는 `한 줄 요약` 라벨 아래의 강조 문장입니다. 스티커당 정확히 1개이고 항상 채워져 있습니다. 제목 뱃지인 `sticker.title`과는 다른 값이므로 둘을 섞어 쓰면 안 됩니다.
 - `comments`는 두 종류가 한 배열에 섞여 옵니다. **구분 기준은 `posX`(와 `posY`)의 존재 여부 하나뿐입니다.**
 
