@@ -52,7 +52,7 @@ data class StickerLayoutRequest(
     @field:Schema(description = "보드 좌표 Y", example = "290.5")
     val posY: Double,
 
-    @field:Schema(description = "확대 비율", example = "1.1")
+    @field:Schema(description = "확대 비율. 1.0이 원본 크기 기준이며 0.8=80% 축소, 1.1=110% 확대처럼 사용. 0보다 큰 값만 허용", example = "1.1")
     val scale: Double,
 
     @field:Schema(description = "회전 각도(degree)", example = "-8")

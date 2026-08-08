@@ -6,7 +6,6 @@ import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 
 data class SaveAnalysisResultCommand(
@@ -23,7 +22,6 @@ data class AnalysisStickerResult(
     val sourcePhotoId: PhotoId?,
     val imageKey: String?,
     val textContent: String?,
-    val layout: StickerLayout,
     val photoIds: List<PhotoId>,
     val comments: List<RecapCommentCreation>,
 )

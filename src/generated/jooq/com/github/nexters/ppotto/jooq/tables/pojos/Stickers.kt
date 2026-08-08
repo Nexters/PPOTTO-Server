@@ -27,8 +27,8 @@ data class Stickers(
     val sourcePhotoId: PhotoId? = null,
     val imageKey: String? = null,
     val textContent: String? = null,
-    val posX: Double,
-    val posY: Double,
+    val posX: Double? = null,
+    val posY: Double? = null,
     val scale: Double? = null,
     val rotation: Double? = null,
     val zIndex: Int? = null,
@@ -88,9 +88,17 @@ data class Stickers(
         }
         else if (this.textContent != o.textContent)
             return false
-        if (this.posX != o.posX)
+        if (this.posX == null) {
+            if (o.posX != null)
+                return false
+        }
+        else if (this.posX != o.posX)
             return false
-        if (this.posY != o.posY)
+        if (this.posY == null) {
+            if (o.posY != null)
+                return false
+        }
+        else if (this.posY != o.posY)
             return false
         if (this.scale == null) {
             if (o.scale != null)
@@ -169,8 +177,8 @@ data class Stickers(
         result = prime * result + (if (this.sourcePhotoId == null) 0 else this.sourcePhotoId.hashCode())
         result = prime * result + (if (this.imageKey == null) 0 else this.imageKey.hashCode())
         result = prime * result + (if (this.textContent == null) 0 else this.textContent.hashCode())
-        result = prime * result + this.posX.hashCode()
-        result = prime * result + this.posY.hashCode()
+        result = prime * result + (if (this.posX == null) 0 else this.posX.hashCode())
+        result = prime * result + (if (this.posY == null) 0 else this.posY.hashCode())
         result = prime * result + (if (this.scale == null) 0 else this.scale.hashCode())
         result = prime * result + (if (this.rotation == null) 0 else this.rotation.hashCode())
         result = prime * result + (if (this.zIndex == null) 0 else this.zIndex.hashCode())

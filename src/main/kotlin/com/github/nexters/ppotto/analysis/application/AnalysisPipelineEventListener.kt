@@ -9,7 +9,6 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
-import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -64,13 +63,10 @@ class AnalysisPipelineEventListener(
 
     private fun AnalysisPipelineResult.toStickerResults(analysisId: UUID): List<AnalysisStickerResult> =
         themes
-            .mapIndexed { themeIndex, theme -> theme.toStickerResult(analysisId, themeIndex) }
+            .map { theme -> theme.toStickerResult(analysisId) }
             .filterNotNull()
 
-    private fun ThemeAnalysisResult.toStickerResult(
-        analysisId: UUID,
-        themeIndex: Int,
-    ): AnalysisStickerResult? {
+    private fun ThemeAnalysisResult.toStickerResult(analysisId: UUID): AnalysisStickerResult? {
         val imageKey = stickerImageKey
         if (imageKey == null) {
             log.warn("스티커 생성 실패: analysisId={}, theme={}", analysisId, theme)
@@ -84,23 +80,10 @@ class AnalysisPipelineEventListener(
             sourcePhotoId = PhotoId(stickerSourcePhotoId),
             imageKey = imageKey,
             textContent = null,
-            layout = stickerLayout(themeIndex),
             photoIds = categorizedPhotoIds.map(::PhotoId),
             comments = emptyList(),
         )
     }
-
-    private fun stickerLayout(themeIndex: Int) =
-        StickerLayout(
-            posX = 40.0 * themeIndex,
-            posY = 40.0 * themeIndex,
-            scale = 1.0,
-            rotation = 0.0,
-            zIndex = themeIndex,
-            badgeOffsetX = 0.0,
-            badgeOffsetY = 0.0,
-            badgeRotation = 0.0,
-        )
 
     companion object {
         private val log = LoggerFactory.getLogger(AnalysisPipelineEventListener::class.java)

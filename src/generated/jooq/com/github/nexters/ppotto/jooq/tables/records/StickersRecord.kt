@@ -58,13 +58,13 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         set(value): Unit = set(8, value)
         get(): String? = get(8) as String?
 
-    open var posX: Double
+    open var posX: Double?
         set(value): Unit = set(9, value)
-        get(): Double = get(9) as Double
+        get(): Double? = get(9) as Double?
 
-    open var posY: Double
+    open var posY: Double?
         set(value): Unit = set(10, value)
-        get(): Double = get(10) as Double
+        get(): Double? = get(10) as Double?
 
     open var scale: Double?
         set(value): Unit = set(11, value)
@@ -119,7 +119,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
     /**
      * Create a detached, initialised StickersRecord
      */
-    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double, posY: Double, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null): this() {
+    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId
