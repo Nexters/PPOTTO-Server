@@ -34,8 +34,8 @@ class ThemeClassificationValidatorTest :
 
         Given("최대개수의 테마 분류가 주어졌을 때") {
             When("검증을 실행하면") {
-                Then("6개 테마 분류는 통과한다") {
-                    val photos = List(6) { UUID.randomUUID() }
+                Then("4개 테마 분류는 통과한다") {
+                    val photos = List(4) { UUID.randomUUID() }
                     val classifications =
                         photos.mapIndexed { idx, photoId ->
                             ThemeClassification(
@@ -80,16 +80,16 @@ class ThemeClassificationValidatorTest :
                         shouldThrow<BusinessException> {
                             ThemeClassificationValidator.validate(emptyList(), setOf(photo1))
                         }
-                    exception.message shouldContain "테마 개수는 1 개 이상 6 개 이하여야 합니다"
+                    exception.message shouldContain "테마 개수는 1 개 이상 4 개 이하여야 합니다"
                     exception.message shouldContain "실제: 0개"
                 }
             }
         }
 
-        Given("테마가 7개 이상인 분류가 주어졌을 때") {
+        Given("테마가 5개 이상인 분류가 주어졌을 때") {
             When("검증을 실행하면") {
                 Then("예외를 발생한다") {
-                    val photos = List(7) { UUID.randomUUID() }
+                    val photos = List(5) { UUID.randomUUID() }
                     val classifications =
                         photos.mapIndexed { idx, photoId ->
                             ThemeClassification(
@@ -106,8 +106,8 @@ class ThemeClassificationValidatorTest :
                         shouldThrow<BusinessException> {
                             ThemeClassificationValidator.validate(classifications, inputPhotoIds)
                         }
-                    exception.message shouldContain "테마 개수는 1 개 이상 6 개 이하여야 합니다"
-                    exception.message shouldContain "실제: 7개"
+                    exception.message shouldContain "테마 개수는 1 개 이상 4 개 이하여야 합니다"
+                    exception.message shouldContain "실제: 5개"
                 }
             }
         }

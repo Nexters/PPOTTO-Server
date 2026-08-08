@@ -42,8 +42,8 @@ python3 e2e/test_photosanalysis_pipeline.py --photos-count 100
 # 특정 테마의 스티커 재생성까지 테스트
 python3 e2e/test_photosanalysis_pipeline.py --theme-query "동물" --regenerate-theme
 
-# 결과 확인
-open e2e/reports/e2e_test_report.html
+# 결과 확인 (최신 리포트)
+open $(ls -t e2e/reports/e2e_test_report_*.html | head -1)
 ```
 
 ## 📂 디렉토리 구조
@@ -54,7 +54,7 @@ e2e/
 ├── E2E_TEST_DESIGN.md               # 설계 문서 (상세)
 ├── README.md                        # 이 파일 (빠른 시작)
 └── reports/                         # 테스트 결과 (자동 생성, Git 제외)
-    └── e2e_test_report.html
+    └── e2e_test_report_<YYYYMMDD_HHMMSS>.html  # 실행마다 새로 생성
 ```
 
 ## 📖 사용 방법
@@ -94,8 +94,8 @@ python3 test_photosanalysis_pipeline.py \
 # 실시간 로그 확인
 tail -f e2e_test.log
 
-# 최종 결과
-open e2e/reports/e2e_test_report.html
+# 최종 결과 (최신 리포트)
+open $(ls -t e2e/reports/e2e_test_report_*.html | head -1)
 
 # API 로그에서 분석 결과 추출
 grep "analysis pipeline result" <path-to-api-log>
@@ -109,14 +109,14 @@ grep "analysis pipeline result" <path-to-api-log>
 |------|-------|------|
 | Signed URL 발급 | ✅ | 90-100개 |
 | 사진 업로드 | ✅ | 100% 성공 |
-| Gemini 분석 | ✅ | 6개 테마 감지 |
+| Gemini 분석 | ✅ | 4개 테마 감지 |
 | 배지 생성 | ✅ 이상 | 3개 이상 (스티커 타임아웃 고려) |
 | 스티커 재생성 | ✅ | `--regenerate-theme` 사용 시 image key 변경, title/summary 유지 |
 | 소요시간 | < 3분 | API 동기 처리 |
 
 ### 결과 파일
 
-`e2e/reports/e2e_test_report.html`에 업로드 사진, 생성 스티커, signed URL, 모델명, Gemini 파이프라인 시간, 테마 분류 요약, 스티커 재생성 전후 정보가 기록됩니다.
+`e2e/reports/e2e_test_report_<YYYYMMDD_HHMMSS>.html`에 업로드 사진, 생성 스티커, signed URL, 모델명, Gemini 파이프라인 시간, 테마 분류 요약, 스티커 재생성 전후 정보가 기록됩니다. 실행마다 타임스탬프가 붙은 새 파일로 저장되므로 이전 결과를 덮어쓰지 않습니다.
 
 ## 🔧 문제 해결
 
@@ -191,7 +191,7 @@ docker exec ppotto-postgres psql -U ppotto -d ppotto -c "SELECT 1;"
 │  └─ Gemini 분류 시작 (동기)
 │
 ├─ 배지/스티커 생성
-│  └─ 6개 테마 감지
+│  └─ 4개 테마 감지
 │  └─ 배지 생성
 │  └─ 스티커 생성 (타임아웃)
 │
@@ -201,7 +201,7 @@ docker exec ppotto-postgres psql -U ppotto -d ppotto -c "SELECT 1;"
 │  └─ image_key 변경 및 title/summary 유지 확인
 │
 └─ 결과 저장
-   └─ e2e/reports/e2e_test_report.html
+   └─ e2e/reports/e2e_test_report_<timestamp>.html
 ```
 
 ## 📝 주요 검증 항목
@@ -218,7 +218,7 @@ docker exec ppotto-postgres psql -U ppotto -d ppotto -c "SELECT 1;"
 
 ### Vertex AI
 - ✅ Gemini 2.5 Flash 호출
-- ✅ 6개 테마 분류
+- ✅ 4개 테마 분류
 - ✅ 배지/설명 생성
 - ✅ 스티커 생성 (120초 타임아웃)
 - ✅ 특정 테마 스티커 재생성 (선택)
@@ -271,7 +271,7 @@ jobs:
         if: always()
         with:
           name: e2e-results
-          path: e2e/reports/e2e_test_report.html
+          path: e2e/reports/*.html
 ```
 
 ## 💡 팁
