@@ -244,7 +244,6 @@ class VertexAiGeminiClassifier(
                             Schema
                                 .builder()
                                 .type(Type.Known.STRING)
-                                .pattern("^#[0-9A-Fa-f]{6}$")
                                 .build(),
                     ),
                 ).required("targetSubject", "sourcePhotoId", "mainColor")
