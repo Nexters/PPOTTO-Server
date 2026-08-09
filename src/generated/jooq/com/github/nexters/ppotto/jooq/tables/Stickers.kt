@@ -207,6 +207,11 @@ open class Stickers(
      */
     val REGENERATION_LOCKED_UNTIL: TableField<StickersRecord, Instant?> = createField(DSL.name("regeneration_locked_until"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
 
+    /**
+     * The column <code>public.stickers.main_color</code>.
+     */
+    val MAIN_COLOR: TableField<StickersRecord, String?> = createField(DSL.name("main_color"), SQLDataType.VARCHAR(7).nullable(false).defaultValue(DSL.field(DSL.raw("'#222222'::character varying"), SQLDataType.VARCHAR)), this, "")
+
     private constructor(alias: Name, aliased: Table<StickersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
@@ -293,6 +298,7 @@ open class Stickers(
     val stickerPhotos: StickerPhotosPath
         get(): StickerPhotosPath = stickerPhotos()
     override fun getChecks(): List<Check<StickersRecord>> = listOf(
+        Internal.createCheck(this, DSL.name("chk_sticker_main_color"), "(((main_color)::text ~ '^#[0-9A-Fa-f]{6}\$'::text))", true),
         Internal.createCheck(this, DSL.name("chk_stickers_content"), "(((((type)::text = 'IMAGE'::text) AND (image_key IS NOT NULL)) OR (((type)::text = 'TEXT'::text) AND (text_content IS NOT NULL))))", true)
     )
     override fun `as`(alias: String): Stickers = Stickers(DSL.name(alias), this)

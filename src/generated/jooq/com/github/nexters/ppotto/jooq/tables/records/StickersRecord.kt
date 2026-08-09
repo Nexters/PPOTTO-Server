@@ -110,6 +110,10 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         set(value): Unit = set(21, value)
         get(): Instant? = get(21) as Instant?
 
+    open var mainColor: String?
+        set(value): Unit = set(22, value)
+        get(): String? = get(22) as String?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -119,7 +123,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
     /**
      * Create a detached, initialised StickersRecord
      */
-    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null): this() {
+    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null, mainColor: String? = null): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId
@@ -142,6 +146,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         this.deletedAt = deletedAt
         this.summary = summary
         this.regenerationLockedUntil = regenerationLockedUntil
+        this.mainColor = mainColor
         resetTouchedOnNotNull()
     }
 
@@ -172,6 +177,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
             this.deletedAt = value.deletedAt
             this.summary = value.summary
             this.regenerationLockedUntil = value.regenerationLockedUntil
+            this.mainColor = value.mainColor
             resetTouchedOnNotNull()
         }
     }

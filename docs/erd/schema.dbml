@@ -254,6 +254,9 @@ Table photos {
   taken_at 만 남기는데, 이건 이미지에 담기지 않는 정보다.
   값의 출처(EXIF, 갤러리 등록 시각 등)는 클라가 정하고 서버는 받은 값을 믿는다.
   GPS는 쓰지 않기로 해서 저장하지 않는다.
+  이 기준은 photos 원본 메타데이터에 한정된다. 스티커처럼 분석 결과로 한 번
+  생성되면 이후 재계산 없이 그대로 재사용해야 하는 파생 산출물(예:
+  stickers.main_color)에는 적용되지 않는다.
   '''
 
   indexes {
@@ -277,6 +280,7 @@ Table stickers {
   source_photo_id uuid [null, ref: > photos.id, note: '이미지형일 때 원본 사진']
   image_key       text [null, note: '서버가 누끼 처리해 올린 스티커 PNG 키. 이미지형은 필수']
   text_content    text [null, note: '텍스트형일 때 문구']
+  main_color      varchar(7) [not null, default: '#222222', note: '스티커 대상의 대표 색상(hex). 리캡 상세 화면 배경색으로 쓰인다. Gemini 분류 단계에서 추출하며, 재생성 시 함께 갱신된다']
 
   regeneration_locked_until timestamptz [null, note: '이미지 재생성 진행 중 잠금 만료 시각. NULL이면 재생성 가능. 재생성 종료 시(성공/실패 무관) 즉시 NULL로 되돌린다 — 정상 흐름에서는 도달하지 않는 크래시 복구용 상한']
 
