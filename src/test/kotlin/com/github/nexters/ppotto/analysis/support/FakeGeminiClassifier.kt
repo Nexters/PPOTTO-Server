@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.StickerRegenerationTarget
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
+import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import java.util.UUID
 
 class FakeGeminiClassifier : GeminiClassifier {
@@ -23,6 +24,11 @@ class FakeGeminiClassifier : GeminiClassifier {
                 stickerTargetSubject = "테스트 피사체",
                 stickerSourcePhotoId = photos.first().photoId,
                 stickerMainColor = "#FF6B6B",
+                comments =
+                    listOf(
+                        ThemeComment(content = "테스트 말풍선", posX = -96.0, posY = -150.0),
+                        ThemeComment(content = "테스트 키워드", posX = null, posY = null),
+                    ),
             ),
         )
     }

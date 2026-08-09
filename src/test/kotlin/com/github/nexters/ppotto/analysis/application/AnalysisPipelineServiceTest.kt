@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.analysis.domain.StickerGenerator
 import com.github.nexters.ppotto.analysis.domain.StickerRegenerationTarget
 import com.github.nexters.ppotto.analysis.domain.StickerStorage
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
+import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
@@ -58,6 +59,13 @@ class AnalysisPipelineServiceTest :
                             "stickers/550e8400-e29b-41d4-a716-446655440000/2-550e8400-e29b-41d4-a716-446655440003.png",
                         )
                 }
+
+                Then("분류 결과의 comments를 그대로 결과에 담는다") {
+                    result.themes.map { it.comments } shouldContainExactly
+                        photos.mapIndexed { index, _ ->
+                            listOf(ThemeComment(content = "코멘트$index", posX = -96.0, posY = -150.0))
+                        }
+                }
             }
         }
     })
@@ -74,6 +82,7 @@ private class FixedGeminiClassifier(
                 stickerTargetSubject = "피사체$index",
                 stickerSourcePhotoId = photo.photoId,
                 stickerMainColor = "#FF6B6B",
+                comments = listOf(ThemeComment(content = "코멘트$index", posX = -96.0, posY = -150.0)),
             )
         }
 
