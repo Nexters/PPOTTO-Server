@@ -18,4 +18,5 @@ interface StickerRegenerationPort {
 data class StickerRegenerationResult(
     val sourcePhotoId: PhotoId,
     val imageKey: String,
+    val mainColor: String,
 )

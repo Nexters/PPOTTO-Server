@@ -13,6 +13,7 @@ data class StickerItemResult(
     val type: StickerType,
     val imageUrl: String?,
     val textContent: String?,
+    val mainColor: String,
     val posX: Double?,
     val posY: Double?,
     val scale: Double,

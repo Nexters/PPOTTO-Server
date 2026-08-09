@@ -117,6 +117,7 @@ class WithdrawnUserDataDeletionAdapterTest(
                                         sourcePhotoId = PhotoId(photo.id),
                                         imageKey = STICKER_IMAGE_KEY,
                                         textContent = null,
+                                        mainColor = "#FF6B6B",
                                         photoIds = listOf(PhotoId(photo.id)),
                                         comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
                                     ),

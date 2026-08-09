@@ -41,6 +41,7 @@ class AnalysisResultSaveService(
                                 sourcePhotoId = result.sourcePhotoId,
                                 imageKey = result.imageKey,
                                 textContent = result.textContent,
+                                mainColor = result.mainColor,
                             ).let { creation ->
                                 stickerRepository.save(command.analysisId, command.boardId, creation)
                             }.also { sticker ->

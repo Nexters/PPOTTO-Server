@@ -34,6 +34,7 @@ object GeminiPrompts {
             - recap.text: a 1-2 sentence recap (in Korean)
             - sticker.targetSubject: a specific description of the subject to turn into a sticker (in Korean)
             - sticker.sourcePhotoId: the photo id to use as the sticker source. It must be a value that actually appears in **this theme's own categorizedPhotoIds array**. Never use an id that exists in the overall photo list but is NOT in this theme's categorizedPhotoIds (i.e., an id belonging to a different theme) — always copy one of the ids you just listed in categorizedPhotoIds above.
+            - sticker.mainColor: the single most representative color of that subject as it actually appears in the source photo, as a 6-digit hex code (e.g. "#FF6B6B"). Pick the color a viewer would call "the color of this thing" — usually its dominant surface/body color, not a shadow, highlight, or background color.
             """.trimIndent(),
             STICKER_CANDIDATE_GUIDE,
             OUTPUT_LANGUAGE_NOTE,
@@ -56,6 +57,7 @@ object GeminiPrompts {
             Generate the following:
             - targetSubject: a specific description of the subject to turn into a sticker (in Korean)
             - sourcePhotoId: the photo id to use as the sticker source. It must be a value that appears in the photo list above.
+            - mainColor: the single most representative color of that subject as it actually appears in the source photo, as a 6-digit hex code (e.g. "#FF6B6B"). Pick the color a viewer would call "the color of this thing", not a shadow, highlight, or background color.
             """.trimIndent(),
             STICKER_CANDIDATE_GUIDE,
             OUTPUT_LANGUAGE_NOTE,

@@ -56,6 +56,7 @@ class StickerQueryServiceTest(
                         sourcePhotoId = PhotoId(photos.first().id),
                         imageKey = "stickers/recap.png",
                         textContent = null,
+                        mainColor = "#FF6B6B",
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
@@ -147,6 +148,7 @@ class StickerQueryServiceTest(
                         sourcePhotoId = PhotoId(representativePhoto.id),
                         imageKey = "stickers/recap.png",
                         textContent = null,
+                        mainColor = "#FF6B6B",
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
@@ -181,6 +183,7 @@ class StickerQueryServiceTest(
                         sourcePhotoId = PhotoId(pendingPhoto.id),
                         imageKey = "stickers/recap.png",
                         textContent = null,
+                        mainColor = "#FF6B6B",
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(pendingPhoto.id)))

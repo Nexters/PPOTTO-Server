@@ -1339,6 +1339,7 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
       "type": "IMAGE",
       "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-1a2b.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=8f3a...",
       "textContent": null,
+      "mainColor": "#FF6B6B",
       "posX": 62.5,
       "posY": 318,
       "scale": 0.8,
@@ -1663,6 +1664,7 @@ Request example:
       "type": "IMAGE",
       "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-1a2b.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=8f3a...",
       "textContent": null,
+      "mainColor": "#FF6B6B",
       "posX": 62.5,
       "posY": 318,
       "scale": 0.8,
@@ -2568,6 +2570,7 @@ Request example:
 | type | Y | `string` | IMAGE, TEXT | - |
 | imageUrl | N | `string \| null` | - | IMAGE 형. 누끼 PNG 의 읽기용 signed URL (만료 1시간) |
 | textContent | N | `string \| null` | - | TEXT 형 문구 |
+| mainColor | Y | `string` | - | 스티커 대상의 대표 색상(hex, 예: #FF6B6B). 리캡 상세 조회(`GET /stickers/{stickerId}`)에만 포함되며 보드 스티커 목록(`GET /boards/{boardId}`)에는 없음 |
 | posX | Y | `number` | - | 보드 좌표. 기준 해상도는 클라 정의를 따른다 |
 | posY | Y | `number` | - | - |
 | scale | Y | `number` | - | 1 |

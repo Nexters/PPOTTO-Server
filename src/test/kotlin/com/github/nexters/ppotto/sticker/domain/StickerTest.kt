@@ -64,6 +64,7 @@ class StickerTest :
                             sourcePhotoId = PhotoId(UUID.randomUUID()),
                             imageKey = null,
                             textContent = null,
+                            mainColor = "#FF6B6B",
                         )
                     }
                 }
@@ -79,6 +80,7 @@ class StickerTest :
                             sourcePhotoId = null,
                             imageKey = null,
                             textContent = "텍스트",
+                            mainColor = "#FF6B6B",
                         )
                     }
                 }
@@ -94,6 +96,7 @@ class StickerTest :
                             sourcePhotoId = null,
                             imageKey = null,
                             textContent = "텍스트",
+                            mainColor = "#FF6B6B",
                         )
                     }
                 }
@@ -109,6 +112,23 @@ class StickerTest :
                             sourcePhotoId = null,
                             imageKey = null,
                             textContent = "텍스트",
+                            mainColor = "#FF6B6B",
+                        )
+                    }
+                }
+            }
+
+            When("hex 형식이 아닌 메인 컬러로 생성하면") {
+                Then("잘못된 입력 예외를 던진다") {
+                    shouldThrow<InvalidInputException> {
+                        StickerCreation(
+                            type = StickerType.TEXT,
+                            title = "텍스트",
+                            summary = "한 줄 요약",
+                            sourcePhotoId = null,
+                            imageKey = null,
+                            textContent = "텍스트",
+                            mainColor = "red",
                         )
                     }
                 }
@@ -128,6 +148,7 @@ private fun imageSticker() =
         sourcePhotoId = PhotoId(UUID.randomUUID()),
         imageKey = "stickers/image.png",
         textContent = null,
+        mainColor = "#FF6B6B",
         posX = 0.0,
         posY = 0.0,
         scale = 1.0,

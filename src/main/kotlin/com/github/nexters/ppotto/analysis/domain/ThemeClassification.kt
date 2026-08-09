@@ -8,4 +8,5 @@ data class ThemeClassification(
     val recap: RecapContent,
     val stickerTargetSubject: String,
     val stickerSourcePhotoId: UUID,
+    val stickerMainColor: String,
 )

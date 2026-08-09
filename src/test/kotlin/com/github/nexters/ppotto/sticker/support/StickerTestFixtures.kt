@@ -22,6 +22,7 @@ fun imageStickerCreation(
     imageKey: String = "stickers/original.png",
     title: String = "원래 제목",
     summary: String = "한 줄 요약",
+    mainColor: String = "#FF6B6B",
 ): StickerCreation =
     StickerCreation(
         type = StickerType.IMAGE,
@@ -30,12 +31,14 @@ fun imageStickerCreation(
         sourcePhotoId = sourcePhotoId,
         imageKey = imageKey,
         textContent = null,
+        mainColor = mainColor,
     )
 
 fun textStickerCreation(
     title: String = "원래 제목",
     summary: String = "한 줄 요약",
     textContent: String = "텍스트",
+    mainColor: String = "#FF6B6B",
 ): StickerCreation =
     StickerCreation(
         type = StickerType.TEXT,
@@ -44,4 +47,5 @@ fun textStickerCreation(
         sourcePhotoId = null,
         imageKey = null,
         textContent = textContent,
+        mainColor = mainColor,
     )

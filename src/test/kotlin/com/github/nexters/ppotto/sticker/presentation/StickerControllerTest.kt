@@ -68,6 +68,7 @@ class StickerControllerTest(
                         sourcePhotoId = PhotoId(photo.id),
                         imageKey = "stickers/controller.png",
                         textContent = null,
+                        mainColor = "#FF6B6B",
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(photo.id)))
@@ -88,6 +89,7 @@ class StickerControllerTest(
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
+                        .andExpect(jsonPath("$.data.sticker.mainColor").value("#FF6B6B"))
                         .andExpect(jsonPath("$.data.summary").value("웃기고 귀여우면 일단 주워요"))
                         .andExpect(jsonPath("$.data.comments[0].content").value("말풍선"))
                         .andExpect(jsonPath("$.data.comments[0].posX").value(3.0))

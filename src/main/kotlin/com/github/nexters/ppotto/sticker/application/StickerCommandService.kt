@@ -111,7 +111,7 @@ class StickerCommandService(
 
             runCatching {
                 transactionTemplate.execute {
-                    sticker.regenerateSticker(result.sourcePhotoId, result.imageKey)
+                    sticker.regenerateSticker(result.sourcePhotoId, result.imageKey, result.mainColor)
 
                     if (!stickerCommandRepository.updateStickerImage(sticker)) {
                         throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)

@@ -18,6 +18,7 @@ class Sticker(
     sourcePhotoId: PhotoId?,
     imageKey: String?,
     val textContent: String?,
+    mainColor: String,
     posX: Double?,
     posY: Double?,
     scale: Double,
@@ -56,11 +57,14 @@ class Sticker(
         private set
     var imageKey: String? = imageKey
         private set
+    var mainColor: String = mainColor
+        private set
 
     init {
         title
             .also(::validateTitle)
             .also { validateSummary(summary) }
+            .also { validateMainColor(mainColor) }
             .let { validateContent(type, sourcePhotoId, imageKey, textContent) }
     }
 
@@ -91,11 +95,14 @@ class Sticker(
     fun regenerateSticker(
         sourcePhotoId: PhotoId,
         imageKey: String,
+        mainColor: String,
     ): Unit =
-        validateContent(type, sourcePhotoId, imageKey, textContent)
+        validateMainColor(mainColor)
+            .let { validateContent(type, sourcePhotoId, imageKey, textContent) }
             .let {
                 this.sourcePhotoId = sourcePhotoId
                 this.imageKey = imageKey
+                this.mainColor = mainColor
             }
 
     fun delete(deletedAt: Instant): Unit =
@@ -107,6 +114,7 @@ class Sticker(
     companion object {
         const val MAX_TITLE_LENGTH = 15
         const val MAX_SUMMARY_LENGTH = 100
+        private val MAIN_COLOR_PATTERN = Regex("^#[0-9A-Fa-f]{6}$")
 
         fun validateTitle(title: String) {
             title
@@ -117,6 +125,12 @@ class Sticker(
         fun validateSummary(summary: String) {
             summary
                 .takeUnless { it.isBlank() || it.length > MAX_SUMMARY_LENGTH }
+                ?: throw InvalidInputException()
+        }
+
+        fun validateMainColor(mainColor: String) {
+            mainColor
+                .takeIf { MAIN_COLOR_PATTERN.matches(it) }
                 ?: throw InvalidInputException()
         }
 
@@ -142,11 +156,13 @@ data class StickerCreation(
     val sourcePhotoId: PhotoId?,
     val imageKey: String?,
     val textContent: String?,
+    val mainColor: String,
 ) {
     init {
         title
             .also(Sticker::validateTitle)
             .also { Sticker.validateSummary(summary) }
+            .also { Sticker.validateMainColor(mainColor) }
             .let { Sticker.validateContent(type, sourcePhotoId, imageKey, textContent) }
     }
 }

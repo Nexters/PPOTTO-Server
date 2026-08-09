@@ -39,7 +39,8 @@ data class Stickers(
     val updatedAt: Instant? = null,
     val deletedAt: Instant? = null,
     val summary: String,
-    val regenerationLockedUntil: Instant? = null
+    val regenerationLockedUntil: Instant? = null,
+    val mainColor: String? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -162,6 +163,12 @@ data class Stickers(
         }
         else if (this.regenerationLockedUntil != o.regenerationLockedUntil)
             return false
+        if (this.mainColor == null) {
+            if (o.mainColor != null)
+                return false
+        }
+        else if (this.mainColor != o.mainColor)
+            return false
         return true
     }
 
@@ -190,6 +197,7 @@ data class Stickers(
         result = prime * result + (if (this.deletedAt == null) 0 else this.deletedAt.hashCode())
         result = prime * result + this.summary.hashCode()
         result = prime * result + (if (this.regenerationLockedUntil == null) 0 else this.regenerationLockedUntil.hashCode())
+        result = prime * result + (if (this.mainColor == null) 0 else this.mainColor.hashCode())
         return result
     }
 
@@ -218,6 +226,7 @@ data class Stickers(
         sb.append(", ").append(deletedAt)
         sb.append(", ").append(summary)
         sb.append(", ").append(regenerationLockedUntil)
+        sb.append(", ").append(mainColor)
 
         sb.append(")")
         return sb.toString()

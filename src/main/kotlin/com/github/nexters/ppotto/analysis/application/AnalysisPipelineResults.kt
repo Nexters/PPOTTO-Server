@@ -15,4 +15,5 @@ data class ThemeAnalysisResult(
     val stickerTargetSubject: String,
     val stickerSourcePhotoId: UUID,
     val stickerImageKey: String?,
+    val stickerMainColor: String,
 )

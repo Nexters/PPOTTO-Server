@@ -80,6 +80,7 @@ class AnalysisPipelineEventListener(
             sourcePhotoId = PhotoId(stickerSourcePhotoId),
             imageKey = imageKey,
             textContent = null,
+            mainColor = stickerMainColor,
             photoIds = categorizedPhotoIds.map(::PhotoId),
             comments = emptyList(),
         )

@@ -17,6 +17,7 @@ import com.google.genai.types.HttpRetryOptions
 import com.google.genai.types.Part
 import com.google.genai.types.Schema
 import com.google.genai.types.Type
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
 import java.util.UUID
@@ -102,6 +103,7 @@ class VertexAiGeminiClassifier(
         return StickerRegenerationTarget(
             stickerTargetSubject = rawSticker.targetSubject,
             stickerSourcePhotoId = rawSticker.sourcePhotoId,
+            stickerMainColor = sanitizedMainColor(rawSticker.mainColor, "regenerate"),
         )
     }
 
@@ -136,6 +138,7 @@ class VertexAiGeminiClassifier(
                 recap = RecapContent(badge = recap.badge, text = recap.text),
                 stickerTargetSubject = sticker.targetSubject,
                 stickerSourcePhotoId = sticker.sourcePhotoId,
+                stickerMainColor = sanitizedMainColor(sticker.mainColor, theme),
             )
     }
 
@@ -147,10 +150,23 @@ class VertexAiGeminiClassifier(
     private data class GeminiStickerResponse(
         val targetSubject: String,
         val sourcePhotoId: UUID,
+        val mainColor: String?,
     )
 
     companion object {
         private const val MODEL = "gemini-2.5-flash"
+        private const val DEFAULT_MAIN_COLOR = "#222222"
+        private val MAIN_COLOR_PATTERN = Regex("^#[0-9A-Fa-f]{6}$")
+        private val log = LoggerFactory.getLogger(VertexAiGeminiClassifier::class.java)
+
+        private fun sanitizedMainColor(
+            raw: String?,
+            context: String,
+        ): String =
+            raw?.takeIf { MAIN_COLOR_PATTERN.matches(it) } ?: run {
+                log.warn("Gemini가 유효하지 않은 mainColor를 반환해 기본값으로 대체합니다: context={}, mainColor={}", context, raw)
+                DEFAULT_MAIN_COLOR
+            }
 
         private val RECAP_SCHEMA =
             Schema
@@ -189,8 +205,14 @@ class VertexAiGeminiClassifier(
                                 .type(Type.Known.STRING)
                                 .enum_(validPhotoIds)
                                 .build(),
+                        "mainColor" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.STRING)
+                                .pattern("^#[0-9A-Fa-f]{6}$")
+                                .build(),
                     ),
-                ).required("targetSubject", "sourcePhotoId")
+                ).required("targetSubject", "sourcePhotoId", "mainColor")
                 .build()
 
         private fun themeSchema(validPhotoIds: List<String>) =

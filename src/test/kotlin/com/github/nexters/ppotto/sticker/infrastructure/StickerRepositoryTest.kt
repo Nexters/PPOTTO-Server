@@ -52,6 +52,7 @@ class StickerRepositoryTest(
                         sourcePhotoId = PhotoId(photos.first().id),
                         imageKey = "stickers/summer.png",
                         textContent = null,
+                        mainColor = "#FF6B6B",
                     ),
                 )
             stickerRecapRepository.savePhotos(saved.id, photos.map { PhotoId(it.id) })
@@ -147,4 +148,5 @@ private fun textCreation(title: String) =
         sourcePhotoId = null,
         imageKey = null,
         textContent = "텍스트",
+        mainColor = "#FF6B6B",
     )
