@@ -58,6 +58,7 @@ class AnalysisPipelineService(
                     stickerSourcePhotoId = sourcePhoto.photoId,
                     stickerImageKey = stickerImageKey,
                     stickerMainColor = classification.stickerMainColor,
+                    comments = classification.comments,
                 )
             }
 

@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.StickerRegenerationTarget
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
+import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import com.github.nexters.ppotto.global.config.VertexAiProperties
 import com.github.nexters.ppotto.global.error.BusinessException
 import com.google.genai.Client
@@ -130,6 +131,7 @@ class VertexAiGeminiClassifier(
         val categorizedPhotoIds: List<UUID>,
         val recap: GeminiRecapResponse,
         val sticker: GeminiStickerResponse,
+        val comments: GeminiCommentsResponse?,
     ) {
         fun toDomain(): ThemeClassification =
             ThemeClassification(
@@ -139,6 +141,7 @@ class VertexAiGeminiClassifier(
                 stickerTargetSubject = sticker.targetSubject,
                 stickerSourcePhotoId = sticker.sourcePhotoId,
                 stickerMainColor = sanitizedMainColor(sticker.mainColor, theme),
+                comments = sanitizedComments(comments, theme),
             )
     }
 
@@ -151,6 +154,17 @@ class VertexAiGeminiClassifier(
         val targetSubject: String,
         val sourcePhotoId: UUID,
         val mainColor: String?,
+    )
+
+    private data class GeminiCommentsResponse(
+        val speechBubbles: List<GeminiSpeechBubbleResponse>?,
+        val keywordChips: List<String>?,
+    )
+
+    private data class GeminiSpeechBubbleResponse(
+        val content: String?,
+        val posX: Double?,
+        val posY: Double?,
     )
 
     companion object {
@@ -167,6 +181,27 @@ class VertexAiGeminiClassifier(
                 log.warn("Gemini가 유효하지 않은 mainColor를 반환해 기본값으로 대체합니다: context={}, mainColor={}", context, raw)
                 DEFAULT_MAIN_COLOR
             }
+
+        private fun sanitizedComments(
+            raw: GeminiCommentsResponse?,
+            context: String,
+        ): List<ThemeComment> {
+            val bubbles =
+                raw?.speechBubbles.orEmpty().mapNotNull { bubble ->
+                    val content = bubble.content
+                    if (content.isNullOrBlank() || bubble.posX == null || bubble.posY == null) {
+                        log.warn("Gemini가 유효하지 않은 speechBubble을 반환해 건너뜁니다: context={}, bubble={}", context, bubble)
+                        null
+                    } else {
+                        ThemeComment(content = content, posX = bubble.posX, posY = bubble.posY)
+                    }
+                }
+            val chips =
+                raw?.keywordChips.orEmpty().mapNotNull { chip ->
+                    chip.takeUnless(String::isBlank)?.let { ThemeComment(content = it, posX = null, posY = null) }
+                }
+            return bubbles + chips
+        }
 
         private val RECAP_SCHEMA =
             Schema
@@ -215,6 +250,53 @@ class VertexAiGeminiClassifier(
                 ).required("targetSubject", "sourcePhotoId", "mainColor")
                 .build()
 
+        private val SPEECH_BUBBLE_SCHEMA =
+            Schema
+                .builder()
+                .type(Type.Known.OBJECT)
+                .properties(
+                    mapOf(
+                        "content" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.STRING)
+                                .build(),
+                        "posX" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.NUMBER)
+                                .build(),
+                        "posY" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.NUMBER)
+                                .build(),
+                    ),
+                ).required("content", "posX", "posY")
+                .build()
+
+        private val COMMENTS_SCHEMA =
+            Schema
+                .builder()
+                .type(Type.Known.OBJECT)
+                .properties(
+                    mapOf(
+                        "speechBubbles" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.ARRAY)
+                                .items(SPEECH_BUBBLE_SCHEMA)
+                                .build(),
+                        "keywordChips" to
+                            Schema
+                                .builder()
+                                .type(Type.Known.ARRAY)
+                                .items(Schema.builder().type(Type.Known.STRING))
+                                .build(),
+                    ),
+                ).required("speechBubbles", "keywordChips")
+                .build()
+
         private fun themeSchema(validPhotoIds: List<String>) =
             Schema
                 .builder()
@@ -238,8 +320,9 @@ class VertexAiGeminiClassifier(
                                 ).build(),
                         "recap" to RECAP_SCHEMA,
                         "sticker" to stickerSchema(validPhotoIds),
+                        "comments" to COMMENTS_SCHEMA,
                     ),
-                ).required("theme", "categorizedPhotoIds", "recap", "sticker")
+                ).required("theme", "categorizedPhotoIds", "recap", "sticker", "comments")
                 .build()
 
         private fun responseSchema(validPhotoIds: List<String>) =

@@ -31,10 +31,15 @@ object GeminiPrompts {
             - theme: theme name (in Korean)
             - categorizedPhotoIds: the list of photo ids classified under this theme (use only values from the list above)
             - recap.badge: a short badge phrase, around 8 characters (in Korean)
-            - recap.text: a 1-2 sentence recap (in Korean)
+            - recap.text: a single-sentence recap (in Korean)
             - sticker.targetSubject: a specific description of the subject to turn into a sticker (in Korean)
             - sticker.sourcePhotoId: the photo id to use as the sticker source. It must be a value that actually appears in **this theme's own categorizedPhotoIds array**. Never use an id that exists in the overall photo list but is NOT in this theme's categorizedPhotoIds (i.e., an id belonging to a different theme) — always copy one of the ids you just listed in categorizedPhotoIds above.
             - sticker.mainColor: the single most representative color of that subject as it actually appears in the source photo, as a 6-digit hex code (e.g. "#FF6B6B"). Pick the color a viewer would call "the color of this thing" — usually its dominant surface/body color, not a shadow, highlight, or background color.
+            - comments.speechBubbles: 2-4 short reaction phrases (in Korean) that float around the sticker like speech bubbles, each with:
+              - content: a short, punchy reaction to this theme's photos (in Korean)
+              - posX / posY: a relative offset in pixels from the sticker's center, roughly between -150 and 150, chosen so the bubbles scatter naturally around the sticker without overlapping each other
+            - comments.keywordChips: 4-8 short keywords or phrases (in Korean) that summarize this theme, shown as chips below the sticker — no position needed
+            All of recap.text, comments.speechBubbles, and comments.keywordChips should read as one consistent voice about the same theme — keep their tone and context flowing naturally from one another instead of feeling like disconnected fragments.
             """.trimIndent(),
             STICKER_CANDIDATE_GUIDE,
             OUTPUT_LANGUAGE_NOTE,

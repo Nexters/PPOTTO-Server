@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
+import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
@@ -440,6 +441,11 @@ class AnalysisServiceTest(
                         stickerTargetSubject = "파란 셔츠를 입고 웃는 사람",
                         stickerSourcePhotoId = sourcePhotoId,
                         stickerMainColor = "#FF6B6B",
+                        comments =
+                            listOf(
+                                ThemeComment(content = "파도 소리 좋다", posX = -96.0, posY = -150.0),
+                                ThemeComment(content = "여름 바다", posX = null, posY = null),
+                            ),
                     ),
                 )
 
@@ -463,7 +469,13 @@ class AnalysisServiceTest(
                         sticker.summary shouldBe "바다와 산책이 함께 남은 여행 리캡입니다."
 
                         stickerRecapRepository.findPhotoIds(sticker.id) shouldContainExactly themePhotoIds.map(::PhotoId)
-                        stickerRecapRepository.findComments(sticker.id).shouldBeEmpty()
+                        val comments = stickerRecapRepository.findComments(sticker.id)
+                        comments shouldHaveSize 2
+                        comments.map { it.content to (it.posX to it.posY) } shouldContainExactly
+                            listOf(
+                                "파도 소리 좋다" to (-96.0 to -150.0),
+                                "여름 바다" to (null to null),
+                            )
                     }
                 }
             }
