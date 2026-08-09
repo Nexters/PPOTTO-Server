@@ -515,10 +515,13 @@ class PhotosPipelineE2ETest:
 
     def _fetch_sticker_report_items(self, analysis_id: str) -> List[Dict]:
         cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
-            SELECT id, type, title, summary, source_photo_id, image_key, text_content, main_color
-            FROM stickers
-            WHERE analysis_id = '{analysis_id}' AND deleted_at IS NULL
-            ORDER BY z_index, created_at
+            SELECT s.id, s.type, s.title, s.summary, s.source_photo_id, s.image_key, s.text_content, s.main_color,
+                   COALESCE(string_agg(DISTINCT rc.content, E'\\n'), '')
+            FROM stickers s
+            LEFT JOIN recap_comments rc ON rc.sticker_id = s.id
+            WHERE s.analysis_id = '{analysis_id}' AND s.deleted_at IS NULL
+            GROUP BY s.id, s.type, s.title, s.summary, s.source_photo_id, s.image_key, s.text_content, s.main_color, s.z_index, s.created_at
+            ORDER BY s.z_index, s.created_at
         " 2>/dev/null"""
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
         if result.returncode != 0 or not result.stdout.strip():
@@ -526,7 +529,7 @@ class PhotosPipelineE2ETest:
 
         stickers = []
         for line in result.stdout.strip().splitlines():
-            sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content, main_color = line.split("|", 7)
+            sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content, main_color, comments = line.split("|", 8)
             stickers.append(
                 {
                     "sticker_id": sticker_id,
@@ -537,6 +540,7 @@ class PhotosPipelineE2ETest:
                     "image_key": image_key or None,
                     "text_content": text_content or None,
                     "main_color": main_color or None,
+                    "comments": [c for c in comments.split("\n") if c],
                     "signed_url": self._sign_gcs_read_url(image_key) if image_key else None,
                 }
             )
@@ -568,6 +572,7 @@ class PhotosPipelineE2ETest:
                     "image_key": object_key,
                     "text_content": None,
                     "main_color": None,
+                    "comments": [],
                     "signed_url": self._sign_gcs_read_url(object_key),
                 }
             )
@@ -925,7 +930,9 @@ class PhotosPipelineE2ETest:
               <figcaption>
                 {html.escape(sticker['title'])}<br>
                 {html.escape(str(sticker.get('sticker_id') or sticker.get('image_key') or ''))}<br>
-                {self._render_main_color(sticker.get('main_color'))}
+                {self._render_main_color(sticker.get('main_color'))}<br>
+                <span class="meta-label">Summary</span> {html.escape(sticker.get('summary') or '-')}<br>
+                <span class="meta-label">Comments</span> {self._render_comments(sticker.get('comments'))}
               </figcaption>
             </figure>
             """
@@ -955,6 +962,8 @@ class PhotosPipelineE2ETest:
     dd {{ margin: 0; word-break: break-all; }}
     .theme p {{ margin: 12px 0 0; color: #6b7280; }}
     .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }}
+    .stickers-grid {{ grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }}
+    .meta-label {{ font-weight: 700; color: #4b5563; }}
     figure {{ margin: 0; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px; }}
     img {{ width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: #f3f4f6; }}
     figcaption {{ margin-top: 8px; font-size: 12px; line-height: 1.4; word-break: break-all; }}
@@ -985,7 +994,7 @@ class PhotosPipelineE2ETest:
   {regeneration_section}
   <section>
     <h2>Stickers</h2>
-    <div class="grid">{sticker_items}</div>
+    <div class="grid stickers-grid">{sticker_items}</div>
   </section>
   <section>
     <h2>Uploaded Photos</h2>
@@ -1006,6 +1015,11 @@ class PhotosPipelineE2ETest:
             return html.escape(str(main_color or "-"))
         color = html.escape(main_color)
         return f'<span class="swatch" style="background-color:{color}"></span>{color}'
+
+    def _render_comments(self, comments: List[str]) -> str:
+        if not comments:
+            return "-"
+        return "<br>".join(html.escape(comment) for comment in comments)
 
     def _render_regeneration_section(self, regeneration: Dict) -> str:
         if not regeneration:
