@@ -13,6 +13,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -514,7 +515,7 @@ class PhotosPipelineE2ETest:
 
     def _fetch_sticker_report_items(self, analysis_id: str) -> List[Dict]:
         cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
-            SELECT id, type, title, summary, source_photo_id, image_key, text_content
+            SELECT id, type, title, summary, source_photo_id, image_key, text_content, main_color
             FROM stickers
             WHERE analysis_id = '{analysis_id}' AND deleted_at IS NULL
             ORDER BY z_index, created_at
@@ -525,7 +526,7 @@ class PhotosPipelineE2ETest:
 
         stickers = []
         for line in result.stdout.strip().splitlines():
-            sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content = line.split("|", 6)
+            sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content, main_color = line.split("|", 7)
             stickers.append(
                 {
                     "sticker_id": sticker_id,
@@ -535,6 +536,7 @@ class PhotosPipelineE2ETest:
                     "source_photo_id": source_photo_id or None,
                     "image_key": image_key or None,
                     "text_content": text_content or None,
+                    "main_color": main_color or None,
                     "signed_url": self._sign_gcs_read_url(image_key) if image_key else None,
                 }
             )
@@ -565,6 +567,7 @@ class PhotosPipelineE2ETest:
                     "source_photo_id": self._source_photo_id_from_sticker_key(filename),
                     "image_key": object_key,
                     "text_content": None,
+                    "main_color": None,
                     "signed_url": self._sign_gcs_read_url(object_key),
                 }
             )
@@ -576,7 +579,7 @@ class PhotosPipelineE2ETest:
 
     def _fetch_sticker_by_id(self, sticker_id: str) -> Dict:
         cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
-            SELECT id, type, title, summary, source_photo_id, image_key, text_content
+            SELECT id, type, title, summary, source_photo_id, image_key, text_content, main_color
             FROM stickers
             WHERE id = '{sticker_id}' AND deleted_at IS NULL
         " 2>/dev/null"""
@@ -584,8 +587,8 @@ class PhotosPipelineE2ETest:
         if result.returncode != 0 or not result.stdout.strip():
             return {}
 
-        sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content = (
-            result.stdout.strip().splitlines()[0].split("|", 6)
+        sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content, main_color = (
+            result.stdout.strip().splitlines()[0].split("|", 7)
         )
         return {
             "sticker_id": sticker_id,
@@ -595,6 +598,7 @@ class PhotosPipelineE2ETest:
             "source_photo_id": source_photo_id or None,
             "image_key": image_key or None,
             "text_content": text_content or None,
+            "main_color": main_color or None,
             "signed_url": self._sign_gcs_read_url(image_key) if image_key else None,
         }
 
@@ -634,6 +638,7 @@ class PhotosPipelineE2ETest:
                 "title": sticker.get("title"),
                 "image_key": sticker.get("image_key"),
                 "source_photo_id": sticker.get("source_photo_id"),
+                "main_color": sticker.get("main_color"),
             }
             for sticker in self.test_results.get("stickers", [])
             if sticker.get("type") == "IMAGE"
@@ -917,7 +922,11 @@ class PhotosPipelineE2ETest:
             f"""
             <figure>
               {self._render_sticker_media(sticker)}
-              <figcaption>{html.escape(sticker['title'])}<br>{html.escape(str(sticker.get('sticker_id') or sticker.get('image_key') or ''))}</figcaption>
+              <figcaption>
+                {html.escape(sticker['title'])}<br>
+                {html.escape(str(sticker.get('sticker_id') or sticker.get('image_key') or ''))}<br>
+                {self._render_main_color(sticker.get('main_color'))}
+              </figcaption>
             </figure>
             """
             for sticker in stickers
@@ -950,6 +959,7 @@ class PhotosPipelineE2ETest:
     img {{ width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: #f3f4f6; }}
     figcaption {{ margin-top: 8px; font-size: 12px; line-height: 1.4; word-break: break-all; }}
     a {{ color: #2563eb; }}
+    .swatch {{ display: inline-block; width: 10px; height: 10px; border-radius: 2px; border: 1px solid #d1d5db; vertical-align: middle; margin-right: 4px; }}
   </style>
 </head>
 <body>
@@ -991,6 +1001,12 @@ class PhotosPipelineE2ETest:
             return f'<a href="{url}" target="_blank" rel="noreferrer"><img src="{url}" alt="{html.escape(sticker["title"])}"></a>'
         return f"<p>{html.escape(sticker.get('text_content') or '')}</p>"
 
+    def _render_main_color(self, main_color: str) -> str:
+        if not main_color or not re.fullmatch(r"#[0-9A-Fa-f]{6}", main_color):
+            return html.escape(str(main_color or "-"))
+        color = html.escape(main_color)
+        return f'<span class="swatch" style="background-color:{color}"></span>{color}'
+
     def _render_regeneration_section(self, regeneration: Dict) -> str:
         if not regeneration:
             return ""
@@ -1006,6 +1022,7 @@ class PhotosPipelineE2ETest:
               <td>{html.escape(str(candidate.get('title') or '-'))}</td>
               <td>{html.escape(str(candidate.get('sticker_id') or '-'))}</td>
               <td>{html.escape(str(candidate.get('image_key') or '-'))}</td>
+              <td>{self._render_main_color(candidate.get('main_color'))}</td>
             </tr>
             """
             for candidate in candidates
@@ -1027,11 +1044,12 @@ class PhotosPipelineE2ETest:
         <tr><td>Summary</td><td>{html.escape(str(before.get('summary') or '-'))}</td><td>{html.escape(str(after.get('summary') or '-'))}</td></tr>
         <tr><td>Source Photo</td><td>{html.escape(str(before.get('source_photo_id') or '-'))}</td><td>{html.escape(str(after.get('source_photo_id') or '-'))}</td></tr>
         <tr><td>Image Key</td><td>{html.escape(str(before.get('image_key') or '-'))}</td><td>{html.escape(str(after.get('image_key') or '-'))}</td></tr>
+        <tr><td>Main Color</td><td>{self._render_main_color(before.get('main_color'))}</td><td>{self._render_main_color(after.get('main_color'))}</td></tr>
       </tbody>
     </table>
     <h3>Regeneration Candidates</h3>
     <table>
-      <thead><tr><th>Title</th><th>Sticker ID</th><th>Image Key</th></tr></thead>
+      <thead><tr><th>Title</th><th>Sticker ID</th><th>Image Key</th><th>Main Color</th></tr></thead>
       <tbody>{candidate_items}</tbody>
     </table>
   </section>

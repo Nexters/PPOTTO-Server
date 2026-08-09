@@ -116,7 +116,7 @@ grep "analysis pipeline result" <path-to-api-log>
 
 ### 결과 파일
 
-`e2e/reports/e2e_test_report_<YYYYMMDD_HHMMSS>.html`에 업로드 사진, 생성 스티커, signed URL, 모델명, Gemini 파이프라인 시간, 테마 분류 요약, 스티커 재생성 전후 정보가 기록됩니다. 실행마다 타임스탬프가 붙은 새 파일로 저장되므로 이전 결과를 덮어쓰지 않습니다.
+`e2e/reports/e2e_test_report_<YYYYMMDD_HHMMSS>.html`에 업로드 사진, 생성 스티커(제목·mainColor 색상 스와치 포함), signed URL, 모델명, Gemini 파이프라인 시간, 테마 분류 요약, 스티커 재생성 전후 정보가 기록됩니다. 실행마다 타임스탬프가 붙은 새 파일로 저장되므로 이전 결과를 덮어쓰지 않습니다.
 
 ## 🔧 문제 해결
 
