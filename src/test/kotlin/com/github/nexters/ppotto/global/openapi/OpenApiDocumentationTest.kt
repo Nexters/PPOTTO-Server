@@ -244,6 +244,10 @@ class OpenApiDocumentationTest(
                         jsonPath("$['components']['schemas']['StickerResponse']['properties']['zIndex']['example']")
                             .value(3),
                     ).andExpect(
+                        jsonPath(
+                            "$['components']['schemas']['StickerResponse']['properties']['mainColor']['example']",
+                        ).value("#FF6B6B"),
+                    ).andExpect(
                         jsonPath("$['components']['schemas']['TermResponse']['properties']['isRequired']['example']")
                             .value(true),
                     ).andExpect(
@@ -289,6 +293,9 @@ class OpenApiDocumentationTest(
                     ).andExpect(
                         jsonPath("$['components']['schemas']['StickerLayoutRequest']['required']")
                             .value(hasItems("id", "posX", "posY", "scale", "rotation", "zIndex")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['StickerResponse']['required']")
+                            .value(hasItems("mainColor")),
                     )
             }
 

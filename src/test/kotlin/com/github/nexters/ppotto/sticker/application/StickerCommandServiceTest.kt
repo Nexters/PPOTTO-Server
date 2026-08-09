@@ -198,6 +198,7 @@ class StickerCommandServiceTest(
                                     return StickerRegenerationResult(
                                         sourcePhotoId = previousSourcePhotoId,
                                         imageKey = uploadedImageKey,
+                                        mainColor = "#FF6B6B",
                                     )
                                 }
                             },
@@ -246,7 +247,7 @@ class StickerCommandServiceTest(
                                     previousSourcePhotoId: PhotoId,
                                 ): StickerRegenerationResult {
                                     portCalled = true
-                                    return StickerRegenerationResult(previousSourcePhotoId, "stickers/should-not-happen.png")
+                                    return StickerRegenerationResult(previousSourcePhotoId, "stickers/should-not-happen.png", "#FF6B6B")
                                 }
                             },
                         ),
@@ -298,7 +299,7 @@ class StickerCommandServiceTest(
                                 ): StickerRegenerationResult {
                                     callCount += 1
                                     if (callCount == 1) error("일시적인 재생성 실패")
-                                    return StickerRegenerationResult(previousSourcePhotoId, "stickers/retry-success.png")
+                                    return StickerRegenerationResult(previousSourcePhotoId, "stickers/retry-success.png", "#FF6B6B")
                                 }
                             },
                         ),

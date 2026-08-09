@@ -73,6 +73,7 @@ private class FixedGeminiClassifier(
                 recap = RecapContent(badge = "뱃지$index", text = "리캡$index"),
                 stickerTargetSubject = "피사체$index",
                 stickerSourcePhotoId = photo.photoId,
+                stickerMainColor = "#FF6B6B",
             )
         }
 
@@ -83,6 +84,7 @@ private class FixedGeminiClassifier(
         StickerRegenerationTarget(
             stickerTargetSubject = "재생성된 피사체",
             stickerSourcePhotoId = photos.first().photoId,
+            stickerMainColor = "#FF6B6B",
         )
 }
 

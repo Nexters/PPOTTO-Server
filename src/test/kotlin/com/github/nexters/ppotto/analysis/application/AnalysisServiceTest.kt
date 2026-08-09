@@ -439,6 +439,7 @@ class AnalysisServiceTest(
                         recap = RecapContent(badge = "여행하루", text = "바다와 산책이 함께 남은 여행 리캡입니다."),
                         stickerTargetSubject = "파란 셔츠를 입고 웃는 사람",
                         stickerSourcePhotoId = sourcePhotoId,
+                        stickerMainColor = "#FF6B6B",
                     ),
                 )
 

@@ -224,6 +224,7 @@ private fun stickerResult(
     sourcePhotoId = sourcePhotoId,
     imageKey = imageKey,
     textContent = null,
+    mainColor = "#FF6B6B",
     photoIds = photoIds,
     comments = listOf(RecapCommentCreation("리캡 코멘트", null, null)),
 )

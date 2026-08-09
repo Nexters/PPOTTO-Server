@@ -22,6 +22,7 @@ class FakeGeminiClassifier : GeminiClassifier {
                 recap = RecapContent(badge = "테스트뱃지", text = "테스트 리캡 문구입니다."),
                 stickerTargetSubject = "테스트 피사체",
                 stickerSourcePhotoId = photos.first().photoId,
+                stickerMainColor = "#FF6B6B",
             ),
         )
     }
@@ -35,6 +36,7 @@ class FakeGeminiClassifier : GeminiClassifier {
         return StickerRegenerationTarget(
             stickerTargetSubject = "재생성된 피사체",
             stickerSourcePhotoId = photos.first().photoId,
+            stickerMainColor = "#FF6B6B",
         )
     }
 }

@@ -23,6 +23,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "단풍", text = "가을의 정취"),
                                 stickerTargetSubject = "단풍잎",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
                     val inputPhotoIds = setOf(photo1)
@@ -44,6 +45,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지$idx", text = "텍스트$idx"),
                                 stickerTargetSubject = "피사체$idx",
                                 stickerSourcePhotoId = photoId,
+                                stickerMainColor = "#FF6B6B",
                             )
                         }
                     val inputPhotoIds = photos.toSet()
@@ -64,6 +66,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뜨거움", text = "한여름"),
                                 stickerTargetSubject = "해",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
                     val inputPhotoIds = setOf(photo1, photo2, photo3) // photo3는 분류되지 않음
@@ -98,6 +101,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지$idx", text = "텍스트$idx"),
                                 stickerTargetSubject = "피사체$idx",
                                 stickerSourcePhotoId = photoId,
+                                stickerMainColor = "#FF6B6B",
                             )
                         }
                     val inputPhotoIds = photos.toSet()
@@ -123,6 +127,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지", text = "텍스트"),
                                 stickerTargetSubject = "피사체",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
@@ -146,6 +151,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "", text = "텍스트"),
                                 stickerTargetSubject = "피사체",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
@@ -169,6 +175,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지", text = ""),
                                 stickerTargetSubject = "피사체",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
@@ -192,6 +199,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지", text = "텍스트"),
                                 stickerTargetSubject = "",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
@@ -215,6 +223,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지", text = "텍스트"),
                                 stickerTargetSubject = "피사체",
                                 stickerSourcePhotoId = UUID.randomUUID(),
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
@@ -238,6 +247,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지", text = "텍스트"),
                                 stickerTargetSubject = "피사체",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
@@ -262,6 +272,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지", text = "텍스트"),
                                 stickerTargetSubject = "피사체",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
@@ -285,6 +296,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지1", text = "텍스트1"),
                                 stickerTargetSubject = "피사체1",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                             ThemeClassification(
                                 theme = "여름",
@@ -292,6 +304,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지2", text = "텍스트2"),
                                 stickerTargetSubject = "피사체2",
                                 stickerSourcePhotoId = photo1,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
@@ -315,6 +328,7 @@ class ThemeClassificationValidatorTest :
                                 recap = RecapContent(badge = "뱃지", text = "텍스트"),
                                 stickerTargetSubject = "피사체",
                                 stickerSourcePhotoId = photo2,
+                                stickerMainColor = "#FF6B6B",
                             ),
                         )
 
