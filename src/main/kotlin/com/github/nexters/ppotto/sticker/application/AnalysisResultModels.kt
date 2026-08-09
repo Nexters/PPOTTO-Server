@@ -22,6 +22,7 @@ data class AnalysisStickerResult(
     val sourcePhotoId: PhotoId?,
     val imageKey: String?,
     val textContent: String?,
+    val mainColor: String,
     val photoIds: List<PhotoId>,
     val comments: List<RecapCommentCreation>,
 )

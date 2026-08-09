@@ -77,6 +77,7 @@ class StickerCommandRepository(
             .update(STICKERS)
             .set(STICKERS.SOURCE_PHOTO_ID, sticker.sourcePhotoId)
             .set(STICKERS.IMAGE_KEY, sticker.imageKey)
+            .set(STICKERS.MAIN_COLOR, sticker.mainColor)
             .where(STICKERS.ID.eq(sticker.id))
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1

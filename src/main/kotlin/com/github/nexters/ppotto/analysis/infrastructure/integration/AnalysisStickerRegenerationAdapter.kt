@@ -54,6 +54,7 @@ class AnalysisStickerRegenerationAdapter(
         return StickerRegenerationResult(
             sourcePhotoId = PhotoId(sourcePhoto.photoId),
             imageKey = imageKey,
+            mainColor = target.stickerMainColor,
         )
     }
 

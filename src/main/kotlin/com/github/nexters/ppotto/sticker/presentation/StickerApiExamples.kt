@@ -67,6 +67,7 @@ private val RECAP_DETAIL_RESPONSE =
                             type = StickerType.IMAGE,
                             imageUrl = "https://storage.googleapis.com/ppotto-stickers/01983f2b.png?X-Goog-Signature=sample",
                             textContent = null,
+                            mainColor = "#FF6B6B",
                             posX = 62.5,
                             posY = 318.0,
                             scale = 0.8,

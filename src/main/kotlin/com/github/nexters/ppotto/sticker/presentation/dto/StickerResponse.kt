@@ -31,6 +31,9 @@ data class StickerResponse(
     @field:Schema(description = "TEXT 형 문구", example = "whats in my mac")
     val textContent: String?,
 
+    @field:Schema(description = "스티커 대상의 대표 색상(hex). 리캡 상세 화면 배경색으로 사용", example = "#FF6B6B")
+    val mainColor: String,
+
     @field:Schema(description = "보드 좌표 X. null이면 클라이언트가 아직 배치를 정하지 않은 스티커. 보드 상태를 보고 계산해 레이아웃 수정 API로 채워야 함", example = "62.5")
     val posX: Double?,
 
@@ -65,6 +68,7 @@ data class StickerResponse(
                 type = result.type,
                 imageUrl = result.imageUrl,
                 textContent = result.textContent,
+                mainColor = result.mainColor,
                 posX = result.posX,
                 posY = result.posY,
                 scale = result.scale,

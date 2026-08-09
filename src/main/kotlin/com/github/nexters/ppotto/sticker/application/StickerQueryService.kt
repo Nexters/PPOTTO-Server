@@ -62,6 +62,7 @@ class StickerQueryService(
                         type = sticker.type,
                         imageUrl = sticker.imageKey?.let { imageUrls[it] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
                         textContent = sticker.textContent,
+                        mainColor = sticker.mainColor,
                         posX = sticker.posX,
                         posY = sticker.posY,
                         scale = sticker.scale,
