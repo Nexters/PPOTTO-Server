@@ -34,6 +34,11 @@ logger = logging.getLogger(__name__)
 class PhotosPipelineE2ETest:
     """뽀또 사진 분석 파이프라인 E2E 테스트"""
 
+    _ROW_SEP = "\x1e"  # psql -R row separator; avoids collision with newlines embedded in aggregated comment text
+
+    def _split_rows(self, stdout: str) -> List[str]:
+        return [row for row in stdout.strip("\n").split(self._ROW_SEP) if row.strip()]
+
     def __init__(
         self,
         api_url: str = "http://localhost:8080",
@@ -514,9 +519,10 @@ class PhotosPipelineE2ETest:
         ]
 
     def _fetch_sticker_report_items(self, analysis_id: str) -> List[Dict]:
-        cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
+        cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -R '{self._ROW_SEP}' -c "
             SELECT s.id, s.type, s.title, s.summary, s.source_photo_id, s.image_key, s.text_content, s.main_color,
-                   COALESCE(string_agg(DISTINCT rc.content, E'\\n'), '')
+                   COALESCE(string_agg(rc.content, E'\\n' ORDER BY rc.created_at) FILTER (WHERE rc.pos_x IS NOT NULL), ''),
+                   COALESCE(string_agg(rc.content, E'\\n' ORDER BY rc.created_at) FILTER (WHERE rc.pos_x IS NULL), '')
             FROM stickers s
             LEFT JOIN recap_comments rc ON rc.sticker_id = s.id
             WHERE s.analysis_id = '{analysis_id}' AND s.deleted_at IS NULL
@@ -528,8 +534,8 @@ class PhotosPipelineE2ETest:
             return self._fetch_gcs_sticker_report_items(analysis_id)
 
         stickers = []
-        for line in result.stdout.strip().splitlines():
-            sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content, main_color, comments = line.split("|", 8)
+        for line in self._split_rows(result.stdout):
+            sticker_id, sticker_type, title, summary, source_photo_id, image_key, text_content, main_color, bubbles, chips = line.split("|", 9)
             stickers.append(
                 {
                     "sticker_id": sticker_id,
@@ -540,7 +546,8 @@ class PhotosPipelineE2ETest:
                     "image_key": image_key or None,
                     "text_content": text_content or None,
                     "main_color": main_color or None,
-                    "comments": [c for c in comments.split("\n") if c],
+                    "speech_bubbles": [c for c in bubbles.split("\n") if c],
+                    "keyword_chips": [c for c in chips.split("\n") if c],
                     "signed_url": self._sign_gcs_read_url(image_key) if image_key else None,
                 }
             )
@@ -572,7 +579,8 @@ class PhotosPipelineE2ETest:
                     "image_key": object_key,
                     "text_content": None,
                     "main_color": None,
-                    "comments": [],
+                    "speech_bubbles": [],
+                    "keyword_chips": [],
                     "signed_url": self._sign_gcs_read_url(object_key),
                 }
             )
@@ -694,12 +702,12 @@ class PhotosPipelineE2ETest:
         return self._build_theme_report_items_from_stickers()
 
     def _fetch_theme_report_items_from_db(self, analysis_id: str) -> List[Dict]:
-        cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
+        cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -R '{self._ROW_SEP}' -c "
             SELECT s.title,
                    s.source_photo_id,
                    s.image_key,
                    COALESCE(string_agg(DISTINCT sp.photo_id::text, ','), ''),
-                   COALESCE(string_agg(DISTINCT rc.content, E'\\n'), '')
+                   COALESCE(string_agg(rc.content, E'\\n' ORDER BY rc.created_at), '')
             FROM stickers s
             LEFT JOIN sticker_photos sp ON sp.sticker_id = s.id
             LEFT JOIN recap_comments rc ON rc.sticker_id = s.id
@@ -712,8 +720,8 @@ class PhotosPipelineE2ETest:
             return []
 
         themes = []
-        for line in result.stdout.strip().splitlines():
-            title, source_photo_id, image_key, photo_ids, comments = line.split("|")
+        for line in self._split_rows(result.stdout):
+            title, source_photo_id, image_key, photo_ids, comments = line.split("|", 4)
             themes.append(
                 {
                     "theme": title,
@@ -923,6 +931,8 @@ class PhotosPipelineE2ETest:
             """
             for photo in photos
         )
+        total_speech_bubbles = sum(len(sticker.get('speech_bubbles') or []) for sticker in stickers)
+        total_keyword_chips = sum(len(sticker.get('keyword_chips') or []) for sticker in stickers)
         sticker_items = "\n".join(
             f"""
             <figure>
@@ -932,7 +942,8 @@ class PhotosPipelineE2ETest:
                 {html.escape(str(sticker.get('sticker_id') or sticker.get('image_key') or ''))}<br>
                 {self._render_main_color(sticker.get('main_color'))}<br>
                 <span class="meta-label">Summary</span> {html.escape(sticker.get('summary') or '-')}<br>
-                <span class="meta-label">Comments</span> {self._render_comments(sticker.get('comments'))}
+                <span class="meta-label">말풍선 ({len(sticker.get('speech_bubbles') or [])}개)</span> {self._render_comments(sticker.get('speech_bubbles'))}<br>
+                <span class="meta-label">키워드 칩 ({len(sticker.get('keyword_chips') or [])}개)</span> {self._render_comments(sticker.get('keyword_chips'))}
               </figcaption>
             </figure>
             """
@@ -979,6 +990,8 @@ class PhotosPipelineE2ETest:
     <div>Gemini Pipeline Time<br><strong>{html.escape(pipeline_elapsed_text)}</strong></div>
     <div>Uploaded Photos<br><strong>{html.escape(str(self.test_results.get('uploaded_photos', 0)))}</strong></div>
     <div>Stickers<br><strong>{len(stickers)}</strong></div>
+    <div>Speech Bubbles (말풍선)<br><strong>{total_speech_bubbles}</strong></div>
+    <div>Keyword Chips (키워드 칩)<br><strong>{total_keyword_chips}</strong></div>
   </div>
   <section>
     <h2>Models</h2>
