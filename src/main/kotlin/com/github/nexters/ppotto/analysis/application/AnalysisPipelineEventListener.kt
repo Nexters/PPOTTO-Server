@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
+import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -82,7 +83,7 @@ class AnalysisPipelineEventListener(
             textContent = null,
             mainColor = stickerMainColor,
             photoIds = categorizedPhotoIds.map(::PhotoId),
-            comments = emptyList(),
+            comments = comments.map { RecapCommentCreation(content = it.content, posX = it.posX, posY = it.posY) },
         )
     }
 

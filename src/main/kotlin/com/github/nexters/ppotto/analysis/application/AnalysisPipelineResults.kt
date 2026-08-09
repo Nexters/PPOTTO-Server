@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import java.util.UUID
 
 data class AnalysisPipelineResult(
@@ -16,4 +17,5 @@ data class ThemeAnalysisResult(
     val stickerSourcePhotoId: UUID,
     val stickerImageKey: String?,
     val stickerMainColor: String,
+    val comments: List<ThemeComment>,
 )

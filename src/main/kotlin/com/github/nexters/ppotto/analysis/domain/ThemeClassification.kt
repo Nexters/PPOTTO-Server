@@ -9,4 +9,5 @@ data class ThemeClassification(
     val stickerTargetSubject: String,
     val stickerSourcePhotoId: UUID,
     val stickerMainColor: String,
+    val comments: List<ThemeComment>,
 )
