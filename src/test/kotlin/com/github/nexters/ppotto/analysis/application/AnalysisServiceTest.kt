@@ -31,6 +31,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
@@ -414,7 +415,9 @@ class AnalysisServiceTest(
                     analysis.shouldNotBeNull()
                     analysis.status shouldBe AnalysisStatus.FAILED
                     analysis.progress shouldBe 10
-                    analysis.failedReason shouldBe "AI 분석 실패"
+                    analysis.failedReason shouldContain "[gemini-classification]"
+                    analysis.failedReason shouldContain "gemini-classification"
+                    analysis.failedReason shouldContain "AI 분석 실패"
                 }
             }
         }

@@ -18,6 +18,7 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
+import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
@@ -121,7 +122,10 @@ class AnalysisService(
     }
 
     private fun performUploadVerification(analysisId: UUID): UploadVerificationResult {
+        val startedAt = System.nanoTime()
+        log.info("analysis upload verification started: analysisId={}", analysisId)
         val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
+        log.info("analysis upload verification pending photos loaded: analysisId={}, pendingCount={}", analysisId, pendingPhotos.size)
         val existingObjects =
             if (pendingPhotos.isEmpty()) {
                 emptyMap()
@@ -137,6 +141,12 @@ class AnalysisService(
                 }.toMap()
 
         if (completedUpdates.isEmpty()) {
+            log.warn(
+                "analysis upload verification failed: analysisId={}, pendingCount={}, elapsedMs={}",
+                analysisId,
+                pendingPhotos.size,
+                elapsedMs(startedAt),
+            )
             throw ConflictException(AnalysisErrorCode.NO_UPLOADED_PHOTOS)
         }
 
@@ -163,6 +173,13 @@ class AnalysisService(
                         )
                     }
             eventPublisher.publishEvent(AnalysisStartRequestedEvent(analysisId, photosToPublish))
+            log.info(
+                "analysis upload verification completed: analysisId={}, uploadedCount={}, failedCount={}, elapsedMs={}",
+                analysisId,
+                completedUpdates.size,
+                failedIds.size,
+                elapsedMs(startedAt),
+            )
         }
 
         return UploadVerificationResult(completedUpdates.size, failedIds.size, failedIds)
@@ -225,5 +242,9 @@ class AnalysisService(
         const val MIN_GROUP_COUNT = 20
         const val MAX_GROUP_COUNT = 100
         const val MAX_BURST_GROUP_SIZE = 10
+
+        private val log = LoggerFactory.getLogger(AnalysisService::class.java)
+
+        private fun elapsedMs(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
     }
 }
