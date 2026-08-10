@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
+import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
@@ -12,6 +13,7 @@ import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.slf4j.LoggerFactory
+import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
@@ -24,6 +26,7 @@ class AnalysisPipelineEventListener(
     private val analysisRepository: AnalysisRepository,
     private val analysisResultSaveService: AnalysisResultSaveService,
 ) {
+    @Async(AsyncConfig.ANALYSIS_PIPELINE_TASK_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handle(event: AnalysisStartRequestedEvent) {
         val startedAt = System.nanoTime()

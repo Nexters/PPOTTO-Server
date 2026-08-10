@@ -53,6 +53,8 @@ class PhotosPipelineE2ETest:
         max_workers: int = 10,
         theme_query: str = None,
         regenerate_theme: bool = False,
+        poll_interval_seconds: int = 5,
+        poll_timeout_seconds: int = 300,
     ):
         self.api_url = api_url
         self.db_host = db_host
@@ -66,6 +68,8 @@ class PhotosPipelineE2ETest:
         self.max_workers = max_workers
         self.theme_query = theme_query
         self.regenerate_theme = regenerate_theme
+        self.poll_interval_seconds = poll_interval_seconds
+        self.poll_timeout_seconds = poll_timeout_seconds
         self.test_results = {}
         self.access_token = None
         self.board_id = None
@@ -400,8 +404,9 @@ class PhotosPipelineE2ETest:
             return False
 
     def _start_analysis(self, analysis_id: str) -> bool:
-        """분석 시작"""
-        logger.info("\n[Step 4] Gemini 분석 시작 (1~2분)...\n")
+        """분석 시작. /start는 UPLOADING -> ANALYZING 전이 시점에 202로 즉시 응답하고,
+        실제 Gemini 파이프라인은 비동기로 진행되므로 GET /analysis/{id}를 폴링해 완료를 기다린다."""
+        logger.info("\n[Step 4] Gemini 분석 시작 요청 (202 즉시 응답 기대)...\n")
 
         try:
             analysis_start_time = time.time()
@@ -412,7 +417,7 @@ class PhotosPipelineE2ETest:
                     "-H", "Content-Type: application/json",
                     "-H", f"Authorization: Bearer {self.access_token}"
                 ],
-                capture_output=True, text=True, timeout=600
+                capture_output=True, text=True, timeout=30
             )
             self.test_results['start_analysis_request_seconds'] = time.time() - analysis_start_time
 
@@ -421,15 +426,21 @@ class PhotosPipelineE2ETest:
                 logger.error(f"❌ 분석 시작 실패: {response['error']['message']}")
                 return False
 
-            logger.info(f"✅ 분석 완료")
+            logger.info(f"✅ 202 응답 수신 ({self.test_results['start_analysis_request_seconds']:.2f}초)")
             logger.info(f"   업로드됨: {response['data']['uploadedCount']}")
             logger.info(f"   실패: {response['data']['failedCount']}")
 
             self.test_results['analysis_result'] = response['data']
+
+            logger.info(f"\n[Step 4-1] 분석 완료까지 폴링 중 (최대 {self.poll_timeout_seconds}초)...\n")
+            status_data = self._poll_analysis(analysis_id)
+            if not status_data:
+                return False
+
             self.test_results['analysis_timing'] = self._fetch_analysis_timing(analysis_id)
-            analysis_status = self.test_results['analysis_timing'].get("status")
+            analysis_status = self.test_results['analysis_timing'].get("status") or status_data.get("status")
             if analysis_status != "COMPLETED":
-                failed_reason = self.test_results['analysis_timing'].get("failed_reason")
+                failed_reason = self.test_results['analysis_timing'].get("failed_reason") or status_data.get("failedReason")
                 logger.error(f"분석 상태가 COMPLETED가 아닙니다: status={analysis_status}, failedReason={failed_reason}")
                 return False
 
@@ -442,6 +453,35 @@ class PhotosPipelineE2ETest:
         except Exception as e:
             logger.error(f"❌ 분석 시작 중 오류: {e}")
             return False
+
+    def _poll_analysis(self, analysis_id: str) -> Dict:
+        """GET /analysis/{id}를 폴링해 COMPLETED/FAILED가 될 때까지 대기."""
+        deadline = time.time() + self.poll_timeout_seconds
+
+        while time.time() < deadline:
+            result = subprocess.run(
+                [
+                    "curl", "-s", "-X", "GET",
+                    f"{self.api_url}/analysis/{analysis_id}",
+                    "-H", f"Authorization: Bearer {self.access_token}"
+                ],
+                capture_output=True, text=True, timeout=10
+            )
+            try:
+                response = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                response = {}
+
+            if response.get("success"):
+                data = response["data"]
+                logger.info(f"   분석 상태: {data.get('status')} ({data.get('progress')}%)")
+                if data.get("status") in ("COMPLETED", "FAILED"):
+                    return data
+
+            time.sleep(self.poll_interval_seconds)
+
+        logger.error(f"❌ 분석 상태 폴링 시간 초과: {self.poll_timeout_seconds}초")
+        return {}
 
     def _regenerate_theme_sticker(self, analysis_id: str) -> bool:
         """특정 테마의 스티커 재생성"""
@@ -1133,6 +1173,8 @@ def main():
     parser.add_argument('--report-analysis-id', help='기존 analysisId로 보고서만 생성')
     parser.add_argument('--theme-query', help='재생성할 테마 또는 스티커 제목 검색어')
     parser.add_argument('--regenerate-theme', action='store_true', help='분석 후 특정 테마의 스티커를 재생성')
+    parser.add_argument('--poll-interval-seconds', type=int, default=5, help='GET /analysis/{id} 폴링 간격')
+    parser.add_argument('--poll-timeout-seconds', type=int, default=300, help='분석 완료 대기 제한 시간')
 
     args = parser.parse_args()
 
@@ -1146,6 +1188,8 @@ def main():
         max_workers=args.max_workers,
         theme_query=args.theme_query,
         regenerate_theme=args.regenerate_theme,
+        poll_interval_seconds=args.poll_interval_seconds,
+        poll_timeout_seconds=args.poll_timeout_seconds,
     )
 
     if args.report_analysis_id:

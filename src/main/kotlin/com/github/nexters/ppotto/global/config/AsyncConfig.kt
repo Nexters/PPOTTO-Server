@@ -27,8 +27,18 @@ class AsyncConfig {
                 .factory(),
         )
 
+    @Bean(ANALYSIS_PIPELINE_TASK_EXECUTOR)
+    fun analysisPipelineTaskExecutor(): Executor =
+        SimpleAsyncTaskExecutor(
+            Thread
+                .ofVirtual()
+                .name("analysis-pipeline-", 0)
+                .factory(),
+        )
+
     companion object {
         const val ANALYSIS_CLEANUP_TASK_EXECUTOR = "analysisCleanupTaskExecutor"
         const val STICKER_IMAGE_CLEANUP_TASK_EXECUTOR = "stickerImageCleanupTaskExecutor"
+        const val ANALYSIS_PIPELINE_TASK_EXECUTOR = "analysisPipelineTaskExecutor"
     }
 }

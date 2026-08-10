@@ -15,6 +15,7 @@ import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.UserJourneyTestConfig
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
 import com.jayway.jsonpath.JsonPath
+import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -34,6 +35,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.util.UUID
+import kotlin.time.Duration.Companion.seconds
 
 private const val PHOTO_COUNT = 90
 
@@ -146,23 +148,25 @@ class UserJourneyIntegrationTest(
                         .andExpect(jsonPath("$.data.failedCount").value(0))
 
                     val stickerIds =
-                        mockMvc
-                            .perform(get("/boards/$boardId").authorized(accessToken))
-                            .andExpect(status().isOk)
-                            .andExpect(jsonPath("$.data.stickers.length()").value(1))
-                            .andExpect(jsonPath("$.data.stickers[0].type").value("IMAGE"))
-                            .andExpect(jsonPath("$.data.stickers[0].title").value("테스트뱃지"))
-                            .andExpect(jsonPath("$.data.stickers[0].isNew").value(true))
-                            .andExpect(jsonPath("$.data.stickers[0].posX").doesNotExist())
-                            .andExpect(jsonPath("$.data.stickers[0].posY").doesNotExist())
-                            .andExpect(jsonPath("$.data.stickers[0].zIndex").doesNotExist())
-                            .andExpect(jsonPath("$.data.stickers[0].scale").value(1.0))
-                            .andExpect(jsonPath("$.data.stickers[0].rotation").value(0.0))
-                            .andReturn()
-                            .response
-                            .getContentAsString(Charsets.UTF_8)
-                            .let { JsonPath.read<List<String>>(it, "$.data.stickers[*].id") }
-                            .map(UUID::fromString)
+                        eventually(5.seconds) {
+                            mockMvc
+                                .perform(get("/boards/$boardId").authorized(accessToken))
+                                .andExpect(status().isOk)
+                                .andExpect(jsonPath("$.data.stickers.length()").value(1))
+                                .andExpect(jsonPath("$.data.stickers[0].type").value("IMAGE"))
+                                .andExpect(jsonPath("$.data.stickers[0].title").value("테스트뱃지"))
+                                .andExpect(jsonPath("$.data.stickers[0].isNew").value(true))
+                                .andExpect(jsonPath("$.data.stickers[0].posX").doesNotExist())
+                                .andExpect(jsonPath("$.data.stickers[0].posY").doesNotExist())
+                                .andExpect(jsonPath("$.data.stickers[0].zIndex").doesNotExist())
+                                .andExpect(jsonPath("$.data.stickers[0].scale").value(1.0))
+                                .andExpect(jsonPath("$.data.stickers[0].rotation").value(0.0))
+                                .andReturn()
+                                .response
+                                .getContentAsString(Charsets.UTF_8)
+                                .let { JsonPath.read<List<String>>(it, "$.data.stickers[*].id") }
+                                .map(UUID::fromString)
+                        }
                     stickerIds shouldHaveSize 1
 
                     val stickerId = stickerIds.single()
@@ -236,10 +240,12 @@ class UserJourneyIntegrationTest(
                         .perform(post("/analysis/$secondAnalysisId/start").authorized(accessToken))
                         .andExpect(status().isAccepted)
 
-                    mockMvc
-                        .perform(get("/boards/$boardId").authorized(accessToken))
-                        .andExpect(status().isOk)
-                        .andExpect(jsonPath("$.data.stickers.length()").value(1))
+                    eventually(5.seconds) {
+                        mockMvc
+                            .perform(get("/boards/$boardId").authorized(accessToken))
+                            .andExpect(status().isOk)
+                            .andExpect(jsonPath("$.data.stickers.length()").value(1))
+                    }
 
                     mockMvc
                         .perform(delete("/users/me").authorized(accessToken))
