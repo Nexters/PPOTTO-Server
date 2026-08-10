@@ -1,7 +1,6 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
 import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
-import java.util.UUID
 
 object GeminiPrompts {
     fun stickerCutout(targetSubject: String): String =
@@ -19,21 +18,21 @@ object GeminiPrompts {
         Output format: the image must be a PNG cropped tightly to the subject's silhouette, with a genuine alpha-transparent background — every pixel outside the cutout must have alpha=0. Do not fill that area with white, gray, black, or any solid-color pixels, and do not bake in a gray/white checkerboard pattern as real pixels (that checkerboard is only an image-editor convention for showing transparency, never actual output content). Do not place the subject on any backdrop, canvas, frame, drop shadow, or decorative element, and do not leave a large rectangular area of transparent padding around it as if it still sits inside the original photo's frame — the result should read as a pure background-removed cutout, not a photo with a decorative border.
         """.trimIndent()
 
-    fun themeClassification(photoIds: List<UUID>): String =
+    fun themeClassification(photoAliases: List<String>): String =
         listOf(
             """
             Classify the attached photos into at most ${ThemeClassificationValidator.MAX_THEME_COUNT} themes. Each photo must belong to exactly one theme,
             and you may exclude photos that don't fit any theme from the result.
             """.trimIndent(),
-            "Photo list (in order): ${photoIds.joinToString(", ")}",
+            "Photo alias list (in the same order as the attached photos): ${photoAliases.joinToString(", ")}",
             """
             For each theme, generate:
             - theme: theme name (in Korean)
-            - categorizedPhotoIds: the list of photo ids classified under this theme (use only values from the list above)
+            - categorizedPhotoIds: the list of photo aliases classified under this theme (use only values from the alias list above)
             - recap.badge: a short badge phrase, around 8 characters (in Korean)
             - recap.text: a single-sentence recap (in Korean)
             - sticker.targetSubject: a specific description of the subject to turn into a sticker (in Korean)
-            - sticker.sourcePhotoId: the photo id to use as the sticker source. It must be a value that actually appears in **this theme's own categorizedPhotoIds array**. Never use an id that exists in the overall photo list but is NOT in this theme's categorizedPhotoIds (i.e., an id belonging to a different theme) — always copy one of the ids you just listed in categorizedPhotoIds above.
+            - sticker.sourcePhotoId: the photo alias to use as the sticker source. It must be a value that actually appears in **this theme's own categorizedPhotoIds array**. Never use an alias that exists in the overall photo list but is NOT in this theme's categorizedPhotoIds (i.e., an alias belonging to a different theme) — always copy one of the aliases you just listed in categorizedPhotoIds above.
             - sticker.mainColor: the single most representative color of that subject as it actually appears in the source photo, as a 6-digit hex code (e.g. "#FF6B6B"). Pick the color a viewer would call "the color of this thing" — usually its dominant surface/body color, not a shadow, highlight, or background color.
             - comments.speechBubbles: 2-4 short reaction phrases (in Korean) that float around the sticker like speech bubbles, each with:
               - content: a short, punchy reaction to this theme's photos (in Korean)
@@ -46,8 +45,8 @@ object GeminiPrompts {
         ).joinToString("\n\n")
 
     fun stickerRegeneration(
-        photoIds: List<UUID>,
-        previousSourcePhotoId: UUID,
+        photoAliases: List<String>,
+        previousSourcePhotoAlias: String?,
     ): String =
         listOf(
             """
@@ -55,13 +54,13 @@ object GeminiPrompts {
             just pick a new subject and source photo to turn into a sticker from among them.
             """.trimIndent(),
             """
-            Photo list (in order): ${photoIds.joinToString(", ")}
-            Photo id previously used as the sticker source: $previousSourcePhotoId (pick a different photo or subject if possible)
+            Photo alias list (in the same order as the attached photos): ${photoAliases.joinToString(", ")}
+            Photo alias previously used as the sticker source: ${previousSourcePhotoAlias ?: "not available"} (pick a different photo or subject if possible)
             """.trimIndent(),
             """
             Generate the following:
             - targetSubject: a specific description of the subject to turn into a sticker (in Korean)
-            - sourcePhotoId: the photo id to use as the sticker source. It must be a value that appears in the photo list above.
+            - sourcePhotoId: the photo alias to use as the sticker source. It must be a value that appears in the alias list above.
             - mainColor: the single most representative color of that subject as it actually appears in the source photo, as a 6-digit hex code (e.g. "#FF6B6B"). Pick the color a viewer would call "the color of this thing", not a shadow, highlight, or background color.
             """.trimIndent(),
             STICKER_CANDIDATE_GUIDE,

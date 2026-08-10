@@ -30,9 +30,10 @@ class VertexAiGeminiClassifier(
     private val vertexAiProperties: VertexAiProperties,
 ) : GeminiClassifier {
     override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> {
+        val photoAliases = GeminiPhotoAliases.from(photos)
         val parts =
             photos.map { Part.fromUri(it.gcsUri, it.mimeType) } +
-                Part.fromText(GeminiPrompts.themeClassification(photos.map { it.photoId }))
+                Part.fromText(GeminiPrompts.themeClassification(photoAliases.aliases))
         val content = Content.fromParts(*parts.toTypedArray())
 
         val httpOptions =
@@ -59,8 +60,10 @@ class VertexAiGeminiClassifier(
         val rawThemes = objectMapper.readValue(response.text(), Array<GeminiThemeResponse>::class.java).toList()
 
         val inputPhotoIds = photos.map { it.photoId }.toSet()
-        val classifications = rawThemes.map { it.toDomain() }
-        ThemeClassificationValidator.validate(classifications, inputPhotoIds)
+        val classifications = toClassifications(rawThemes, photoAliases)
+        if (classifications.isNotEmpty()) {
+            ThemeClassificationValidator.validate(classifications, inputPhotoIds)
+        }
         return classifications
     }
 
@@ -68,9 +71,10 @@ class VertexAiGeminiClassifier(
         photos: List<PhotoRef>,
         previousSourcePhotoId: UUID,
     ): StickerRegenerationTarget {
+        val photoAliases = GeminiPhotoAliases.from(photos)
         val parts =
             photos.map { Part.fromUri(it.gcsUri, it.mimeType) } +
-                Part.fromText(GeminiPrompts.stickerRegeneration(photos.map { it.photoId }, previousSourcePhotoId))
+                Part.fromText(GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId)))
         val content = Content.fromParts(*parts.toTypedArray())
 
         val httpOptions =
@@ -97,73 +101,8 @@ class VertexAiGeminiClassifier(
         val rawSticker = objectMapper.readValue(response.text(), GeminiStickerResponse::class.java)
 
         val inputPhotoIds = photos.map { it.photoId }.toSet()
-        validateRegeneration(rawSticker, inputPhotoIds)
-
-        return StickerRegenerationTarget(
-            stickerTargetSubject = rawSticker.targetSubject,
-            stickerSourcePhotoId = rawSticker.sourcePhotoId,
-            stickerMainColor = sanitizedMainColor(rawSticker.mainColor, "regenerate"),
-        )
+        return toRegenerationTarget(rawSticker, photoAliases, inputPhotoIds)
     }
-
-    private fun validateRegeneration(
-        sticker: GeminiStickerResponse,
-        inputPhotoIds: Set<UUID>,
-    ) {
-        if (sticker.targetSubject.isBlank()) {
-            throw BusinessException(
-                AnalysisErrorCode.INVALID_GEMINI_RESPONSE,
-                message = "sticker.targetSubject가 비어있습니다.",
-            )
-        }
-        if (sticker.sourcePhotoId !in inputPhotoIds) {
-            throw BusinessException(
-                AnalysisErrorCode.INVALID_GEMINI_RESPONSE,
-                message = "sticker.sourcePhotoId(${sticker.sourcePhotoId})가 입력 사진 목록에 없습니다.",
-            )
-        }
-    }
-
-    private data class GeminiThemeResponse(
-        val theme: String,
-        val categorizedPhotoIds: List<UUID>,
-        val recap: GeminiRecapResponse,
-        val sticker: GeminiStickerResponse,
-        val comments: GeminiCommentsResponse?,
-    ) {
-        fun toDomain(): ThemeClassification =
-            ThemeClassification(
-                theme = theme,
-                categorizedPhotoIds = categorizedPhotoIds,
-                recap = RecapContent(badge = recap.badge, text = recap.text),
-                stickerTargetSubject = sticker.targetSubject,
-                stickerSourcePhotoId = sticker.sourcePhotoId,
-                stickerMainColor = sanitizedMainColor(sticker.mainColor, theme),
-                comments = sanitizedComments(comments, theme),
-            )
-    }
-
-    private data class GeminiRecapResponse(
-        val badge: String,
-        val text: String,
-    )
-
-    private data class GeminiStickerResponse(
-        val targetSubject: String,
-        val sourcePhotoId: UUID,
-        val mainColor: String?,
-    )
-
-    private data class GeminiCommentsResponse(
-        val speechBubbles: List<GeminiSpeechBubbleResponse>?,
-        val keywordChips: List<String>?,
-    )
-
-    private data class GeminiSpeechBubbleResponse(
-        val content: String?,
-        val posX: Double?,
-        val posY: Double?,
-    )
 
     companion object {
         private const val MODEL = "gemini-2.5-flash"
@@ -200,6 +139,118 @@ class VertexAiGeminiClassifier(
                 }
             return bubbles + chips
         }
+
+        internal fun toClassifications(
+            rawThemes: List<GeminiThemeResponse>,
+            photoAliases: GeminiPhotoAliases,
+        ): List<ThemeClassification> =
+            rawThemes.mapIndexedNotNull { index, theme ->
+                theme.toDomainOrNull(index, photoAliases)
+            }
+
+        internal fun toRegenerationTarget(
+            rawSticker: GeminiStickerResponse,
+            photoAliases: GeminiPhotoAliases,
+            inputPhotoIds: Set<UUID>,
+        ): StickerRegenerationTarget {
+            val sourcePhotoId =
+                photoAliases.photoId(rawSticker.sourcePhotoId)
+                    ?: throw BusinessException(
+                        AnalysisErrorCode.INVALID_GEMINI_RESPONSE,
+                        message = "sticker.sourcePhotoId(${rawSticker.sourcePhotoId})가 입력 사진 alias 목록에 없습니다.",
+                    )
+            validateRegeneration(rawSticker, sourcePhotoId, inputPhotoIds)
+            return StickerRegenerationTarget(
+                stickerTargetSubject = rawSticker.targetSubject,
+                stickerSourcePhotoId = sourcePhotoId,
+                stickerMainColor = sanitizedMainColor(rawSticker.mainColor, "regenerate"),
+            )
+        }
+
+        private fun validateRegeneration(
+            sticker: GeminiStickerResponse,
+            sourcePhotoId: UUID,
+            inputPhotoIds: Set<UUID>,
+        ) {
+            if (sticker.targetSubject.isBlank()) {
+                throw BusinessException(
+                    AnalysisErrorCode.INVALID_GEMINI_RESPONSE,
+                    message = "sticker.targetSubject가 비어있습니다.",
+                )
+            }
+            if (sourcePhotoId !in inputPhotoIds) {
+                throw BusinessException(
+                    AnalysisErrorCode.INVALID_GEMINI_RESPONSE,
+                    message = "sticker.sourcePhotoId(${sticker.sourcePhotoId})가 입력 사진 목록에 없습니다.",
+                )
+            }
+        }
+
+        private fun GeminiThemeResponse.toDomainOrNull(
+            index: Int,
+            photoAliases: GeminiPhotoAliases,
+        ): ThemeClassification? =
+            validCategorizedPhotoIds(index, photoAliases)?.let { categorizedPhotoIds ->
+                validStickerSourcePhotoId(index, categorizedPhotoIds, photoAliases)?.let { stickerSourcePhotoId ->
+                    ThemeClassification(
+                        theme = theme,
+                        categorizedPhotoIds = categorizedPhotoIds,
+                        recap = RecapContent(badge = recap.badge, text = recap.text),
+                        stickerTargetSubject = sticker.targetSubject,
+                        stickerSourcePhotoId = stickerSourcePhotoId,
+                        stickerMainColor = sanitizedMainColor(sticker.mainColor, theme),
+                        comments = sanitizedComments(comments, theme),
+                    )
+                }
+            }
+
+        private fun GeminiThemeResponse.validCategorizedPhotoIds(
+            index: Int,
+            photoAliases: GeminiPhotoAliases,
+        ): List<UUID>? {
+            val categorizedPhotoIds =
+                categorizedPhotoIds.mapNotNull { alias ->
+                    photoAliases.photoId(alias).also { photoId ->
+                        if (photoId == null) {
+                            log.warn("Gemini가 알 수 없는 photo alias를 반환해 건너뜁니다: themeIndex={}, alias={}", index, alias)
+                        }
+                    }
+                }
+            if (categorizedPhotoIds.isEmpty()) {
+                log.warn("Gemini 테마의 유효한 categorizedPhotoIds가 없어 테마를 건너뜁니다: themeIndex={}, theme={}", index, theme)
+                return null
+            }
+            return categorizedPhotoIds
+        }
+
+        private fun GeminiThemeResponse.validStickerSourcePhotoId(
+            index: Int,
+            categorizedPhotoIds: List<UUID>,
+            photoAliases: GeminiPhotoAliases,
+        ): UUID? =
+            photoAliases
+                .photoId(sticker.sourcePhotoId)
+                .also { stickerSourcePhotoId ->
+                    if (stickerSourcePhotoId == null) {
+                        log.warn(
+                            "Gemini 테마의 sticker.sourcePhotoId alias를 찾을 수 없어 테마를 건너뜁니다: themeIndex={}, theme={}, alias={}",
+                            index,
+                            theme,
+                            sticker.sourcePhotoId,
+                        )
+                    }
+                }?.takeIf { stickerSourcePhotoId ->
+                    val valid = stickerSourcePhotoId in categorizedPhotoIds
+                    if (!valid) {
+                        log.warn(
+                            "Gemini 테마의 sticker.sourcePhotoId가 categorizedPhotoIds에 없어 테마를 건너뜁니다: themeIndex={}, theme={}, alias={}",
+                            index,
+                            theme,
+                            sticker.sourcePhotoId,
+                        )
+                    }
+                    valid
+                }
 
         private val RECAP_SCHEMA =
             Schema
@@ -328,3 +379,57 @@ class VertexAiGeminiClassifier(
                 .build()
     }
 }
+
+internal class GeminiPhotoAliases private constructor(
+    private val photoIdByAlias: Map<String, UUID>,
+    private val aliasByPhotoId: Map<UUID, String>,
+) {
+    val aliases: List<String> = photoIdByAlias.keys.toList()
+
+    fun photoId(alias: String): UUID? = photoIdByAlias[alias.trim()]
+
+    fun aliasFor(photoId: UUID): String? = aliasByPhotoId[photoId]
+
+    companion object {
+        fun from(photos: List<PhotoRef>): GeminiPhotoAliases {
+            val photoIdByAlias = linkedMapOf<String, UUID>()
+            val aliasByPhotoId = linkedMapOf<UUID, String>()
+            photos.forEachIndexed { index, photo ->
+                val alias = "P%03d".format(index + 1)
+                photoIdByAlias[alias] = photo.photoId
+                aliasByPhotoId[photo.photoId] = alias
+            }
+            return GeminiPhotoAliases(photoIdByAlias, aliasByPhotoId)
+        }
+    }
+}
+
+internal data class GeminiThemeResponse(
+    val theme: String,
+    val categorizedPhotoIds: List<String>,
+    val recap: GeminiRecapResponse,
+    val sticker: GeminiStickerResponse,
+    val comments: GeminiCommentsResponse?,
+)
+
+internal data class GeminiRecapResponse(
+    val badge: String,
+    val text: String,
+)
+
+internal data class GeminiStickerResponse(
+    val targetSubject: String,
+    val sourcePhotoId: String,
+    val mainColor: String?,
+)
+
+internal data class GeminiCommentsResponse(
+    val speechBubbles: List<GeminiSpeechBubbleResponse>?,
+    val keywordChips: List<String>?,
+)
+
+internal data class GeminiSpeechBubbleResponse(
+    val content: String?,
+    val posX: Double?,
+    val posY: Double?,
+)
