@@ -47,12 +47,11 @@ class VertexAiGeminiClassifier(
                         .build(),
                 ).build()
 
-        val photoIdStrings = photos.map { it.photoId.toString() }
         val config =
             GenerateContentConfig
                 .builder()
                 .responseMimeType("application/json")
-                .responseSchema(responseSchema(photoIdStrings))
+                .responseSchema(classificationResponseSchema())
                 .httpOptions(httpOptions)
                 .build()
 
@@ -86,12 +85,11 @@ class VertexAiGeminiClassifier(
                         .build(),
                 ).build()
 
-        val photoIdStrings = photos.map { it.photoId.toString() }
         val config =
             GenerateContentConfig
                 .builder()
                 .responseMimeType("application/json")
-                .responseSchema(stickerSchema(photoIdStrings))
+                .responseSchema(stickerResponseSchema())
                 .httpOptions(httpOptions)
                 .build()
 
@@ -223,7 +221,7 @@ class VertexAiGeminiClassifier(
                 ).required("badge", "text")
                 .build()
 
-        private fun stickerSchema(validPhotoIds: List<String>) =
+        internal fun stickerResponseSchema() =
             Schema
                 .builder()
                 .type(Type.Known.OBJECT)
@@ -238,7 +236,6 @@ class VertexAiGeminiClassifier(
                             Schema
                                 .builder()
                                 .type(Type.Known.STRING)
-                                .enum_(validPhotoIds)
                                 .build(),
                         "mainColor" to
                             Schema
@@ -296,7 +293,7 @@ class VertexAiGeminiClassifier(
                 ).required("speechBubbles", "keywordChips")
                 .build()
 
-        private fun themeSchema(validPhotoIds: List<String>) =
+        private fun themeSchema() =
             Schema
                 .builder()
                 .type(Type.Known.OBJECT)
@@ -314,21 +311,20 @@ class VertexAiGeminiClassifier(
                                 .items(
                                     Schema
                                         .builder()
-                                        .type(Type.Known.STRING)
-                                        .enum_(validPhotoIds),
+                                        .type(Type.Known.STRING),
                                 ).build(),
                         "recap" to RECAP_SCHEMA,
-                        "sticker" to stickerSchema(validPhotoIds),
+                        "sticker" to stickerResponseSchema(),
                         "comments" to COMMENTS_SCHEMA,
                     ),
                 ).required("theme", "categorizedPhotoIds", "recap", "sticker", "comments")
                 .build()
 
-        private fun responseSchema(validPhotoIds: List<String>) =
+        internal fun classificationResponseSchema() =
             Schema
                 .builder()
                 .type(Type.Known.ARRAY)
-                .items(themeSchema(validPhotoIds))
+                .items(themeSchema())
                 .build()
     }
 }
