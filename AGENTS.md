@@ -88,7 +88,7 @@ photo/
 | `buildSrc/` | DB build convention plugin (see `buildSrc/AGENTS.md`) |
 | `.github/` | CI workflow + templates (see `.github/AGENTS.md`) |
 | `.gitattributes` | Marks `src/generated/**` as `linguist-generated` so PR diffs collapse generated files |
-| `.gitignore` | Ignores local build/tooling files, secrets, `.env`, and generated E2E report artifacts |
+| `.gitignore` | Ignores local build/tooling files, secrets, `.env`, the personal dev-server E2E script, and generated E2E report artifacts |
 | `compose.yaml` | Local PostgreSQL 18 + pgvector |
 | `compose.deploy.yaml` | Shared server deployment stack: Caddy + API + PostgreSQL + Valkey (Redis-compatible, backs refresh token storage) |
 | `compose.dev.yaml` | Dev deployment overrides; mounts GCS credentials from `../secrets` |
