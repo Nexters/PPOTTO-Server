@@ -49,6 +49,7 @@ class PhotosPipelineE2ETest:
         db_password: str = "ppotto",
         photos_dir: str = None,
         photos_count: int = 90,
+        group_size: int = 1,
         max_workers: int = 10,
         theme_query: str = None,
         regenerate_theme: bool = False,
@@ -61,6 +62,7 @@ class PhotosPipelineE2ETest:
         self.db_password = db_password
         self.photos_dir = photos_dir or os.path.expanduser("~/Desktop/etc/wark")
         self.photos_count = photos_count
+        self.group_size = group_size
         self.max_workers = max_workers
         self.theme_query = theme_query
         self.regenerate_theme = regenerate_theme
@@ -160,6 +162,9 @@ class PhotosPipelineE2ETest:
             ]
             if len(image_files) < self.photos_count:
                 logger.error(f"❌ 사진 부족: {len(image_files)}개 (필요: {self.photos_count}개)")
+                return False
+
+            if not self._is_valid_grouping():
                 return False
 
             logger.info(f"✅ 사진 디렉토리 준비: {len(image_files)}개")
@@ -280,18 +285,7 @@ class PhotosPipelineE2ETest:
         try:
             payload = {
                 "boardId": board_id,
-                "photos": [
-                    {
-                        "items": [
-                            {
-                                "takenAt": p["takenAt"],
-                                "contentType": p["contentType"],
-                                "isRepresentative": True,
-                            }
-                        ]
-                    }
-                    for p in photos
-                ]
+                "photos": self._group_photo_payloads(photos),
             }
 
             result = subprocess.run(
@@ -324,6 +318,34 @@ class PhotosPipelineE2ETest:
         except Exception as e:
             logger.error(f"❌ Signed URL 발급 중 오류: {e}")
             return None
+
+    def _is_valid_grouping(self) -> bool:
+        if self.group_size < 1 or self.group_size > 10:
+            logger.error(f"❌ 그룹 크기 오류: {self.group_size}개 (허용: 1~10개)")
+            return False
+
+        group_count = (self.photos_count + self.group_size - 1) // self.group_size
+        if group_count < 20 or group_count > 100:
+            logger.error(f"❌ 사진 그룹 개수 오류: {group_count}개 (허용: 20~100개)")
+            return False
+
+        logger.info(f"✅ 사진 그룹 구성: {group_count}개 그룹, 그룹당 최대 {self.group_size}장")
+        return True
+
+    def _group_photo_payloads(self, photos: List[Dict]) -> List[Dict]:
+        groups = []
+        for start in range(0, len(photos), self.group_size):
+            items = []
+            for index, photo in enumerate(photos[start:start + self.group_size]):
+                items.append(
+                    {
+                        "takenAt": photo["takenAt"],
+                        "contentType": photo["contentType"],
+                        "isRepresentative": index == 0,
+                    }
+                )
+            groups.append({"items": items})
+        return groups
 
     def _upload_photos(self, photos: List[Dict], uploads: List[Dict]) -> bool:
         """사진 업로드"""
@@ -404,8 +426,14 @@ class PhotosPipelineE2ETest:
             logger.info(f"   실패: {response['data']['failedCount']}")
 
             self.test_results['analysis_result'] = response['data']
-            self.test_results['stickers'] = self._fetch_sticker_report_items(analysis_id)
             self.test_results['analysis_timing'] = self._fetch_analysis_timing(analysis_id)
+            analysis_status = self.test_results['analysis_timing'].get("status")
+            if analysis_status != "COMPLETED":
+                failed_reason = self.test_results['analysis_timing'].get("failed_reason")
+                logger.error(f"분석 상태가 COMPLETED가 아닙니다: status={analysis_status}, failedReason={failed_reason}")
+                return False
+
+            self.test_results['stickers'] = self._fetch_sticker_report_items(analysis_id)
             self.test_results['models'] = self._model_report_items()
             self.test_results['themes'] = self._fetch_theme_report_items(analysis_id)
 
@@ -706,13 +734,18 @@ class PhotosPipelineE2ETest:
             SELECT s.title,
                    s.source_photo_id,
                    s.image_key,
-                   COALESCE(string_agg(DISTINCT sp.photo_id::text, ','), ''),
-                   COALESCE(string_agg(rc.content, E'\\n' ORDER BY rc.created_at), '')
+                   COALESCE(sp.photo_ids, ''),
+                   COALESCE(rc.comments, '')
             FROM stickers s
-            LEFT JOIN sticker_photos sp ON sp.sticker_id = s.id
-            LEFT JOIN recap_comments rc ON rc.sticker_id = s.id
+            LEFT JOIN LATERAL (
+                SELECT string_agg(DISTINCT photo_id::text, ',') AS photo_ids
+                FROM sticker_photos WHERE sticker_id = s.id
+            ) sp ON true
+            LEFT JOIN LATERAL (
+                SELECT string_agg(content, E'\\n' ORDER BY created_at) AS comments
+                FROM recap_comments WHERE sticker_id = s.id
+            ) rc ON true
             WHERE s.analysis_id = '{analysis_id}' AND s.deleted_at IS NULL
-            GROUP BY s.id, s.title, s.source_photo_id, s.image_key, s.z_index
             ORDER BY s.z_index, s.created_at
         " 2>/dev/null"""
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
@@ -751,7 +784,7 @@ class PhotosPipelineE2ETest:
 
     def _fetch_analysis_timing(self, analysis_id: str) -> Dict:
         cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -c "
-            SELECT started_at, completed_at,
+            SELECT status, failed_reason, started_at, completed_at,
                    EXTRACT(EPOCH FROM (completed_at - started_at))
             FROM analysis
             WHERE id = '{analysis_id}'
@@ -759,8 +792,12 @@ class PhotosPipelineE2ETest:
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
         if result.returncode != 0 or not result.stdout.strip():
             return {}
-        started_at, completed_at, elapsed_seconds = result.stdout.strip().splitlines()[0].split("|")
+        status, failed_reason, started_at, completed_at, elapsed_seconds = (
+            result.stdout.strip().splitlines()[0].split("|")
+        )
         return {
+            "status": status or None,
+            "failed_reason": failed_reason or None,
             "started_at": started_at or None,
             "completed_at": completed_at or None,
             "pipeline_elapsed_seconds": float(elapsed_seconds) if elapsed_seconds else None,
@@ -1091,6 +1128,7 @@ def main():
     parser.add_argument('--db-port', type=int, default=54782, help='DB 포트')
     parser.add_argument('--photos-dir', help='사진 디렉토리')
     parser.add_argument('--photos-count', type=int, default=90, help='테스트 사진 개수')
+    parser.add_argument('--group-size', type=int, default=1, help='분석 요청 그룹당 사진 개수')
     parser.add_argument('--max-workers', type=int, default=10, help='병렬 워커 수')
     parser.add_argument('--report-analysis-id', help='기존 analysisId로 보고서만 생성')
     parser.add_argument('--theme-query', help='재생성할 테마 또는 스티커 제목 검색어')
@@ -1098,16 +1136,13 @@ def main():
 
     args = parser.parse_args()
 
-    if args.photos_count > 100:
-        logger.error("❌ 사진 개수는 100개 이하여야 합니다.")
-        return 1
-
     test = PhotosPipelineE2ETest(
         api_url=args.api_url,
         db_host=args.db_host,
         db_port=args.db_port,
         photos_dir=args.photos_dir,
         photos_count=args.photos_count,
+        group_size=args.group_size,
         max_workers=args.max_workers,
         theme_query=args.theme_query,
         regenerate_theme=args.regenerate_theme,

@@ -26,40 +26,90 @@ class AnalysisPipelineEventListener(
 ) {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handle(event: AnalysisStartRequestedEvent) {
-        val pipelineRun =
-            runCatching {
-                analysisPipelineService.run(event.analysisId, event.photos) { progress ->
-                    analysisRepository.updateProgress(event.analysisId, progress)
+        val startedAt = System.nanoTime()
+        log.info("analysis pipeline listener started: analysisId={}, photoCount={}", event.analysisId, event.photos.size)
+        runCatching {
+            val pipelineResult =
+                measuredStep(event.analysisId, "pipeline-run") {
+                    analysisPipelineService.run(event.analysisId, event.photos) { progress ->
+                        analysisRepository.updateProgress(event.analysisId, progress)
+                    }
                 }
-            }
 
-        pipelineRun.onSuccess { pipelineResult ->
             log.info("analysis pipeline result for analysisId={}: {}", event.analysisId, pipelineResult)
 
             val analysis =
-                analysisRepository.findById(event.analysisId)
-                    ?: error("분석을 찾을 수 없습니다: ${event.analysisId}")
+                measuredStep(event.analysisId, "analysis-load") {
+                    analysisRepository.findById(event.analysisId)
+                        ?: error("분석을 찾을 수 없습니다: ${event.analysisId}")
+                }
 
-            val stickers = pipelineResult.toStickerResults(event.analysisId)
+            val stickers =
+                measuredStep(event.analysisId, "sticker-result-mapping") {
+                    pipelineResult.toStickerResults(event.analysisId)
+                }
 
             if (stickers.isNotEmpty()) {
-                analysisResultSaveService.save(
-                    SaveAnalysisResultCommand(
-                        userId = UserId(analysis.userId),
-                        analysisId = AnalysisId(event.analysisId),
-                        boardId = BoardId(analysis.boardId),
-                        stickers = stickers,
-                    ),
-                )
+                measuredStep(event.analysisId, "analysis-result-save") {
+                    analysisResultSaveService.save(
+                        SaveAnalysisResultCommand(
+                            userId = UserId(analysis.userId),
+                            analysisId = AnalysisId(event.analysisId),
+                            boardId = BoardId(analysis.boardId),
+                            stickers = stickers,
+                        ),
+                    )
+                }
+            } else {
+                log.warn("analysis pipeline produced no savable stickers: analysisId={}", event.analysisId)
             }
 
-            analysisRepository.markCompleted(event.analysisId, Instant.now())
-        }
-        pipelineRun.onFailure {
-            log.error("analysis pipeline failed for analysisId={}", event.analysisId, it)
-            val errorMessage = it.message ?: it::class.simpleName ?: "알 수 없는 오류"
+            measuredStep(event.analysisId, "analysis-mark-completed") {
+                analysisRepository.markCompleted(event.analysisId, Instant.now())
+            }
+        }.onSuccess {
+            log.info("analysis pipeline listener completed: analysisId={}, elapsedMs={}", event.analysisId, elapsedMs(startedAt))
+        }.onFailure {
+            val step = (it as? AnalysisPipelineStepException)?.step ?: "unknown"
+            log.error(
+                "analysis pipeline listener failed: analysisId={}, step={}, elapsedMs={}",
+                event.analysisId,
+                step,
+                elapsedMs(startedAt),
+                it,
+            )
+            val errorMessage = "[$step] ${it.message ?: it::class.simpleName ?: "알 수 없는 오류"}"
             analysisRepository.markFailed(event.analysisId, errorMessage)
         }
+    }
+
+    private fun <T> measuredStep(
+        analysisId: UUID,
+        step: String,
+        block: () -> T,
+    ): T {
+        val startedAt = System.nanoTime()
+        log.info("analysis pipeline listener step started: analysisId={}, step={}", analysisId, step)
+        return runCatching(block)
+            .onSuccess {
+                log.info(
+                    "analysis pipeline listener step completed: analysisId={}, step={}, elapsedMs={}",
+                    analysisId,
+                    step,
+                    elapsedMs(startedAt),
+                )
+            }.onFailure {
+                log.error(
+                    "analysis pipeline listener step failed: analysisId={}, step={}, elapsedMs={}",
+                    analysisId,
+                    step,
+                    elapsedMs(startedAt),
+                    it,
+                )
+            }.getOrElse {
+                if (it is AnalysisPipelineStepException) throw it
+                throw AnalysisPipelineStepException(step, it)
+            }
     }
 
     private fun AnalysisPipelineResult.toStickerResults(analysisId: UUID): List<AnalysisStickerResult> =
@@ -89,5 +139,7 @@ class AnalysisPipelineEventListener(
 
     companion object {
         private val log = LoggerFactory.getLogger(AnalysisPipelineEventListener::class.java)
+
+        private fun elapsedMs(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
     }
 }

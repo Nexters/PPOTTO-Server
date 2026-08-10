@@ -39,6 +39,9 @@ python3 e2e/test_photosanalysis_pipeline.py
 # 100개 사진으로 테스트
 python3 e2e/test_photosanalysis_pipeline.py --photos-count 100
 
+# 180장 사진을 90개 연사 그룹(그룹당 2장)으로 분석
+python3 e2e/test_photosanalysis_pipeline.py --photos-count 180 --group-size 2
+
 # 특정 테마의 스티커 재생성까지 테스트
 python3 e2e/test_photosanalysis_pipeline.py --theme-query "동물" --regenerate-theme
 
@@ -73,7 +76,8 @@ python3 test_photosanalysis_pipeline.py \
   --db-host localhost                          # PostgreSQL 호스트
   --db-port 54782                              # PostgreSQL 포트
   --photos-dir ~/Desktop/etc/wark              # 사진 디렉토리
-  --photos-count 90                            # 테스트 사진 개수 (90-100)
+  --photos-count 90                            # 테스트 사진 개수
+  --group-size 1                               # 분석 요청 그룹당 사진 개수 (1-10)
   --max-workers 10                             # 병렬 업로드 워커 수
   --theme-query "동물"                         # 재생성할 테마/스티커 제목 검색어
   --regenerate-theme                           # 특정 테마 스티커 재생성 수행
@@ -107,7 +111,7 @@ grep "analysis pipeline result" <path-to-api-log>
 
 | 항목 | 기대값 | 비고 |
 |------|-------|------|
-| Signed URL 발급 | ✅ | 90-100개 |
+| Signed URL 발급 | ✅ | 20-100개 그룹, 그룹당 1-10장 |
 | 사진 업로드 | ✅ | 100% 성공 |
 | Gemini 분석 | ✅ | 4개 테마 감지 |
 | 배지 생성 | ✅ 이상 | 3개 이상 (스티커 타임아웃 고려) |
