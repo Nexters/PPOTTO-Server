@@ -67,18 +67,23 @@ class AnalysisPipelineService(
         classifications: List<ThemeClassification>,
         photoRefById: Map<UUID, PhotoRef>,
         onProgress: (Int) -> Unit,
-    ): List<ThemeAnalysisResult> =
-        classifications.mapIndexed { themeIndex, classification ->
-            val result = processTheme(analysisId, themeIndex, classification, photoRefById)
-            onProgress(stickerProgress(themeIndex + 1, classifications.size))
-            result
+    ): List<ThemeAnalysisResult> {
+        val totalThemeCount = classifications.size
+        var completedWeightedThemes = 0.0
+        return classifications.mapIndexed { themeIndex, classification ->
+            processTheme(analysisId, themeIndex, classification, photoRefById) { stepWeight ->
+                completedWeightedThemes += stepWeight
+                onProgress(stickerProgress(completedWeightedThemes, totalThemeCount))
+            }
         }
+    }
 
     private fun processTheme(
         analysisId: UUID,
         themeIndex: Int,
         classification: ThemeClassification,
         photoRefById: Map<UUID, PhotoRef>,
+        onStepCompleted: (Double) -> Unit,
     ): ThemeAnalysisResult {
         val sourcePhoto = photoRefById.getValue(classification.stickerSourcePhotoId)
         log.info(
@@ -89,10 +94,12 @@ class AnalysisPipelineService(
             sourcePhoto.photoId,
         )
         val verifiedSubject = resolvedStickerSubject(analysisId, themeIndex, classification, sourcePhoto)
+        onStepCompleted(VERIFY_STEP_WEIGHT)
         val stickerImageKey =
             verifiedSubject?.let {
                 generateAndUploadSticker(analysisId, themeIndex, classification.theme, sourcePhoto, it.targetSubject)
             }
+        onStepCompleted(GENERATE_STEP_WEIGHT)
         return ThemeAnalysisResult(
             theme = classification.theme,
             categorizedPhotoIds = classification.categorizedPhotoIds,
@@ -201,18 +208,21 @@ class AnalysisPipelineService(
     }
 
     private fun stickerProgress(
-        completedCount: Int,
-        totalCount: Int,
+        completedWeightedThemes: Double,
+        totalThemeCount: Int,
     ): Int {
-        if (totalCount <= 0) return STICKER_COMPLETED_PROGRESS
+        if (totalThemeCount <= 0) return STICKER_COMPLETED_PROGRESS
 
         val progressRange = STICKER_COMPLETED_PROGRESS - CLASSIFICATION_COMPLETED_PROGRESS
-        return CLASSIFICATION_COMPLETED_PROGRESS + (progressRange * completedCount / totalCount)
+        return CLASSIFICATION_COMPLETED_PROGRESS + (progressRange * completedWeightedThemes / totalThemeCount).toInt()
     }
 
     companion object {
         const val CLASSIFICATION_COMPLETED_PROGRESS = 45
         const val STICKER_COMPLETED_PROGRESS = 90
+
+        private const val VERIFY_STEP_WEIGHT = 0.25
+        private const val GENERATE_STEP_WEIGHT = 0.75
 
         private val log = LoggerFactory.getLogger(AnalysisPipelineService::class.java)
 

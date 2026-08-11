@@ -50,7 +50,7 @@ class AnalysisPipelineServiceTest :
                 val result = service.run(analysisId, photos) { progress += it }
 
                 Then("단계별 진행률을 콜백으로 전달한다") {
-                    progress shouldContainExactly listOf(45, 60, 75, 90, 90)
+                    progress shouldContainExactly listOf(45, 48, 60, 63, 75, 78, 90, 90)
                 }
 
                 Then("분석 아이디와 스티커 이미지 키를 결과에 담는다") {
