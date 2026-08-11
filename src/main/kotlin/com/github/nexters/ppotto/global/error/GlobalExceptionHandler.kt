@@ -81,6 +81,6 @@ class GlobalExceptionHandler {
                 status
                     .takeIf(HttpStatus::is5xxServerError)
                     ?.let { log.error("unhandled exception", e) }
-                    ?: log.warn("{}: {}", e::class.simpleName, e.message)
+                    ?: log.warn("{}: {}", e::class.simpleName, e.message, e)
             }.let { ResponseEntity.status(status).body(ApiResponse.error(error)) }
 }
