@@ -1,0 +1,90 @@
+receivers:
+  hostmetrics:
+    root_path: /hostfs
+    collection_interval: 30s
+    scrapers:
+      cpu:
+      memory:
+      load:
+      disk:
+      filesystem:
+      network:
+  docker_stats:
+    endpoint: unix:///var/run/docker.sock
+    collection_interval: 30s
+  postgresql:
+    endpoint: postgres:5432
+    transport: tcp
+    username: ${env:POSTGRES_USER}
+    password: ${env:POSTGRES_PASSWORD}
+    databases:
+      - ${env:POSTGRES_DB}
+    collection_interval: 30s
+    tls:
+      insecure: true
+  redis:
+    endpoint: valkey:6379
+    password: ${env:REDIS_PASSWORD}
+    collection_interval: 30s
+  filelog:
+    include:
+      - /var/lib/docker/containers/*/*-json.log
+    operators:
+      - type: json_parser
+        timestamp:
+          parse_from: attributes.time
+          layout_type: gotime
+          layout: 2006-01-02T15:04:05.999999999Z07:00
+      - type: move
+        from: attributes.log
+        to: body
+
+processors:
+  batch:
+  resourcedetection:
+    detectors:
+      - system
+    system:
+      hostname_sources:
+        - os
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${env:DEPLOY_ENV}
+        action: upsert
+  resource/caddy:
+    attributes:
+      - key: service.name
+        value: caddy
+        action: upsert
+
+exporters:
+  otlphttp:
+    endpoint: https://otel.ppotto.co.kr
+    headers:
+      authorization: ${env:CLICKSTACK_API_KEY}
+
+service:
+  pipelines:
+    metrics:
+      receivers:
+        - hostmetrics
+        - docker_stats
+        - postgresql
+        - redis
+      processors:
+        - resourcedetection
+        - resource
+        - batch
+      exporters:
+        - otlphttp
+    logs:
+      receivers:
+        - filelog
+      processors:
+        - resourcedetection
+        - resource
+        - resource/caddy
+        - batch
+      exporters:
+        - otlphttp

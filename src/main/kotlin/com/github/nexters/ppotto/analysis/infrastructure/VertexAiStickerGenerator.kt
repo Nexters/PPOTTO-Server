@@ -4,6 +4,9 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.StickerGenerator
 import com.github.nexters.ppotto.global.config.VertexAiProperties
 import com.github.nexters.ppotto.global.error.BusinessException
+import com.github.nexters.ppotto.global.observability.LlmOperation
+import com.github.nexters.ppotto.global.observability.LlmTracer
+import com.github.nexters.ppotto.global.observability.record
 import com.google.genai.Client
 import com.google.genai.types.Content
 import com.google.genai.types.GenerateContentConfig
@@ -48,7 +51,12 @@ class VertexAiStickerGenerator(
                 .httpOptions(httpOptions)
                 .build()
 
-        val response = genAiClient.models.generateContent(MODEL, content, config)
+        val response =
+            LlmTracer.trace(LlmOperation.STICKER_GENERATION, MODEL) { span ->
+                genAiClient.models
+                    .generateContent(MODEL, content, config)
+                    .also { span.record(it) }
+            }
         val inlineData =
             response
                 .parts()
