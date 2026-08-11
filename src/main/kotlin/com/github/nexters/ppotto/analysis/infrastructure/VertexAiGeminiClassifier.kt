@@ -11,6 +11,9 @@ import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
 import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import com.github.nexters.ppotto.global.config.VertexAiProperties
 import com.github.nexters.ppotto.global.error.BusinessException
+import com.github.nexters.ppotto.global.observability.LlmOperation
+import com.github.nexters.ppotto.global.observability.LlmTracer
+import com.github.nexters.ppotto.global.observability.record
 import com.google.genai.Client
 import com.google.genai.types.Content
 import com.google.genai.types.GenerateContentConfig
@@ -55,7 +58,16 @@ class VertexAiGeminiClassifier(
                 .httpOptions(httpOptions)
                 .build()
 
-        val response = genAiClient.models.generateContent(MODEL, content, config)
+        val response =
+            LlmTracer.trace(
+                LlmOperation.CLASSIFY,
+                MODEL,
+                attributes = mapOf(ATTR_PHOTO_COUNT to photos.size.toString()),
+            ) { span ->
+                genAiClient.models
+                    .generateContent(MODEL, content, config)
+                    .also { span.record(it) }
+            }
         val rawThemes = objectMapper.readValue(response.text(), Array<GeminiThemeResponse>::class.java).toList()
 
         val inputPhotoIds = photos.map { it.photoId }.toSet()
@@ -96,7 +108,16 @@ class VertexAiGeminiClassifier(
                 .httpOptions(httpOptions)
                 .build()
 
-        val response = genAiClient.models.generateContent(MODEL, content, config)
+        val response =
+            LlmTracer.trace(
+                LlmOperation.STICKER_REGENERATION,
+                MODEL,
+                attributes = mapOf(ATTR_PHOTO_COUNT to photos.size.toString()),
+            ) { span ->
+                genAiClient.models
+                    .generateContent(MODEL, content, config)
+                    .also { span.record(it) }
+            }
         val rawSticker = objectMapper.readValue(response.text(), GeminiStickerResponse::class.java)
 
         val inputPhotoIds = photos.map { it.photoId }.toSet()
@@ -133,13 +154,19 @@ class VertexAiGeminiClassifier(
                 .httpOptions(httpOptions)
                 .build()
 
-        val response = genAiClient.models.generateContent(MODEL, content, config)
+        val response =
+            LlmTracer.trace(LlmOperation.SUBJECT_VERIFICATION, MODEL) { span ->
+                genAiClient.models
+                    .generateContent(MODEL, content, config)
+                    .also { span.record(it) }
+            }
         val raw = objectMapper.readValue(response.text(), GeminiSubjectVerificationResponse::class.java)
         return toVerification(raw)
     }
 
     companion object {
         private const val MODEL = "gemini-2.5-flash"
+        private const val ATTR_PHOTO_COUNT = "ppotto.llm.photo_count"
         private const val DEFAULT_MAIN_COLOR = "#222222"
         private val MAIN_COLOR_PATTERN = Regex("^#[0-9A-Fa-f]{6}$")
         private val log = LoggerFactory.getLogger(VertexAiGeminiClassifier::class.java)
