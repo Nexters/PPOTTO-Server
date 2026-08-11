@@ -2,7 +2,9 @@ package com.github.nexters.ppotto.global.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import org.springframework.core.task.SimpleAsyncTaskExecutor
+import org.springframework.core.task.SyncTaskExecutor
 import org.springframework.scheduling.annotation.EnableAsync
 import java.util.concurrent.Executor
 
@@ -28,6 +30,7 @@ class AsyncConfig {
         )
 
     @Bean(ANALYSIS_PIPELINE_TASK_EXECUTOR)
+    @Profile("!test")
     fun analysisPipelineTaskExecutor(): Executor =
         SimpleAsyncTaskExecutor(
             Thread
@@ -35,6 +38,10 @@ class AsyncConfig {
                 .name("analysis-pipeline-", 0)
                 .factory(),
         )
+
+    @Bean(ANALYSIS_PIPELINE_TASK_EXECUTOR)
+    @Profile("test")
+    fun testAnalysisPipelineTaskExecutor(): Executor = SyncTaskExecutor()
 
     companion object {
         const val ANALYSIS_CLEANUP_TASK_EXECUTOR = "analysisCleanupTaskExecutor"
