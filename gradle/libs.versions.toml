@@ -39,6 +39,8 @@ jooq-kotlin = { module = "org.jooq:jooq-kotlin", version.ref = "jooq" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 google-cloud-storage = { module = "com.google.cloud:google-cloud-storage", version.ref = "google-cloud-storage" }
 google-genai = { module = "com.google.genai:google-genai", version.ref = "google-genai" }
+opentelemetry-api = { module = "io.opentelemetry:opentelemetry-api" }
+opentelemetry-sdk-testing = { module = "io.opentelemetry:opentelemetry-sdk-testing" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 spring-dotenv = { module = "me.paulschwarz:springboot4-dotenv", version.ref = "spring-dotenv" }
 testcontainers-junit-jupiter = { module = "org.testcontainers:testcontainers-junit-jupiter" }
