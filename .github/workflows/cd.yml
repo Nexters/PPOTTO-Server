@@ -124,7 +124,7 @@ jobs:
       - name: 서버 배포
         run: |
           set -euo pipefail
-          port="${DEPLOY_PORT:-30438}"
+          port="${DEPLOY_PORT:?DEPLOY_PORT secret is not set}"
           image="${REGISTRY_HOST}/${REGISTRY_REPOSITORY}:${DEPLOY_SHA}"
           ssh \
             -i ~/.ssh/deploy_key \
