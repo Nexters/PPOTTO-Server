@@ -6,6 +6,8 @@ import com.google.genai.types.Schema
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import java.util.UUID
@@ -25,7 +27,7 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 분류 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiClassifier.classificationResponseSchema().containsEnum() shouldBe false
+                    VertexAiGeminiSchemas.classificationResponseSchema().containsEnum() shouldBe false
                 }
             }
         }
@@ -33,7 +35,22 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 스티커 재생성 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiClassifier.stickerResponseSchema().containsEnum() shouldBe false
+                    VertexAiGeminiSchemas.stickerResponseSchema().containsEnum() shouldBe false
+                }
+
+                Then("sourcePhotoId를 targetSubject보다 먼저 생성하도록 순서를 강제한다") {
+                    VertexAiGeminiSchemas
+                        .stickerResponseSchema()
+                        .propertyOrdering()
+                        .get() shouldContainExactly listOf("sourcePhotoId", "targetSubject", "mainColor")
+                }
+            }
+        }
+
+        Given("Gemini 스티커 대상 재확인 응답 schema가 주어졌을 때") {
+            When("schema를 확인하면") {
+                Then("동적 enum 제약을 포함하지 않는다") {
+                    VertexAiGeminiSchemas.verificationResponseSchema().containsEnum() shouldBe false
                 }
             }
         }
@@ -197,6 +214,71 @@ class VertexAiGeminiClassifierSchemaTest :
 
                 Then("명확한 Gemini 응답 오류를 반환한다") {
                     exception.message shouldContain "입력 사진 alias 목록에 없습니다"
+                }
+            }
+        }
+
+        Given("Gemini 스티커 대상 재확인 응답이 주어졌을 때") {
+            When("대상이 존재하고 mainColor가 유효하면") {
+                val verification =
+                    VertexAiGeminiClassifier.toVerification(
+                        GeminiSubjectVerificationResponse(
+                            subjectPresent = true,
+                            targetSubject = "고양이",
+                            mainColor = "#123456",
+                        ),
+                    )
+
+                Then("보정된 targetSubject/mainColor를 반환한다") {
+                    verification.shouldNotBeNull()
+                    verification.targetSubject shouldBe "고양이"
+                    verification.mainColor shouldBe "#123456"
+                }
+            }
+
+            When("대상이 존재하지만 mainColor 형식이 잘못되면") {
+                val verification =
+                    VertexAiGeminiClassifier.toVerification(
+                        GeminiSubjectVerificationResponse(
+                            subjectPresent = true,
+                            targetSubject = "고양이",
+                            mainColor = "not-a-color",
+                        ),
+                    )
+
+                Then("기본 색상으로 대체한다") {
+                    verification.shouldNotBeNull()
+                    verification.mainColor shouldBe "#222222"
+                }
+            }
+
+            When("subjectPresent가 false면") {
+                val verification =
+                    VertexAiGeminiClassifier.toVerification(
+                        GeminiSubjectVerificationResponse(
+                            subjectPresent = false,
+                            targetSubject = null,
+                            mainColor = null,
+                        ),
+                    )
+
+                Then("null을 반환한다") {
+                    verification.shouldBeNull()
+                }
+            }
+
+            When("subjectPresent는 true인데 targetSubject가 비어있으면") {
+                val verification =
+                    VertexAiGeminiClassifier.toVerification(
+                        GeminiSubjectVerificationResponse(
+                            subjectPresent = true,
+                            targetSubject = "  ",
+                            mainColor = "#123456",
+                        ),
+                    )
+
+                Then("null을 반환한다") {
+                    verification.shouldBeNull()
                 }
             }
         }

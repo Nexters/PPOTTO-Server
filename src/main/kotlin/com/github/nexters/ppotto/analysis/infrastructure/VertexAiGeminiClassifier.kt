@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.StickerRegenerationTarget
+import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
 import com.github.nexters.ppotto.analysis.domain.ThemeComment
@@ -16,8 +17,6 @@ import com.google.genai.types.GenerateContentConfig
 import com.google.genai.types.HttpOptions
 import com.google.genai.types.HttpRetryOptions
 import com.google.genai.types.Part
-import com.google.genai.types.Schema
-import com.google.genai.types.Type
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
@@ -52,7 +51,7 @@ class VertexAiGeminiClassifier(
             GenerateContentConfig
                 .builder()
                 .responseMimeType("application/json")
-                .responseSchema(classificationResponseSchema())
+                .responseSchema(VertexAiGeminiSchemas.classificationResponseSchema())
                 .httpOptions(httpOptions)
                 .build()
 
@@ -93,7 +92,7 @@ class VertexAiGeminiClassifier(
             GenerateContentConfig
                 .builder()
                 .responseMimeType("application/json")
-                .responseSchema(stickerResponseSchema())
+                .responseSchema(VertexAiGeminiSchemas.stickerResponseSchema())
                 .httpOptions(httpOptions)
                 .build()
 
@@ -102,6 +101,41 @@ class VertexAiGeminiClassifier(
 
         val inputPhotoIds = photos.map { it.photoId }.toSet()
         return toRegenerationTarget(rawSticker, photoAliases, inputPhotoIds)
+    }
+
+    override fun verifyStickerSubject(
+        photo: PhotoRef,
+        targetSubject: String,
+    ): StickerSubjectVerification? {
+        val content =
+            Content.fromParts(
+                Part.fromUri(photo.gcsUri, photo.mimeType),
+                Part.fromText(GeminiPrompts.verifyStickerSubject(targetSubject)),
+            )
+
+        val httpOptions =
+            HttpOptions
+                .builder()
+                .timeout(vertexAiProperties.classifyTimeoutMs.toInt())
+                .retryOptions(
+                    HttpRetryOptions
+                        .builder()
+                        .attempts(2)
+                        .httpStatusCodes(listOf(429, 500, 502, 503, 504))
+                        .build(),
+                ).build()
+
+        val config =
+            GenerateContentConfig
+                .builder()
+                .responseMimeType("application/json")
+                .responseSchema(VertexAiGeminiSchemas.verificationResponseSchema())
+                .httpOptions(httpOptions)
+                .build()
+
+        val response = genAiClient.models.generateContent(MODEL, content, config)
+        val raw = objectMapper.readValue(response.text(), GeminiSubjectVerificationResponse::class.java)
+        return toVerification(raw)
     }
 
     companion object {
@@ -164,6 +198,15 @@ class VertexAiGeminiClassifier(
                 stickerTargetSubject = rawSticker.targetSubject,
                 stickerSourcePhotoId = sourcePhotoId,
                 stickerMainColor = sanitizedMainColor(rawSticker.mainColor, "regenerate"),
+            )
+        }
+
+        internal fun toVerification(raw: GeminiSubjectVerificationResponse): StickerSubjectVerification? {
+            val targetSubject = raw.targetSubject
+            if (!raw.subjectPresent || targetSubject.isNullOrBlank()) return null
+            return StickerSubjectVerification(
+                targetSubject = targetSubject,
+                mainColor = sanitizedMainColor(raw.mainColor, "verify"),
             )
         }
 
@@ -251,132 +294,6 @@ class VertexAiGeminiClassifier(
                     }
                     valid
                 }
-
-        private val RECAP_SCHEMA =
-            Schema
-                .builder()
-                .type(Type.Known.OBJECT)
-                .properties(
-                    mapOf(
-                        "badge" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.STRING)
-                                .build(),
-                        "text" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.STRING)
-                                .build(),
-                    ),
-                ).required("badge", "text")
-                .build()
-
-        internal fun stickerResponseSchema() =
-            Schema
-                .builder()
-                .type(Type.Known.OBJECT)
-                .properties(
-                    mapOf(
-                        "targetSubject" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.STRING)
-                                .build(),
-                        "sourcePhotoId" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.STRING)
-                                .build(),
-                        "mainColor" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.STRING)
-                                .build(),
-                    ),
-                ).required("targetSubject", "sourcePhotoId", "mainColor")
-                .build()
-
-        private val SPEECH_BUBBLE_SCHEMA =
-            Schema
-                .builder()
-                .type(Type.Known.OBJECT)
-                .properties(
-                    mapOf(
-                        "content" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.STRING)
-                                .build(),
-                        "posX" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.NUMBER)
-                                .build(),
-                        "posY" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.NUMBER)
-                                .build(),
-                    ),
-                ).required("content", "posX", "posY")
-                .build()
-
-        private val COMMENTS_SCHEMA =
-            Schema
-                .builder()
-                .type(Type.Known.OBJECT)
-                .properties(
-                    mapOf(
-                        "speechBubbles" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.ARRAY)
-                                .items(SPEECH_BUBBLE_SCHEMA)
-                                .build(),
-                        "keywordChips" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.ARRAY)
-                                .items(Schema.builder().type(Type.Known.STRING))
-                                .build(),
-                    ),
-                ).required("speechBubbles", "keywordChips")
-                .build()
-
-        private fun themeSchema() =
-            Schema
-                .builder()
-                .type(Type.Known.OBJECT)
-                .properties(
-                    mapOf(
-                        "theme" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.STRING)
-                                .build(),
-                        "categorizedPhotoIds" to
-                            Schema
-                                .builder()
-                                .type(Type.Known.ARRAY)
-                                .items(
-                                    Schema
-                                        .builder()
-                                        .type(Type.Known.STRING),
-                                ).build(),
-                        "recap" to RECAP_SCHEMA,
-                        "sticker" to stickerResponseSchema(),
-                        "comments" to COMMENTS_SCHEMA,
-                    ),
-                ).required("theme", "categorizedPhotoIds", "recap", "sticker", "comments")
-                .build()
-
-        internal fun classificationResponseSchema() =
-            Schema
-                .builder()
-                .type(Type.Known.ARRAY)
-                .items(themeSchema())
-                .build()
     }
 }
 
@@ -420,6 +337,12 @@ internal data class GeminiRecapResponse(
 internal data class GeminiStickerResponse(
     val targetSubject: String,
     val sourcePhotoId: String,
+    val mainColor: String?,
+)
+
+internal data class GeminiSubjectVerificationResponse(
+    val subjectPresent: Boolean,
+    val targetSubject: String?,
     val mainColor: String?,
 )
 

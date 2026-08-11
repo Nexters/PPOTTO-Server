@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.StickerGenerator
 import com.github.nexters.ppotto.analysis.domain.StickerStorage
+import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
 import org.slf4j.LoggerFactory
@@ -87,31 +88,64 @@ class AnalysisPipelineService(
             classification.theme,
             sourcePhoto.photoId,
         )
-        val stickerImageKey = generateAndUploadSticker(analysisId, themeIndex, classification, sourcePhoto)
+        val verifiedSubject = resolvedStickerSubject(analysisId, themeIndex, classification, sourcePhoto)
+        val stickerImageKey =
+            verifiedSubject?.let {
+                generateAndUploadSticker(analysisId, themeIndex, classification.theme, sourcePhoto, it.targetSubject)
+            }
         return ThemeAnalysisResult(
             theme = classification.theme,
             categorizedPhotoIds = classification.categorizedPhotoIds,
             badge = classification.recap.badge,
             text = classification.recap.text,
-            stickerTargetSubject = classification.stickerTargetSubject,
+            stickerTargetSubject = verifiedSubject?.targetSubject ?: classification.stickerTargetSubject,
             stickerSourcePhotoId = sourcePhoto.photoId,
             stickerImageKey = stickerImageKey,
-            stickerMainColor = classification.stickerMainColor,
+            stickerMainColor = verifiedSubject?.mainColor ?: classification.stickerMainColor,
             comments = classification.comments,
+        )
+    }
+
+    private fun resolvedStickerSubject(
+        analysisId: UUID,
+        themeIndex: Int,
+        classification: ThemeClassification,
+        sourcePhoto: PhotoRef,
+    ): StickerSubjectVerification? {
+        val verifyStartedAt = System.nanoTime()
+        return runCatching {
+            measuredStep(analysisId, "sticker-verify[$themeIndex]") {
+                geminiClassifier.verifyStickerSubject(sourcePhoto, classification.stickerTargetSubject)
+            }
+        }.fold(
+            onSuccess = { it },
+            onFailure = {
+                log.warn(
+                    "analysis pipeline sticker verification failed, falling back to unverified targetSubject: " +
+                        "analysisId={}, themeIndex={}, theme={}, elapsedMs={}",
+                    analysisId,
+                    themeIndex,
+                    classification.theme,
+                    elapsedMs(verifyStartedAt),
+                    it,
+                )
+                StickerSubjectVerification(classification.stickerTargetSubject, classification.stickerMainColor)
+            },
         )
     }
 
     private fun generateAndUploadSticker(
         analysisId: UUID,
         themeIndex: Int,
-        classification: ThemeClassification,
+        theme: String,
         sourcePhoto: PhotoRef,
+        targetSubject: String,
     ): String? {
         val stickerStartedAt = System.nanoTime()
         return runCatching {
             val bytes =
                 measuredStep(analysisId, "sticker-generate[$themeIndex]") {
-                    stickerGenerator.generate(sourcePhoto.gcsUri, sourcePhoto.mimeType, classification.stickerTargetSubject)
+                    stickerGenerator.generate(sourcePhoto.gcsUri, sourcePhoto.mimeType, targetSubject)
                 }
             val objectKey = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhoto.photoId)
             measuredStep(analysisId, "sticker-upload[$themeIndex]") {
@@ -122,7 +156,7 @@ class AnalysisPipelineService(
                 "analysis pipeline sticker failed: analysisId={}, themeIndex={}, theme={}, sourcePhotoId={}, elapsedMs={}",
                 analysisId,
                 themeIndex,
-                classification.theme,
+                theme,
                 sourcePhoto.photoId,
                 elapsedMs(stickerStartedAt),
                 it,
