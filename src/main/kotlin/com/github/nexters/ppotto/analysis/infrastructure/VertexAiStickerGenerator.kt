@@ -10,12 +10,14 @@ import com.google.genai.types.GenerateContentConfig
 import com.google.genai.types.HttpOptions
 import com.google.genai.types.HttpRetryOptions
 import com.google.genai.types.Part
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
 class VertexAiStickerGenerator(
     private val genAiClient: Client,
     private val vertexAiProperties: VertexAiProperties,
+    private val pixianBackgroundRemover: PixianBackgroundRemover,
 ) : StickerGenerator {
     override fun generate(
         sourceGcsUri: String,
@@ -51,7 +53,15 @@ class VertexAiStickerGenerator(
             response
                 .parts()
                 ?.firstNotNullOfOrNull { it.inlineData().orElse(null) }
-                ?: throw BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE)
+        if (inlineData == null) {
+            val refusalText =
+                response
+                    .parts()
+                    ?.mapNotNull { it.text().orElse(null) }
+                    ?.joinToString(" ")
+            log.warn("sticker generation returned no image data: targetSubject={}, modelText={}", targetSubject, refusalText)
+            throw BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE)
+        }
 
         val mimeType = inlineData.mimeType().orElse(null)
         if (mimeType != EXPECTED_MIME_TYPE) {
@@ -61,10 +71,12 @@ class VertexAiStickerGenerator(
             )
         }
 
-        return inlineData.data().orElseThrow { BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE) }
+        val rawBytes = inlineData.data().orElseThrow { BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE) }
+        return pixianBackgroundRemover.removeBackground(rawBytes)
     }
 
     companion object {
+        private val log = LoggerFactory.getLogger(VertexAiStickerGenerator::class.java)
         private const val MODEL = "gemini-2.5-flash-image"
         private const val EXPECTED_MIME_TYPE = "image/png"
     }

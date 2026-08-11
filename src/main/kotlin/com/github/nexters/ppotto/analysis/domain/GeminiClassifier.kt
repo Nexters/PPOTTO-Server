@@ -9,4 +9,9 @@ interface GeminiClassifier {
         photos: List<PhotoRef>,
         previousSourcePhotoId: UUID,
     ): StickerRegenerationTarget
+
+    fun verifyStickerSubject(
+        photo: PhotoRef,
+        targetSubject: String,
+    ): StickerSubjectVerification?
 }

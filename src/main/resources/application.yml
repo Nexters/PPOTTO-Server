@@ -12,6 +12,7 @@ spring:
       - classpath:config/redis.yml
       - classpath:config/auth.yml
       - classpath:config/vertexai.yml
+      - classpath:config/pixian.yml
       - classpath:config/jooq.yml
       - classpath:config/jackson.yml
       - classpath:config/actuator.yml
