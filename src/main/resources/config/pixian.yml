@@ -1,0 +1,12 @@
+spring:
+  http:
+    serviceclient:
+      pixian:
+        connect-timeout: ${PIXIAN_CONNECT_TIMEOUT_MILLIS}
+        read-timeout: ${PIXIAN_READ_TIMEOUT_MILLIS}
+
+pixian:
+  api-id: ${PIXIAN_API_ID}
+  api-secret: ${PIXIAN_API_SECRET}
+  test-mode: ${PIXIAN_TEST_MODE}
+  remove-background-uri: ${PIXIAN_REMOVE_BACKGROUND_URI}
