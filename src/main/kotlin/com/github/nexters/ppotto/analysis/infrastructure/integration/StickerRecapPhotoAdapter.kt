@@ -19,5 +19,5 @@ class StickerRecapPhotoAdapter(
     ): List<RecapPhotoMetadata> =
         photoQueryService
             .getReadablePhotos(analysisId, boardId, photoIds)
-            .map { RecapPhotoMetadata(it.id, it.imageUrl, it.takenAt, it.isRepresentative) }
+            .map { RecapPhotoMetadata(it.id, it.imageUrl, it.takenAt, it.isRepresentative, it.burstGroupId) }
 }

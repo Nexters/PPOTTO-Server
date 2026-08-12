@@ -32,7 +32,14 @@ data class RecapDetailResponse(
                     },
                 photos =
                     result.photos.map {
-                        RecapPhotoResponse(it.id, it.imageUrl, it.takenAt)
+                        RecapPhotoResponse(
+                            id = it.id,
+                            imageUrl = it.imageUrl,
+                            takenAt = it.takenAt,
+                            isGroup = it.isGroup,
+                            groupId = it.groupId,
+                            groupPhotos = it.groupPhotos.map { photo -> RecapGroupPhotoResponse(photo.id, photo.imageUrl, photo.takenAt) },
+                        )
                     },
             )
     }
@@ -66,5 +73,30 @@ data class RecapPhotoResponse(
     val imageUrl: String,
 
     @field:Schema(description = "촬영 시각", example = "2026-06-14T13:22:10+09:00")
+    val takenAt: Instant,
+
+    @field:Schema(description = "연사 그룹 여부")
+    val isGroup: Boolean,
+
+    @field:Schema(description = "연사 그룹 ID. 그룹이 아니면 null", example = "01983f2e-9c0d-7e1f-a2b3-4c5d6e7f8a9b")
+    val groupId: UUID?,
+
+    @field:Schema(description = "연사 그룹 내 나머지(비대표) 사진들. takenAt, id 오름차순. 그룹이 아니면 빈 배열")
+    val groupPhotos: List<RecapGroupPhotoResponse>,
+)
+
+@Schema(description = "연사 그룹 내 나머지 사진")
+data class RecapGroupPhotoResponse(
+    @get:Schema(description = "사진 ID (uuidv7)", example = "01983f2e-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
+    @get:JsonProperty("id")
+    val id: PhotoId,
+
+    @field:Schema(
+        description = "읽기용 signed URL (만료 1시간)",
+        example = "https://storage.googleapis.com/ppotto-photos/01983f2f.jpg?X-Goog-Signature=sample",
+    )
+    val imageUrl: String,
+
+    @field:Schema(description = "촬영 시각", example = "2026-06-14T13:22:11+09:00")
     val takenAt: Instant,
 )

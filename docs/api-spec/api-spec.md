@@ -1410,12 +1410,24 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
       {
         "id": "01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
         "imageUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-1a2b.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=1c9b...",
-        "takenAt": "2026-06-14T13:22:10+09:00"
+        "takenAt": "2026-06-14T13:22:10+09:00",
+        "isGroup": true,
+        "groupId": "01983f2e-9c0d-7e1f-a2b3-4c5d6e7f8a9b",
+        "groupPhotos": [
+          {
+            "id": "01983f2e-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+            "imageUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-3c4d.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=9a1f...",
+            "takenAt": "2026-06-14T13:22:11+09:00"
+          }
+        ]
       },
       {
         "id": "01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
         "imageUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-2b3c.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=7d2e...",
-        "takenAt": "2026-07-02T19:05:44+09:00"
+        "takenAt": "2026-07-02T19:05:44+09:00",
+        "isGroup": false,
+        "groupId": null,
+        "groupPhotos": []
       }
     ]
   },
@@ -1424,7 +1436,8 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 ```
 
 #### Notes
-- `photos`는 연사(버스트) 그룹으로 촬영된 사진이라도 그룹당 대표 사진(`is_representative = true`) 1장만 포함합니다. 단독으로 촬영된 사진은 항상 포함됩니다.
+- `photos`는 연사(버스트) 그룹으로 촬영된 사진이라도 그룹당 대표 사진(`is_representative = true`) 1장만 최상위에 포함합니다. 단독으로 촬영된 사진은 항상 포함됩니다.
+- 연사 그룹의 대표 사진(`isGroup = true`)은 같은 그룹의 나머지(비대표) 사진들을 `groupPhotos`로 함께 내려줍니다. 단독 사진은 `isGroup = false`, `groupId = null`, `groupPhotos = []`로 내려갑니다.
 
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
@@ -1703,12 +1716,24 @@ Request example:
       {
         "id": "01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
         "imageUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-1a2b.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=1c9b...",
-        "takenAt": "2026-06-14T13:22:10+09:00"
+        "takenAt": "2026-06-14T13:22:10+09:00",
+        "isGroup": true,
+        "groupId": "01983f2e-9c0d-7e1f-a2b3-4c5d6e7f8a9b",
+        "groupPhotos": [
+          {
+            "id": "01983f2e-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+            "imageUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-3c4d.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=9a1f...",
+            "takenAt": "2026-06-14T13:22:11+09:00"
+          }
+        ]
       },
       {
         "id": "01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
         "imageUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-2b3c.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=7d2e...",
-        "takenAt": "2026-07-02T19:05:44+09:00"
+        "takenAt": "2026-07-02T19:05:44+09:00",
+        "isGroup": false,
+        "groupId": null,
+        "groupPhotos": []
       }
     ]
   },
@@ -2631,6 +2656,16 @@ Request example:
 | posY | N | `number` | - | posX 와 항상 함께 있거나 함께 없음 |
 
 ### RecapPhoto
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| id | Y | `string` | - | - |
+| imageUrl | Y | `string` | - | 읽기용 signed URL (만료 1시간) |
+| takenAt | Y | `string` | - | - |
+| isGroup | Y | `boolean` | - | 연사(버스트) 그룹 여부 |
+| groupId | N | `string \| null` | - | 연사 그룹 ID. 그룹이 아니면 null |
+| groupPhotos | Y | `object`[] | - | 그룹 내 나머지(비대표) 사진들. takenAt, id 오름차순. 그룹이 아니면 빈 배열 |
+
+### RecapGroupPhoto
 | Field | Required | Type | Enum | Description |
 | --- | --- | --- | --- | --- |
 | id | Y | `string` | - | - |

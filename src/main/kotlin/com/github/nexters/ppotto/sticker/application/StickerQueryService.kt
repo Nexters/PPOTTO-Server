@@ -31,20 +31,49 @@ class StickerQueryService(
                 .findComments(stickerId)
                 .map { RecapCommentResult(it.id, it.content, it.posX, it.posY) }
                 .let { comments ->
-                    stickerRecapRepository
-                        .findPhotoIds(stickerId)
-                        .takeIf { it.isNotEmpty() }
-                        ?.let { photoIds ->
-                            photoQueryPort()
-                                .getByIds(sticker.analysisId, sticker.boardId, photoIds)
-                                .also { checkPhotoContract(photoIds, it) }
-                                .filter { it.isRepresentative }
-                                .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id.value })
-                                .map { RecapPhotoResult(it.id, it.imageUrl, it.takenAt) }
-                        }.orEmpty()
-                        .let { StickerRecapResult(toResults(listOf(sticker)).single(), sticker.summary, comments, it) }
+                    val photos =
+                        stickerRecapRepository
+                            .findPhotoIds(stickerId)
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { photoIds -> toPhotoResults(sticker, photoIds) }
+                            .orEmpty()
+                    StickerRecapResult(toResults(listOf(sticker)).single(), sticker.summary, comments, photos)
                 }
         }
+
+    private fun toPhotoResults(
+        sticker: Sticker,
+        photoIds: List<PhotoId>,
+    ): List<RecapPhotoResult> {
+        val recapPhotos =
+            photoQueryPort()
+                .getByIds(sticker.analysisId, sticker.boardId, photoIds)
+                .also { checkPhotoContract(photoIds, it) }
+
+        val groupPhotosByGroupId =
+            recapPhotos
+                .filterNot { it.isRepresentative }
+                .filter { it.burstGroupId != null }
+                .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id.value })
+                .groupBy { it.burstGroupId }
+
+        return recapPhotos
+            .filter { it.isRepresentative }
+            .sortedWith(compareBy<RecapPhotoMetadata> { it.takenAt }.thenBy { it.id.value })
+            .map { photo ->
+                RecapPhotoResult(
+                    id = photo.id,
+                    imageUrl = photo.imageUrl,
+                    takenAt = photo.takenAt,
+                    isGroup = photo.burstGroupId != null,
+                    groupId = photo.burstGroupId,
+                    groupPhotos =
+                        groupPhotosByGroupId[photo.burstGroupId]
+                            ?.map { RecapGroupPhotoResult(it.id, it.imageUrl, it.takenAt) }
+                            .orEmpty(),
+                )
+            }
+    }
 
     private fun toResults(stickers: List<Sticker>): List<StickerItemResult> =
         stickers

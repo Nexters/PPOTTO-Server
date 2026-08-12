@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapCommentResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapDetailResponse
+import com.github.nexters.ppotto.sticker.presentation.dto.RecapGroupPhotoResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapPhotoResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.StickerResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleRequest
@@ -85,11 +86,24 @@ private val RECAP_DETAIL_RESPONSE =
                                 id = PhotoId(UUID.fromString("01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f")),
                                 imageUrl = "https://storage.googleapis.com/ppotto-photos/01983f2e.jpg?X-Goog-Signature=sample",
                                 takenAt = Instant.parse("2026-06-14T04:22:10Z"),
+                                isGroup = true,
+                                groupId = UUID.fromString("01983f2e-9c0d-7e1f-a2b3-4c5d6e7f8a9b"),
+                                groupPhotos =
+                                    listOf(
+                                        RecapGroupPhotoResponse(
+                                            id = PhotoId(UUID.fromString("01983f2e-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
+                                            imageUrl = "https://storage.googleapis.com/ppotto-photos/01983f2e-3c.jpg?X-Goog-Signature=smpl",
+                                            takenAt = Instant.parse("2026-06-14T04:22:11Z"),
+                                        ),
+                                    ),
                             ),
                             RecapPhotoResponse(
                                 id = PhotoId(UUID.fromString("01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a")),
                                 imageUrl = "https://storage.googleapis.com/ppotto-photos/01983f2f.jpg?X-Goog-Signature=sample",
                                 takenAt = Instant.parse("2026-07-02T10:05:44Z"),
+                                isGroup = false,
+                                groupId = null,
+                                groupPhotos = emptyList(),
                             ),
                         ),
                 ),

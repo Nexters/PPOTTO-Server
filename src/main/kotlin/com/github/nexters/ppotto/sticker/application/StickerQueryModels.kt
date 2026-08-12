@@ -42,4 +42,13 @@ data class RecapPhotoResult(
     val id: PhotoId,
     val imageUrl: String,
     val takenAt: Instant,
+    val isGroup: Boolean,
+    val groupId: UUID?,
+    val groupPhotos: List<RecapGroupPhotoResult>,
+)
+
+data class RecapGroupPhotoResult(
+    val id: PhotoId,
+    val imageUrl: String,
+    val takenAt: Instant,
 )
