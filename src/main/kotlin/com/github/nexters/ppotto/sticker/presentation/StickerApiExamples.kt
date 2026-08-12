@@ -92,7 +92,7 @@ private val RECAP_DETAIL_RESPONSE =
                                     listOf(
                                         RecapGroupPhotoResponse(
                                             id = PhotoId(UUID.fromString("01983f2e-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
-                                            imageUrl = "https://storage.googleapis.com/ppotto-photos/01983f2e-2.jpg?X-Goog-Signature=sample",
+                                            imageUrl = "https://storage.googleapis.com/ppotto-photos/01983f2e-3c.jpg?X-Goog-Signature=smpl",
                                             takenAt = Instant.parse("2026-06-14T04:22:11Z"),
                                         ),
                                     ),
