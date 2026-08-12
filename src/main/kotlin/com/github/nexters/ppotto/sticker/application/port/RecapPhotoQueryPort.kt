@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import java.time.Instant
+import java.util.UUID
 
 interface RecapPhotoQueryPort {
     fun getByIds(
@@ -18,4 +19,5 @@ data class RecapPhotoMetadata(
     val imageUrl: String,
     val takenAt: Instant,
     val isRepresentative: Boolean,
+    val burstGroupId: UUID?,
 )

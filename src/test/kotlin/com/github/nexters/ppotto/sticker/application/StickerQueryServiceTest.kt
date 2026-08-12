@@ -88,6 +88,14 @@ class StickerQueryServiceTest(
                     result.photos.map { it.id } shouldContainExactly photos.reversed().map { PhotoId(it.id) }
                 }
 
+                Then("연사 그룹이 아니므로 isGroup은 false이고 groupId, groupPhotos는 비어있다") {
+                    result.photos.forEach {
+                        it.isGroup shouldBe false
+                        it.groupId shouldBe null
+                        it.groupPhotos shouldBe emptyList()
+                    }
+                }
+
                 Then("말풍선은 좌표를 갖고 키워드 칩은 좌표가 null이다") {
                     val (bubble, chip) = result.comments
 
@@ -158,6 +166,15 @@ class StickerQueryServiceTest(
 
                 Then("연사 그룹의 대표 사진만 반환한다") {
                     result.photos.map { it.id } shouldContainExactly listOf(PhotoId(representativePhoto.id))
+                }
+
+                Then("대표 사진에 그룹 여부/ID와 나머지 사진 목록이 채워진다") {
+                    val nonRepresentativePhoto = photos.single { !it.isRepresentative }
+                    val photo = result.photos.single()
+
+                    photo.isGroup shouldBe true
+                    photo.groupId shouldBe burstGroupId
+                    photo.groupPhotos.map { it.id } shouldContainExactly listOf(PhotoId(nonRepresentativePhoto.id))
                 }
             }
         }

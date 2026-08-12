@@ -62,4 +62,5 @@ data class PhotoReadResult(
     val imageUrl: String,
     val takenAt: Instant,
     val isRepresentative: Boolean,
+    val burstGroupId: UUID?,
 )
