@@ -8,6 +8,7 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
+import com.github.nexters.ppotto.sticker.domain.RecapCommentPosition
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -90,6 +91,43 @@ class StickerRepositoryTest(
                     stickerRepository.findById(saved.id).shouldBeNull()
                     stickerRecapRepository.findPhotoIds(saved.id) shouldBe emptyList()
                     stickerRecapRepository.findComments(saved.id) shouldBe emptyList()
+                }
+            }
+        }
+
+        Given("스티커에 말풍선과 키워드 칩 코멘트가 등록된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textCreation("코멘트 위치 테스트"))
+            val comments =
+                stickerRecapRepository.saveComments(
+                    sticker.id,
+                    listOf(
+                        RecapCommentCreation("키워드 칩", null, null),
+                        RecapCommentCreation("말풍선", 1.0, 2.0),
+                    ),
+                )
+            val chipComment = comments.first { it.content == "키워드 칩" }
+            val bubbleComment = comments.first { it.content == "말풍선" }
+
+            When("말풍선과 키워드 칩 id로 위치 수정을 시도하면") {
+                val updatedCount =
+                    stickerRecapRepository.updatePositions(
+                        sticker.id,
+                        listOf(
+                            RecapCommentPosition(bubbleComment.id, 9.0, 8.0),
+                            RecapCommentPosition(chipComment.id, 5.0, 6.0),
+                        ),
+                    )
+
+                Then("말풍선만 갱신되고 키워드 칩은 건너뛴다") {
+                    updatedCount shouldBe 1
+                    val found = stickerRecapRepository.findComments(sticker.id)
+                    found.first { it.id == bubbleComment.id }.posX shouldBe 9.0
+                    found
+                        .first { it.id == chipComment.id }
+                        .posX
+                        .shouldBeNull()
                 }
             }
         }

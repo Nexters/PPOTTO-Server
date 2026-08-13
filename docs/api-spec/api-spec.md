@@ -67,6 +67,7 @@
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 (편집 모드 종료 시) | 200 | 400, 401, 404 | Y |
 | stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 | 200 | 401, 404 | Y |
 | stickers | PATCH | /stickers/{stickerId} | 스티커 제목 수정 | 200 | 400, 401, 404 | Y |
+| stickers | PATCH | /stickers/{stickerId}/comments | 리캡 코멘트 위치 일괄 수정 | 200 | 400, 401, 404 | Y |
 | stickers | DELETE | /stickers/{stickerId} | 스티커 묶음 삭제 | 200 | 401, 404 | Y |
 | stickers | POST | /stickers/{stickerId}/regenerate | 스티커 이미지 재생성 | 200 | 400, 401, 404, 409 | Y |
 | stickers | POST | /stickers/{stickerId}/view | 리캡 열람 처리 (빨간 점 제거) | 200 | 401, 404 | Y |
@@ -1597,6 +1598,104 @@ Request example:
 
 #### Notes
 - 리캡 화면의 연필로 제목을 수정할 때 사용합니다. 보드 편집 중에는 layout API를 사용합니다. 제목을 수정해도 빨간 점 상태는 바뀌지 않습니다. 최대 15자.
+
+### PATCH /stickers/{stickerId}/comments
+
+- Operation ID: `updateCommentPositions`
+- Summary: 리캡 코멘트 위치 일괄 수정
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | stickerId | Y | `string` | 01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f | - |
+
+- Body schema: comments(필수, `object`[])
+
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| comments[].id | Y | `string` | - | 위치를 바꿀 말풍선 코멘트 ID (uuidv7) |
+| comments[].posX | Y | `number` | - | 스티커 기준 상대 좌표 X |
+| comments[].posY | Y | `number` | - | 스티커 기준 상대 좌표 Y |
+
+Request example:
+```json
+{
+  "comments": [
+    { "id": "01983f2d-1a2b-7c3d-8e4f-5a6b7c8d9e0f", "posX": -80, "posY": 40 },
+    { "id": "01983f2d-2b3c-7d4e-9f5a-6b7c8d9e0f1a", "posX": 96, "posY": -12 }
+  ]
+}
+```
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 수정 완료 | `null` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | COMMON-001 | 잘못된 입력입니다. | 존재하지 않는 코멘트 id, 다른 스티커 소속 id, 하단 키워드 칩(원래 posX/posY가 없던 코멘트) id, id 중복, 좌표가 유한하지 않음 |
+| 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
+| 404 | STICKER-001 | 스티커를 찾을 수 없습니다. | 스티커 없음 또는 소유자 불일치 |
+
+400 COMMON-001 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "COMMON-001",
+    "message": "잘못된 입력입니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+401 COMMON-004 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "COMMON-004",
+    "message": "인증이 필요합니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+404 STICKER-001 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "STICKER-001",
+    "message": "스티커를 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 리캡 상세 화면에서 사용자가 말풍선을 드래그로 옮긴 뒤, 바뀐 코멘트만 모아 한 번에 저장하는 용도입니다.
+- 이미 `posX`/`posY`가 있는 말풍선 코멘트만 대상입니다. 하단 `테마 분석` 키워드 칩(원래 `posX`/`posY`가 없던 코멘트)의 id로 위치를 새로 부여하는 것은 지원하지 않으며 400 `COMMON-001`을 반환합니다.
+- 스티커 자체의 보드 배치(위치·스케일·회전)는 이 API가 아니라 `PATCH /boards/{boardId}/layout`으로 저장합니다. 좌표계가 다르므로(코멘트는 스티커 기준 상대 좌표) 섞어 쓰면 안 됩니다.
 
 ### DELETE /stickers/{stickerId}
 
