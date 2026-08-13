@@ -15,6 +15,7 @@ import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientException
 import org.springframework.web.client.support.RestClientAdapter
 import org.springframework.web.service.invoker.HttpServiceProxyFactory
 import java.net.InetSocketAddress
@@ -54,6 +55,7 @@ class AppleOAuthClientTest :
             )
         val jwks = """{"keys":[{"kty":"RSA","kid":"$keyId","alg":"RS256","n":"$modulus","e":"$exponent"}]}"""
         val revokeBody = AtomicReference("")
+        val revokeStatus = AtomicReference(200)
         val tokenResponse = AtomicReference("""{"refresh_token":"apple-refresh-token"}""")
         val server = HttpServer.create(InetSocketAddress(0), 0)
         server.createContext("/keys") { exchange ->
@@ -68,7 +70,7 @@ class AppleOAuthClientTest :
                     .bufferedReader()
                     .readText(),
             )
-            exchange.respond(200, "")
+            exchange.respond(revokeStatus.get(), "")
         }
         server.start()
 
@@ -174,6 +176,30 @@ class AppleOAuthClientTest :
                     client.revoke("apple-refresh-token")
 
                     revokeBody.get().contains("token=apple-refresh-token") shouldBe true
+                }
+            }
+        }
+
+        Given("애플이 계정 해지 요청을 거절할 때") {
+            When("이미 해지된 토큰이라 400을 반환하면") {
+                Then("예외 없이 통과해 탈퇴를 계속할 수 있다") {
+                    revokeStatus.set(400)
+
+                    client.revoke("already-revoked-token")
+
+                    revokeBody.get().contains("token=already-revoked-token") shouldBe true
+                }
+            }
+
+            When("애플 장애로 500을 반환하면") {
+                Then("예외를 전파해 탈퇴를 중단시킨다") {
+                    revokeStatus.set(500)
+
+                    shouldThrow<RestClientException> {
+                        client.revoke("apple-refresh-token")
+                    }
+
+                    revokeStatus.set(200)
                 }
             }
         }

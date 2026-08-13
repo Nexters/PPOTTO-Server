@@ -15,6 +15,7 @@ import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClientException
 import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
@@ -50,13 +51,17 @@ internal class AppleOAuthClient(
         }
 
     override fun revoke(providerRefreshToken: String) {
-        appleOAuthApi.revoke(
-            properties.revokeUri,
-            properties.clientId,
-            clientSecretGenerator.generate(),
-            providerRefreshToken,
-            REFRESH_TOKEN,
-        )
+        try {
+            appleOAuthApi.revoke(
+                properties.revokeUri,
+                properties.clientId,
+                clientSecretGenerator.generate(),
+                providerRefreshToken,
+                REFRESH_TOKEN,
+            )
+        } catch (e: HttpClientErrorException) {
+            log.warn("애플이 계정 해지를 거절했습니다. 이미 해지된 토큰으로 간주하고 탈퇴를 계속합니다.", e)
+        }
     }
 
     private fun verifyIdentityToken(
