@@ -72,13 +72,16 @@ class StickerControllerTest(
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(photo.id)))
-            stickerRecapRepository.saveComments(
-                sticker.id,
-                listOf(
-                    RecapCommentCreation("말풍선", 3.0, 4.0),
-                    RecapCommentCreation("키워드", null, null),
-                ),
-            )
+            val comments =
+                stickerRecapRepository.saveComments(
+                    sticker.id,
+                    listOf(
+                        RecapCommentCreation("말풍선", 3.0, 4.0),
+                        RecapCommentCreation("키워드", null, null),
+                    ),
+                )
+            val bubbleComment = comments.first { it.content == "말풍선" }
+            val chipComment = comments.first { it.content == "키워드" }
 
             When("리캡 상세를 요청하면") {
                 authenticate(board.userId.value)
@@ -156,6 +159,68 @@ class StickerControllerTest(
                     mockMvc
                         .perform(get("/stickers/${sticker.id}"))
                         .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("STICKER-001"))
+                }
+            }
+
+            When("말풍선 코멘트 위치를 수정하면") {
+                authenticate(board.userId.value)
+
+                Then("바뀐 위치를 저장한다") {
+                    mockMvc
+                        .perform(
+                            patch("/stickers/${sticker.id}/comments")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""{"comments":[{"id":"${bubbleComment.id}","posX":10.5,"posY":-20.5}]}"""),
+                        ).andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+
+                    mockMvc
+                        .perform(get("/stickers/${sticker.id}"))
+                        .andExpect(jsonPath("$.data.comments[0].posX").value(10.5))
+                        .andExpect(jsonPath("$.data.comments[0].posY").value(-20.5))
+                }
+            }
+
+            When("키워드 칩 코멘트의 위치를 수정하려 하면") {
+                authenticate(board.userId.value)
+
+                Then("400 응답을 반환한다") {
+                    mockMvc
+                        .perform(
+                            patch("/stickers/${sticker.id}/comments")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""{"comments":[{"id":"${chipComment.id}","posX":1.0,"posY":2.0}]}"""),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-001"))
+                }
+            }
+
+            When("존재하지 않는 코멘트 id로 위치를 수정하려 하면") {
+                authenticate(board.userId.value)
+
+                Then("400 응답을 반환한다") {
+                    mockMvc
+                        .perform(
+                            patch("/stickers/${sticker.id}/comments")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""{"comments":[{"id":"${UUID.randomUUID()}","posX":1.0,"posY":2.0}]}"""),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-001"))
+                }
+            }
+
+            When("다른 사용자가 코멘트 위치를 수정하려 하면") {
+                val otherUser = userRepository.saveTestUser()
+                authenticate(otherUser.id.value)
+
+                Then("404 응답을 반환한다") {
+                    mockMvc
+                        .perform(
+                            patch("/stickers/${sticker.id}/comments")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""{"comments":[{"id":"${bubbleComment.id}","posX":1.0,"posY":2.0}]}"""),
+                        ).andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("STICKER-001"))
                 }
             }
