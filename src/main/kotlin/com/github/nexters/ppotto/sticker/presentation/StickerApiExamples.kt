@@ -8,11 +8,13 @@ import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.OperationExamples
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.sticker.domain.StickerType
+import com.github.nexters.ppotto.sticker.presentation.dto.RecapCommentPositionRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapCommentResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapDetailResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapGroupPhotoResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapPhotoResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.StickerResponse
+import com.github.nexters.ppotto.sticker.presentation.dto.UpdateRecapCommentPositionsRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleResponse
 import org.springframework.stereotype.Component
@@ -122,6 +124,22 @@ private val UPDATE_STICKER_TITLE_RESPONSE =
         value = ApiResponse.success(UpdateStickerTitleResponse(id = StickerId(STICKER_ID), title = "고양이 모음집")),
     )
 
+private val UPDATE_RECAP_COMMENT_POSITIONS_REQUEST =
+    ApiExample(
+        name = "말풍선 위치 수정",
+        value =
+            UpdateRecapCommentPositionsRequest(
+                comments =
+                    listOf(
+                        RecapCommentPositionRequest(
+                            id = UUID.fromString("01983f2d-1a2b-7c3d-8e4f-5a6b7c8d9e0f"),
+                            posX = -80.0,
+                            posY = 40.0,
+                        ),
+                    ),
+            ),
+    )
+
 private val STICKER_NOT_FOUND_RESPONSE =
     listOf(
         ApiExamples.errorExample(
@@ -158,6 +176,16 @@ class StickerApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(UPDATE_STICKER_TITLE_RESPONSE),
+                            "400" to ApiExamples.INVALID_INPUT_RESPONSE,
+                            "404" to STICKER_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            StickerApi::updateCommentPositions to
+                OperationExamples(
+                    request = listOf(UPDATE_RECAP_COMMENT_POSITIONS_REQUEST),
+                    responses =
+                        mapOf(
+                            "200" to ApiExamples.EMPTY_SUCCESS,
                             "400" to ApiExamples.INVALID_INPUT_RESPONSE,
                             "404" to STICKER_NOT_FOUND_RESPONSE,
                         ),

@@ -27,3 +27,9 @@ data class RecapCommentCreation(
             ?: throw InvalidInputException()
     }
 }
+
+data class RecapCommentPosition(
+    val id: UUID,
+    val posX: Double,
+    val posY: Double,
+)

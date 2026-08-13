@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.jooq.tables.references.RECAP_COMMENTS
 import com.github.nexters.ppotto.jooq.tables.references.STICKER_PHOTOS
 import com.github.nexters.ppotto.sticker.domain.RecapComment
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
+import com.github.nexters.ppotto.sticker.domain.RecapCommentPosition
 import com.github.nexters.ppotto.sticker.domain.StickerPhoto
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.row
@@ -61,6 +62,21 @@ class StickerRecapRepository(
             .where(STICKER_PHOTOS.STICKER_ID.eq(stickerId))
             .fetch(STICKER_PHOTOS.PHOTO_ID)
             .filterNotNull()
+
+    fun updatePositions(
+        stickerId: StickerId,
+        positions: List<RecapCommentPosition>,
+    ): Int =
+        positions.count { position ->
+            dslContext
+                .update(RECAP_COMMENTS)
+                .set(RECAP_COMMENTS.POS_X, position.posX)
+                .set(RECAP_COMMENTS.POS_Y, position.posY)
+                .where(RECAP_COMMENTS.ID.eq(position.id))
+                .and(RECAP_COMMENTS.STICKER_ID.eq(stickerId))
+                .and(RECAP_COMMENTS.POS_X.isNotNull)
+                .execute() == 1
+        }
 
     fun findComments(stickerId: StickerId): List<RecapComment> =
         dslContext

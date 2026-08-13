@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapDetailResponse
+import com.github.nexters.ppotto.sticker.presentation.dto.UpdateRecapCommentPositionsRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleResponse
 import io.swagger.v3.oas.annotations.Operation
@@ -84,6 +85,38 @@ interface StickerApi {
         stickerId: StickerId,
         request: UpdateStickerTitleRequest,
     ): ApiResponse<UpdateStickerTitleResponse>
+
+    @PatchMapping("/{stickerId}/comments")
+    @Operation(
+        operationId = "updateCommentPositions",
+        summary = "리캡 코멘트 위치 일괄 수정",
+        description = "이미 위치가 있는 말풍선 코멘트만 대상으로, 리캡 상세 화면에서 바뀐 위치만 일괄 저장함. 하단 키워드 칩(posX/posY가 없던 코멘트)의 id는 허용되지 않음",
+        parameters = [
+            Parameter(
+                name = "stickerId",
+                description = "코멘트가 속한 스티커 ID (uuidv7)",
+                example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+            ),
+        ],
+        requestBody =
+            OpenApiRequestBody(
+                required = true,
+                content = [
+                    Content(
+                        mediaType = "application/json",
+                        schema = Schema(implementation = UpdateRecapCommentPositionsRequest::class),
+                    ),
+                ],
+            ),
+    )
+    @EmptySuccessApiResponse
+    @InvalidInputApiResponse
+    @StickerNotFoundApiResponse
+    fun updateCommentPositions(
+        userId: UserId,
+        stickerId: StickerId,
+        request: UpdateRecapCommentPositionsRequest,
+    ): ApiResponse<Unit>
 
     @DeleteMapping("/{stickerId}")
     @Operation(
