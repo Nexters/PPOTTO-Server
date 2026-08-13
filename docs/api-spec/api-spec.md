@@ -175,6 +175,7 @@ Request example (애플 재로그인 (refresh token 보관 중이면 교환 생�
 | --- | --- | --- | --- |
 | 400 | COMMON-001 | 잘못된 입력입니다. | provider 별 필수 필드 누락, 카카오 요청에 name 포함, 애플 name 공백 |
 | 400 | AUTH-006 | 가입에 필요한 이름이 전달되지 않았습니다. | 애플 신규 가입인데 name 미전달. 최초 인가에서 받은 이름을 함께 보내야 합니다. |
+| 400 | AUTH-007 | 가입에 필요한 이메일을 확인할 수 없습니다. 다시 로그인해 주세요. | 애플 신규 가입인데 identity token과 code 교환 id_token 어디에도 email이 없습니다. 애플 설정에서 앱 연동을 해제한 뒤 다시 로그인해야 합니다. |
 | 401 | AUTH-001 | 소셜 로그인 검증에 실패했습니다. | provider 토큰 검증 실패 (만료, 위조, aud/app_id 불일치, nonce 불일치) |
 | 401 | AUTH-003 | 스웨거 예시 없음 | 애플 authorization code 교환 실패 (만료 또는 재사용, 최초 로그인만 치명) |
 | 403 | AUTH-004 | 이메일 제공에 동의해야 가입할 수 있습니다. | 카카오 이메일 동의 필요. 클라이언트는 account_email 추가 동의 후 재시도합니다. |
@@ -264,8 +265,22 @@ Request example (애플 재로그인 (refresh token 보관 중이면 교환 생�
 }
 ```
 
+400 AUTH-007 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "AUTH-007",
+    "message": "가입에 필요한 이메일을 확인할 수 없습니다. 다시 로그인해 주세요.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
 #### Notes
-- 카카오 또는 애플 계정으로 로그인합니다. 처음 보는 계정이면 가입과 기본 보드 생성까지 한 번에 처리됩니다.  **카카오** - 클라이언트가 카카오 SDK로 받은 `accessToken`을 보내면, 서버가 먼저   `/v1/user/access_token_info`로 토큰의 `app_id`가 우리 앱인지 확인합니다   (다른 서비스에서 수집한 토큰으로 로그인하는 토큰 치환 공격 차단, 불일치 시 AUTH-001).   이후 `/v2/user/me`로 회원번호를 조회해 `providerUserId`로 사용합니다. - 이메일은 필수입니다. 동의하지 않았으면 403 `AUTH-004`로 거부되며,   클라이언트는 추가 동의(`account_email` 스코프)를 요청한 뒤 다시 로그인합니다. - 닉네임도 필수입니다. 서버가 `/v2/user/me`의 `kakao_account.profile.nickname`을 이름으로 저장하며,   동의하지 않았으면 403 `AUTH-005`로 거부됩니다. 카카오 요청에 `name`을 보내면 400입니다.  **애플** - `identityToken`(JWT)을 애플 JWKS로 검증합니다 (iss / aud / exp / nonce).   `nonce` 클레임은 함께 보낸 `rawNonce`의 SHA-256 해시와 대조합니다. - 토큰의 `sub`를 `providerUserId`로 사용합니다. - `authorizationCode`는 5분 안에 refresh token으로 교환해 탈퇴(revoke)용으로   보관합니다. 앱스토어 심사 필수 사항이며, 재로그인 시에는 교환이 실패해도   로그인은 통과됩니다. - 이름은 애플이 최초 인가 1회에만 클라이언트에 내려주므로, 최초 로그인 시 `fullName`을 조합해   `name`으로 함께 보내야 합니다. 신규 가입인데 `name`이 없으면 400 `AUTH-006`으로 거부되고,   기존 사용자의 재로그인은 `name` 없이 통과하며 저장된 이름을 유지합니다.  응답의 `pendingTerms`가 비어 있지 않으면 약관 동의 화면으로 이동합니다.
+- 카카오 또는 애플 계정으로 로그인합니다. 처음 보는 계정이면 가입과 기본 보드 생성까지 한 번에 처리됩니다.  **카카오** - 클라이언트가 카카오 SDK로 받은 `accessToken`을 보내면, 서버가 먼저   `/v1/user/access_token_info`로 토큰의 `app_id`가 우리 앱인지 확인합니다   (다른 서비스에서 수집한 토큰으로 로그인하는 토큰 치환 공격 차단, 불일치 시 AUTH-001).   이후 `/v2/user/me`로 회원번호를 조회해 `providerUserId`로 사용합니다. - 이메일은 필수입니다. 동의하지 않았으면 403 `AUTH-004`로 거부되며,   클라이언트는 추가 동의(`account_email` 스코프)를 요청한 뒤 다시 로그인합니다. - 닉네임도 필수입니다. 서버가 `/v2/user/me`의 `kakao_account.profile.nickname`을 이름으로 저장하며,   동의하지 않았으면 403 `AUTH-005`로 거부됩니다. 카카오 요청에 `name`을 보내면 400입니다.  **애플** - `identityToken`(JWT)을 애플 JWKS로 검증합니다 (iss / aud / exp / nonce).   `nonce` 클레임은 함께 보낸 `rawNonce`의 SHA-256 해시와 대조합니다. - 토큰의 `sub`를 `providerUserId`로 사용합니다. - `authorizationCode`는 5분 안에 refresh token으로 교환해 탈퇴(revoke)용으로   보관합니다. 앱스토어 심사 필수 사항이며, 재로그인 시에는 교환이 실패해도   로그인은 통과됩니다. - 이름은 애플이 최초 인가 1회에만 클라이언트에 내려주므로, 최초 로그인 시 `fullName`을 조합해   `name`으로 함께 보내야 합니다. 신규 가입인데 `name`이 없으면 400 `AUTH-006`으로 거부되고,   기존 사용자의 재로그인은 `name` 없이 통과하며 저장된 이름을 유지합니다. - 이메일도 애플이 최초 인가 1회에만 `identityToken`에 담아주므로, 재로그인 토큰에는 `email` 클레임이 없습니다.   서버는 `email`이 없으면 `authorizationCode` 교환 응답의 `id_token`에서 확보하고(`sub` 일치 확인),   그래도 없으면 기존 사용자는 저장된 이메일을 유지한 채 로그인시키며 신규 가입만 400 `AUTH-007`로 거부합니다.  응답의 `pendingTerms`가 비어 있지 않으면 약관 동의 화면으로 이동합니다.
 
 ### POST /auth/refresh
 
@@ -488,6 +503,8 @@ Request example:
 
 #### Notes
 - 애플 계정은 보관 중인 refresh token으로 revoke를 호출합니다 (앱스토어 심사 필수). email과 provider refresh token은 즉시 파기(익명화)하고, 나머지 데이터는 soft delete 후 유예기간이 지나면 GCS 사진 원본까지 배치로 하드 삭제합니다. 같은 계정으로 다시 로그인하면 신규 가입이 됩니다.
+- 애플이 revoke를 4xx로 거절하면(이미 해지된 토큰) 목표 상태가 이미 달성된 것으로 보고 탈퇴를 계속합니다. 5xx나 네트워크 오류는 그대로 실패시켜 연동이 남은 채 탈퇴되는 것을 막습니다.
+- revoke가 성공하면 애플 연동이 끊겨 다음 로그인이 최초 인가로 처리되므로 재가입 시 `name`과 `email`이 다시 내려옵니다. 보관된 refresh token이 없어 revoke를 건너뛴 계정은 연동이 남아 재가입 토큰에 `name`이 없으므로, 클라이언트는 400 `AUTH-006`을 받으면 이름 입력 화면으로 유도해 `name`과 함께 재요청해야 합니다.
 - 탈퇴 즉시 서비스 refresh token 세션이 폐기되므로 `POST /auth/refresh`는 `AUTH-002`로 실패하고, 남아 있는 accessToken으로 `GET /users/me`를 호출하면 `USER-001`을 반환합니다.
 - 유예기간이 지난 뒤 정리 배치가 보드, 드로잉, 스티커, 리캡, 분석, 사진, 약관 동의 이력을 하드 삭제하고 GCS 사진 원본과 스티커 생성 이미지를 함께 파기합니다. 유예기간 일수와 배치 활성화 여부는 서버 설정(`user.withdrawn-cleanup.*`)으로 관리하며 배치는 기본 비활성입니다. 이 배치는 클라이언트가 호출하는 API가 아니며 본 문서의 엔드포인트를 추가하지 않습니다.
 

@@ -8,6 +8,7 @@ import com.github.nexters.ppotto.user.domain.EncryptedProviderRefreshToken
 import com.github.nexters.ppotto.user.domain.OAuthProvider
 import com.github.nexters.ppotto.user.domain.User
 import org.jooq.DSLContext
+import org.jooq.impl.DSL.value
 import org.springframework.stereotype.Repository
 import java.time.Instant
 
@@ -65,12 +66,12 @@ class UserRepository(
 
     fun updateSocialProfile(
         id: UserId,
-        email: String,
+        email: String?,
         providerRefreshToken: EncryptedProviderRefreshToken?,
     ): User? =
         dslContext
             .update(USERS)
-            .set(USERS.EMAIL, email)
+            .set(USERS.EMAIL, email?.let { value(it, USERS.EMAIL) } ?: USERS.EMAIL)
             .apply {
                 providerRefreshToken?.let {
                     set(USERS.PROVIDER_REFRESH_TOKEN, it.value)

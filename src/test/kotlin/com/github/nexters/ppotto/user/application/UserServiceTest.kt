@@ -9,9 +9,11 @@ import com.github.nexters.ppotto.user.support.FakeSocialAccountRevoker
 import com.github.nexters.ppotto.user.support.FakeUserSessionRevoker
 import com.github.nexters.ppotto.user.support.Revocation
 import com.github.nexters.ppotto.user.support.UserTestConfig
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
 import java.time.Instant
@@ -65,6 +67,47 @@ class UserServiceTest(
                     second.user.id shouldBe first.user.id
                     second.user.email shouldBe "changed@example.com"
                     second.user.name shouldBe "애플사용자"
+                }
+            }
+
+            When("같은 소셜 계정으로 이름과 이메일 없이 다시 로그인하면") {
+                val first = userService.findOrCreate(firstCommand)!!
+                val second =
+                    userService.findOrCreate(
+                        firstCommand.copy(
+                            email = null,
+                            name = null,
+                            providerRefreshToken = "relogin-refresh-token",
+                        ),
+                    )!!
+
+                Then("저장된 이메일과 이름을 유지한 채 로그인한다") {
+                    second.isNewUser shouldBe false
+                    second.user.id shouldBe first.user.id
+                    second.user.email shouldBe first.user.email
+                    second.user.name shouldBe "애플사용자"
+                }
+            }
+        }
+
+        Given("가입한 적 없는 소셜 계정이 이메일 없이 로그인할 때") {
+            val command =
+                SocialUserCommand(
+                    provider = OAuthProvider.APPLE,
+                    providerUserId = "emailless-${UUID.randomUUID()}",
+                    email = null,
+                    name = "이메일없는사용자",
+                    providerRefreshToken = null,
+                )
+
+            When("사용자를 조회하거나 생성하면") {
+                val result = userService.findOrCreate(command)
+
+                Then("사용자를 생성하지 않고 null을 반환한다") {
+                    result.shouldBeNull()
+                    userRepository
+                        .findBySocialAccount(OAuthProvider.APPLE, command.providerUserId)
+                        .shouldBeNull()
                 }
             }
         }
@@ -147,6 +190,70 @@ class UserServiceTest(
                     revoker.revocations shouldContainExactly listOf(Revocation(OAuthProvider.APPLE, "revoke-me"))
                     sessionRevoker.revokedUserIds shouldContainExactly listOf(result.user.id)
                     userRepository.findById(result.user.id).shouldBeNull()
+                }
+            }
+        }
+
+        Given("제공자 refresh token이 없는 사용자가 있을 때") {
+            revoker.clear()
+            sessionRevoker.clear()
+            val providerUserId = "tokenless-${UUID.randomUUID()}"
+            val result =
+                userService.findOrCreate(
+                    SocialUserCommand(
+                        provider = OAuthProvider.APPLE,
+                        providerUserId = providerUserId,
+                        email = "tokenless@example.com",
+                        name = "토큰없는사용자",
+                        providerRefreshToken = null,
+                    ),
+                )!!
+
+            When("회원 탈퇴를 처리하면") {
+                userService.withdraw(result.user.id, Instant.parse("2026-07-30T00:00:00Z"))
+
+                Then("제공자 계정 해지를 건너뛰고 탈퇴를 완료한다") {
+                    revoker.revocations.shouldBeEmpty()
+                    userRepository.findById(result.user.id).shouldBeNull()
+                }
+            }
+
+            When("탈퇴한 애플 계정이 이름과 함께 다시 가입하면") {
+                userService.withdraw(result.user.id, Instant.parse("2026-07-30T00:00:00Z"))
+                val rejoined =
+                    userService.findOrCreate(
+                        SocialUserCommand(
+                            provider = OAuthProvider.APPLE,
+                            providerUserId = providerUserId,
+                            email = "rejoin@example.com",
+                            name = "재가입사용자",
+                            providerRefreshToken = "rejoin-refresh-token",
+                        ),
+                    )!!
+
+                Then("탈퇴한 계정과 별개인 새 사용자로 가입한다") {
+                    rejoined.isNewUser shouldBe true
+                    rejoined.user.id shouldNotBe result.user.id
+                    rejoined.user.name shouldBe "재가입사용자"
+                    rejoined.user.email shouldBe "rejoin@example.com"
+                }
+            }
+
+            When("탈퇴한 애플 계정이 이름 없이 다시 가입하면") {
+                userService.withdraw(result.user.id, Instant.parse("2026-07-30T00:00:00Z"))
+                val rejoined =
+                    userService.findOrCreate(
+                        SocialUserCommand(
+                            provider = OAuthProvider.APPLE,
+                            providerUserId = providerUserId,
+                            email = "rejoin@example.com",
+                            name = null,
+                            providerRefreshToken = "rejoin-refresh-token",
+                        ),
+                    )
+
+                Then("탈퇴한 계정을 되살리지 않고 null을 반환한다") {
+                    rejoined.shouldBeNull()
                 }
             }
         }

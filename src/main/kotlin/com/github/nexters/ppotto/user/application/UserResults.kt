@@ -6,14 +6,14 @@ import com.github.nexters.ppotto.user.domain.User
 data class SocialUserCommand(
     val provider: OAuthProvider,
     val providerUserId: String,
-    val email: String,
+    val email: String?,
     val name: String?,
     val providerRefreshToken: String?,
 ) {
     init {
         listOf(
             providerUserId.isNotBlank(),
-            email.isNotBlank(),
+            email == null || email.isNotBlank(),
             name == null || name.isNotBlank(),
             providerRefreshToken == null || providerRefreshToken.isNotBlank(),
         ).all { it }

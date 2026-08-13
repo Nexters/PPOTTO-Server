@@ -33,6 +33,8 @@ internal interface AppleOAuthApi {
 internal data class AppleTokenResponse(
     @JsonProperty("refresh_token")
     val refreshToken: String?,
+    @JsonProperty("id_token")
+    val idToken: String? = null,
 )
 
 internal data class AppleJwksResponse(

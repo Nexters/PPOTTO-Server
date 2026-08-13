@@ -157,6 +157,13 @@ private val SIGNUP_NAME_REQUIRED =
         message = "가입에 필요한 이름이 전달되지 않았습니다.",
     )
 
+private val SIGNUP_EMAIL_REQUIRED =
+    ApiExamples.errorExample(
+        code = "AUTH-007",
+        summary = "애플 신규 가입인데 이메일 확보 실패. 애플 설정에서 앱 연동 해제 후 재로그인 필요",
+        message = "가입에 필요한 이메일을 확인할 수 없습니다. 다시 로그인해 주세요.",
+    )
+
 private val INVALID_REFRESH_TOKEN =
     ApiExamples.errorExample(
         code = "AUTH-002",
@@ -174,7 +181,7 @@ class AuthApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(NEW_USER_LOGIN_RESPONSE, RETURNING_USER_LOGIN_RESPONSE),
-                            "400" to ApiExamples.INVALID_INPUT_RESPONSE + SIGNUP_NAME_REQUIRED,
+                            "400" to ApiExamples.INVALID_INPUT_RESPONSE + SIGNUP_NAME_REQUIRED + SIGNUP_EMAIL_REQUIRED,
                             "401" to listOf(SOCIAL_AUTHENTICATION_FAILED, APPLE_CODE_EXCHANGE_FAILED),
                             "403" to listOf(KAKAO_EMAIL_CONSENT_REQUIRED, KAKAO_NICKNAME_CONSENT_REQUIRED),
                         ),
