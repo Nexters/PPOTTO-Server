@@ -109,6 +109,52 @@ class AuthServiceTest :
             }
         }
 
+        Given("가입에 필요한 이메일 없이 신규 가입을 시도했을 때") {
+            val oauthClient = FakeOAuthClient(email = null)
+            val userPort = AuthUserPort { null }
+            val service =
+                AuthService(
+                    oauthClients = listOf(oauthClient),
+                    signupTransaction = noTransaction,
+                    tokenProvider = tokenProvider,
+                    refreshTokenStore = refreshStore,
+                    authUserPort = userPort,
+                    authTermsPort = termsPort,
+                    authActiveUserPort = activeUserPort,
+                )
+
+            When("로그인하면") {
+                Then("AUTH-007 예외가 발생한다") {
+                    val exception =
+                        shouldThrow<InvalidInputException> {
+                            service.login(LoginCommand.Kakao("apple-command-placeholder"))
+                        }
+                    exception.errorCode shouldBe AuthErrorCode.SIGNUP_EMAIL_REQUIRED
+                }
+            }
+        }
+
+        Given("이메일 없이 기존 사용자가 다시 로그인했을 때") {
+            val oauthClient = FakeOAuthClient(email = null)
+            val userPort = AuthUserPort { AuthUser(userId, false) }
+            val service =
+                AuthService(
+                    oauthClients = listOf(oauthClient),
+                    signupTransaction = noTransaction,
+                    tokenProvider = tokenProvider,
+                    refreshTokenStore = refreshStore,
+                    authUserPort = userPort,
+                    authTermsPort = termsPort,
+                    authActiveUserPort = activeUserPort,
+                )
+
+            When("로그인하면") {
+                Then("기존 사용자로 로그인에 성공한다") {
+                    service.login(LoginCommand.Kakao("apple-command-placeholder")).isNewUser shouldBe false
+                }
+            }
+        }
+
         Given("애플 기존 사용자의 authorization code 교환이 실패했을 때") {
             val oauthClient = FakeOAuthClient(exchangeFailed = true)
             val userPort = AuthUserPort { AuthUser(userId, false) }
@@ -187,6 +233,7 @@ class AuthServiceTest :
     }) {
     private class FakeOAuthClient(
         private val exchangeFailed: Boolean = false,
+        private val email: String? = "user@example.com",
     ) : OAuthClient {
         override val provider = OAuthProvider.KAKAO
 
@@ -194,7 +241,7 @@ class AuthServiceTest :
             SocialProfile(
                 provider,
                 "provider-user-id",
-                "user@example.com",
+                email,
                 "테스트사용자",
                 authorizationCodeExchangeFailed = exchangeFailed,
             )

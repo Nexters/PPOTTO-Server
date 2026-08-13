@@ -60,11 +60,16 @@ class AuthService(
 
     private fun signUp(profile: SocialProfile): AuthSignup =
         signupTransaction.execute {
-            (authUserPort.findOrCreate(profile) ?: throw InvalidInputException(AuthErrorCode.SIGNUP_NAME_REQUIRED))
+            (authUserPort.findOrCreate(profile) ?: throw signupRequirementFailure(profile))
                 .takeUnless { profile.authorizationCodeExchangeFailed && it.isNewUser }
                 ?.let { AuthSignup(it, authTermsPort.findPendingTerms(it.userId)) }
                 ?: throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
         }
+
+    private fun signupRequirementFailure(profile: SocialProfile): InvalidInputException =
+        profile.email
+            ?.let { InvalidInputException(AuthErrorCode.SIGNUP_NAME_REQUIRED) }
+            ?: InvalidInputException(AuthErrorCode.SIGNUP_EMAIL_REQUIRED)
 
     companion object {
         const val SIGNUP_TRANSACTION = "signupTransaction"

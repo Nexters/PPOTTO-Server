@@ -27,26 +27,32 @@ class UserService(
         command.providerRefreshToken
             ?.let(tokenCipher::encrypt)
             .let { encryptedToken ->
-                command.name
-                    ?.let { name ->
-                        create(command, name, encryptedToken)
+                command
+                    .signupIdentity()
+                    ?.let { identity ->
+                        create(command, identity, encryptedToken)
                             ?: refresh(command, encryptedToken)
                             ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
                     }
                     ?: refresh(command, encryptedToken)
             }
 
+    private fun SocialUserCommand.signupIdentity(): SignupIdentity? =
+        email?.let { signupEmail ->
+            name?.let { signupName -> SignupIdentity(signupEmail, signupName) }
+        }
+
     private fun create(
         command: SocialUserCommand,
-        name: String,
+        identity: SignupIdentity,
         encryptedToken: EncryptedProviderRefreshToken?,
     ): UserRegistrationResult? =
         socialUserRepository
             .saveIfAbsent(
                 provider = command.provider,
                 providerUserId = command.providerUserId,
-                email = command.email,
-                name = name,
+                email = identity.email,
+                name = identity.name,
                 providerRefreshToken = encryptedToken,
             )?.let { UserRegistrationResult(it, true) }
 
@@ -83,4 +89,9 @@ class UserService(
             }.let { userRepository.withdraw(it.withdraw(withdrawnAt)) }
             ?.let { userSessionRevoker.revoke(id) }
             ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
+
+    private data class SignupIdentity(
+        val email: String,
+        val name: String,
+    )
 }

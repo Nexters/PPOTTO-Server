@@ -6,7 +6,7 @@ import com.github.nexters.ppotto.global.identifier.UserId
 data class SocialProfile(
     val provider: OAuthProvider,
     val providerUserId: String,
-    val email: String,
+    val email: String?,
     val name: String?,
     val providerRefreshToken: String? = null,
     val authorizationCodeExchangeFailed: Boolean = false,

@@ -12,6 +12,7 @@ import com.nimbusds.jwt.SignedJWT
 import com.sun.net.httpserver.HttpServer
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.support.RestClientAdapter
@@ -53,12 +54,13 @@ class AppleOAuthClientTest :
             )
         val jwks = """{"keys":[{"kty":"RSA","kid":"$keyId","alg":"RS256","n":"$modulus","e":"$exponent"}]}"""
         val revokeBody = AtomicReference("")
+        val tokenResponse = AtomicReference("""{"refresh_token":"apple-refresh-token"}""")
         val server = HttpServer.create(InetSocketAddress(0), 0)
         server.createContext("/keys") { exchange ->
             exchange.respond(200, jwks)
         }
         server.createContext("/token") { exchange ->
-            exchange.respond(200, """{"refresh_token":"apple-refresh-token"}""")
+            exchange.respond(200, tokenResponse.get())
         }
         server.createContext("/revoke") { exchange ->
             revokeBody.set(
@@ -84,30 +86,21 @@ class AppleOAuthClientTest :
                 clientSecretExpirationDays = 180,
                 jwksCacheSeconds = 3600,
             )
+        val appleOAuthApi =
+            HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(RestClient.builder().build()))
+                .build()
+                .createClient(AppleOAuthApi::class.java)
         val client =
             AppleOAuthClient(
-                HttpServiceProxyFactory
-                    .builderFor(RestClientAdapter.create(RestClient.builder().build()))
-                    .build()
-                    .createClient(AppleOAuthApi::class.java),
+                appleOAuthApi,
                 properties,
                 AppleClientSecretGenerator(properties),
+                AppleJwkProvider(appleOAuthApi, properties),
             )
 
-        fun identityToken(rawNonce: String): String {
-            val now = Instant.now()
-            val claims =
-                JWTClaimsSet
-                    .Builder()
-                    .issuer(properties.issuer)
-                    .audience(properties.clientId)
-                    .subject("apple-user-id")
-                    .claim("email", "relay@privaterelay.appleid.com")
-                    .claim("nonce", sha256(rawNonce))
-                    .issueTime(Date.from(now))
-                    .expirationTime(Date.from(now.plusSeconds(300)))
-                    .build()
-            return SignedJWT(
+        fun sign(claims: JWTClaimsSet): String =
+            SignedJWT(
                 JWSHeader
                     .Builder(JWSAlgorithm.RS256)
                     .keyID(keyId)
@@ -115,7 +108,44 @@ class AppleOAuthClientTest :
                 claims,
             ).apply { sign(RSASSASigner(privateKey)) }
                 .serialize()
+
+        fun identityToken(
+            rawNonce: String,
+            email: String? = "relay@privaterelay.appleid.com",
+        ): String {
+            val now = Instant.now()
+            return JWTClaimsSet
+                .Builder()
+                .issuer(properties.issuer)
+                .audience(properties.clientId)
+                .subject("apple-user-id")
+                .claim("nonce", sha256(rawNonce))
+                .issueTime(Date.from(now))
+                .expirationTime(Date.from(now.plusSeconds(300)))
+                .apply { email?.let { claim("email", it) } }
+                .build()
+                .let(::sign)
         }
+
+        fun exchangeTokenResponse(
+            subject: String = "apple-user-id",
+            email: String? = null,
+        ): String =
+            email
+                ?.let {
+                    JWTClaimsSet
+                        .Builder()
+                        .issuer(properties.issuer)
+                        .audience(properties.clientId)
+                        .subject(subject)
+                        .claim("email", it)
+                        .build()
+                        .let(::sign)
+                }.let { idToken ->
+                    idToken
+                        ?.let { """{"refresh_token":"apple-refresh-token","id_token":"$it"}""" }
+                        ?: """{"refresh_token":"apple-refresh-token"}"""
+                }
 
         afterSpec {
             server.stop(0)
@@ -144,6 +174,52 @@ class AppleOAuthClientTest :
                     client.revoke("apple-refresh-token")
 
                     revokeBody.get().contains("token=apple-refresh-token") shouldBe true
+                }
+            }
+        }
+
+        Given("재로그인이라 identity token에 email이 없을 때") {
+            val rawNonce = "relogin-nonce"
+
+            When("code 교환 응답의 id_token이 이메일을 담고 있으면") {
+                Then("교환 id_token에서 이메일을 확보한다") {
+                    tokenResponse.set(exchangeTokenResponse(email = "relay@privaterelay.appleid.com"))
+
+                    val profile =
+                        client.authenticate(
+                            LoginCommand.Apple(identityToken(rawNonce, null), "authorization-code", rawNonce, null),
+                        )
+
+                    profile.providerUserId shouldBe "apple-user-id"
+                    profile.email shouldBe "relay@privaterelay.appleid.com"
+                }
+            }
+
+            When("code 교환 응답에도 이메일이 없으면") {
+                Then("이메일 없이 프로필을 반환한다") {
+                    tokenResponse.set(exchangeTokenResponse())
+
+                    val profile =
+                        client.authenticate(
+                            LoginCommand.Apple(identityToken(rawNonce, null), "authorization-code", rawNonce, null),
+                        )
+
+                    profile.providerUserId shouldBe "apple-user-id"
+                    profile.email.shouldBeNull()
+                    profile.authorizationCodeExchangeFailed shouldBe false
+                }
+            }
+
+            When("code 교환 id_token의 sub가 identity token과 다르면") {
+                Then("해당 이메일을 사용하지 않는다") {
+                    tokenResponse.set(exchangeTokenResponse("other-apple-user", "attacker@example.com"))
+
+                    val profile =
+                        client.authenticate(
+                            LoginCommand.Apple(identityToken(rawNonce, null), "authorization-code", rawNonce, null),
+                        )
+
+                    profile.email.shouldBeNull()
                 }
             }
         }

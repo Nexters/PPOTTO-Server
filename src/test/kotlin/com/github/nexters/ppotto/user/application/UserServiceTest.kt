@@ -67,6 +67,47 @@ class UserServiceTest(
                     second.user.name shouldBe "애플사용자"
                 }
             }
+
+            When("같은 소셜 계정으로 이름과 이메일 없이 다시 로그인하면") {
+                val first = userService.findOrCreate(firstCommand)!!
+                val second =
+                    userService.findOrCreate(
+                        firstCommand.copy(
+                            email = null,
+                            name = null,
+                            providerRefreshToken = "relogin-refresh-token",
+                        ),
+                    )!!
+
+                Then("저장된 이메일과 이름을 유지한 채 로그인한다") {
+                    second.isNewUser shouldBe false
+                    second.user.id shouldBe first.user.id
+                    second.user.email shouldBe first.user.email
+                    second.user.name shouldBe "애플사용자"
+                }
+            }
+        }
+
+        Given("가입한 적 없는 소셜 계정이 이메일 없이 로그인할 때") {
+            val command =
+                SocialUserCommand(
+                    provider = OAuthProvider.APPLE,
+                    providerUserId = "emailless-${UUID.randomUUID()}",
+                    email = null,
+                    name = "이메일없는사용자",
+                    providerRefreshToken = null,
+                )
+
+            When("사용자를 조회하거나 생성하면") {
+                val result = userService.findOrCreate(command)
+
+                Then("사용자를 생성하지 않고 null을 반환한다") {
+                    result.shouldBeNull()
+                    userRepository
+                        .findBySocialAccount(OAuthProvider.APPLE, command.providerUserId)
+                        .shouldBeNull()
+                }
+            }
         }
 
         Given("가입한 적 없는 소셜 계정이 이름 없이 로그인할 때") {
