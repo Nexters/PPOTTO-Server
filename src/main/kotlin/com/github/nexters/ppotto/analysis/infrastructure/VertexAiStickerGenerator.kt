@@ -21,6 +21,7 @@ class VertexAiStickerGenerator(
     private val genAiClient: Client,
     private val vertexAiProperties: VertexAiProperties,
     private val pixianBackgroundRemover: PixianBackgroundRemover,
+    private val stickerImageCropper: StickerImageCropper,
 ) : StickerGenerator {
     override fun generate(
         sourceGcsUri: String,
@@ -80,7 +81,8 @@ class VertexAiStickerGenerator(
         }
 
         val rawBytes = inlineData.data().orElseThrow { BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE) }
-        return pixianBackgroundRemover.removeBackground(rawBytes)
+        val removedBackgroundBytes = pixianBackgroundRemover.removeBackground(rawBytes)
+        return stickerImageCropper.cropTransparentPadding(removedBackgroundBytes)
     }
 
     companion object {
