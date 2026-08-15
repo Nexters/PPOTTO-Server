@@ -3,6 +3,8 @@ package com.github.nexters.ppotto.analysis.application
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 
 class SimulatedProgressTickerTest :
     BehaviorSpec({
@@ -34,6 +36,43 @@ class SimulatedProgressTickerTest :
                     val countAfterCompletion = observed.size
                     Thread.sleep(50)
                     observed.size shouldBe countAfterCompletion
+                }
+            }
+        }
+
+        Given("block() 종료 시점이 onProgress 콜백 실행 도중과 겹칠 때") {
+            // 예전 구현(Thread.interrupt() 기반)은 이 타이밍에서 onProgress(DB 호출 등 blocking I/O를
+            // 포함할 수 있는 콜백) 도중에 인터럽트가 도착해 콜백이 중간에 끊길 수 있었다. 지금 구현은
+            // CountDownLatch로 tick 사이(sleep 구간)에서만 정지 신호를 확인하므로, 이미 시작된 onProgress
+            // 호출은 절대 중단되지 않고 끝까지 실행되어야 한다.
+            val ticker =
+                SimulatedProgressTicker(
+                    minIntervalMs = 5L,
+                    maxIntervalMs = 10L,
+                    minStep = 1,
+                    maxStep = 1,
+                    fillRatio = 1.0,
+                )
+            val onProgressStarted = CountDownLatch(1)
+            val onProgressCompleted = AtomicBoolean(false)
+
+            When("onProgress 콜백이 느리게 끝나는 동안 block()이 먼저 종료되면") {
+                ticker.run(
+                    floor = 0,
+                    ceiling = 100,
+                    onProgress = {
+                        onProgressStarted.countDown()
+                        Thread.sleep(100)
+                        onProgressCompleted.set(true)
+                    },
+                ) {
+                    // 첫 tick이 onProgress를 호출할 때까지 기다린 뒤, 그 콜백이 끝나기 전에 block()을 반환한다.
+                    onProgressStarted.await()
+                    Thread.sleep(10)
+                }
+
+                Then("run()이 반환될 때 진행 중이던 onProgress 호출은 중단되지 않고 끝까지 실행되어 있다") {
+                    onProgressCompleted.get().shouldBeTrue()
                 }
             }
         }
