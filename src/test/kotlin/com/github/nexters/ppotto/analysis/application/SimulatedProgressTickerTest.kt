@@ -24,7 +24,10 @@ class SimulatedProgressTickerTest :
 
                 Then("전달된 값은 floor 이상, ceiling 이하이며 단조 증가한다") {
                     observed.all { it in 0..10 }.shouldBeTrue()
-                    observed.zipWithNext { a, b -> a <= b }.all { it }.shouldBeTrue()
+                    observed
+                        .zipWithNext { a, b -> a <= b }
+                        .all { it }
+                        .shouldBeTrue()
                 }
 
                 Then("블록 종료 후에는 더 이상 값이 전달되지 않는다") {
