@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
@@ -92,21 +93,19 @@ class AnalysisRepository(
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.UPLOADING.name))
             .execute()
 
-    // 병렬 파이프라인 워커/진행률 티커 등 Spring 트랜잭션 컨텍스트가 없는 스레드에서도 호출되므로,
-    // 호출 스레드와 무관하게 매번 독립적인 트랜잭션을 열고 커밋하도록 명시적으로 @Transactional을 붙인다.
-    // 이게 없으면 새 스레드에서 실행된 UPDATE가 커밋되지 않고 idle in transaction 상태로 남아
-    // 해당 행의 락을 영구히 들고 있는 채로 멈추는 문제가 있었다.
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun updateProgress(
         id: UUID,
         progress: Int,
-    ): Int =
-        dslContext
+    ): Int {
+        dslContext.execute("SET LOCAL lock_timeout = '$PROGRESS_LOCK_TIMEOUT'")
+        return dslContext
             .update(ANALYSIS)
             .set(ANALYSIS.PROGRESS, progress.coerceIn(MIN_PROGRESS, MAX_IN_PROGRESS))
             .where(ANALYSIS.ID.eq(AnalysisId(id)))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
             .execute()
+    }
 
     fun markCompleted(
         id: UUID,
@@ -151,6 +150,7 @@ class AnalysisRepository(
         const val ANALYZING_STARTED_PROGRESS = 10
         const val COMPLETED_PROGRESS = 100
         const val FAILED_REASON_CANCELED = "CANCELED"
+        const val PROGRESS_LOCK_TIMEOUT = "500ms"
         private const val MIN_PROGRESS = 0
         private const val MAX_IN_PROGRESS = 99
     }
