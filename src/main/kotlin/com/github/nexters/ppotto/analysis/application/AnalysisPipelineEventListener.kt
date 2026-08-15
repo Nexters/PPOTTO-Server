@@ -35,7 +35,7 @@ class AnalysisPipelineEventListener(
             val pipelineResult =
                 measuredStep(event.analysisId, "pipeline-run") {
                     analysisPipelineService.run(event.analysisId, event.photos) { progress ->
-                        analysisRepository.updateProgress(event.analysisId, progress)
+                        updateProgressBestEffort(event.analysisId, progress)
                     }
                 }
 
@@ -113,6 +113,22 @@ class AnalysisPipelineEventListener(
                 if (it is AnalysisPipelineStepException) throw it
                 throw AnalysisPipelineStepException(step, it)
             }
+    }
+
+    private fun updateProgressBestEffort(
+        analysisId: UUID,
+        progress: Int,
+    ) {
+        runCatching {
+            analysisRepository.updateProgress(analysisId, progress)
+        }.onFailure {
+            log.warn(
+                "analysis progress update skipped: analysisId={}, progress={}, error={}",
+                analysisId,
+                progress,
+                it.message ?: it::class.simpleName,
+            )
+        }
     }
 
     private fun AnalysisPipelineResult.toStickerResults(analysisId: UUID): List<AnalysisStickerResult> =

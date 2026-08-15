@@ -12,14 +12,20 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class AnalysisRepositoryTest(
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
     dslContext: DSLContext,
+    transactionTemplate: TransactionTemplate,
 ) : IntegrationTest({
         Given("Board가 등록된 상태에서 Analysis를 저장하면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
@@ -74,6 +80,49 @@ class AnalysisRepositoryTest(
 
                 Then("완료 전 최대 진행률 99로 보정된다") {
                     analysisRepository.findById(saved.id)?.progress shouldBe 99
+                }
+            }
+        }
+
+        Given("ANALYZING 상태의 Analysis 행이 다른 트랜잭션에서 잠겨 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val saved = analysisRepository.save(board.userId.value, board.id.value)
+            analysisRepository.markAnalyzing(saved.id, Instant.now().truncatedTo(ChronoUnit.MICROS))
+
+            When("중간 진행률 갱신을 시도하면") {
+                val executor = Executors.newSingleThreadExecutor()
+                val lockAcquired = CountDownLatch(1)
+                val releaseLock = CountDownLatch(1)
+                val lockFuture =
+                    executor.submit(
+                        Callable {
+                            transactionTemplate.executeWithoutResult {
+                                dslContext
+                                    .selectFrom(ANALYSIS)
+                                    .where(ANALYSIS.ID.eq(AnalysisId(saved.id)))
+                                    .forUpdate()
+                                    .fetchOne()
+                                lockAcquired.countDown()
+                                check(releaseLock.await(10, TimeUnit.SECONDS))
+                            }
+                        },
+                    )
+
+                check(lockAcquired.await(10, TimeUnit.SECONDS))
+                val startedAt = System.nanoTime()
+                val result =
+                    runCatching {
+                        analysisRepository.updateProgress(saved.id, 45)
+                    }
+                val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000
+                releaseLock.countDown()
+                lockFuture.get(10, TimeUnit.SECONDS)
+                executor.shutdownNow()
+
+                Then("짧은 lock timeout 뒤 실패하고 진행률을 바꾸지 않는다") {
+                    result.isFailure shouldBe true
+                    (elapsedMs < 3_000) shouldBe true
+                    analysisRepository.findById(saved.id)?.progress shouldBe 10
                 }
             }
         }

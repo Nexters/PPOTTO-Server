@@ -3,6 +3,8 @@ package com.github.nexters.ppotto.analysis.application
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.shouldBe
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicBoolean
 
 class SimulatedProgressTickerTest :
     BehaviorSpec({
@@ -34,6 +36,38 @@ class SimulatedProgressTickerTest :
                     val countAfterCompletion = observed.size
                     Thread.sleep(50)
                     observed.size shouldBe countAfterCompletion
+                }
+            }
+        }
+
+        Given("block() 종료 시점이 onProgress 콜백 실행 도중과 겹칠 때") {
+            val ticker =
+                SimulatedProgressTicker(
+                    minIntervalMs = 5L,
+                    maxIntervalMs = 10L,
+                    minStep = 1,
+                    maxStep = 1,
+                    fillRatio = 1.0,
+                )
+            val onProgressStarted = CountDownLatch(1)
+            val onProgressCompleted = AtomicBoolean(false)
+
+            When("onProgress 콜백이 느리게 끝나는 동안 block()이 먼저 종료되면") {
+                ticker.run(
+                    floor = 0,
+                    ceiling = 100,
+                    onProgress = {
+                        onProgressStarted.countDown()
+                        Thread.sleep(100)
+                        onProgressCompleted.set(true)
+                    },
+                ) {
+                    onProgressStarted.await()
+                    Thread.sleep(10)
+                }
+
+                Then("run()이 반환될 때 진행 중이던 onProgress 호출은 중단되지 않고 끝까지 실행되어 있다") {
+                    onProgressCompleted.get().shouldBeTrue()
                 }
             }
         }

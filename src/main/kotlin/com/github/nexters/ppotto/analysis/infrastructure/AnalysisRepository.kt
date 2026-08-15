@@ -9,6 +9,8 @@ import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import java.util.UUID
 
@@ -91,16 +93,19 @@ class AnalysisRepository(
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.UPLOADING.name))
             .execute()
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun updateProgress(
         id: UUID,
         progress: Int,
-    ): Int =
-        dslContext
+    ): Int {
+        dslContext.execute("SET LOCAL lock_timeout = '$PROGRESS_LOCK_TIMEOUT'")
+        return dslContext
             .update(ANALYSIS)
             .set(ANALYSIS.PROGRESS, progress.coerceIn(MIN_PROGRESS, MAX_IN_PROGRESS))
             .where(ANALYSIS.ID.eq(AnalysisId(id)))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
             .execute()
+    }
 
     fun markCompleted(
         id: UUID,
@@ -145,6 +150,7 @@ class AnalysisRepository(
         const val ANALYZING_STARTED_PROGRESS = 10
         const val COMPLETED_PROGRESS = 100
         const val FAILED_REASON_CANCELED = "CANCELED"
+        const val PROGRESS_LOCK_TIMEOUT = "500ms"
         private const val MIN_PROGRESS = 0
         private const val MAX_IN_PROGRESS = 99
     }

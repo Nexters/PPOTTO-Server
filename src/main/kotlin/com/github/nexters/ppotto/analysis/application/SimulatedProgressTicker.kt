@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.analysis.application
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 class SimulatedProgressTicker(
@@ -18,24 +20,22 @@ class SimulatedProgressTicker(
         val cap = floor + ((ceiling - floor) * fillRatio).toInt()
         if (cap <= floor) return block()
 
+        val stopSignal = CountDownLatch(1)
         val thread =
             Thread.ofVirtual().unstarted {
                 var current = floor
-                try {
-                    while (current < cap) {
-                        Thread.sleep(Random.nextLong(minIntervalMs, maxIntervalMs))
-                        current = (current + Random.nextInt(minStep, maxStep + 1)).coerceAtMost(cap)
-                        onProgress(current)
-                    }
-                } catch (_: InterruptedException) {
-                    // block() 완료로 인한 정상 중단
+                while (current < cap) {
+                    val stopped = stopSignal.await(Random.nextLong(minIntervalMs, maxIntervalMs), TimeUnit.MILLISECONDS)
+                    if (stopped) break
+                    current = (current + Random.nextInt(minStep, maxStep + 1)).coerceAtMost(cap)
+                    onProgress(current)
                 }
             }
         thread.start()
         return try {
             block()
         } finally {
-            thread.interrupt()
+            stopSignal.countDown()
             thread.join()
         }
     }
