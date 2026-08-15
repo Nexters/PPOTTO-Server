@@ -26,9 +26,10 @@ docker compose -f compose.deploy.yaml -f compose.dev.yaml config
 docker compose -f compose.deploy.yaml -f compose.dev.yaml up -d --build
 ```
 
-`.env.dev`에서 `APP_DOMAIN`, `CORS_ALLOWED_ORIGINS`, DB 및 Swagger 비밀번호,
-`GCS_BUCKET`을 실제 Dev 환경 값으로 변경한다. 앱은 서버 배포 설정을 사용하기 위해
-`SPRING_PROFILES_ACTIVE=prod`로 실행된다.
+`.env.dev`에서 `APP_DOMAIN`, DB 및 Swagger 비밀번호, `GCS_BUCKET`을 실제 Dev 환경
+값으로 변경한다. 앱은 서버 배포 설정을 사용하기 위해 `SPRING_PROFILES_ACTIVE=prod`로
+실행된다. CORS는 `compose.dev.yaml`이 `CORS_ALLOWED_ORIGINS=*`로 고정해 모든 origin을
+허용하므로 `.env.dev`에서 따로 설정하지 않아도 된다.
 
 ### Production 서버
 
