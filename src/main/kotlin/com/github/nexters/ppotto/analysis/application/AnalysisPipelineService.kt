@@ -16,6 +16,7 @@ class AnalysisPipelineService(
     private val geminiClassifier: GeminiClassifier,
     private val stickerGenerator: StickerGenerator,
     private val stickerStorage: StickerStorage,
+    private val progressTicker: SimulatedProgressTicker = SimulatedProgressTicker(),
 ) {
     fun run(
         analysisId: UUID,
@@ -26,7 +27,7 @@ class AnalysisPipelineService(
         log.info("analysis pipeline started: analysisId={}, photoCount={}", analysisId, photos.size)
 
         val photoRefById = indexPhotos(analysisId, photos)
-        val classifications = classify(analysisId, photos)
+        val classifications = classify(analysisId, photos, onProgress)
         onProgress(CLASSIFICATION_COMPLETED_PROGRESS)
 
         val themes = processThemes(analysisId, classifications, photoRefById, onProgress)
@@ -53,10 +54,17 @@ class AnalysisPipelineService(
     private fun classify(
         analysisId: UUID,
         photos: List<PhotoRef>,
+        onProgress: (Int) -> Unit,
     ): List<ThemeClassification> {
         val classifications =
             measuredStep(analysisId, "gemini-classification") {
-                geminiClassifier.classifyAndRecap(photos)
+                progressTicker.run(
+                    floor = CLASSIFICATION_STARTED_PROGRESS,
+                    ceiling = CLASSIFICATION_COMPLETED_PROGRESS,
+                    onProgress = onProgress,
+                ) {
+                    geminiClassifier.classifyAndRecap(photos)
+                }
             }
         log.info("analysis pipeline classification result: analysisId={}, themeCount={}", analysisId, classifications.size)
         return classifications
@@ -70,8 +78,11 @@ class AnalysisPipelineService(
     ): List<ThemeAnalysisResult> {
         val totalThemeCount = classifications.size
         var completedWeightedThemes = 0.0
+        val progressAt: (Double) -> Int = { additionalWeight ->
+            stickerProgress(completedWeightedThemes + additionalWeight, totalThemeCount)
+        }
         return classifications.mapIndexed { themeIndex, classification ->
-            processTheme(analysisId, themeIndex, classification, photoRefById) { stepWeight ->
+            processTheme(analysisId, themeIndex, classification, photoRefById, onProgress, progressAt) { stepWeight ->
                 completedWeightedThemes += stepWeight
                 onProgress(stickerProgress(completedWeightedThemes, totalThemeCount))
             }
@@ -83,6 +94,8 @@ class AnalysisPipelineService(
         themeIndex: Int,
         classification: ThemeClassification,
         photoRefById: Map<UUID, PhotoRef>,
+        onProgress: (Int) -> Unit,
+        progressAt: (Double) -> Int,
         onStepCompleted: (Double) -> Unit,
     ): ThemeAnalysisResult {
         val sourcePhoto = photoRefById.getValue(classification.stickerSourcePhotoId)
@@ -93,11 +106,24 @@ class AnalysisPipelineService(
             classification.theme,
             sourcePhoto.photoId,
         )
-        val verifiedSubject = resolvedStickerSubject(analysisId, themeIndex, classification, sourcePhoto)
+        val verifiedSubject =
+            progressTicker.run(
+                floor = progressAt(0.0),
+                ceiling = progressAt(VERIFY_STEP_WEIGHT),
+                onProgress = onProgress,
+            ) {
+                resolvedStickerSubject(analysisId, themeIndex, classification, sourcePhoto)
+            }
         onStepCompleted(VERIFY_STEP_WEIGHT)
         val stickerImageKey =
             verifiedSubject?.let {
-                generateAndUploadSticker(analysisId, themeIndex, classification.theme, sourcePhoto, it.targetSubject)
+                progressTicker.run(
+                    floor = progressAt(0.0),
+                    ceiling = progressAt(GENERATE_STEP_WEIGHT),
+                    onProgress = onProgress,
+                ) {
+                    generateAndUploadSticker(analysisId, themeIndex, classification.theme, sourcePhoto, it.targetSubject)
+                }
             }
         onStepCompleted(GENERATE_STEP_WEIGHT)
         return ThemeAnalysisResult(
@@ -218,6 +244,7 @@ class AnalysisPipelineService(
     }
 
     companion object {
+        const val CLASSIFICATION_STARTED_PROGRESS = 10
         const val CLASSIFICATION_COMPLETED_PROGRESS = 45
         const val STICKER_COMPLETED_PROGRESS = 90
 
