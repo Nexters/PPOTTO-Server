@@ -19,7 +19,7 @@ class StickerImageCropper {
             return pngBytes
         }
 
-        val bounds = alphaBounds(image, OPAQUE_ALPHA_THRESHOLD) ?: alphaBounds(image, TRANSPARENT_ALPHA) ?: throw cropFailed()
+        val bounds = subjectBounds(image) ?: throw cropFailed()
         val padding = ceil(max(bounds.width, bounds.height) * PADDING_RATIO).toInt()
         val crop = bounds.expand(padding, image.width, image.height)
         val cropped = image.getSubimage(crop.left, crop.top, crop.width, crop.height)
@@ -33,17 +33,31 @@ class StickerImageCropper {
             throw cropFailed(e)
         }
 
+    private fun subjectBounds(image: BufferedImage): Bounds? {
+        val coreBounds =
+            alphaBounds(image, CORE_ALPHA_THRESHOLD)
+                ?: return alphaBounds(image, DETAIL_ALPHA_THRESHOLD)
+        val detailPadding =
+            max(
+                ceil(max(coreBounds.width, coreBounds.height) * DETAIL_SEARCH_RATIO).toInt(),
+                MIN_DETAIL_SEARCH_PADDING,
+            )
+        val detailSearchBounds = coreBounds.expand(detailPadding, image.width, image.height)
+        return alphaBounds(image, DETAIL_ALPHA_THRESHOLD, detailSearchBounds) ?: coreBounds
+    }
+
     private fun alphaBounds(
         image: BufferedImage,
         alphaThreshold: Int,
+        searchBounds: Bounds = Bounds(0, 0, image.width - 1, image.height - 1),
     ): Bounds? {
         var left = image.width
         var top = image.height
         var right = -1
         var bottom = -1
 
-        for (y in 0 until image.height) {
-            for (x in 0 until image.width) {
+        for (y in searchBounds.top..searchBounds.bottom) {
+            for (x in searchBounds.left..searchBounds.right) {
                 val alpha = image.getRGB(x, y) ushr ALPHA_SHIFT
                 if (alpha > alphaThreshold) {
                     left = minOf(left, x)
@@ -99,9 +113,11 @@ class StickerImageCropper {
 
     companion object {
         private const val PADDING_RATIO = 0.12
+        private const val DETAIL_SEARCH_RATIO = 0.25
+        private const val MIN_DETAIL_SEARCH_PADDING = 16
         private const val ALPHA_SHIFT = 24
-        private const val OPAQUE_ALPHA_THRESHOLD = 32
-        private const val TRANSPARENT_ALPHA = 0
+        private const val CORE_ALPHA_THRESHOLD = 128
+        private const val DETAIL_ALPHA_THRESHOLD = 0
         private const val PNG_FORMAT = "png"
     }
 }
