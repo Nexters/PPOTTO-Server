@@ -15,7 +15,7 @@ Configuration and database migrations.
 | `config/actuator.yml` | health/info only; local exposes all with details |
 | `config/logging.yml` | Console pattern with `[requestId]` MDC; local raises levels to debug |
 | `config/springdoc.yml` | Swagger UI options plus `default-produces-media-type: application/json`, which keeps inferred response media types off `*/*` so generated clients see a single JSON content type |
-| `config/cors.yml` | `cors.allowed-origins` from `${CORS_ALLOWED_ORIGINS}` |
+| `config/cors.yml` | `cors.allowed-origins` from `${CORS_ALLOWED_ORIGINS}`, applied as CORS origin patterns. Dev(`compose.dev.yaml`)는 `*`로 고정해 모든 origin을 허용한다 |
 | `config/security.yml` | Basic auth user for swagger from `${SWAGGER_USER}` / `${SWAGGER_PASSWORD}` |
 | `config/user.yml` | User-account provider refresh-token encryption key from `${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}` plus the `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron from `${USER_WITHDRAWN_CLEANUP_*}` |
 | `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` / `gcs.read-signed-url-expiration-minutes` / `gcs.timeout-millis` from `${GCS_*}` |
