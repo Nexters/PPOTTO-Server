@@ -48,7 +48,7 @@ class StickerImageCropperTest {
     fun `반투명 픽셀도 피사체 영역에 포함한다`() {
         val input =
             transparentImage(20, 20).also {
-                it.setRGB(5, 5, Color(0, 0, 255, 1).rgb)
+                it.setRGB(5, 5, Color(0, 0, 255, 33).rgb)
                 it.setRGB(10, 10, Color(0, 0, 255, 255).rgb)
             }
 
@@ -56,8 +56,38 @@ class StickerImageCropperTest {
 
         output.width shouldBe 8
         output.height shouldBe 8
-        alpha(output, 1, 1) shouldBe 1
+        alpha(output, 1, 1) shouldBe 33
         alpha(output, 6, 6) shouldBe 255
+    }
+
+    @Test
+    fun `이미지 가장자리의 약한 알파 노이즈는 피사체 영역에서 제외한다`() {
+        val input =
+            transparentImage(100, 100).also {
+                it.setRGB(0, 0, Color(0, 0, 255, 1).rgb)
+                fill(it, 40, 40, 10, 10, Color(255, 0, 0, 255).rgb)
+            }
+
+        val output = read(cropper.cropTransparentPadding(write(input)))
+
+        output.width shouldBe 14
+        output.height shouldBe 14
+        alpha(output, 0, 0) shouldBe 0
+        alpha(output, 2, 2) shouldBe 255
+    }
+
+    @Test
+    fun `강한 알파 픽셀이 없으면 약한 반투명 픽셀 기준으로 자른다`() {
+        val input =
+            transparentImage(20, 20).also {
+                it.setRGB(10, 10, Color(0, 0, 255, 1).rgb)
+            }
+
+        val output = read(cropper.cropTransparentPadding(write(input)))
+
+        output.width shouldBe 3
+        output.height shouldBe 3
+        alpha(output, 1, 1) shouldBe 1
     }
 
     @Test

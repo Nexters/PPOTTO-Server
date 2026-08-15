@@ -19,7 +19,7 @@ class StickerImageCropper {
             return pngBytes
         }
 
-        val bounds = alphaBounds(image)
+        val bounds = alphaBounds(image, OPAQUE_ALPHA_THRESHOLD) ?: alphaBounds(image, TRANSPARENT_ALPHA) ?: throw cropFailed()
         val padding = ceil(max(bounds.width, bounds.height) * PADDING_RATIO).toInt()
         val crop = bounds.expand(padding, image.width, image.height)
         val cropped = image.getSubimage(crop.left, crop.top, crop.width, crop.height)
@@ -33,7 +33,10 @@ class StickerImageCropper {
             throw cropFailed(e)
         }
 
-    private fun alphaBounds(image: BufferedImage): Bounds {
+    private fun alphaBounds(
+        image: BufferedImage,
+        alphaThreshold: Int,
+    ): Bounds? {
         var left = image.width
         var top = image.height
         var right = -1
@@ -42,7 +45,7 @@ class StickerImageCropper {
         for (y in 0 until image.height) {
             for (x in 0 until image.width) {
                 val alpha = image.getRGB(x, y) ushr ALPHA_SHIFT
-                if (alpha > TRANSPARENT_ALPHA) {
+                if (alpha > alphaThreshold) {
                     left = minOf(left, x)
                     top = minOf(top, y)
                     right = maxOf(right, x)
@@ -52,7 +55,7 @@ class StickerImageCropper {
         }
 
         if (right < left || bottom < top) {
-            throw cropFailed()
+            return null
         }
 
         return Bounds(left, top, right, bottom)
@@ -97,6 +100,7 @@ class StickerImageCropper {
     companion object {
         private const val PADDING_RATIO = 0.12
         private const val ALPHA_SHIFT = 24
+        private const val OPAQUE_ALPHA_THRESHOLD = 32
         private const val TRANSPARENT_ALPHA = 0
         private const val PNG_FORMAT = "png"
     }
