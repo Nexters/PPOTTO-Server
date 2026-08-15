@@ -303,7 +303,7 @@ class OpenApiDocumentationTest(
                 result
                     .andExpect(
                         jsonPath("$['components']['schemas']['PhotoUploadItem']['properties']['contentType']['enum']")
-                            .value(hasItems("image/jpeg", "image/png", "image/heic")),
+                            .value(hasItems("image/jpeg", "image/png", "image/heic", "image/webp")),
                     ).andExpect(
                         jsonPath("$['components']['schemas']['PhotoUploadItem']['required']")
                             .value(hasItems("takenAt", "contentType", "isRepresentative")),

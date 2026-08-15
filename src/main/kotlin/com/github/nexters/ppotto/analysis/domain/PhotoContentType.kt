@@ -9,4 +9,5 @@ enum class PhotoContentType(
     JPEG("image/jpeg", "jpg"),
     PNG("image/png", "png"),
     HEIC("image/heic", "heic"),
+    WEBP("image/webp", "webp"),
 }

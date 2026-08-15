@@ -15,11 +15,14 @@ class PhotoContentTypeTest :
 
                 PhotoContentType.HEIC.mimeType shouldBe "image/heic"
                 PhotoContentType.HEIC.extension shouldBe "heic"
+
+                PhotoContentType.WEBP.mimeType shouldBe "image/webp"
+                PhotoContentType.WEBP.extension shouldBe "webp"
             }
 
-            Then("지원 형식은 세 가지뿐이다") {
+            Then("지원 형식은 네 가지뿐이다") {
                 PhotoContentType.entries.map(PhotoContentType::mimeType) shouldBe
-                    listOf("image/jpeg", "image/png", "image/heic")
+                    listOf("image/jpeg", "image/png", "image/heic", "image/webp")
             }
         }
     })
