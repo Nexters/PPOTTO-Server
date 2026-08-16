@@ -2,12 +2,9 @@ package com.github.nexters.ppotto.analysis.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
-import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
-import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
-import com.github.nexters.ppotto.global.error.InvalidInputException
 import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
@@ -33,16 +30,7 @@ data class CreateAnalysisRequest(
     )
     val photos: List<@Valid PhotoUploadGroup>,
 ) {
-    fun toServiceRequests(): List<PhotoUploadGroupRequest> =
-        photos
-            .also { validateGroupCount(it) }
-            .map { it.toServiceRequest() }
-
-    private fun validateGroupCount(groups: List<PhotoUploadGroup>) {
-        if (groups.size !in AnalysisService.MIN_GROUP_COUNT..AnalysisService.MAX_GROUP_COUNT) {
-            throw InvalidInputException(AnalysisErrorCode.GROUP_COUNT_OUT_OF_RANGE)
-        }
-    }
+    fun toServiceRequests(): List<PhotoUploadGroupRequest> = photos.map { it.toServiceRequest() }
 }
 
 @Schema(description = "사진 그룹. 연사가 아니면 원소 1개, 연사면 여러 장(최대 10장)")
