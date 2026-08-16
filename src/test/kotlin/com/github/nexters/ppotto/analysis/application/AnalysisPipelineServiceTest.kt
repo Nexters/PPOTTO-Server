@@ -10,11 +10,15 @@ import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import java.util.UUID
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 
 class AnalysisPipelineServiceTest :
     BehaviorSpec({
@@ -38,19 +42,44 @@ class AnalysisPipelineServiceTest :
                         mimeType = "image/jpeg",
                     ),
                 )
-            val progress = mutableListOf<Int>()
+            val progress = CopyOnWriteArrayList<Int>()
+            val intermediateProgressThreadIds = CopyOnWriteArrayList<Long>()
+            val stickerGenerator = ConcurrentStickerGenerator()
             val service =
                 AnalysisPipelineService(
                     geminiClassifier = FixedGeminiClassifier(photos),
-                    stickerGenerator = FixedStickerGenerator(),
+                    stickerGenerator = stickerGenerator,
                     stickerStorage = EchoStickerStorage(),
                 )
 
             When("run을 실행하면") {
-                val result = service.run(analysisId, photos) { progress += it }
+                val result =
+                    service.run(analysisId, photos) {
+                        progress += it
+                        if (it in 46..89) {
+                            intermediateProgressThreadIds += Thread.currentThread().threadId()
+                        }
+                    }
 
-                Then("단계별 진행률을 콜백으로 전달한다") {
-                    progress shouldContainExactly listOf(45, 48, 60, 63, 75, 78, 90, 90)
+                Then("진행률은 단조 증가하고 주요 체크포인트를 유지한다") {
+                    progress.first() shouldBe 45
+                    progress.last() shouldBe 90
+                    progress
+                        .zipWithNext { a, b -> a <= b }
+                        .all { it }
+                        .shouldBeTrue()
+                    progress.all { it in 10..90 }.shouldBeTrue()
+                }
+
+                Then("중간 진행률은 단일 dispatcher thread에서 전달한다") {
+                    intermediateProgressThreadIds.isNotEmpty().shouldBeTrue()
+                    intermediateProgressThreadIds.distinct().size shouldBe 1
+                }
+
+                Then("테마별 스티커 생성은 병렬로 실행한다") {
+                    stickerGenerator.maxActiveCount
+                        .get()
+                        .shouldBeGreaterThan(1)
                 }
 
                 Then("분석 아이디와 스티커 이미지 키를 결과에 담는다") {
@@ -120,6 +149,67 @@ class AnalysisPipelineServiceTest :
                 }
             }
         }
+
+        Given("스티커 대상 재확인이 실패할 때") {
+            val analysisId = UUID.fromString("550e8400-e29b-41d4-a716-446655440020")
+            val photo =
+                PhotoRef(
+                    photoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440021"),
+                    gcsUri = "gs://bucket/21.jpg",
+                    mimeType = "image/jpeg",
+                )
+            val recordedTargetSubjects = mutableListOf<String>()
+            val service =
+                AnalysisPipelineService(
+                    geminiClassifier = FailingVerificationGeminiClassifier(photo),
+                    stickerGenerator = RecordingStickerGenerator(recordedTargetSubjects),
+                    stickerStorage = EchoStickerStorage(),
+                )
+
+            When("run을 실행하면") {
+                val result = service.run(analysisId, listOf(photo))
+
+                Then("분류 결과의 피사체와 색상으로 fallback하여 스티커 생성을 계속한다") {
+                    val theme = result.themes.single()
+                    theme.stickerTargetSubject shouldBe "분류된 피사체"
+                    theme.stickerMainColor shouldBe "#112233"
+                    theme.stickerImageKey.shouldNotBeNull()
+                    recordedTargetSubjects shouldContainExactly listOf("분류된 피사체")
+                }
+            }
+        }
+
+        Given("일부 테마 처리 중 예상하지 못한 예외가 발생할 때") {
+            val analysisId = UUID.fromString("550e8400-e29b-41d4-a716-446655440030")
+            val validPhoto =
+                PhotoRef(
+                    photoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440031"),
+                    gcsUri = "gs://bucket/31.jpg",
+                    mimeType = "image/jpeg",
+                )
+            val missingPhotoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440032")
+            val service =
+                AnalysisPipelineService(
+                    geminiClassifier = PartiallyInvalidThemeGeminiClassifier(validPhoto, missingPhotoId),
+                    stickerGenerator = RecordingStickerGenerator(mutableListOf()),
+                    stickerStorage = EchoStickerStorage(),
+                )
+
+            When("run을 실행하면") {
+                val result = service.run(analysisId, listOf(validPhoto))
+
+                Then("실패한 테마는 스티커 없이 남기고 성공한 테마 결과는 유지한다") {
+                    result.themes.map { it.theme } shouldContainExactly listOf("정상 테마", "실패 테마")
+                    result.themes.map { it.stickerImageKey } shouldContainExactly
+                        listOf(
+                            "stickers/550e8400-e29b-41d4-a716-446655440030/0-550e8400-e29b-41d4-a716-446655440031.png",
+                            null,
+                        )
+                    result.themes[1].stickerSourcePhotoId shouldBe missingPhotoId
+                    result.themes[1].stickerTargetSubject shouldBe "없는 피사체"
+                }
+            }
+        }
     })
 
 private class FixedGeminiClassifier(
@@ -186,12 +276,85 @@ private class VerifyingGeminiClassifier(
     }
 }
 
-private class FixedStickerGenerator : StickerGenerator {
+private class FailingVerificationGeminiClassifier(
+    private val photo: PhotoRef,
+) : GeminiClassifier {
+    override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> =
+        listOf(
+            ThemeClassification(
+                theme = "테마",
+                categorizedPhotoIds = listOf(photo.photoId),
+                recap = RecapContent(badge = "뱃지", text = "리캡"),
+                stickerTargetSubject = "분류된 피사체",
+                stickerSourcePhotoId = photo.photoId,
+                stickerMainColor = "#112233",
+                comments = emptyList(),
+            ),
+        )
+
+    override fun regenerateSticker(
+        photos: List<PhotoRef>,
+        previousSourcePhotoId: UUID,
+    ): StickerRegenerationTarget = throw UnsupportedOperationException("사용되지 않음")
+
+    override fun verifyStickerSubject(
+        photo: PhotoRef,
+        targetSubject: String,
+    ): StickerSubjectVerification? = throw IllegalStateException("검증 실패")
+}
+
+private class PartiallyInvalidThemeGeminiClassifier(
+    private val validPhoto: PhotoRef,
+    private val missingPhotoId: UUID,
+) : GeminiClassifier {
+    override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> =
+        listOf(
+            ThemeClassification(
+                theme = "정상 테마",
+                categorizedPhotoIds = listOf(validPhoto.photoId),
+                recap = RecapContent(badge = "정상", text = "정상 리캡"),
+                stickerTargetSubject = "정상 피사체",
+                stickerSourcePhotoId = validPhoto.photoId,
+                stickerMainColor = "#112233",
+                comments = emptyList(),
+            ),
+            ThemeClassification(
+                theme = "실패 테마",
+                categorizedPhotoIds = listOf(validPhoto.photoId),
+                recap = RecapContent(badge = "실패", text = "실패 리캡"),
+                stickerTargetSubject = "없는 피사체",
+                stickerSourcePhotoId = missingPhotoId,
+                stickerMainColor = "#445566",
+                comments = emptyList(),
+            ),
+        )
+
+    override fun regenerateSticker(
+        photos: List<PhotoRef>,
+        previousSourcePhotoId: UUID,
+    ): StickerRegenerationTarget = throw UnsupportedOperationException("사용되지 않음")
+
+    override fun verifyStickerSubject(
+        photo: PhotoRef,
+        targetSubject: String,
+    ): StickerSubjectVerification = StickerSubjectVerification(targetSubject, "#112233")
+}
+
+private class ConcurrentStickerGenerator : StickerGenerator {
+    val maxActiveCount = AtomicInteger(0)
+    private val activeCount = AtomicInteger(0)
+
     override fun generate(
         sourceGcsUri: String,
         sourceMimeType: String,
         targetSubject: String,
-    ): ByteArray = byteArrayOf(1)
+    ): ByteArray {
+        val active = activeCount.incrementAndGet()
+        maxActiveCount.updateAndGet { current -> maxOf(current, active) }
+        Thread.sleep(100)
+        activeCount.decrementAndGet()
+        return byteArrayOf(1)
+    }
 }
 
 private class RecordingStickerGenerator(
