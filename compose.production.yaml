@@ -13,10 +13,6 @@ services:
       - ../secrets/gcs-production-service-account.json:/run/secrets/gcs-service-account.json:ro,z
       - ../secrets/apple-auth-key.p8:/run/secrets/apple-auth-key.p8:ro,z
 
-  otel-agent:
-    env_file:
-      - .env.production
-
   postgres:
     env_file:
       - .env.production
