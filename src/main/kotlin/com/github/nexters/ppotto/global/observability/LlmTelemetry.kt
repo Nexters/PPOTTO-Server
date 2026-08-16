@@ -6,7 +6,6 @@ enum class LlmOperation(
     CLASSIFY("classify"),
     STICKER_REGENERATION("sticker_regeneration"),
     SUBJECT_VERIFICATION("subject_verification"),
-    STICKER_GENERATION("sticker_generation"),
 }
 
 interface LlmSpanHandle {

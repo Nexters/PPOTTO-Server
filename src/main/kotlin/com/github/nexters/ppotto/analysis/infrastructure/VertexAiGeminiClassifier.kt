@@ -137,7 +137,7 @@ class VertexAiGeminiClassifier(
         val httpOptions =
             HttpOptions
                 .builder()
-                .timeout(vertexAiProperties.classifyTimeoutMs.toInt())
+                .timeout(vertexAiProperties.verifyTimeoutMs.toInt())
                 .retryOptions(
                     HttpRetryOptions
                         .builder()

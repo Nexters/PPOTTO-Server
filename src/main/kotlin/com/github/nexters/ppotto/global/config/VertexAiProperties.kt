@@ -18,5 +18,5 @@ data class VertexAiProperties(
     val classifyTimeoutMs: Long,
 
     @field:Positive
-    val stickerGenerationTimeoutMs: Long,
+    val verifyTimeoutMs: Long,
 )

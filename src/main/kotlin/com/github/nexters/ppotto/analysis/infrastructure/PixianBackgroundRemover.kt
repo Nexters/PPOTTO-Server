@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
+import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.global.config.PixianProperties
 import com.github.nexters.ppotto.global.error.BusinessException
 import org.slf4j.LoggerFactory
@@ -16,17 +17,23 @@ import java.util.Base64
 class PixianBackgroundRemover(
     private val pixianApi: PixianApi,
     private val pixianProperties: PixianProperties,
-) {
-    fun removeBackground(pngBytes: ByteArray): ByteArray {
-        val response = requestRemoveBackground(pngBytes)
+) : StickerBackgroundRemover {
+    override fun removeBackground(
+        imageBytes: ByteArray,
+        mimeType: String,
+    ): ByteArray {
+        val response = requestRemoveBackground(imageBytes, mimeType)
         val creditsCharged = response.headers.getFirst(CREDITS_CHARGED_HEADER)
         log.info("pixian background removal succeeded: creditsCharged={}, test={}", creditsCharged, pixianProperties.testMode)
 
         return requireResponseBody(response)
     }
 
-    private fun requestRemoveBackground(pngBytes: ByteArray): ResponseEntity<ByteArray> {
-        val resource = namedResource(pngBytes)
+    private fun requestRemoveBackground(
+        imageBytes: ByteArray,
+        mimeType: String,
+    ): ResponseEntity<ByteArray> {
+        val resource = namedResource(imageBytes, mimeType)
         return try {
             callRemoveBackground(resource)
         } catch (e: RestClientResponseException) {
@@ -84,14 +91,29 @@ class PixianBackgroundRemover(
         return "Basic " + Base64.getEncoder().encodeToString(credentials.toByteArray())
     }
 
-    private fun namedResource(pngBytes: ByteArray) =
-        object : ByteArrayResource(pngBytes) {
-            override fun getFilename() = "sticker.png"
+    private fun namedResource(
+        imageBytes: ByteArray,
+        mimeType: String,
+    ): Resource {
+        val extension = resolveExtension(mimeType)
+        return object : ByteArrayResource(imageBytes) {
+            override fun getFilename() = "source-image.$extension"
         }
+    }
+
+    private fun resolveExtension(mimeType: String): String {
+        val matched = PhotoContentType.entries.firstOrNull { it.mimeType == mimeType }
+        if (matched == null) {
+            log.warn("pixian background removal received unknown mimeType, falling back to default extension: mimeType={}", mimeType)
+            return DEFAULT_EXTENSION
+        }
+        return matched.extension
+    }
 
     companion object {
         private val log = LoggerFactory.getLogger(PixianBackgroundRemover::class.java)
         private const val OUTPUT_FORMAT_PNG = "png"
+        private const val DEFAULT_EXTENSION = "png"
         private const val CREDITS_CHARGED_HEADER = "X-Credits-Charged"
     }
 }

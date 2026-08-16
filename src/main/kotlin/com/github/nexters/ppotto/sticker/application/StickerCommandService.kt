@@ -218,10 +218,6 @@ class StickerCommandService(
     }
 
     companion object {
-        // Gemini regenerateSticker(classify-timeout-ms) 60s + stickerGenerator.generate(sticker-generation-timeout-ms) 90s,
-        // 각각 HttpRetryOptions.attempts(2)로 최악 (60+90)*2 = 300s(5분)까지 걸릴 수 있음.
-        // 정상 흐름에서는 regenerate()가 끝나자마자 finally에서 즉시 해제되므로 이 값에 도달하지 않고,
-        // 프로세스가 죽어 해제되지 못했을 때만 발동하는 백스톱이다.
         private val REGENERATION_LOCK_TTL: Duration = Duration.ofMinutes(5)
     }
 }

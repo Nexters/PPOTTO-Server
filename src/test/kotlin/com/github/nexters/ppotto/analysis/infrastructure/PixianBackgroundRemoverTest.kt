@@ -7,6 +7,7 @@ import com.sun.net.httpserver.HttpServer
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.support.RestClientAdapter
 import org.springframework.web.service.invoker.HttpServiceProxyFactory
@@ -19,7 +20,9 @@ class PixianBackgroundRemoverTest :
         val server = HttpServer.create(InetSocketAddress(0), 0)
         val requestCount = AtomicInteger(0)
         var responsesByAttempt = listOf(200 to byteArrayOf(1, 2, 3, 4))
+        var lastRequestBody = ByteArray(0)
         server.createContext("/remove-background") { exchange ->
+            lastRequestBody = exchange.requestBody.readBytes()
             val attempt = requestCount.getAndIncrement()
             val (status, body) = responsesByAttempt.getOrElse(attempt) { responsesByAttempt.last() }
             exchange.responseHeaders.add("X-Credits-Charged", "0.05")
@@ -53,7 +56,7 @@ class PixianBackgroundRemoverTest :
 
             When("removeBackground를 호출하면") {
                 Then("응답 바이트를 그대로 반환한다") {
-                    remover.removeBackground(byteArrayOf(1)) shouldBe byteArrayOf(9, 9, 9)
+                    remover.removeBackground(byteArrayOf(1), "image/jpeg") shouldBe byteArrayOf(9, 9, 9)
                 }
             }
         }
@@ -66,7 +69,7 @@ class PixianBackgroundRemoverTest :
                 Then("재시도 없이 즉시 ANALYSIS-011 예외가 발생한다") {
                     val exception =
                         shouldThrow<BusinessException> {
-                            remover.removeBackground(byteArrayOf(1))
+                            remover.removeBackground(byteArrayOf(1), "image/jpeg")
                         }
                     exception.errorCode shouldBe AnalysisErrorCode.STICKER_BACKGROUND_REMOVAL_FAILED
                     requestCount.get() shouldBe 1
@@ -80,7 +83,7 @@ class PixianBackgroundRemoverTest :
 
             When("removeBackground를 호출하면") {
                 Then("1회 재시도해서 성공 응답을 반환한다") {
-                    remover.removeBackground(byteArrayOf(1)) shouldBe byteArrayOf(7, 7, 7)
+                    remover.removeBackground(byteArrayOf(1), "image/jpeg") shouldBe byteArrayOf(7, 7, 7)
                     requestCount.get() shouldBe 2
                 }
             }
@@ -94,10 +97,62 @@ class PixianBackgroundRemoverTest :
                 Then("정확히 2번만 시도하고 ANALYSIS-011 예외가 발생한다") {
                     val exception =
                         shouldThrow<BusinessException> {
-                            remover.removeBackground(byteArrayOf(1))
+                            remover.removeBackground(byteArrayOf(1), "image/jpeg")
                         }
                     exception.errorCode shouldBe AnalysisErrorCode.STICKER_BACKGROUND_REMOVAL_FAILED
                     requestCount.get() shouldBe 2
+                }
+            }
+        }
+
+        Given("원본 사진의 mimeType이 image/jpeg일 때") {
+            requestCount.set(0)
+            responsesByAttempt = listOf(200 to byteArrayOf(9, 9, 9))
+
+            When("removeBackground를 호출하면") {
+                Then("jpg 확장자가 붙은 파일명으로 전송한다") {
+                    remover.removeBackground(byteArrayOf(1, 2, 3), "image/jpeg")
+
+                    String(lastRequestBody, Charsets.ISO_8859_1) shouldContain "filename=\"source-image.jpg\""
+                }
+            }
+        }
+
+        Given("원본 사진의 mimeType이 image/png일 때") {
+            requestCount.set(0)
+            responsesByAttempt = listOf(200 to byteArrayOf(9, 9, 9))
+
+            When("removeBackground를 호출하면") {
+                Then("png 확장자가 붙은 파일명으로 전송한다") {
+                    remover.removeBackground(byteArrayOf(1, 2, 3), "image/png")
+
+                    String(lastRequestBody, Charsets.ISO_8859_1) shouldContain "filename=\"source-image.png\""
+                }
+            }
+        }
+
+        Given("원본 사진의 mimeType이 image/webp일 때") {
+            requestCount.set(0)
+            responsesByAttempt = listOf(200 to byteArrayOf(9, 9, 9))
+
+            When("removeBackground를 호출하면") {
+                Then("webp 확장자가 붙은 파일명으로 전송한다") {
+                    remover.removeBackground(byteArrayOf(1, 2, 3), "image/webp")
+
+                    String(lastRequestBody, Charsets.ISO_8859_1) shouldContain "filename=\"source-image.webp\""
+                }
+            }
+        }
+
+        Given("원본 사진의 mimeType을 알 수 없을 때") {
+            requestCount.set(0)
+            responsesByAttempt = listOf(200 to byteArrayOf(9, 9, 9))
+
+            When("removeBackground를 호출하면") {
+                Then("기본 확장자(png)로 폴백해서 요청을 보낸다") {
+                    remover.removeBackground(byteArrayOf(1, 2, 3), "image/unknown")
+
+                    String(lastRequestBody, Charsets.ISO_8859_1) shouldContain "filename=\"source-image.png\""
                 }
             }
         }

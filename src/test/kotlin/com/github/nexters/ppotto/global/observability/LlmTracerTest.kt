@@ -64,7 +64,7 @@ class LlmTracerTest :
             When("블록에서 예외가 발생하면") {
                 Then("예외를 기록하고 ERROR 상태로 스팬을 종료한 뒤 예외를 다시 던진다") {
                     shouldThrow<IllegalStateException> {
-                        LlmTracer.trace(LlmOperation.STICKER_GENERATION, "gemini-2.5-flash-image") {
+                        LlmTracer.trace(LlmOperation.SUBJECT_VERIFICATION, "gemini-2.5-flash") {
                             error("boom")
                         }
                     }

@@ -6,7 +6,7 @@ LLM 호출 계측 래퍼. OTel javaagent가 못 잡는 GenAI 속성(모델명·�
 
 | File | Description |
 |------|-------------|
-| `LlmTelemetry.kt` | `LlmOperation` enum과 `LlmSpanHandle` 인터페이스. 호출부에 OTel API 타입이 새지 않게 하는 추상화 경계 |
+| `LlmTelemetry.kt` | `LlmOperation` enum과 `LlmSpanHandle` 인터페이스. Operations cover Gemini classification, sticker-source regeneration, and sticker-subject verification; sticker cutout is Pixian/GCS work and is not traced as an LLM operation. 호출부에 OTel API 타입이 새지 않게 하는 추상화 경계 |
 | `LlmTracer.kt` | `trace(operation, model, attributes) { span -> }` 고차함수. 스팬 생성·컨텍스트 바인딩·예외 기록·종료를 전담 |
 | `GeminiResponseSpans.kt` | `LlmSpanHandle.record(GenerateContentResponse)` 확장 — usageMetadata 토큰수·modelVersion·finishReason을 스팬 속성으로 자동 매핑 |
 
