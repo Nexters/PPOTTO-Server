@@ -9,6 +9,9 @@ services:
     image: ${APP_IMAGE:-ppotto-server:production}
     env_file:
       - .env.production
+    environment:
+      SENTRY_ENVIRONMENT: production
+      SENTRY_TRACES_SAMPLE_RATE: "0.1"
     volumes:
       - ../secrets/gcs-production-service-account.json:/run/secrets/gcs-service-account.json:ro,z
       - ../secrets/apple-auth-key.p8:/run/secrets/apple-auth-key.p8:ro,z

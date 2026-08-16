@@ -31,6 +31,10 @@ docker compose -f compose.deploy.yaml -f compose.dev.yaml up -d --build
 실행된다. CORS는 `compose.dev.yaml`이 `CORS_ALLOWED_ORIGINS=*`로 고정해 모든 origin을
 허용하므로 `.env.dev`에서 따로 설정하지 않아도 된다.
 
+Sentry는 `.env.dev`의 `SENTRY_DSN`만 채우면 켜진다. `SENTRY_ENVIRONMENT=dev`와
+트레이싱 샘플링 비율 `1.0`은 `compose.dev.yaml`이 고정하므로 환경파일에 넣지 않는다.
+`SENTRY_DSN`을 비워 두면 SDK가 비활성 상태로 뜨고 이벤트를 보내지 않는다.
+
 ### Production 서버
 
 Production은 Dev와 프로젝트명, 환경파일, GCS 자격증명, Docker 볼륨이 모두 분리된다.
@@ -42,6 +46,9 @@ mkdir -p ../secrets
 docker compose -f compose.deploy.yaml -f compose.production.yaml config
 docker compose -f compose.deploy.yaml -f compose.production.yaml up -d --build
 ```
+
+Sentry는 `.env.production`의 `SENTRY_DSN`만 채우면 켜진다. `SENTRY_ENVIRONMENT=production`과
+트레이싱 샘플링 비율 `0.1`은 `compose.production.yaml`이 고정한다.
 
 두 Compose는 모두 80/443 포트를 사용하므로 같은 호스트에서 동시에 실행하지 않는다.
 Production과 Dev를 동시에 운영해야 할 때는 서버를 분리하거나 공용 프록시 구성을 사용한다.

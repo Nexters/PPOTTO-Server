@@ -1,0 +1,10 @@
+sentry:
+  dsn: ${SENTRY_DSN}
+  environment: ${SENTRY_ENVIRONMENT}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE}
+  send-default-pii: false
+  max-request-body-size: none
+  logging:
+    enabled: true
+    minimum-event-level: error
+    minimum-breadcrumb-level: info

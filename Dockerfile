@@ -48,6 +48,7 @@ RUN --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-gcs-
     PIXIAN_API_ID=aot PIXIAN_API_SECRET=dummy-pixian-secret PIXIAN_TEST_MODE=true \
     PIXIAN_REMOVE_BACKGROUND_URI=http://localhost/pixian/remove-background \
     PIXIAN_CONNECT_TIMEOUT_MILLIS=5000 PIXIAN_READ_TIMEOUT_MILLIS=90000 \
+    SENTRY_DSN= SENTRY_ENVIRONMENT=aot SENTRY_TRACES_SAMPLE_RATE=0 \
     java --add-modules java.instrument -XX:AOTCacheOutput=application.aot -Dspring.context.exit=onRefresh -jar application.jar
 USER spring:spring
 EXPOSE 8080

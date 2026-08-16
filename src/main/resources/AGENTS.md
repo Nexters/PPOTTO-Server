@@ -21,6 +21,7 @@ Configuration and database migrations.
 | `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` / `gcs.read-signed-url-expiration-minutes` / `gcs.timeout-millis` from `${GCS_*}` |
 | `config/vertexai.yml` | `vertexai.project` / `location` plus classify and verify timeout budgets from `${VERTEX_AI_*}` |
 | `config/redis.yml` | Redis host, port, password, and timeouts from `${REDIS_*}` for refresh token storage |
+| `config/sentry.yml` | Sentry DSN, environment, and traces sample rate from `${SENTRY_*}`, plus a fixed privacy posture (`send-default-pii: false`, `max-request-body-size: none`) and logback bridge levels (`error` → event, `info` → breadcrumb). An empty `SENTRY_DSN` leaves the SDK initialized but inactive, which is the local/test default |
 | `config/auth.yml` | OAuth HTTP Service client group timeouts (`spring.http.serviceclient.oauth.*` from `${OAUTH_*_TIMEOUT_MILLIS}`, bare integers bind as milliseconds), Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
 | `db/migration/` | Flyway timestamp migrations. The base schema creates core tables; later migrations add legacy-compatible social accounts, terms, drawings, stickers, recap data, active-analysis index updates, the six-stickers-per-analysis guard, and the recap one-line summary column that replaced `recap_comments.is_float` |
 

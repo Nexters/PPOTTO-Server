@@ -11,6 +11,8 @@ services:
       - .env.dev
     environment:
       CORS_ALLOWED_ORIGINS: "*"
+      SENTRY_ENVIRONMENT: dev
+      SENTRY_TRACES_SAMPLE_RATE: "1.0"
     volumes:
       - ../secrets/gcs-dev-service-account.json:/run/secrets/gcs-service-account.json:ro,z
       - ../secrets/apple-auth-key.p8:/run/secrets/apple-auth-key.p8:ro,z
