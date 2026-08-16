@@ -761,8 +761,8 @@ class AnalysisControllerTest(
                 }
             }
 
-            When("정상 contentType(image/heic)로 요청하면") {
-                Then("성공 응답에 analysisId와 사진별 signed URL이 담긴다") {
+            When("지원하지 않는 contentType(image/heic)으로 요청하면") {
+                Then("400 응답을 반환한다") {
                     val photosJson =
                         (0 until 90).joinToString(",") {
                             """{"items": [{"takenAt": "2026-07-0${(it % 9) + 1}T00:00:00Z", """ +
@@ -780,10 +780,8 @@ class AnalysisControllerTest(
                                     }
                                     """.trimIndent(),
                                 ),
-                        ).andExpect(status().isOk)
-                        .andExpect(jsonPath("$.success").value(true))
-                        .andExpect(jsonPath("$.data.analysisId").exists())
-                        .andExpect(jsonPath("$.data.uploads.length()").value(90))
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.success").value(false))
                 }
             }
         }

@@ -58,7 +58,7 @@
 ### 포함되는 항목 ✅
 - 100개 사진 업로드 (실제 GCS)
 - Gemini 2.5 Flash 분류 모델 호출
-- Gemini 2.5 Flash-Image 스티커 생성 모델 호출
+- 선택된 sourcePhoto의 배경 제거 API 호출 및 스티커 업로드
 - POST /stickers/{stickerId}/regenerate 스티커 재생성 호출
 - 배지 및 설명문 생성
 - 데이터베이스 상태 관리
@@ -90,7 +90,9 @@
     ↓
 [Vertex AI]
     └─ gemini-2.5-flash (분류)
-    └─ gemini-2.5-flash-image (스티커)
+    └─ gemini-2.5-flash (검증)
+[Background Removal API]
+    └─ sourcePhoto cutout 생성
 ```
 
 ---
@@ -114,7 +116,7 @@ Step 2: 사진 준비
   └─ 확장자별 contentType 매핑
      - .jpeg → image/jpeg
      - .png → image/png
-     - .heic → image/heic
+     - .webp → image/webp
 
 Step 3: Signed URL 발급
   POST /analysis
@@ -165,9 +167,10 @@ Step 6: Gemini 분석 (동기)
   - 4개 테마 감지
   - 각 테마별 배지/설명 생성
 
-Step 7: 스티커 생성 (동기)
-  - Gemini 2.5 Flash-Image로 스티커 생성
-  - 타임아웃: 120초/테마
+Step 7: 스티커 cutout 생성 (동기)
+  - 검증된 테마의 sourcePhoto를 읽음
+  - 배경 제거 API로 PNG cutout 생성
+  - 스티커 버킷에 업로드
 
 Step 8: 특정 테마 스티커 재생성 (선택)
   - --regenerate-theme 옵션이 있을 때 실행
@@ -279,10 +282,9 @@ Step 9: 결과 로그 출력
   ✓ Gemini 2.5 Flash 호출 성공
   ✓ 4개 테마 감지됨
   ✓ 각 테마별 배지, 설명, 타겟 대상 생성
-  ✓ Gemini 2.5 Flash-Image 스티커 생성
-  ✓ 스티커 생성 타임아웃: 120초
+  ✓ sourcePhoto 기반 스티커 cutout 생성
   ✓ 스티커 저장 위치: gs://ppotto-bucket-dev/stickers/
-  ✓ 특정 테마 스티커 재생성 시 새 이미지 생성
+  ✓ 특정 테마 스티커 재생성 시 새 cutout 업로드
 ```
 
 ### 성능 검증
@@ -292,7 +294,7 @@ Step 9: 결과 로그 출력
   ✓ Signed URL 발급: < 2초
   ✓ 100개 사진 업로드: < 60초 (병렬)
   ✓ Gemini 분류: < 20초
-  ✓ 스티커 생성: < 120초/테마
+  ✓ 스티커 cutout 및 업로드: < 120초/테마
   ✓ 전체 소요시간: < 3분
 ```
 
@@ -487,7 +489,7 @@ cd /Users/dustin.hwang/IdeaProjects/Gallery100-Server
 ls -la /Users/dustin.hwang/Desktop/etc/wark/
 
 # 사진 개수 확인
-ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png,heic} 2>/dev/null | wc -l
+ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png,webp} 2>/dev/null | wc -l
 
 # 옵션으로 경로 지정
 python3 e2e/test_photosanalysis_pipeline.py \
@@ -506,9 +508,9 @@ python3 e2e/test_photosanalysis_pipeline.py \
 # .env에서 타임아웃 확인
 cat .env | grep VERTEX_AI_.*_TIMEOUT
 
-# 타임아웃 증가 (분류: 180초, 스티커: 120초)
+# 타임아웃 증가 (분류: 300초, 검증: 60초)
 VERTEX_AI_CLASSIFY_TIMEOUT_MS=300000
-VERTEX_AI_STICKER_TIMEOUT_MS=180000
+VERTEX_AI_VERIFY_TIMEOUT_MS=60000
 
 # 서버 재시작
 ./gradlew bootRun
@@ -565,7 +567,7 @@ docker exec ppotto-postgres psql -U ppotto -d ppotto -c "SELECT 1;"
 | `VERTEX_AI_PROJECT` | ppotto-project-503613 | GCP 프로젝트 ID |
 | `VERTEX_AI_LOCATION` | us-central1 | Vertex AI 지역 |
 | `VERTEX_AI_CLASSIFY_TIMEOUT_MS` | 180000 | 분류 타임아웃 (3분) |
-| `VERTEX_AI_STICKER_TIMEOUT_MS` | 120000 | 스티커 타임아웃 (2분) |
+| `VERTEX_AI_VERIFY_TIMEOUT_MS` | 30000 | 검증 타임아웃 (30초) |
 | `GCS_BUCKET` | ppotto-bucket-dev | GCS 버킷명 |
 | `GCS_TIMEOUT_MILLIS` | 5000 | GCS 작업 타임아웃 |
 

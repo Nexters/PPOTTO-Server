@@ -3,21 +3,6 @@ package com.github.nexters.ppotto.analysis.infrastructure
 import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
 
 object GeminiPrompts {
-    fun stickerCutout(targetSubject: String): String =
-        """
-        Perform a precise background removal (like a Photoshop "cutout" / "remove background" tool) on this photo, keeping only this subject: '$targetSubject'. This is NOT a printed die-cut sticker — do not apply any printed-sticker styling such as a white border, colored outline, or halo around the edge. Treat this purely as isolating the subject from its background, nothing more.
-        Preserve the subject's natural appeal from the original photo, including its pose, expression, color, texture, and recognizable silhouette.
-        Keep the cutout clean and polished, but do not redraw, cartoonize, beautify unrealistically, or add new design elements.
-
-        Background: unless the subject description above explicitly refers to a landscape, scenery, or wide view, treat everything else in the original photo as background and remove it completely — this includes walls, floors, furniture, other objects, other people, sky, ground, or any part of the scene not covered by the named subject itself. Only when the subject description itself is a landscape/scenery should a wider view remain, and even then only that described scene, not unrelated clutter around it.
-
-        Orientation: keep the subject's overall up-down axis exactly as gravity would place it in real life. This is only about that axis, not the subject's pose — a sitting, lying, or reclining pose is fine. Do not rotate, tilt, flip, or invert the image so the subject reads as sideways or upside down — for example, a potted plant must stand upright, not sideways or upside down, and a standing person must have feet down and head up, not appear to stand on the ceiling.
-
-        Edges: absolutely no outline, border, stroke, halo, or colored line of any kind may trace the subject's silhouette — not white, not any color. The cutout boundary itself must be the only edge, exactly like a background-removal tool would produce, not like a printed sticker. This applies especially to people: their body, hair, and clothing edges must transition directly from subject to background with zero added line art.
-
-        Output format: the image must be a PNG containing just the subject, with a modest uniform margin around it so no part of it touches the image boundary. The background does not need to be transparent or any particular color — a separate automated step removes whatever background is present — but keep it simple and uncluttered (a plain surface or soft blur is fine) so the subject stays the clear, dominant element. Do not place the subject on any decorative backdrop, canvas, frame, or drop shadow.
-        """.trimIndent()
-
     fun themeClassification(photoAliases: List<String>): String =
         listOf(
             """

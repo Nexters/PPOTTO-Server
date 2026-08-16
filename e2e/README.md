@@ -142,20 +142,21 @@ cd /Users/dustin.hwang/IdeaProjects/Gallery100-Server
 ls /Users/dustin.hwang/Desktop/etc/wark/ | head -10
 
 # 사진 개수 확인
-ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png} 2>/dev/null | wc -l
+ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png,webp} 2>/dev/null | wc -l
 
 # 다른 경로 지정
 python3 test_photosanalysis_pipeline.py --photos-dir /path/to/photos
 ```
 
-### Gemini 타임아웃
+### 분석 타임아웃
 
 ```bash
 # .env 타임아웃 확인
 cat .env | grep VERTEX_AI.*TIMEOUT
 
 # 필요시 증가 (단위: ms)
-# VERTEX_AI_STICKER_TIMEOUT_MS=180000  # 3분으로 증가
+# VERTEX_AI_CLASSIFY_TIMEOUT_MS=300000
+# VERTEX_AI_VERIFY_TIMEOUT_MS=60000
 ```
 
 ### 데이터베이스 연결 실패
@@ -194,10 +195,10 @@ docker exec ppotto-postgres psql -U ppotto -d ppotto -c "SELECT 1;"
 │  └─ POST /analysis/{id}/start
 │  └─ Gemini 분류 시작 (동기)
 │
-├─ 배지/스티커 생성
+├─ 테마별 스티커 생성
 │  └─ 4개 테마 감지
 │  └─ 배지 생성
-│  └─ 스티커 생성 (타임아웃)
+│  └─ sourcePhoto 배경 제거 및 업로드
 │
 ├─ 특정 테마 스티커 재생성 (선택)
 │  └─ title 또는 테마명으로 대상 스티커 선택
@@ -224,7 +225,7 @@ docker exec ppotto-postgres psql -U ppotto -d ppotto -c "SELECT 1;"
 - ✅ Gemini 2.5 Flash 호출
 - ✅ 4개 테마 분류
 - ✅ 배지/설명 생성
-- ✅ 스티커 생성 (120초 타임아웃)
+- ✅ sourcePhoto 기반 스티커 cutout 업로드
 - ✅ 특정 테마 스티커 재생성 (선택)
 
 ## 📚 추가 문서
