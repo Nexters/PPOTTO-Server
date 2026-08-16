@@ -34,13 +34,6 @@ services:
       REDIS_HOST: valkey
       REDIS_PORT: 6379
       GCS_CREDENTIALS_PATH: /run/secrets/gcs-service-account.json
-      JAVA_TOOL_OPTIONS: -javaagent:/otel/opentelemetry-javaagent.jar
-      OTEL_SERVICE_NAME: ppotto-server
-      OTEL_EXPORTER_OTLP_ENDPOINT: https://otel.ppotto.co.kr
-      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,24 +48,6 @@ services:
     cpus: 1.5
     security_opt:
       - no-new-privileges:true
-
-  otel-agent:
-    image: otel/opentelemetry-collector-contrib:0.158.0
-    user: "0"
-    volumes:
-      - ./otel-agent.yaml:/etc/otelcol-contrib/config.yaml:ro,z
-      - /:/hostfs:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-      valkey:
-        condition: service_healthy
-    restart: unless-stopped
-    mem_limit: 256m
-    security_opt:
-      - label=disable
 
   postgres:
     image: pgvector/pgvector:pg18
