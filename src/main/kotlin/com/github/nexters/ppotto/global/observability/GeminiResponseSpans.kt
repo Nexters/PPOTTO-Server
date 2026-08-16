@@ -1,10 +1,11 @@
 package com.github.nexters.ppotto.global.observability
 
+import com.google.genai.types.Candidate
 import com.google.genai.types.GenerateContentResponse
 import com.google.genai.types.GenerateContentResponseUsageMetadata
 import kotlin.jvm.optionals.getOrNull
 
-fun LlmSpanHandle.record(response: GenerateContentResponse) {
+fun LlmSpanHandle.recordResponse(response: GenerateContentResponse) {
     response
         .usageMetadata()
         .getOrNull()
@@ -20,14 +21,27 @@ fun LlmSpanHandle.record(response: GenerateContentResponse) {
     response
         .candidates()
         .getOrNull()
-        ?.mapNotNull { candidate ->
+        ?.let(::recordCandidates)
+}
+
+private fun LlmSpanHandle.recordCandidates(candidates: List<Candidate>) {
+    candidates
+        .mapNotNull { candidate ->
             candidate
                 .finishReason()
                 .getOrNull()
                 ?.toString()
-        }?.distinct()
-        ?.takeIf { it.isNotEmpty() }
+        }.distinct()
+        .takeIf { it.isNotEmpty() }
         ?.let(::setFinishReasons)
+    candidates
+        .mapNotNull { candidate ->
+            candidate
+                .content()
+                .getOrNull()
+                ?.toLlmMessage(LlmRole.ASSISTANT)
+        }.takeIf { it.isNotEmpty() }
+        ?.let(::setOutputMessages)
 }
 
 private fun LlmSpanHandle.recordUsage(usage: GenerateContentResponseUsageMetadata) {

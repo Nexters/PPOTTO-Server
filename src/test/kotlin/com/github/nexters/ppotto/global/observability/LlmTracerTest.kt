@@ -51,6 +51,21 @@ class LlmTracerTest :
                         span.setResponseModel("gemini-2.5-flash-002")
                         span.setResponseId("resp-123")
                         span.setFinishReasons(listOf("STOP"))
+                        span.setSystemInstructions("너는 사진 분류기다")
+                        span.setInputMessages(
+                            listOf(
+                                LlmMessage(
+                                    LlmRole.USER,
+                                    listOf(
+                                        LlmMessagePart.Uri("gs://bucket/photo-1.jpg", "image/jpeg"),
+                                        LlmMessagePart.Text("분류해줘"),
+                                    ),
+                                ),
+                            ),
+                        )
+                        span.setOutputMessages(
+                            listOf(LlmMessage(LlmRole.ASSISTANT, listOf(LlmMessagePart.Text("{\"theme\":\"바다\"}")))),
+                        )
                         "ok"
                     }
 
@@ -82,6 +97,26 @@ class LlmTracerTest :
                     trace.data["gen_ai.usage.reasoning.output_tokens"] shouldBe 30
                     trace.data["gen_ai.usage.total_tokens"] shouldBe 190
                     trace.data["ppotto.llm.photo_count"] shouldBe "3"
+                }
+
+                Then("프롬프트와 응답 본문을 스펙 키와 구버전 키 양쪽에 담는다") {
+                    val data =
+                        captured
+                            .single()
+                            .contexts.trace
+                            .shouldNotBeNull()
+                            .data
+
+                    data["gen_ai.system_instructions"] shouldBe "너는 사진 분류기다"
+                    data["gen_ai.input.messages"] shouldBe
+                        """[{"role":"user","parts":[{"type":"uri","modality":"image","mime_type":"image/jpeg",""" +
+                        """"uri":"gs://bucket/photo-1.jpg"},{"type":"text","content":"분류해줘"}]}]"""
+                    data["gen_ai.request.messages"] shouldBe
+                        """[{"role":"user","content":[{"type":"uri","modality":"image","mime_type":"image/jpeg",""" +
+                        """"uri":"gs://bucket/photo-1.jpg"},{"type":"text","text":"분류해줘"}]}]"""
+                    data["gen_ai.output.messages"] shouldBe
+                        """[{"role":"assistant","parts":[{"type":"text","content":"{\"theme\":\"바다\"}"}]}]"""
+                    data["gen_ai.response.text"] shouldBe """["{\"theme\":\"바다\"}"]"""
                 }
             }
         }

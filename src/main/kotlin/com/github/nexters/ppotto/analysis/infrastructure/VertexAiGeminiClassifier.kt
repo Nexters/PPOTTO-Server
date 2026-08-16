@@ -13,7 +13,8 @@ import com.github.nexters.ppotto.global.config.VertexAiProperties
 import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.observability.LlmPipeline
 import com.github.nexters.ppotto.global.observability.LlmTracer
-import com.github.nexters.ppotto.global.observability.record
+import com.github.nexters.ppotto.global.observability.recordRequest
+import com.github.nexters.ppotto.global.observability.recordResponse
 import com.google.genai.Client
 import com.google.genai.types.Content
 import com.google.genai.types.GenerateContentConfig
@@ -64,9 +65,10 @@ class VertexAiGeminiClassifier(
                 MODEL,
                 attributes = mapOf(ATTR_PHOTO_COUNT to photos.size.toString()),
             ) { span ->
+                span.recordRequest(content, config)
                 genAiClient.models
                     .generateContent(MODEL, content, config)
-                    .also { span.record(it) }
+                    .also { span.recordResponse(it) }
             }
         val rawThemes = objectMapper.readValue(response.text(), Array<GeminiThemeResponse>::class.java).toList()
 
@@ -114,9 +116,10 @@ class VertexAiGeminiClassifier(
                 MODEL,
                 attributes = mapOf(ATTR_PHOTO_COUNT to photos.size.toString()),
             ) { span ->
+                span.recordRequest(content, config)
                 genAiClient.models
                     .generateContent(MODEL, content, config)
-                    .also { span.record(it) }
+                    .also { span.recordResponse(it) }
             }
         val rawSticker = objectMapper.readValue(response.text(), GeminiStickerResponse::class.java)
 
@@ -156,9 +159,10 @@ class VertexAiGeminiClassifier(
 
         val response =
             LlmTracer.trace(LlmPipeline.STICKER_SUBJECT_VERIFICATION, MODEL) { span ->
+                span.recordRequest(content, config)
                 genAiClient.models
                     .generateContent(MODEL, content, config)
-                    .also { span.record(it) }
+                    .also { span.recordResponse(it) }
             }
         val raw = objectMapper.readValue(response.text(), GeminiSubjectVerificationResponse::class.java)
         return toVerification(raw)
