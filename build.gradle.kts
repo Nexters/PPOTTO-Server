@@ -40,6 +40,8 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
     implementation(libs.jooq.kotlin)
     implementation(libs.kotlin.reflect)
+    implementation(libs.sentry.logback)
+    implementation(libs.sentry.spring.boot4.starter)
     implementation(libs.spring.boot.restclient)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.spring.boot.starter.data.redis)
