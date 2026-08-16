@@ -9,6 +9,7 @@ import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
+import java.util.Collections
 import java.util.UUID
 
 @Component
@@ -33,14 +34,36 @@ class RequestLoggingFilter : OncePerRequestFilter() {
                 } finally {
                     log
                         .info(
-                            "{} {} {} {}ms",
+                            "{} {} {} {}ms headers={}",
                             request.method,
                             request.requestURI,
                             response.status,
                             System.currentTimeMillis() - started,
+                            request.maskedHeaders(),
                         ).let { MDC.clear() }
                 }
             }
 
     override fun shouldNotFilter(request: HttpServletRequest): Boolean = request.requestURI.startsWith("/actuator")
+
+    private fun HttpServletRequest.maskedHeaders(): String =
+        Collections
+            .list(headerNames)
+            .joinToString(prefix = "[", postfix = "]") { name ->
+                "$name=${maskedHeaderValue(name)}"
+            }
+
+    private fun HttpServletRequest.maskedHeaderValue(name: String): String =
+        when {
+            name.equals(AUTHORIZATION, ignoreCase = true) -> MASKED
+            else ->
+                Collections
+                    .list(getHeaders(name))
+                    .joinToString(",")
+        }
+
+    private companion object {
+        const val AUTHORIZATION = "Authorization"
+        const val MASKED = "***"
+    }
 }
