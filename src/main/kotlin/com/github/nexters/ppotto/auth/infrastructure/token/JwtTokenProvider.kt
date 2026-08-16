@@ -22,6 +22,28 @@ import java.util.Base64
 import java.util.Date
 import java.util.UUID
 
+enum class JwtAccessTokenFailureReason {
+    PARSE_FAILED,
+    ALGORITHM_MISMATCH,
+    SIGNATURE_INVALID,
+    ISSUER_MISMATCH,
+    EXPIRED,
+    TOKEN_USE_INVALID,
+    SUBJECT_INVALID,
+}
+
+class JwtAccessTokenVerificationException(
+    val reason: JwtAccessTokenFailureReason,
+    val issuer: String? = null,
+    val subject: String? = null,
+    val tokenUse: String? = null,
+    cause: Exception? = null,
+) : UnauthorizedException(CommonErrorCode.UNAUTHORIZED) {
+    init {
+        cause?.let(::addSuppressed)
+    }
+}
+
 @Component
 class JwtTokenProvider(
     private val properties: JwtAuthProperties,
@@ -57,25 +79,44 @@ class JwtTokenProvider(
         try {
             SignedJWT
                 .parse(accessToken)
-                .takeIf { it.header.algorithm == JWSAlgorithm.HS256 }
-                ?.takeIf { it.verify(MACVerifier(secret)) }
-                ?.jwtClaimsSet
-                ?.takeIf { it.issuer == properties.issuer }
-                ?.takeIf {
-                    it.expirationTime
-                        ?.toInstant()
-                        ?.isAfter(clock.instant()) == true
-                }?.takeIf { it.getStringClaim(TOKEN_USE) == ACCESS }
-                ?.let { UserId(UUID.fromString(it.subject)) }
-                ?: unauthorized()
-        } catch (e: UnauthorizedException) {
-            throw e
+                .also { token ->
+                    if (token.header.algorithm != JWSAlgorithm.HS256) {
+                        unauthorized(JwtAccessTokenFailureReason.ALGORITHM_MISMATCH)
+                    }
+                }.also { token ->
+                    if (!token.verify(MACVerifier(secret))) {
+                        unauthorized(JwtAccessTokenFailureReason.SIGNATURE_INVALID)
+                    }
+                }.jwtClaimsSet
+                .let { claims ->
+                    if (claims.issuer != properties.issuer) {
+                        unauthorized(JwtAccessTokenFailureReason.ISSUER_MISMATCH, issuer = claims.issuer)
+                    }
+                    if (claims.expirationTime
+                            ?.toInstant()
+                            ?.isAfter(clock.instant()) != true
+                    ) {
+                        unauthorized(JwtAccessTokenFailureReason.EXPIRED, subject = claims.subject)
+                    }
+                    claims.getStringClaim(TOKEN_USE).let { tokenUse ->
+                        if (tokenUse != ACCESS) {
+                            unauthorized(
+                                JwtAccessTokenFailureReason.TOKEN_USE_INVALID,
+                                subject = claims.subject,
+                                tokenUse = tokenUse,
+                            )
+                        }
+                    }
+                    try {
+                        UserId(UUID.fromString(claims.subject))
+                    } catch (e: IllegalArgumentException) {
+                        unauthorized(JwtAccessTokenFailureReason.SUBJECT_INVALID, subject = claims.subject, cause = e)
+                    }
+                }
         } catch (e: ParseException) {
-            unauthorized(e)
+            unauthorized(JwtAccessTokenFailureReason.PARSE_FAILED, cause = e)
         } catch (e: JOSEException) {
-            unauthorized(e)
-        } catch (e: IllegalArgumentException) {
-            unauthorized(e)
+            unauthorized(JwtAccessTokenFailureReason.SIGNATURE_INVALID, cause = e)
         }
 
     private fun randomRefreshToken(): String =
@@ -88,10 +129,20 @@ class JwtTokenProvider(
                     .encodeToString(it)
             }
 
-    private fun unauthorized(cause: Exception? = null): Nothing =
-        UnauthorizedException(CommonErrorCode.UNAUTHORIZED)
-            .also { exception -> cause?.let(exception::addSuppressed) }
-            .let { throw it }
+    private fun unauthorized(
+        reason: JwtAccessTokenFailureReason,
+        issuer: String? = null,
+        subject: String? = null,
+        tokenUse: String? = null,
+        cause: Exception? = null,
+    ): Nothing =
+        JwtAccessTokenVerificationException(
+            reason = reason,
+            issuer = issuer,
+            subject = subject,
+            tokenUse = tokenUse,
+            cause = cause,
+        ).let { throw it }
 
     private companion object {
         const val TOKEN_USE = "token_use"
