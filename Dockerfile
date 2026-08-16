@@ -13,10 +13,8 @@ COPY --from=build /workspace/build/libs/*.jar application.jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
 FROM bellsoft/liberica-openjre-debian:25-cds
-ARG OTEL_AGENT_VERSION=2.30.0
 WORKDIR /application
 RUN groupadd --system --gid 1001 spring && useradd --system --uid 1001 --gid spring spring
-ADD --chown=spring:spring https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar /otel/opentelemetry-javaagent.jar
 COPY --from=extractor --chown=spring:spring /builder/extracted/dependencies/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/spring-boot-loader/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/snapshot-dependencies/ ./
