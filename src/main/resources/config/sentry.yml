@@ -1,0 +1,17 @@
+sentry:
+  dsn: ${SENTRY_DSN}
+  environment: ${SENTRY_ENVIRONMENT}
+  release: ${SENTRY_RELEASE}
+  traces-sample-rate: ${SENTRY_TRACES_SAMPLE_RATE}
+  profile-session-sample-rate: ${SENTRY_PROFILE_SESSION_SAMPLE_RATE}
+  profile-lifecycle: trace
+  profiling-traces-dir-path: ${SENTRY_PROFILING_TRACES_DIR}
+  send-default-pii: true
+  max-request-body-size: always
+  logs:
+    enabled: true
+  logging:
+    enabled: true
+    minimum-event-level: error
+    minimum-breadcrumb-level: info
+    minimum-level: info

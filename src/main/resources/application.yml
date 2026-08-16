@@ -21,3 +21,4 @@ spring:
       - classpath:config/cors.yml
       - classpath:config/security.yml
       - classpath:config/user.yml
+      - classpath:config/sentry.yml

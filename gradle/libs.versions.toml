@@ -11,6 +11,7 @@ postgresql = "42.7.11"
 kotest = "6.2.3"
 spring-dotenv = "5.1.0"
 springdoc = "3.0.3"
+sentry = "8.53.0"
 ktlint-gradle = "14.2.0"
 kover = "0.9.9"
 detekt = "2.0.0-alpha.5"
@@ -33,6 +34,9 @@ spring-boot-starter-flyway-test = { module = "org.springframework.boot:spring-bo
 spring-cloud-dependencies = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
 spring-security-oauth2-jose = { module = "org.springframework.security:spring-security-oauth2-jose" }
 springdoc-openapi-starter-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+sentry-spring-boot4-starter = { module = "io.sentry:sentry-spring-boot-4-starter", version.ref = "sentry" }
+sentry-logback = { module = "io.sentry:sentry-logback", version.ref = "sentry" }
+sentry-async-profiler = { module = "io.sentry:sentry-async-profiler", version.ref = "sentry" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 jackson-module-kotlin = { module = "tools.jackson.module:jackson-module-kotlin" }
 jooq-kotlin = { module = "org.jooq:jooq-kotlin", version.ref = "jooq" }

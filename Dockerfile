@@ -14,7 +14,8 @@ RUN java -Djarmode=tools -jar application.jar extract --layers --destination ext
 
 FROM bellsoft/liberica-openjre-debian:25-cds
 WORKDIR /application
-RUN groupadd --system --gid 1001 spring && useradd --system --uid 1001 --gid spring spring
+RUN groupadd --system --gid 1001 spring && useradd --system --uid 1001 --gid spring spring \
+    && mkdir -p /application/profiling && chown spring:spring /application/profiling
 COPY --from=extractor --chown=spring:spring /builder/extracted/dependencies/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/spring-boot-loader/ ./
 COPY --from=extractor --chown=spring:spring /builder/extracted/snapshot-dependencies/ ./
@@ -48,7 +49,9 @@ RUN --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-gcs-
     PIXIAN_API_ID=aot PIXIAN_API_SECRET=dummy-pixian-secret PIXIAN_TEST_MODE=true \
     PIXIAN_REMOVE_BACKGROUND_URI=http://localhost/pixian/remove-background \
     PIXIAN_CONNECT_TIMEOUT_MILLIS=5000 PIXIAN_READ_TIMEOUT_MILLIS=90000 \
+    SENTRY_DSN= SENTRY_ENVIRONMENT=aot SENTRY_TRACES_SAMPLE_RATE=0 SENTRY_RELEASE=aot \
+    SENTRY_PROFILE_SESSION_SAMPLE_RATE=0 SENTRY_PROFILING_TRACES_DIR=/tmp \
     java --add-modules java.instrument -XX:AOTCacheOutput=application.aot -Dspring.context.exit=onRefresh -jar application.jar
 USER spring:spring
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:AOTCache=application.aot", "-jar", "application.jar"]
+ENTRYPOINT ["java", "--enable-native-access=ALL-UNNAMED", "-XX:AOTCache=application.aot", "-jar", "application.jar"]

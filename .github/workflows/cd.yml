@@ -152,19 +152,19 @@ jobs:
 
           git merge --ff-only "$deploy_sha"
           test "$(git rev-parse HEAD)" = "$deploy_sha"
-          APP_IMAGE="$image" docker compose \
+          APP_IMAGE="$image" SENTRY_RELEASE="$deploy_sha" docker compose \
             -f compose.deploy.yaml \
             -f "$compose_file" \
             config -q
-          APP_IMAGE="$image" docker compose \
+          APP_IMAGE="$image" SENTRY_RELEASE="$deploy_sha" docker compose \
             -f compose.deploy.yaml \
             -f "$compose_file" \
             pull
-          APP_IMAGE="$image" docker compose \
+          APP_IMAGE="$image" SENTRY_RELEASE="$deploy_sha" docker compose \
             -f compose.deploy.yaml \
             -f "$compose_file" \
             up -d --no-build --remove-orphans
-          APP_IMAGE="$image" docker compose \
+          APP_IMAGE="$image" SENTRY_RELEASE="$deploy_sha" docker compose \
             -f compose.deploy.yaml \
             -f "$compose_file" \
             ps

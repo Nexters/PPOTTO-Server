@@ -34,6 +34,8 @@ services:
       REDIS_HOST: valkey
       REDIS_PORT: 6379
       GCS_CREDENTIALS_PATH: /run/secrets/gcs-service-account.json
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-unknown}
+      SENTRY_PROFILING_TRACES_DIR: /application/profiling
     depends_on:
       postgres:
         condition: service_healthy
