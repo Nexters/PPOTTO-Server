@@ -10,3 +10,4 @@ Python E2E test suite for the photo analysis pipeline.
 - When adding or changing E2E behavior, update `README.md` or `E2E_TEST_DESIGN.md` if the usage, scenario coverage, or output location changes.
 - The main pipeline script may optionally verify theme-based sticker regeneration with `--theme-query` and `--regenerate-theme`; keep report fields aligned with that scenario.
 - The main pipeline script supports grouped upload requests through `--group-size`, so high-count tests can exercise burst groups without exceeding the API's 100-group limit.
+- The main pipeline script accepts JPEG, PNG, and WEBP photos for new uploads; HEIC files are intentionally excluded from E2E input discovery.

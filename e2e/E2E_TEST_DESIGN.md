@@ -116,7 +116,7 @@ Step 2: 사진 준비
   └─ 확장자별 contentType 매핑
      - .jpeg → image/jpeg
      - .png → image/png
-     - .heic → image/heic
+     - .webp → image/webp
 
 Step 3: Signed URL 발급
   POST /analysis
@@ -489,7 +489,7 @@ cd /Users/dustin.hwang/IdeaProjects/Gallery100-Server
 ls -la /Users/dustin.hwang/Desktop/etc/wark/
 
 # 사진 개수 확인
-ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png,heic} 2>/dev/null | wc -l
+ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png,webp} 2>/dev/null | wc -l
 
 # 옵션으로 경로 지정
 python3 e2e/test_photosanalysis_pipeline.py \

@@ -1,10 +1,10 @@
 package com.github.nexters.ppotto.analysis.presentation
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
-import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
+import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadContentType
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadGroup
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadItem
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadUrlItem
@@ -48,7 +48,7 @@ private val CREATE_ANALYSIS_REQUEST =
                                 listOf(
                                     PhotoUploadItem(
                                         takenAt = Instant.parse("2026-06-14T04:22:10Z"),
-                                        contentType = PhotoContentType.JPEG,
+                                        contentType = PhotoUploadContentType.JPEG,
                                         isRepresentative = true,
                                     ),
                                 ),
@@ -58,12 +58,12 @@ private val CREATE_ANALYSIS_REQUEST =
                                 listOf(
                                     PhotoUploadItem(
                                         takenAt = Instant.parse("2026-06-14T04:24:02Z"),
-                                        contentType = PhotoContentType.HEIC,
+                                        contentType = PhotoUploadContentType.PNG,
                                         isRepresentative = true,
                                     ),
                                     PhotoUploadItem(
                                         takenAt = Instant.parse("2026-06-14T04:24:03Z"),
-                                        contentType = PhotoContentType.HEIC,
+                                        contentType = PhotoUploadContentType.WEBP,
                                         isRepresentative = false,
                                     ),
                                 ),
@@ -73,7 +73,7 @@ private val CREATE_ANALYSIS_REQUEST =
                                 listOf(
                                     PhotoUploadItem(
                                         takenAt = Instant.parse("2026-07-02T10:05:44Z"),
-                                        contentType = PhotoContentType.JPEG,
+                                        contentType = PhotoUploadContentType.JPEG,
                                         isRepresentative = true,
                                     ),
                                 ),
@@ -97,7 +97,7 @@ private val CREATE_ANALYSIS_RESPONSE =
                             ),
                             PhotoUploadUrlItem(
                                 photoId = UUID.fromString("01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a"),
-                                uploadUrl = "https://storage.googleapis.com/ppotto-photos/01983f2f.heic?X-Goog-Expires=900",
+                                uploadUrl = "https://storage.googleapis.com/ppotto-photos/01983f2f.webp?X-Goog-Expires=900",
                             ),
                         ),
                 ),

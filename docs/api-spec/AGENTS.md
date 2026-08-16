@@ -6,7 +6,7 @@ API contract source documents.
 
 | File | Description |
 |------|---------|
-| `api-spec.md` | Source API contract for spec-driven development, including terms, boards, stickers/recaps, analysis, auth, user, and report APIs |
+| `api-spec.md` | Source API contract for spec-driven development, including terms, boards, stickers/recaps, analysis, auth, user, and report APIs. Analysis photo upload accepts JPEG/PNG/WEBP for new requests; HEIC is intentionally excluded from the public upload contract |
 
 ## Rules
 

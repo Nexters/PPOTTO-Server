@@ -162,7 +162,7 @@ class PhotosPipelineE2ETest:
 
             image_files = [
                 f for f in os.listdir(self.photos_dir)
-                if f.lower().endswith(('.jpeg', '.jpg', '.png', '.heic'))
+                if f.lower().endswith(('.jpeg', '.jpg', '.png', '.webp'))
             ]
             if len(image_files) < self.photos_count:
                 logger.error(f"❌ 사진 부족: {len(image_files)}개 (필요: {self.photos_count}개)")
@@ -252,7 +252,7 @@ class PhotosPipelineE2ETest:
         try:
             all_files = [
                 f for f in sorted(os.listdir(self.photos_dir))
-                if f.lower().endswith(('.jpeg', '.jpg', '.png', '.heic'))
+                if f.lower().endswith(('.jpeg', '.jpg', '.png', '.webp'))
             ]
 
             image_files = all_files[:self.photos_count]
@@ -264,8 +264,8 @@ class PhotosPipelineE2ETest:
                     ct = "image/jpeg"
                 elif ext == 'png':
                     ct = "image/png"
-                elif ext == 'heic':
-                    ct = "image/heic"
+                elif ext == 'webp':
+                    ct = "image/webp"
                 else:
                     ct = f"image/{ext}"
 
@@ -873,7 +873,7 @@ class PhotosPipelineE2ETest:
         extensions = {
             "image/jpeg": "jpg",
             "image/png": "png",
-            "image/heic": "heic",
+            "image/webp": "webp",
         }
         return f"photos/{analysis_id}/{photo_id}.{extensions[content_type]}"
 

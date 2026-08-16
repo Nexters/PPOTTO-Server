@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.analysis.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonValue
 import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
@@ -55,7 +56,7 @@ data class PhotoUploadGroup(
             items.map {
                 PhotoUploadItemRequest(
                     takenAt = it.takenAt,
-                    contentType = it.contentType,
+                    contentType = it.contentType.toDomain(),
                     isRepresentative = it.isRepresentative,
                 )
             },
@@ -70,10 +71,22 @@ data class PhotoUploadItem(
 
     @field:NotNull
     @field:Schema(description = "지원 형식. 업로드 시 Content-Type과 일치해야 함", example = "image/jpeg")
-    val contentType: PhotoContentType,
+    val contentType: PhotoUploadContentType,
 
     @field:NotNull
     @get:JsonProperty("isRepresentative")
     @get:Schema(description = "연사 그룹 내 대표 사진 여부")
     val isRepresentative: Boolean,
 )
+
+enum class PhotoUploadContentType(
+    @get:JsonValue val mimeType: String,
+    private val domainType: PhotoContentType,
+) {
+    JPEG("image/jpeg", PhotoContentType.JPEG),
+    PNG("image/png", PhotoContentType.PNG),
+    WEBP("image/webp", PhotoContentType.WEBP),
+    ;
+
+    fun toDomain(): PhotoContentType = domainType
+}

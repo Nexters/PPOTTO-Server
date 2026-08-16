@@ -2010,7 +2010,7 @@ Request example:
 | photos | Y | `object`[] | - | 촬영 시각 오름차순으로 보내는 사진 그룹. 펼친 사진 수는 총 90~100장 |
 | photos[].items | Y | `object`[] | - | 그룹에 속한 사진들. 원소 1개면 단독 사진, 2개 이상이면 연사 그룹 |
 | photos[].items[].takenAt | Y | `string` | - | 사진 촬영 시각 |
-| photos[].items[].contentType | Y | `string` | `image/jpeg`, `image/png`, `image/heic`, `image/webp` | 지원 형식. 업로드 시 Content-Type과 일치해야 함 |
+| photos[].items[].contentType | Y | `string` | `image/jpeg`, `image/png`, `image/webp` | 지원 형식. 업로드 시 Content-Type과 일치해야 함 |
 | photos[].items[].isRepresentative | Y | `boolean` | - | 화면에 보여줄 대표 사진 여부. 단독 사진은 true로 처리되고, 연사 그룹은 정확히 1장만 true |
 
 Request example:
@@ -2031,12 +2031,12 @@ Request example:
       "items": [
         {
           "takenAt": "2026-06-14T13:24:02+09:00",
-          "contentType": "image/heic",
+          "contentType": "image/png",
           "isRepresentative": true
         },
         {
           "takenAt": "2026-06-14T13:24:03+09:00",
-          "contentType": "image/heic",
+          "contentType": "image/webp",
           "isRepresentative": false
         }
       ]
@@ -2072,7 +2072,7 @@ Request example:
       },
       {
         "photoId": "01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
-        "uploadUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-2b3c.heic?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=900&X-Goog-Signature=b41c..."
+        "uploadUrl": "https://storage.googleapis.com/ppotto-photos/01983f2e-2b3c.webp?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=900&X-Goog-Signature=b41c..."
       }
     ]
   },

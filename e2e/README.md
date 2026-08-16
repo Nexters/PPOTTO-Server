@@ -142,7 +142,7 @@ cd /Users/dustin.hwang/IdeaProjects/Gallery100-Server
 ls /Users/dustin.hwang/Desktop/etc/wark/ | head -10
 
 # 사진 개수 확인
-ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png} 2>/dev/null | wc -l
+ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png,webp} 2>/dev/null | wc -l
 
 # 다른 경로 지정
 python3 test_photosanalysis_pipeline.py --photos-dir /path/to/photos
