@@ -14,7 +14,7 @@ object GeminiPrompts {
             For each theme, generate:
             - theme: theme name (in Korean)
             - categorizedPhotoIds: the list of photo aliases classified under this theme (use only values from the alias list above)
-            - recap.badge: a short badge phrase, around 8 characters (in Korean)
+            - recap.badge: a short badge phrase, around 8 characters (in Korean), always ending with exactly one emoji that fits the theme's mood (e.g. "여행 필수템 🧳")
             - recap.text: a single-sentence recap (in Korean)
             - sticker.sourcePhotoId: FIRST, before writing any subject description, pick the photo alias to use as the sticker source. It must be a value that actually appears in **this theme's own categorizedPhotoIds array**. Never use an alias that exists in the overall photo list but is NOT in this theme's categorizedPhotoIds (i.e., an alias belonging to a different theme) — always copy one of the aliases you just listed in categorizedPhotoIds above.
             - sticker.targetSubject: ONLY AFTER you have picked sourcePhotoId above, look again at that exact photo and write a specific description (in Korean) of a subject that is literally, visibly present in that exact photo. Do not describe something you recall from a different photo in this batch, and do not write an idealized or generic subject — describe only what is actually depicted in the sourcePhotoId photo you just chose. Before finalizing, re-check yourself: if you looked at that sourcePhotoId photo again right now, would everything in targetSubject be immediately visible in it? If not, either choose a different sourcePhotoId or rewrite targetSubject to match what that photo truly shows.
