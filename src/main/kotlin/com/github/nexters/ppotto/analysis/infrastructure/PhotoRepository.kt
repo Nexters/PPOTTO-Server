@@ -114,50 +114,47 @@ class PhotoRepository(
         analysisId: UUID,
         boardId: UUID,
         ids: Collection<UUID>,
-    ): List<Photo> =
-        ids
-            .toSet()
-            .takeIf { it.isNotEmpty() }
-            ?.let { uniqueIds ->
-                dslContext
-                    .selectFrom(PHOTOS)
-                    .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
-                    .and(PHOTOS.BOARD_ID.eq(BoardId(boardId)))
-                    .and(PHOTOS.ID.`in`(uniqueIds.map(::PhotoId)))
-                    .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
-                    .fetch()
-                    .map { it.toDomain() }
-            } ?: emptyList()
+    ): List<Photo> {
+        val uniqueIds = ids.toSet()
+        if (uniqueIds.isEmpty()) return emptyList()
+
+        return dslContext
+            .selectFrom(PHOTOS)
+            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
+            .and(PHOTOS.BOARD_ID.eq(BoardId(boardId)))
+            .and(PHOTOS.ID.`in`(uniqueIds.map(::PhotoId)))
+            .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
+            .fetch()
+            .map { it.toDomain() }
+    }
 
     fun countOwnedByAnalysis(
         analysisId: UUID,
         boardId: UUID,
         ids: Collection<UUID>,
-    ): Int =
-        ids
-            .toSet()
-            .takeIf { it.isNotEmpty() }
-            ?.let { uniqueIds ->
-                dslContext
-                    .selectCount()
-                    .from(PHOTOS)
-                    .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
-                    .and(PHOTOS.BOARD_ID.eq(BoardId(boardId)))
-                    .and(PHOTOS.ID.`in`(uniqueIds.map(::PhotoId)))
-                    .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
-                    .fetchSingle(0, Int::class.java)
-            } ?: 0
+    ): Int {
+        val uniqueIds = ids.toSet()
+        if (uniqueIds.isEmpty()) return 0
 
-    fun hardDeleteAllByAnalysisIds(analysisIds: Collection<UUID>): Int =
-        analysisIds
-            .toSet()
-            .takeIf { it.isNotEmpty() }
-            ?.let {
-                dslContext
-                    .deleteFrom(PHOTOS)
-                    .where(PHOTOS.ANALYSIS_ID.`in`(it.map(::AnalysisId)))
-                    .execute()
-            } ?: 0
+        return dslContext
+            .selectCount()
+            .from(PHOTOS)
+            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
+            .and(PHOTOS.BOARD_ID.eq(BoardId(boardId)))
+            .and(PHOTOS.ID.`in`(uniqueIds.map(::PhotoId)))
+            .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
+            .fetchSingle(0, Int::class.java) ?: 0
+    }
+
+    fun hardDeleteAllByAnalysisIds(analysisIds: Collection<UUID>): Int {
+        val uniqueIds = analysisIds.toSet()
+        if (uniqueIds.isEmpty()) return 0
+
+        return dslContext
+            .deleteFrom(PHOTOS)
+            .where(PHOTOS.ANALYSIS_ID.`in`(uniqueIds.map(::AnalysisId)))
+            .execute()
+    }
 
     private fun PhotosRecord.toDomain() =
         Photo(
