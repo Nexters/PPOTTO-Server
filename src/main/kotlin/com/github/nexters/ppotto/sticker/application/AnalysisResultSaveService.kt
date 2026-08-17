@@ -20,37 +20,35 @@ class AnalysisResultSaveService(
     private val ownershipPorts: List<AnalysisPhotoOwnershipPort>,
 ) {
     @Transactional
-    fun save(command: SaveAnalysisResultCommand): SavedAnalysisResult =
-        command
-            .also {
-                validateStickerCount(it.stickers.size)
-                validateOwnership(it, ownershipPort())
-                stickerRepository.lockAnalysisResult(it.analysisId)
-            }.let { command ->
-                stickerRepository
-                    .findAllByAnalysisId(command.analysisId)
-                    .takeIf { stickers -> stickers.isNotEmpty() }
-                    ?.map { sticker -> sticker.id }
-                    ?.let(::SavedAnalysisResult)
-                    ?: command.stickers
-                        .map { result ->
-                            StickerCreation(
-                                type = result.type,
-                                title = result.title,
-                                summary = result.summary,
-                                sourcePhotoId = result.sourcePhotoId,
-                                imageKey = result.imageKey,
-                                textContent = result.textContent,
-                                mainColor = result.mainColor,
-                            ).let { creation ->
-                                stickerRepository.save(command.analysisId, command.boardId, creation)
-                            }.also { sticker ->
-                                stickerRecapRepository
-                                    .savePhotos(sticker.id, result.photoIds)
-                                    .let { stickerRecapRepository.saveComments(sticker.id, result.comments) }
-                            }.id
-                        }.let(::SavedAnalysisResult)
+    fun save(command: SaveAnalysisResultCommand): SavedAnalysisResult {
+        validateStickerCount(command.stickers.size)
+        validateOwnership(command, ownershipPort())
+        stickerRepository.lockAnalysisResult(command.analysisId)
+
+        val existingStickerIds = stickerRepository.findAllByAnalysisId(command.analysisId).map { it.id }
+        if (existingStickerIds.isNotEmpty()) {
+            return SavedAnalysisResult(existingStickerIds)
+        }
+
+        val stickerIds =
+            command.stickers.map { result ->
+                val creation =
+                    StickerCreation(
+                        type = result.type,
+                        title = result.title,
+                        summary = result.summary,
+                        sourcePhotoId = result.sourcePhotoId,
+                        imageKey = result.imageKey,
+                        textContent = result.textContent,
+                        mainColor = result.mainColor,
+                    )
+                val sticker = stickerRepository.save(command.analysisId, command.boardId, creation)
+                stickerRecapRepository.savePhotos(sticker.id, result.photoIds)
+                stickerRecapRepository.saveComments(sticker.id, result.comments)
+                sticker.id
             }
+        return SavedAnalysisResult(stickerIds)
+    }
 
     private fun validateStickerCount(stickerCount: Int) {
         stickerCount

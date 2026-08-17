@@ -25,6 +25,7 @@ class AnalysisPipelineService(
     private val stickerGenerator: StickerGenerator,
     private val stickerStorage: StickerStorage,
     private val progressTicker: SimulatedProgressTicker = SimulatedProgressTicker(),
+    private val stepTimer: PipelineStepTimer = PipelineStepTimer(),
 ) {
     private val activeGeminiVerifyCount = AtomicInteger(0)
 
@@ -37,7 +38,7 @@ class AnalysisPipelineService(
         log.info("analysis pipeline started: analysisId={}, photoCount={}", analysisId, photos.size)
 
         val photoRefById =
-            measuredStep(analysisId, "photo-indexing") {
+            stepTimer.measuredStep(analysisId, "photo-indexing") {
                 photos.associateBy { it.photoId }
             }
         val classifications = classify(analysisId, photos, onProgress)
@@ -62,7 +63,7 @@ class AnalysisPipelineService(
         onProgress: (Int) -> Unit,
     ): List<ThemeClassification> {
         val classifications =
-            measuredStep(analysisId, "gemini-classification") {
+            stepTimer.measuredStep(analysisId, "gemini-classification") {
                 progressTicker.run(
                     floor = CLASSIFICATION_STARTED_PROGRESS,
                     ceiling = CLASSIFICATION_COMPLETED_PROGRESS,
@@ -270,8 +271,8 @@ class AnalysisPipelineService(
     ): StickerSubjectResolution {
         val verifyStartedAt = System.nanoTime()
         return runCatching {
-            measuredStep(analysisId, "sticker-verify[$themeIndex]") {
-                measuredGeminiCall(
+            stepTimer.measuredStep(analysisId, "sticker-verify[$themeIndex]") {
+                stepTimer.measuredGeminiCall(
                     analysisId = analysisId,
                     operation = "sticker-verify",
                     themeIndex = themeIndex,
@@ -312,11 +313,11 @@ class AnalysisPipelineService(
         val stickerStartedAt = System.nanoTime()
         return runCatching {
             val bytes =
-                measuredStep(analysisId, "sticker-cutout[$themeIndex]") {
+                stepTimer.measuredStep(analysisId, "sticker-cutout[$themeIndex]") {
                     stickerGenerator.generate(sourcePhoto.gcsUri, sourcePhoto.mimeType, targetSubject)
                 }
             val objectKey = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhoto.photoId)
-            measuredStep(analysisId, "sticker-upload[$themeIndex]") {
+            stepTimer.measuredStep(analysisId, "sticker-upload[$themeIndex]") {
                 stickerStorage.upload(objectKey, bytes)
             }
         }.onFailure {
@@ -338,70 +339,6 @@ class AnalysisPipelineService(
                 elapsedMs(stickerStartedAt),
             )
         }.getOrNull()
-    }
-
-    private fun <T> measuredGeminiCall(
-        analysisId: UUID,
-        operation: String,
-        themeIndex: Int,
-        theme: String,
-        activeCount: AtomicInteger,
-        block: () -> T,
-    ): T {
-        val startedAt = System.nanoTime()
-        val currentActiveCount = activeCount.incrementAndGet()
-        log.info(
-            "analysis pipeline gemini call started: " +
-                "analysisId={}, operation={}, themeIndex={}, theme={}, activeCount={}",
-            analysisId,
-            operation,
-            themeIndex,
-            theme,
-            currentActiveCount,
-        )
-        return try {
-            block()
-        } finally {
-            val remainingActiveCount = activeCount.decrementAndGet()
-            log.info(
-                "analysis pipeline gemini call finished: " +
-                    "analysisId={}, operation={}, themeIndex={}, theme={}, activeCount={}, elapsedMs={}",
-                analysisId,
-                operation,
-                themeIndex,
-                theme,
-                remainingActiveCount,
-                elapsedMs(startedAt),
-            )
-        }
-    }
-
-    private fun <T> measuredStep(
-        analysisId: UUID,
-        step: String,
-        block: () -> T,
-    ): T {
-        val startedAt = System.nanoTime()
-        log.info("analysis pipeline step started: analysisId={}, step={}", analysisId, step)
-        return runCatching(block)
-            .onSuccess {
-                log.info(
-                    "analysis pipeline step completed: analysisId={}, step={}, elapsedMs={}",
-                    analysisId,
-                    step,
-                    elapsedMs(startedAt),
-                )
-            }.onFailure {
-                log.error(
-                    "analysis pipeline step failed: analysisId={}, step={}, elapsedMs={}",
-                    analysisId,
-                    step,
-                    elapsedMs(startedAt),
-                    it,
-                )
-            }.getOrElse {
-                throw AnalysisPipelineStepException(step, it)
-            }
     }
 
     companion object {
@@ -508,11 +445,6 @@ class AnalysisPipelineService(
         val fallback: Boolean,
     )
 }
-
-class AnalysisPipelineStepException(
-    val step: String,
-    cause: Throwable,
-) : RuntimeException("$step: ${cause.message ?: cause::class.simpleName ?: "알 수 없는 오류"}", cause)
 
 private fun <T> Future<T>.getOrThrow(): T =
     try {

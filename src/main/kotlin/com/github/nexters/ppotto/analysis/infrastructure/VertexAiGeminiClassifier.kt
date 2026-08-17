@@ -39,17 +39,7 @@ class VertexAiGeminiClassifier(
                 Part.fromText(GeminiPrompts.themeClassification(photoAliases.aliases))
         val content = Content.fromParts(*parts.toTypedArray())
 
-        val httpOptions =
-            HttpOptions
-                .builder()
-                .timeout(vertexAiProperties.classifyTimeoutMs.toInt())
-                .retryOptions(
-                    HttpRetryOptions
-                        .builder()
-                        .attempts(2)
-                        .httpStatusCodes(listOf(429, 500, 502, 503, 504))
-                        .build(),
-                ).build()
+        val httpOptions = buildHttpOptions(vertexAiProperties.classifyTimeoutMs)
 
         val config =
             GenerateContentConfig
@@ -90,17 +80,7 @@ class VertexAiGeminiClassifier(
                 Part.fromText(GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId)))
         val content = Content.fromParts(*parts.toTypedArray())
 
-        val httpOptions =
-            HttpOptions
-                .builder()
-                .timeout(vertexAiProperties.classifyTimeoutMs.toInt())
-                .retryOptions(
-                    HttpRetryOptions
-                        .builder()
-                        .attempts(2)
-                        .httpStatusCodes(listOf(429, 500, 502, 503, 504))
-                        .build(),
-                ).build()
+        val httpOptions = buildHttpOptions(vertexAiProperties.classifyTimeoutMs)
 
         val config =
             GenerateContentConfig
@@ -137,17 +117,7 @@ class VertexAiGeminiClassifier(
                 Part.fromText(GeminiPrompts.verifyStickerSubject(targetSubject)),
             )
 
-        val httpOptions =
-            HttpOptions
-                .builder()
-                .timeout(vertexAiProperties.verifyTimeoutMs.toInt())
-                .retryOptions(
-                    HttpRetryOptions
-                        .builder()
-                        .attempts(2)
-                        .httpStatusCodes(listOf(429, 500, 502, 503, 504))
-                        .build(),
-                ).build()
+        val httpOptions = buildHttpOptions(vertexAiProperties.verifyTimeoutMs)
 
         val config =
             GenerateContentConfig
@@ -174,6 +144,18 @@ class VertexAiGeminiClassifier(
         private const val DEFAULT_MAIN_COLOR = "#222222"
         private val MAIN_COLOR_PATTERN = Regex("^#[0-9A-Fa-f]{6}$")
         private val log = LoggerFactory.getLogger(VertexAiGeminiClassifier::class.java)
+
+        private fun buildHttpOptions(timeoutMs: Long): HttpOptions =
+            HttpOptions
+                .builder()
+                .timeout(timeoutMs.toInt())
+                .retryOptions(
+                    HttpRetryOptions
+                        .builder()
+                        .attempts(2)
+                        .httpStatusCodes(listOf(429, 500, 502, 503, 504))
+                        .build(),
+                ).build()
 
         private fun sanitizedMainColor(
             raw: String?,
