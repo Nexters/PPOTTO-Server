@@ -24,6 +24,7 @@ object GeminiPrompts {
               - posX / posY: a relative offset in pixels from the sticker's center, roughly between -150 and 150, chosen so the bubbles scatter naturally around the sticker without overlapping each other
             - comments.keywordChips: 4-8 short keywords or phrases (in Korean) that summarize this theme, shown as chips below the sticker — no position needed
             All of recap.text, comments.speechBubbles, and comments.keywordChips should read as one consistent voice about the same theme — keep their tone and context flowing naturally from one another instead of feeling like disconnected fragments.
+            None of theme, recap.badge, recap.text, comments.speechBubbles, or comments.keywordChips may contain profanity, sexual or suggestive content, violent or graphic content, hate speech, or anything else inappropriate for viewers under 19 (age-restricted/adult content). This applies regardless of what the source photos actually depict — always phrase every generated text field in clean, wholesome language appropriate for a general, all-ages audience.
             """.trimIndent(),
             STICKER_CANDIDATE_GUIDE,
             OUTPUT_LANGUAGE_NOTE,
