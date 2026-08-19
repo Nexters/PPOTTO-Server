@@ -183,10 +183,12 @@ class VertexAiGeminiClassifier(
                 }
             val chips =
                 raw?.keywordChips.orEmpty().mapNotNull { chip ->
-                    chip.takeUnless(String::isBlank)?.let { ThemeComment(content = it, posX = null, posY = null) }
+                    stripHashtagPrefix(chip).takeUnless(String::isBlank)?.let { ThemeComment(content = it, posX = null, posY = null) }
                 }
             return bubbles + chips
         }
+
+        private fun stripHashtagPrefix(text: String): String = text.trimStart('#').trim()
 
         internal fun toClassifications(
             rawThemes: List<GeminiThemeResponse>,

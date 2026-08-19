@@ -174,6 +174,27 @@ class VertexAiGeminiClassifierSchemaTest :
                     classifications shouldBe emptyList()
                 }
             }
+
+            When("keywordChips에 해시태그 접두사가 붙어있으면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(
+                            themeResponse(
+                                categorizedPhotoIds = listOf("P001"),
+                                sourcePhotoId = "P001",
+                                keywordChips = listOf("#미식", "## 여행", "일상"),
+                            ),
+                        ),
+                        aliases,
+                    )
+
+                Then("맨 앞의 #을 제거하고 저장한다") {
+                    classifications
+                        .first()
+                        .comments
+                        .map { it.content } shouldContainExactly listOf("미식", "여행", "일상")
+                }
+            }
         }
 
         Given("Gemini 스티커 재생성 응답이 alias를 사용할 때") {
@@ -296,6 +317,7 @@ private fun themeResponse(
     theme: String = "테마",
     categorizedPhotoIds: List<String>,
     sourcePhotoId: String,
+    keywordChips: List<String> = emptyList(),
 ) = GeminiThemeResponse(
     theme = theme,
     categorizedPhotoIds = categorizedPhotoIds,
@@ -306,5 +328,5 @@ private fun themeResponse(
             sourcePhotoId = sourcePhotoId,
             mainColor = "#FF6B6B",
         ),
-    comments = GeminiCommentsResponse(speechBubbles = emptyList(), keywordChips = emptyList()),
+    comments = GeminiCommentsResponse(speechBubbles = emptyList(), keywordChips = keywordChips),
 )
