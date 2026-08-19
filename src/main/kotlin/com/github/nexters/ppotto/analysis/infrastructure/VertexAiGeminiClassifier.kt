@@ -142,6 +142,7 @@ class VertexAiGeminiClassifier(
         private const val MODEL = "gemini-2.5-flash"
         private const val ATTR_PHOTO_COUNT = "ppotto.llm.photo_count"
         private const val DEFAULT_MAIN_COLOR = "#222222"
+        private const val RETRY_ATTEMPTS = 5
         private val MAIN_COLOR_PATTERN = Regex("^#[0-9A-Fa-f]{6}$")
         private val log = LoggerFactory.getLogger(VertexAiGeminiClassifier::class.java)
 
@@ -152,8 +153,8 @@ class VertexAiGeminiClassifier(
                 .retryOptions(
                     HttpRetryOptions
                         .builder()
-                        .attempts(2)
-                        .httpStatusCodes(listOf(429, 500, 502, 503, 504))
+                        .attempts(RETRY_ATTEMPTS)
+                        .httpStatusCodes(listOf(408, 429, 500, 502, 503, 504))
                         .build(),
                 ).build()
 
