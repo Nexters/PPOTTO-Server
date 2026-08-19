@@ -170,6 +170,8 @@ class AnalysisService(
                             photoId = photo.id,
                             gcsUri = "gs://${gcsProperties.bucket}/${PhotoObjectKeys.keyFor(analysisId, photo.id, photo.contentType)}",
                             mimeType = photo.contentType.mimeType,
+                            burstGroupId = photo.burstGroupId,
+                            isRepresentative = photo.isRepresentative,
                         )
                     }
             eventPublisher.publishEvent(AnalysisStartRequestedEvent(analysisId, photosToPublish))

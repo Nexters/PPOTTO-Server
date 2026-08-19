@@ -6,4 +6,6 @@ data class PhotoRef(
     val photoId: UUID,
     val gcsUri: String,
     val mimeType: String,
+    val burstGroupId: UUID? = null,
+    val isRepresentative: Boolean = true,
 )

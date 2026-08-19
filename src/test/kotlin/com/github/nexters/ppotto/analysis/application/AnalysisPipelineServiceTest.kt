@@ -179,6 +179,60 @@ class AnalysisPipelineServiceTest :
             }
         }
 
+        Given("연사(버스트) 그룹 사진이 포함되어 있을 때") {
+            val analysisId = UUID.fromString("550e8400-e29b-41d4-a716-446655440040")
+            val burstGroupId = UUID.fromString("550e8400-e29b-41d4-a716-446655440049")
+            val representativePhoto =
+                PhotoRef(
+                    photoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440041"),
+                    gcsUri = "gs://bucket/41.jpg",
+                    mimeType = "image/jpeg",
+                    burstGroupId = burstGroupId,
+                    isRepresentative = true,
+                )
+            val siblingPhotos =
+                listOf(
+                    PhotoRef(
+                        photoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440042"),
+                        gcsUri = "gs://bucket/42.jpg",
+                        mimeType = "image/jpeg",
+                        burstGroupId = burstGroupId,
+                        isRepresentative = false,
+                    ),
+                    PhotoRef(
+                        photoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440043"),
+                        gcsUri = "gs://bucket/43.jpg",
+                        mimeType = "image/jpeg",
+                        burstGroupId = burstGroupId,
+                        isRepresentative = false,
+                    ),
+                )
+            val photos = listOf(representativePhoto) + siblingPhotos
+            val receivedPhotoIds = mutableListOf<UUID>()
+            val service =
+                AnalysisPipelineService(
+                    geminiClassifier = RecordingClassifyGeminiClassifier(receivedPhotoIds),
+                    stickerGenerator = RecordingStickerGenerator(mutableListOf()),
+                    stickerStorage = EchoStickerStorage(),
+                )
+
+            When("run을 실행하면") {
+                val result = service.run(analysisId, photos)
+
+                Then("Gemini 분류 요청에는 대표사진만 전달한다") {
+                    receivedPhotoIds shouldContainExactly listOf(representativePhoto.photoId)
+                }
+
+                Then("대표사진이 속한 테마의 categorizedPhotoIds에 연사 형제사진이 모두 포함된다") {
+                    result.themes
+                        .single()
+                        .categorizedPhotoIds
+                        .toSet() shouldBe
+                        setOf(representativePhoto.photoId, siblingPhotos[0].photoId, siblingPhotos[1].photoId)
+                }
+            }
+        }
+
         Given("일부 테마 처리 중 예상하지 못한 예외가 발생할 때") {
             val analysisId = UUID.fromString("550e8400-e29b-41d4-a716-446655440030")
             val validPhoto =
@@ -274,6 +328,35 @@ private class VerifyingGeminiClassifier(
         if (photo.photoId in notPresentPhotoIds) return null
         return correctedSubjectByPhotoId[photo.photoId] ?: StickerSubjectVerification(targetSubject, "#FF6B6B")
     }
+}
+
+private class RecordingClassifyGeminiClassifier(
+    private val receivedPhotoIds: MutableList<UUID>,
+) : GeminiClassifier {
+    override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> {
+        receivedPhotoIds += photos.map { it.photoId }
+        return listOf(
+            ThemeClassification(
+                theme = "테마",
+                categorizedPhotoIds = photos.map { it.photoId },
+                recap = RecapContent(badge = "뱃지", text = "리캡"),
+                stickerTargetSubject = "피사체",
+                stickerSourcePhotoId = photos.first().photoId,
+                stickerMainColor = "#FF6B6B",
+                comments = emptyList(),
+            ),
+        )
+    }
+
+    override fun regenerateSticker(
+        photos: List<PhotoRef>,
+        previousSourcePhotoId: UUID,
+    ): StickerRegenerationTarget = throw UnsupportedOperationException("사용되지 않음")
+
+    override fun verifyStickerSubject(
+        photo: PhotoRef,
+        targetSubject: String,
+    ): StickerSubjectVerification = StickerSubjectVerification(targetSubject, "#FF6B6B")
 }
 
 private class FailingVerificationGeminiClassifier(
