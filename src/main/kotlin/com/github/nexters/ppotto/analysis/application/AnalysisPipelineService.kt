@@ -41,7 +41,8 @@ class AnalysisPipelineService(
             stepTimer.measuredStep(analysisId, "photo-indexing") {
                 photos.associateBy { it.photoId }
             }
-        val classifications = classify(analysisId, photos, onProgress)
+        val representativePhotos = photos.filter { it.isRepresentative }
+        val classifications = expandWithBurstSiblings(classify(analysisId, representativePhotos, onProgress), photos)
         onProgress(CLASSIFICATION_COMPLETED_PROGRESS)
 
         val themes = processThemes(analysisId, classifications, photoRefById, onProgress)
@@ -74,6 +75,25 @@ class AnalysisPipelineService(
             }
         log.info("analysis pipeline classification result: analysisId={}, themeCount={}", analysisId, classifications.size)
         return classifications
+    }
+
+    private fun expandWithBurstSiblings(
+        classifications: List<ThemeClassification>,
+        photos: List<PhotoRef>,
+    ): List<ThemeClassification> {
+        val photosByBurstGroupId = photos.filter { it.burstGroupId != null }.groupBy { it.burstGroupId }
+        val burstGroupIdByPhotoId = photos.associate { it.photoId to it.burstGroupId }
+        return classifications.map { classification ->
+            val expandedIds =
+                classification.categorizedPhotoIds
+                    .flatMap { photoId ->
+                        burstGroupIdByPhotoId[photoId]
+                            ?.let { photosByBurstGroupId[it] }
+                            ?.map { it.photoId }
+                            ?: listOf(photoId)
+                    }.distinct()
+            classification.copy(categorizedPhotoIds = expandedIds)
+        }
     }
 
     private fun processThemes(
