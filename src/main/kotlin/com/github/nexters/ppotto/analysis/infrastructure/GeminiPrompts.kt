@@ -6,7 +6,7 @@ object GeminiPrompts {
     fun themeClassification(photoAliases: List<String>): String =
         listOf(
             """
-            Classify the attached photos into at most ${ThemeClassificationValidator.MAX_THEME_COUNT} themes. Each photo must belong to exactly one theme,
+            Classify the attached photos into between ${ThemeClassificationValidator.MIN_THEME_COUNT} and ${ThemeClassificationValidator.MAX_THEME_COUNT} themes. Each photo must belong to exactly one theme,
             and you may exclude photos that don't fit any theme from the result.
             """.trimIndent(),
             "Photo alias list (in the same order as the attached photos): ${photoAliases.joinToString(", ")}",
