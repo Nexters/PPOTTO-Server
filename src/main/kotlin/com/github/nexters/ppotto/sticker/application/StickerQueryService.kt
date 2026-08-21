@@ -23,10 +23,10 @@ class StickerQueryService(
     fun getByBoardId(boardId: BoardId): List<StickerItemResult> = stickerRepository.findAllByBoardId(boardId).let(::toResults)
 
     fun getRecap(
-        userId: UserId,
+        userId: UserId?,
         stickerId: StickerId,
     ): StickerRecapResult =
-        stickerAccessService.getOwned(userId, stickerId).let { sticker ->
+        stickerAccessService.getWithOwnership(userId, stickerId).let { (sticker, isOwner) ->
             stickerRecapRepository
                 .findComments(stickerId)
                 .map { RecapCommentResult(it.id, it.content, it.posX, it.posY) }
@@ -37,7 +37,7 @@ class StickerQueryService(
                             .takeIf { it.isNotEmpty() }
                             ?.let { photoIds -> toPhotoResults(sticker, photoIds) }
                             .orEmpty()
-                    StickerRecapResult(toResults(listOf(sticker)).single(), sticker.summary, comments, photos)
+                    StickerRecapResult(toResults(listOf(sticker), isOwner).single(), sticker.summary, comments, photos)
                 }
         }
 
@@ -75,7 +75,10 @@ class StickerQueryService(
             }
     }
 
-    private fun toResults(stickers: List<Sticker>): List<StickerItemResult> =
+    private fun toResults(
+        stickers: List<Sticker>,
+        isOwner: Boolean = true,
+    ): List<StickerItemResult> =
         stickers
             .mapNotNull { it.imageKey }
             .toSet()
@@ -87,7 +90,7 @@ class StickerQueryService(
                     StickerItemResult(
                         id = sticker.id,
                         title = sticker.title,
-                        isNew = sticker.viewedAt == null,
+                        isNew = isOwner && sticker.viewedAt == null,
                         type = sticker.type,
                         imageUrl = sticker.imageKey?.let { imageUrls[it] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
                         textContent = sticker.textContent,

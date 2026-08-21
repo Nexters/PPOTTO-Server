@@ -30,7 +30,9 @@ interface StickerApi {
     @Operation(
         operationId = "getRecap",
         summary = "리캡 상세 조회",
-        description = "스티커 정보와 분석 코멘트, 관련 사진을 반환함. 빨간 점 제거는 /view를 따로 호출함",
+        description =
+            "스티커 정보와 분석 코멘트, 관련 사진을 반환함. 인증 없이 누구나 조회할 수 있고 isNew는 본인 스티커일 때만 true가 됨. " +
+                "빨간 점 제거는 /view를 따로 호출함",
         parameters = [
             Parameter(
                 name = "stickerId",
@@ -46,7 +48,7 @@ interface StickerApi {
     )
     @StickerNotFoundApiResponse
     fun getRecap(
-        userId: UserId,
+        userId: UserId?,
         stickerId: StickerId,
     ): ApiResponse<RecapDetailResponse>
 

@@ -133,7 +133,8 @@ class BearerTokenAuthenticationFilter(
         }
     }
 
-    private fun shouldLogImmediateFailure(request: HttpServletRequest): Boolean = request.method != GET || request.servletPath != TERMS_PATH
+    private fun shouldLogImmediateFailure(request: HttpServletRequest): Boolean =
+        request.method != GET || !PublicPaths.isOptionalAuthGet(request.servletPath)
 
     private fun isDev(): Boolean = environment.getProperty(DEPLOY_ENV) == DEV
 
@@ -143,7 +144,6 @@ class BearerTokenAuthenticationFilter(
         const val DEPLOY_ENV = "DEPLOY_ENV"
         const val DEV = "dev"
         const val GET = "GET"
-        const val TERMS_PATH = "/terms"
         const val MISSING_AUTHORIZATION = "missing_authorization"
         const val INVALID_AUTHORIZATION_SCHEME = "invalid_authorization_scheme"
         const val BLANK_BEARER_TOKEN = "blank_bearer_token"

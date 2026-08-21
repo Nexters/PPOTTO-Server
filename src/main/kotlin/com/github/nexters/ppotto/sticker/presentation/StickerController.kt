@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
+import com.github.nexters.ppotto.global.security.CurrentUser
 import com.github.nexters.ppotto.sticker.application.RecapCommentCommandService
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
@@ -23,7 +24,7 @@ class StickerController(
     private val recapCommentCommandService: RecapCommentCommandService,
 ) : StickerApi {
     override fun getRecap(
-        @AuthenticatedUser userId: UserId,
+        @CurrentUser userId: UserId?,
         @PathVariable stickerId: StickerId,
     ): ApiResponse<RecapDetailResponse> =
         stickerQueryService

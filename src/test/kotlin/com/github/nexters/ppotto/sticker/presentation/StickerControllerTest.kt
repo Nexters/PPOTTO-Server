@@ -155,11 +155,13 @@ class StickerControllerTest(
                 val otherUser = userRepository.saveTestUser()
                 authenticate(otherUser.id.value)
 
-                Then("404 응답을 반환한다") {
+                Then("리캡 내용을 응답하고 isNew는 false다") {
                     mockMvc
                         .perform(get("/stickers/${sticker.id}"))
-                        .andExpect(status().isNotFound)
-                        .andExpect(jsonPath("$.error.code").value("STICKER-001"))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
+                        .andExpect(jsonPath("$.data.sticker.isNew").value(false))
+                        .andExpect(jsonPath("$.data.summary").value("웃기고 귀여우면 일단 주워요"))
                 }
             }
 
@@ -239,9 +241,22 @@ class StickerControllerTest(
             When("인증 없이 리캡을 조회하면") {
                 SecurityContextHolder.clearContext()
 
-                Then("401 응답을 반환한다") {
+                Then("리캡 내용을 응답하고 isNew는 false다") {
                     mockMvc
                         .perform(get("/stickers/${sticker.id}"))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
+                        .andExpect(jsonPath("$.data.sticker.isNew").value(false))
+                        .andExpect(jsonPath("$.data.comments[0].content").value("말풍선"))
+                }
+            }
+
+            When("인증 없이 리캡을 열람 처리하면") {
+                SecurityContextHolder.clearContext()
+
+                Then("401 응답을 반환한다") {
+                    mockMvc
+                        .perform(post("/stickers/${sticker.id}/view"))
                         .andExpect(status().isUnauthorized)
                         .andExpect(jsonPath("$.error.code").value("COMMON-004"))
                 }

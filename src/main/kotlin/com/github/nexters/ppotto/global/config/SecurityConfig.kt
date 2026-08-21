@@ -59,7 +59,7 @@ class SecurityConfig {
                 it
                     .requestMatchers(*PublicPaths.PUBLIC_API_PATTERNS, *PublicPaths.DOCUMENT_PATTERNS)
                     .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/terms")
+                    .requestMatchers(HttpMethod.GET, *PublicPaths.OPTIONAL_AUTH_GET_PATTERNS)
                     .permitAll()
                     .anyRequest()
                     .authenticated()
