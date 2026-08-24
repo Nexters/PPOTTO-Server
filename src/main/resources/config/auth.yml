@@ -21,6 +21,8 @@ auth:
     revoke-uri: ${APPLE_REVOKE_URI}
     client-secret-expiration-days: ${APPLE_CLIENT_SECRET_EXPIRATION_DAYS}
     jwks-cache-seconds: ${APPLE_JWKS_CACHE_SECONDS}
+  dev-login:
+    enabled: ${DEV_LOGIN_ENABLED:false}
   jwt:
     issuer: ${JWT_ISSUER}
     secret: ${JWT_SECRET}

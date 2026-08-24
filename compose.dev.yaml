@@ -11,6 +11,7 @@ services:
       - .env.dev
     environment:
       CORS_ALLOWED_ORIGINS: "*"
+      DEV_LOGIN_ENABLED: "true"
       SENTRY_ENVIRONMENT: dev
       SENTRY_TRACES_SAMPLE_RATE: "1.0"
       SENTRY_PROFILE_SESSION_SAMPLE_RATE: "1.0"
