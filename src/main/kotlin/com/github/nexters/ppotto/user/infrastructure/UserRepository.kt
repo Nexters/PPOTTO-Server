@@ -64,6 +64,18 @@ class UserRepository(
             .fetchOne()
             ?.toDomain()
 
+    // 개발용 로그인(DevAuthController) 전용 조회
+    fun findActiveKakaoByEmail(email: String): User? =
+        dslContext
+            .selectFrom(USERS)
+            .where(USERS.PROVIDER.eq(OauthProvider.KAKAO))
+            .and(USERS.EMAIL.eq(email))
+            .and(USERS.DELETED_AT.isNull)
+            .orderBy(USERS.ID.desc())
+            .limit(1)
+            .fetchOne()
+            ?.toDomain()
+
     fun updateSocialProfile(
         id: UserId,
         email: String?,

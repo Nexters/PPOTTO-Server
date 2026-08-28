@@ -5,7 +5,7 @@ object PublicPaths {
     private const val TERMS_PATH = "/terms"
     private const val STICKER_DETAIL_PATTERN = "/stickers/*"
     private val STICKER_DETAIL_REGEX = Regex("/stickers/[^/]+")
-    private val PUBLIC_API_EXACT_PATHS = setOf("/auth/login", "/auth/refresh")
+    private val PUBLIC_API_EXACT_PATHS = setOf("/auth/login", "/auth/refresh", "/dev/auth/login")
     private val DOCUMENT_PATH_PREFIXES = setOf("/swagger-ui", "/v3/api-docs")
 
     val PUBLIC_API_PATTERNS = (PUBLIC_API_EXACT_PATHS + "$HEALTH_PATH/**").toTypedArray()
