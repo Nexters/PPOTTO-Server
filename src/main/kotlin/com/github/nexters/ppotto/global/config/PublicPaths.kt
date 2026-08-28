@@ -5,7 +5,6 @@ object PublicPaths {
     private const val TERMS_PATH = "/terms"
     private const val STICKER_DETAIL_PATTERN = "/stickers/*"
     private val STICKER_DETAIL_REGEX = Regex("/stickers/[^/]+")
-    // /dev/auth/login은 dev 서버에서만 controller bean이 존재함 (auth.dev-login.enabled)
     private val PUBLIC_API_EXACT_PATHS = setOf("/auth/login", "/auth/refresh", "/dev/auth/login")
     private val DOCUMENT_PATH_PREFIXES = setOf("/swagger-ui", "/v3/api-docs")
 
