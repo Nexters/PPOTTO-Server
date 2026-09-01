@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
-@RequestMapping("/auth", version = "1")
+@RequestMapping("/auth", version = "1+")
 @Tag(name = "인증", description = "소셜 로그인과 서비스 토큰 관리")
 interface AuthApi {
     @PostMapping("/login")

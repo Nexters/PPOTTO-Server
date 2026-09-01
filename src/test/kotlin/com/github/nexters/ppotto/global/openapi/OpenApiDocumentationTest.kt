@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.global.openapi
 import com.github.nexters.ppotto.support.IntegrationTest
 import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.hasItems
+import org.hamcrest.Matchers.hasKey
 import org.hamcrest.Matchers.hasSize
 import org.hamcrest.Matchers.not
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -77,9 +78,9 @@ class OpenApiDocumentationTest(
                         ).value(hasItem("1")),
                     ).andExpect(
                         jsonPath(
-                            "$['paths']['/boards/{boardId}']['get']" +
+                            "$['paths']['/analysis']['post']" +
                                 "['parameters'][?(@.name == 'X-API-Version')].schema.enum",
-                        ).value(hasItem(listOf("1"))),
+                        ).value(hasItem(listOf("1", "2"))),
                     )
             }
 
@@ -358,6 +359,62 @@ class OpenApiDocumentationTest(
                         jsonPath("$['components']['schemas']['BoardStickerResponse']['required']")
                             .value(not(hasItems("posX", "posY", "zIndex"))),
                     )
+            }
+        }
+
+        Given("버전별 OpenAPI 그룹 문서를 조회하면") {
+            val v1 = mockMvc.perform(get("/v3/api-docs/v1"))
+            val v2 = mockMvc.perform(get("/v3/api-docs/v2"))
+
+            Then("같은 경로라도 그룹마다 해당 버전의 operation만 노출한다") {
+                v1
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$['paths']['/boards/{boardId}']['get']['operationId']").value("get"))
+                    .andExpect(
+                        jsonPath("$['paths']['/boards/{boardId}/layout']['patch']['operationId']").value("update"),
+                    )
+                v2
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$['paths']['/boards/{boardId}']['get']['operationId']").value("getV2"))
+                    .andExpect(
+                        jsonPath("$['paths']['/boards/{boardId}/layout']['patch']['operationId']").value("updateV2"),
+                    )
+            }
+
+            Then("그룹마다 X-API-Version 을 그 버전으로 고정해 보여준다") {
+                v1.andExpect(
+                    jsonPath(
+                        "$['paths']['/boards/{boardId}']['get']" +
+                            "['parameters'][?(@.name == 'X-API-Version')].schema.enum",
+                    ).value(hasItem(listOf("1"))),
+                )
+                v2.andExpect(
+                    jsonPath(
+                        "$['paths']['/boards/{boardId}']['get']" +
+                            "['parameters'][?(@.name == 'X-API-Version')].schema.enum",
+                    ).value(hasItem(listOf("2"))),
+                )
+            }
+
+            Then("텍스트 스키마는 v2 문서에만 있다") {
+                v1.andExpect(jsonPath("$['components']['schemas']['DrawingCreateTextRequest']").doesNotExist())
+                v2
+                    .andExpect(
+                        jsonPath("$['components']['schemas']['DrawingCreateTextRequest']['required']")
+                            .value(hasItems("content", "fontSize", "posX", "posY", "maxWidth")),
+                    ).andExpect(
+                        jsonPath("$['components']['schemas']['DrawingTextResponse']['allOf'][1]['properties']")
+                            .value(hasKey("content")),
+                    )
+            }
+
+            Then("v1 문서는 스티커나 인증처럼 바뀌지 않은 엔드포인트도 그대로 담는다") {
+                v1
+                    .andExpect(jsonPath("$['paths']['/auth/login']['post']['operationId']").value("login"))
+                    .andExpect(jsonPath("$['paths']['/users/me']['get']").exists())
+                v2
+                    .andExpect(jsonPath("$['paths']['/auth/login']['post']['operationId']").value("login"))
+                    .andExpect(jsonPath("$['paths']['/users/me']['get']").exists())
             }
         }
     })

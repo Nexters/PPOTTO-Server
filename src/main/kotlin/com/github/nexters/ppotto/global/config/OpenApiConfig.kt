@@ -17,6 +17,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement
 import io.swagger.v3.oas.models.security.SecurityScheme
 import org.springdoc.core.customizers.OpenApiCustomizer
 import org.springdoc.core.customizers.OperationCustomizer
+import org.springdoc.core.models.GroupedOpenApi
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
@@ -71,26 +72,13 @@ class OpenApiConfig {
             )
 
     @Bean
-    fun apiVersionHeaderCustomizer(): OpenApiCustomizer =
-        OpenApiCustomizer { openApi ->
-            openApi.paths
-                ?.values
-                ?.flatMap { it.readOperations() }
-                ?.mapNotNull { it.parameters }
-                ?.flatten()
-                ?.filter { it.name == API_VERSION_HEADER }
-                ?.forEach {
-                    it
-                        .description(API_VERSION_DESCRIPTION)
-                        .required(false)
-                        .example(DEFAULT_API_VERSION)
-                        .schema(
-                            StringSchema()
-                                ._default(DEFAULT_API_VERSION)
-                                ._enum(listOf(DEFAULT_API_VERSION)),
-                        )
-                }
-        }
+    fun apiVersionHeaderCustomizer(): OpenApiCustomizer = versionHeaderCustomizer(SUPPORTED_API_VERSIONS)
+
+    @Bean
+    fun v1ApiGroup(): GroupedOpenApi = versionedGroup("v1")
+
+    @Bean
+    fun v2ApiGroup(): GroupedOpenApi = versionedGroup("v2")
 
     @Bean
     fun operationCustomizer(exampleFactory: ApiExampleFactory): OperationCustomizer =
@@ -137,10 +125,42 @@ class OpenApiConfig {
                 ),
             )
 
+    private fun versionedGroup(group: String): GroupedOpenApi =
+        group
+            .removePrefix("v")
+            .let { version ->
+                GroupedOpenApi
+                    .builder()
+                    .group(group)
+                    .addOpenApiMethodFilter { version in acceptedVersionsOf(it.declaringClass) }
+                    .addOpenApiCustomizer(versionHeaderCustomizer(listOf(version)))
+                    .build()
+            }
+
+    private fun versionHeaderCustomizer(versions: List<String>): OpenApiCustomizer =
+        OpenApiCustomizer { openApi ->
+            openApi.paths
+                ?.values
+                ?.flatMap { it.readOperations() }
+                ?.mapNotNull { it.parameters }
+                ?.flatten()
+                ?.filter { it.name == API_VERSION_HEADER }
+                ?.forEach {
+                    it
+                        .description(API_VERSION_DESCRIPTION)
+                        .required(false)
+                        .example(versions.first())
+                        .schema(
+                            StringSchema()
+                                ._default(versions.first())
+                                ._enum(versions),
+                        )
+                }
+        }
+
     private companion object {
         const val BEARER_AUTH_SCHEME = "bearerAuth"
         const val API_VERSION_HEADER = "X-API-Version"
-        const val DEFAULT_API_VERSION = "1"
         const val API_VERSION_DESCRIPTION = "API 버전. 생략하면 서버 기본값 1로 처리합니다"
         const val APPLICATION_JSON = "application/json"
         const val API_ERROR_RESPONSE_REF = "#/components/schemas/ApiErrorResponse"

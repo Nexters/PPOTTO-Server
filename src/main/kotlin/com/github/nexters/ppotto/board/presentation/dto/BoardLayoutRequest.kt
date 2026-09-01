@@ -130,12 +130,13 @@ data class DrawingCreateRequest(
     val strokeWidth: Double,
 ) {
     fun toCommand(): DrawingCreateCommand =
-        DrawingCreateCommand(
+        DrawingCreateCommand.Stroke(
             id = id,
             scope = scope,
             stickerId = stickerId,
-            stroke = stroke,
             color = color,
+            zIndex = stroke.legacyZIndex(),
+            stroke = stroke.withoutLegacyZIndex(),
             strokeWidth = strokeWidth,
         )
 }

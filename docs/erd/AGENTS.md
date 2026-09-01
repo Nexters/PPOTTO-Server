@@ -7,7 +7,7 @@ ERD and database design source documents.
 | File | Description |
 |------|---------|
 | `README.md` | ERD document usage and maintenance guide |
-| `schema.dbml` | Source DBML schema for the ppotto database design, including analysis status and active-analysis index notes |
+| `schema.dbml` | Source DBML schema for the ppotto database design, including analysis status, active-analysis index notes, and the drawing type/shape check constraints that DBML cannot express |
 
 ## Rules
 

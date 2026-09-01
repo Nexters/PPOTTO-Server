@@ -8,6 +8,8 @@
 ## 1. 공통 규칙
 
 - API 버전은 `X-API-Version` 요청 헤더로 지정한다. 헤더가 없으면 서버 기본값 `1`로 처리한다.
+- 현재 지원 버전은 `1`과 `2`다. 버전이 다르게 동작하는 엔드포인트는 `GET /boards/{boardId}`와 `PATCH /boards/{boardId}/layout` 둘뿐이고, 나머지 엔드포인트는 두 버전에서 같은 응답을 준다. 따라서 v2 클라이언트는 모든 요청에 `X-API-Version: 2`를 붙이면 된다.
+- 지원하지 않는 버전을 보내면 `400 COMMON-001`로 응답한다.
 - URL 경로에는 `/api` 프리픽스와 버전 세그먼트를 붙이지 않는다.
 - 보호 API는 `Authorization: Bearer {accessToken}` 헤더가 필요하다.
 - `GET /terms`는 인증 없이 호출할 수 있고 유효한 access token을 보내면 사용자 동의 상태를 함께 반환한다.
@@ -65,6 +67,8 @@
 | boards | PATCH | /boards/{boardId} | 보드 이름 변경 | 200 | 400, 401, 404 | Y |
 | boards | DELETE | /boards/{boardId} | 보드 삭제 | 200 | 401, 404, 409 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 (편집 모드 종료 시) | 200 | 400, 401, 404 | Y |
+| boards | GET | /boards/{boardId} | 보드 상세 조회 — v2 (선 + 텍스트) | 200 | 401, 404 | Y |
+| boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 — v2 (선 + 텍스트) | 200 | 400, 401, 404 | Y |
 | stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 | 200 | 401, 404 | Y |
 | stickers | PATCH | /stickers/{stickerId} | 스티커 제목 수정 | 200 | 400, 401, 404 | Y |
 | stickers | PATCH | /stickers/{stickerId}/comments | 리캡 코멘트 위치 일괄 수정 | 200 | 400, 401, 404 | Y |
@@ -1323,6 +1327,124 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 
 #### Notes
 - 편집 모드를 끌 때 해당 모드에서 바뀐 것만 보냅니다. 모든 필드는 선택입니다.  | 편집 모드 | 보내는 필드 | |---|---| | 스티커 이동 | `stickers` (배치) | | 텍스트 | `stickers` (제목 + 뱃지 배치) | | 드로잉 | `drawings.created` / `drawings.deletedIds` |  드로잉 id는 클라이언트가 uuidv7로 생성해 보내고 서버는 upsert합니다. 타임아웃 후 재시도해도 중복 저장되지 않습니다 (멱등). 본인 소유가 아닌 id가 섞여 있으면 `BOARD-001`로 전체 거부됩니다 (부분 저장 없음).
+
+### GET /boards/{boardId} (X-API-Version: 2)
+
+- Operation ID: `getBoardDetailV2`
+- Summary: 보드 상세 조회 (선과 텍스트)
+
+v1과 다른 점은 `drawings` 배열뿐이다. `id`, `name`, `stickers`는 v1과 완전히 같다.
+
+- v1: `drawings`에 선만 담기고, 겹침 순서는 `stroke` JSON 안의 `zIndex` 키로 내려간다. 텍스트는 내려가지 않는다.
+- v2: `drawings`가 `type` 판별자를 가진 합집합이고, 겹침 순서는 `zIndex` 필드로 내려간다.
+
+200 data example:
+```json
+{
+  "id": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+  "name": "Board 7",
+  "stickers": [],
+  "drawings": [
+    {
+      "type": "STROKE",
+      "id": "01983f2c-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "scope": "STICKER",
+      "stickerId": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "color": "#FFD400",
+      "zIndex": 6,
+      "stroke": { "points": [[10.5, 22], [14.2, 25.1], [19.8, 27.4]] },
+      "strokeWidth": 4
+    },
+    {
+      "type": "TEXT",
+      "id": "01983f2c-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+      "scope": "BOARD",
+      "color": "#FFFFFF",
+      "zIndex": 7,
+      "content": "여름 휴가",
+      "fontSize": 26,
+      "posX": 80,
+      "posY": 290.5,
+      "maxWidth": 280,
+      "rotation": 0
+    }
+  ]
+}
+```
+
+#### Failure Spec
+v1과 같다 (401 `COMMON-004`, 404 `BOARD-002`).
+
+### PATCH /boards/{boardId}/layout (X-API-Version: 2)
+
+- Operation ID: `saveBoardLayoutV2`
+- Summary: 편집 결과 일괄 저장 (선과 텍스트)
+
+`stickers`는 v1과 완전히 같다. `drawings.created` 항목만 `type` 판별자를 가진 합집합으로 바뀐다.
+
+Request example (드로잉 모드 종료 — 선 생성 1건, 삭제 1건):
+```json
+{
+  "drawings": {
+    "created": [
+      {
+        "type": "STROKE",
+        "id": "01983f2c-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+        "scope": "STICKER",
+        "stickerId": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+        "color": "#FFD400",
+        "zIndex": 6,
+        "stroke": { "points": [[10.5, 22], [14.2, 25.1], [19.8, 27.4]] },
+        "strokeWidth": 4
+      }
+    ],
+    "deletedIds": ["01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a"]
+  }
+}
+```
+
+Request example (텍스트 모드 종료 — 텍스트 생성 1건):
+```json
+{
+  "drawings": {
+    "created": [
+      {
+        "type": "TEXT",
+        "id": "01983f2c-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+        "scope": "BOARD",
+        "color": "#FFFFFF",
+        "zIndex": 7,
+        "content": "여름 휴가",
+        "fontSize": 26,
+        "posX": 80,
+        "posY": 290.5,
+        "maxWidth": 280,
+        "rotation": 0
+      }
+    ]
+  }
+}
+```
+
+#### Success Spec
+v1과 같다 (200, `data: null`).
+
+#### Failure Spec
+v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
+
+| Status | Error Code | 발생 조건 |
+| --- | --- | --- |
+| 400 | COMMON-001 | `type`이 `STROKE`/`TEXT`가 아님 |
+| 400 | COMMON-001 | `content`가 비었거나 32자 초과 |
+| 400 | COMMON-001 | `color`가 `#RRGGBB` 형식이 아님 |
+| 400 | COMMON-001 | `fontSize` 또는 `maxWidth`가 0 이하 |
+
+#### Notes
+- `created`는 v1과 같이 `id` 기준 upsert입니다. 같은 id를 다시 보내면 수정이고, 재시도해도 중복 저장되지 않습니다 (멱등). 삭제한 id를 다시 `created`로 보내면 되살아납니다.
+- `deletedIds`는 선과 텍스트를 구분하지 않습니다.
+- `content`의 줄바꿈은 클라이언트가 실측해 넣은 그대로 저장하고 서버는 다시 감싸지 않습니다. `maxWidth`는 그 줄바꿈 기준이 된 편집창 폭이며 렌더 폭 보존용입니다.
+- `zIndex`는 스티커의 `zIndex`와 같은 숫자 공간을 씁니다.
+- v1에서는 `color`가 공백만 아니면 통과했지만 v2는 `#RRGGBB`를 강제합니다.
 
 ## 8. stickers API
 
@@ -2735,25 +2857,57 @@ Request example:
 | badgeOffsetY | Y | `number` | - | - |
 | badgeRotation | Y | `number` | - | - |
 
-### Drawing
+### Drawing (v1)
 | Field | Required | Type | Enum | Description |
 | --- | --- | --- | --- | --- |
 | id | Y | `string` | - | - |
 | scope | Y | `string` | STICKER, BOARD | - |
 | stickerId | N | `string \| null` | - | scope=STICKER 일 때만 |
-| stroke | Y | `object` | - | 점 배열 등 선 데이터. 포맷은 클라 정의를 그대로 저장 |
+| stroke | Y | `object` | - | 점 배열 등 선 데이터. 포맷은 클라 정의를 그대로 저장하며, 겹침 순서가 `zIndex` 키로 함께 들어 있다 |
 | color | Y | `string` | - | #FFD400 |
 | strokeWidth | Y | `number` | - | 4 |
 
-### DrawingCreate
+v1에는 텍스트가 없다. 텍스트 드로잉은 v1 응답에서 제외된다.
+
+### DrawingCreate (v1)
 | Field | Required | Type | Enum | Description |
 | --- | --- | --- | --- | --- |
 | id | Y | `string` | - | 클라이언트가 생성한 uuidv7. 서버가 이 id로 upsert합니다. |
 | scope | Y | `string` | STICKER, BOARD | - |
 | stickerId | N | `string` | - | scope=STICKER 필수 |
-| stroke | Y | `object` | - | - |
+| stroke | Y | `object` | - | 겹침 순서를 `zIndex` 키로 함께 담는다 |
 | color | Y | `string` | - | - |
 | strokeWidth | Y | `number` | - | - |
+
+### DrawingStroke (v2)
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| type | Y | `string` | STROKE | 판별자 |
+| id | Y | `string` | - | - |
+| scope | Y | `string` | STICKER, BOARD | - |
+| stickerId | N | `string \| null` | - | scope=STICKER 일 때만 |
+| color | Y | `string` | - | #RRGGBB |
+| zIndex | Y | `integer` | - | 스티커 zIndex 와 같은 숫자 공간 |
+| stroke | Y | `object` | - | 점 배열 등 선 데이터. 포맷은 클라 정의를 그대로 저장 |
+| strokeWidth | Y | `number` | - | 0 초과 |
+
+### DrawingText (v2)
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| type | Y | `string` | TEXT | 판별자 |
+| id | Y | `string` | - | - |
+| scope | Y | `string` | STICKER, BOARD | - |
+| stickerId | N | `string \| null` | - | scope=STICKER 일 때만 |
+| color | Y | `string` | - | 글자 색. #RRGGBB |
+| zIndex | Y | `integer` | - | 스티커 zIndex 와 같은 숫자 공간 |
+| content | Y | `string` | - | 표시할 문구. 최대 32자. 클라이언트가 실측한 줄바꿈을 그대로 담는다 |
+| fontSize | Y | `number` | - | 0 초과 |
+| posX | Y | `number` | - | 텍스트 상자 중심 |
+| posY | Y | `number` | - | 텍스트 상자 중심 |
+| maxWidth | Y | `number` | - | 줄바꿈 기준이 된 편집창 폭. 0 초과 |
+| rotation | N | `number` | - | degree. 생략하면 0 |
+
+`DrawingCreateStroke` / `DrawingCreateText` 요청 모델은 위 두 표와 같은 필드를 쓴다.
 
 ### RecapDetail
 | Field | Required | Type | Enum | Description |

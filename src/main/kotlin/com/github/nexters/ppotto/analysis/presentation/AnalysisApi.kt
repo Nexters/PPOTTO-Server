@@ -23,7 +23,7 @@ import java.util.UUID
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
-@RequestMapping("/analysis", version = "1")
+@RequestMapping("/analysis", version = "1+")
 @Tag(name = "분석", description = "사진 업로드와 분석 실행")
 interface AnalysisApi {
     @PostMapping

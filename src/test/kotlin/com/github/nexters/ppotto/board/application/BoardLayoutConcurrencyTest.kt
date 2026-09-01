@@ -47,9 +47,10 @@ class BoardLayoutConcurrencyTest(
                     stickers = emptyList(),
                     createdDrawings =
                         listOf(
-                            DrawingCreateCommand(
+                            DrawingCreateCommand.Stroke(
                                 id = drawingId,
                                 scope = DrawingScope.BOARD,
+                                zIndex = 0,
                                 stickerId = null,
                                 stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
                                 color = "#FFFFFF",

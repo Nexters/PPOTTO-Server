@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
+import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
@@ -10,6 +11,7 @@ import com.github.nexters.ppotto.board.support.BoardTestConfig
 import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
@@ -20,6 +22,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.springframework.context.annotation.Import
 
 @Import(BoardTestConfig::class)
@@ -40,9 +43,10 @@ class BoardLayoutServiceTest(
                     stickers = emptyList(),
                     createdDrawings =
                         listOf(
-                            DrawingCreateCommand(
+                            DrawingCreateCommand.Stroke(
                                 id = drawingId,
                                 scope = DrawingScope.BOARD,
+                                zIndex = 0,
                                 stickerId = null,
                                 stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
                                 color = "#FFFFFF",
@@ -59,9 +63,9 @@ class BoardLayoutServiceTest(
                     user.id,
                     command.copy(
                         createdDrawings =
-                            command.createdDrawings.map {
-                                it.copy(color = "#FFD400")
-                            },
+                            command.createdDrawings
+                                .filterIsInstance<DrawingCreateCommand.Stroke>()
+                                .map { it.copy(color = "#FFD400") },
                     ),
                 )
 
@@ -89,9 +93,10 @@ class BoardLayoutServiceTest(
                         stickers = listOf(stickerLayout(sticker.id)),
                         createdDrawings =
                             listOf(
-                                DrawingCreateCommand(
+                                DrawingCreateCommand.Stroke(
                                     id = DrawingId(uuidV7()),
                                     scope = DrawingScope.STICKER,
+                                    zIndex = 0,
                                     stickerId = sticker.id,
                                     stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
                                     color = "#FFFFFF",
@@ -118,11 +123,12 @@ class BoardLayoutServiceTest(
             val board = boardRepository.save(user.id)
             val otherBoard = boardRepository.save(user.id)
             val foreignDrawing =
-                NewDrawing(
+                NewDrawing.Stroke(
                     id = DrawingId(uuidV7()),
                     boardId = otherBoard.id,
                     stickerId = null,
                     scope = DrawingScope.BOARD,
+                    zIndex = 0,
                     stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
                     color = "#FFFFFF",
                     strokeWidth = 2.0,
@@ -166,9 +172,10 @@ class BoardLayoutServiceTest(
                                     stickers = emptyList(),
                                     createdDrawings =
                                         listOf(
-                                            DrawingCreateCommand(
+                                            DrawingCreateCommand.Stroke(
                                                 id = DrawingId(uuidV7()),
                                                 scope = DrawingScope.STICKER,
+                                                zIndex = 0,
                                                 stickerId = StickerId(uuidV7()),
                                                 stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
                                                 color = "#FFFFFF",
@@ -184,7 +191,59 @@ class BoardLayoutServiceTest(
                 }
             }
         }
+
+        Given("보드에 텍스트를 얹으려는 사용자가") {
+            stickerPort.reset()
+            val user = userRepository.saveTestUser()
+            val board = boardRepository.save(user.id)
+
+            When("32자 이하 문구로 저장을 요청하면") {
+                boardLayoutService.update(board.id, user.id, textLayoutCommand("여름 휴가"))
+
+                Then("텍스트가 보드에 저장된다") {
+                    val text = drawingRepository.findByBoardId(board.id).single()
+                    text.shouldBeInstanceOf<Drawing.Text>().content shouldBe "여름 휴가"
+                }
+            }
+
+            When("32자를 넘는 문구로 저장을 요청하면") {
+                val exception =
+                    shouldThrow<InvalidInputException> {
+                        boardLayoutService.update(board.id, user.id, textLayoutCommand("가".repeat(33)))
+                    }
+
+                Then("COMMON-001로 거부한다") {
+                    exception.errorCode shouldBe CommonErrorCode.INVALID_INPUT
+                }
+
+                Then("텍스트는 저장되지 않는다") {
+                    drawingRepository.findByBoardId(board.id).shouldBeEmpty()
+                }
+            }
+        }
     })
+
+private fun textLayoutCommand(content: String) =
+    BoardLayoutUpdateCommand(
+        stickers = emptyList(),
+        createdDrawings =
+            listOf(
+                DrawingCreateCommand.Text(
+                    id = DrawingId(uuidV7()),
+                    scope = DrawingScope.BOARD,
+                    stickerId = null,
+                    color = "#FFFFFF",
+                    zIndex = 7,
+                    content = content,
+                    fontSize = 26.0,
+                    posX = 80.0,
+                    posY = 290.5,
+                    maxWidth = 280.0,
+                    rotation = 0.0,
+                ),
+            ),
+        deletedDrawingIds = emptyList(),
+    )
 
 private fun stickerLayout(id: StickerId) =
     BoardStickerLayoutCommand(

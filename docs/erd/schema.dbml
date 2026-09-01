@@ -10,6 +10,9 @@ Project ppotto {
   - CHECK 제약 (LLM 파이프라인이 직접 쓰는 경로라 API 검증이 닿지 않음):
     stickers: (type='IMAGE' AND image_key IS NOT NULL) OR (type='TEXT' AND text_content IS NOT NULL)
     drawings: (scope='STICKER') = (sticker_id IS NOT NULL)
+    drawings: (type='STROKE') = (stroke IS NOT NULL AND stroke_width IS NOT NULL)
+    drawings: (type='TEXT') = (content IS NOT NULL AND font_size IS NOT NULL
+                               AND pos_x IS NOT NULL AND pos_y IS NOT NULL AND max_width IS NOT NULL)
     recap_comments: (pos_x IS NULL) = (pos_y IS NULL)
     analysis: progress BETWEEN 0 AND 100 (실제 마이그레이션은 DDL 인라인 CHECK 로 반영됨)
   '''
@@ -42,6 +45,11 @@ Enum sticker_type {
 Enum drawing_scope {
   STICKER [note: '스티커 묶음에 포함']
   BOARD   [note: '보드 배경에 고정']
+}
+
+Enum drawing_type {
+  STROKE [note: '선. stroke/stroke_width 를 채운다']
+  TEXT   [note: '텍스트. content/font_size/pos_x/pos_y/max_width 를 채운다']
 }
 
 // ── 공통 조각 ─────────────────────────────
@@ -347,10 +355,20 @@ Table drawings {
   board_id   uuid          [not null]
   sticker_id uuid          [null, note: 'scope=STICKER 일 때만 채운다']
   scope      drawing_scope [not null]
+  type       drawing_type  [not null, default: 'STROKE', note: '선과 텍스트를 가르는 판별자']
 
-  stroke       jsonb  [not null, note: '점 배열 등 선 데이터']
-  color        text   [not null]
-  stroke_width double [not null]
+  color   text [not null, note: '선 색 또는 글자 색. v2 요청은 #RRGGBB 만 허용']
+  z_index integer [not null, default: 0, note: '스티커 z_index 와 같은 숫자 공간. v1 클라이언트는 stroke JSON 의 zIndex 키로 읽고 쓴다']
+
+  stroke       jsonb  [null, note: 'type=STROKE 전용. 점 배열 등 선 데이터']
+  stroke_width double [null, note: 'type=STROKE 전용']
+
+  content   text   [null, note: 'type=TEXT 전용. 클라이언트가 실측한 줄바꿈을 그대로 저장. 최대 32자']
+  font_size double [null, note: 'type=TEXT 전용']
+  pos_x     double [null, note: 'type=TEXT 전용. 텍스트 상자 중심']
+  pos_y     double [null, note: 'type=TEXT 전용. 텍스트 상자 중심']
+  max_width double [null, note: 'type=TEXT 전용. 줄바꿈 기준이 된 편집창 폭']
+  rotation  double [not null, default: 0, note: 'type=TEXT 에서만 의미가 있다. STROKE 는 회전을 점 좌표에 반영해 저장']
 
   ~timestamps
   ~soft_delete
@@ -359,6 +377,7 @@ Table drawings {
   스티커 주변에 그린 선은 해당 스티커 묶음에 포함되어 함께 이동/변형된다.
   스티커와 무관하게 배경에 그린 선은 보드에 고정된다.
   스티커 삭제 시 연결된 드로잉도 함께 제거.
+  type 별 필수 컬럼은 CHECK 제약으로 강제한다. 텍스트는 API v2 에서만 읽고 쓸 수 있다.
   '''
 
   indexes {

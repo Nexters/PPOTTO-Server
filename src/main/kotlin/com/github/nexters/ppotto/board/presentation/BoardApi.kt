@@ -1,6 +1,5 @@
 package com.github.nexters.ppotto.board.presentation
 
-import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
@@ -24,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
-@RequestMapping("/boards", version = "1")
+@RequestMapping("/boards", version = "1+")
 @Tag(name = "보드", description = "보드 조회와 관리")
 interface BoardApi {
     @GetMapping
@@ -75,30 +74,6 @@ interface BoardApi {
         userId: UserId,
         request: CreateBoardRequest,
     ): ApiResponse<BoardResponse>
-
-    @GetMapping("/{boardId}")
-    @Operation(
-        operationId = "get",
-        summary = "보드 상세 조회",
-        description = "보드와 배치된 스티커, 그림을 함께 반환함. imageUrl은 만료가 있으므로 진입할 때마다 새로 조회함",
-        parameters = [
-            Parameter(
-                name = "boardId",
-                description = "조회할 보드 ID (uuidv7)",
-                example = "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
-            ),
-        ],
-    )
-    @OpenApiResponse(
-        responseCode = "200",
-        useReturnTypeSchema = true,
-        description = "보드 상태",
-    )
-    @BoardNotFoundApiResponse
-    fun get(
-        userId: UserId,
-        boardId: BoardId,
-    ): ApiResponse<BoardDetailResponse>
 
     @PatchMapping("/{boardId}")
     @Operation(

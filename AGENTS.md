@@ -65,7 +65,10 @@ photo/
 - Put each primary-constructor property on its own line. Property annotations go on separate lines immediately above the property, never on the same line as `val` or `var`. Separate each annotated property group from the next with one blank line, so a property reads as one block instead of blurring into the annotations above it (`ktlint_standard_no-blank-line-in-list` is disabled repo-wide in `.editorconfig` to allow this).
 - Validation annotations on data class constructor properties always use the `@field:` use-site; without it Hibernate Validator may not see them. Controllers take `@Valid @RequestBody`.
 - Never write a fully-qualified name (FQN) inline. Import the short name whenever there's no naming conflict.
-- API versioning: the version is specified via the `X-API-Version` request header (Spring Framework 7 native API versioning, `WebMvcConfigurer.configureApiVersioning`, configured in `global/config/WebMvcConfig.kt`). A missing header defaults to `1`. URL paths carry no version and no `/api` prefix (e.g. `/analysis`). Each controller declares `version = "N"` on its class-level `@RequestMapping`.
+- API versioning: the version is specified via the `X-API-Version` request header (Spring Framework 7 native API versioning, `WebMvcConfigurer.configureApiVersioning`, configured in `global/config/WebMvcConfig.kt`). A missing header defaults to `1`. URL paths carry no version and no `/api` prefix (e.g. `/analysis`). Supported versions are `1` and `2`.
+- Each API interface declares a **baseline** version — `version = "1+"` — on its class-level `@RequestMapping`, so it keeps matching as new versions appear. Only an endpoint that has a replacement at the same path and method for a newer version may pin a fixed `version = "N"`; today that is `BoardDetailApi` and `BoardLayoutApi`. Spring detects supported versions from the mappings, so a fixed mapping without a newer sibling answers a newer-version request with 400. `ApiVersioningTest` enforces this.
+- One controller class implements exactly one versioned API interface. Two type-level `@RequestMapping` annotations on one controller abort startup with `Ambiguous mapping`.
+- Per-version OpenAPI documents are served at `/v3/api-docs/v1` and `/v3/api-docs/v2`; the ungrouped `/v3/api-docs` cannot show two operations on the same path and method.
 
 ## Planned Conventions
 

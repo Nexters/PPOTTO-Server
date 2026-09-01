@@ -101,11 +101,12 @@ class BoardCommandServiceTest(
             boardRepository.save(user.id)
             drawingRepository.upsertAll(
                 listOf(
-                    NewDrawing(
+                    NewDrawing.Stroke(
                         id = DrawingId(uuidV7()),
                         boardId = board.id,
                         stickerId = null,
                         scope = DrawingScope.BOARD,
+                        zIndex = 0,
                         stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
                         color = "#FFFFFF",
                         strokeWidth = 2.0,

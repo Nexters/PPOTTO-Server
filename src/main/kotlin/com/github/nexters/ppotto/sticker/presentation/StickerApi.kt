@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
-@RequestMapping("/stickers", version = "1")
+@RequestMapping("/stickers", version = "1+")
 @Tag(name = "스티커", description = "스티커와 리캡 관리")
 interface StickerApi {
     @GetMapping("/{stickerId}")

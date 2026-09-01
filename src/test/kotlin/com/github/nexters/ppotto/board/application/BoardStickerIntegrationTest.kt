@@ -101,12 +101,13 @@ class BoardStickerIntegrationTest(
                         stickers = listOf(updatedLayout(sticker.id)),
                         createdDrawings =
                             listOf(
-                                DrawingCreateCommand(
+                                DrawingCreateCommand.Stroke(
                                     id = drawing.id,
                                     scope = drawing.scope,
                                     stickerId = drawing.stickerId,
-                                    stroke = drawing.stroke,
                                     color = drawing.color,
+                                    zIndex = drawing.zIndex,
+                                    stroke = drawing.stroke,
                                     strokeWidth = drawing.strokeWidth,
                                 ),
                             ),
