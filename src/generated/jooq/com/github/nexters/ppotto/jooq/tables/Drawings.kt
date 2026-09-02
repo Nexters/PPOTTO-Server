@@ -107,7 +107,7 @@ open class Drawings(
     /**
      * The column <code>public.drawings.stroke</code>.
      */
-    val STROKE: TableField<DrawingsRecord, JSONB?> = createField(DSL.name("stroke"), SQLDataType.JSONB.nullable(false), this, "")
+    val STROKE: TableField<DrawingsRecord, JSONB?> = createField(DSL.name("stroke"), SQLDataType.JSONB, this, "")
 
     /**
      * The column <code>public.drawings.color</code>.
@@ -117,7 +117,7 @@ open class Drawings(
     /**
      * The column <code>public.drawings.stroke_width</code>.
      */
-    val STROKE_WIDTH: TableField<DrawingsRecord, Double?> = createField(DSL.name("stroke_width"), SQLDataType.DOUBLE.nullable(false), this, "")
+    val STROKE_WIDTH: TableField<DrawingsRecord, Double?> = createField(DSL.name("stroke_width"), SQLDataType.DOUBLE, this, "")
 
     /**
      * The column <code>public.drawings.created_at</code>.
@@ -133,6 +133,46 @@ open class Drawings(
      * The column <code>public.drawings.deleted_at</code>.
      */
     val DELETED_AT: TableField<DrawingsRecord, Instant?> = createField(DSL.name("deleted_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
+
+    /**
+     * The column <code>public.drawings.type</code>.
+     */
+    val TYPE: TableField<DrawingsRecord, String?> = createField(DSL.name("type"), SQLDataType.VARCHAR(20).nullable(false).defaultValue(DSL.field(DSL.raw("'STROKE'::character varying"), SQLDataType.VARCHAR)), this, "")
+
+    /**
+     * The column <code>public.drawings.z_index</code>.
+     */
+    val Z_INDEX: TableField<DrawingsRecord, Int?> = createField(DSL.name("z_index"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+
+    /**
+     * The column <code>public.drawings.content</code>.
+     */
+    val CONTENT: TableField<DrawingsRecord, String?> = createField(DSL.name("content"), SQLDataType.CLOB, this, "")
+
+    /**
+     * The column <code>public.drawings.font_size</code>.
+     */
+    val FONT_SIZE: TableField<DrawingsRecord, Double?> = createField(DSL.name("font_size"), SQLDataType.DOUBLE, this, "")
+
+    /**
+     * The column <code>public.drawings.pos_x</code>.
+     */
+    val POS_X: TableField<DrawingsRecord, Double?> = createField(DSL.name("pos_x"), SQLDataType.DOUBLE, this, "")
+
+    /**
+     * The column <code>public.drawings.pos_y</code>.
+     */
+    val POS_Y: TableField<DrawingsRecord, Double?> = createField(DSL.name("pos_y"), SQLDataType.DOUBLE, this, "")
+
+    /**
+     * The column <code>public.drawings.max_width</code>.
+     */
+    val MAX_WIDTH: TableField<DrawingsRecord, Double?> = createField(DSL.name("max_width"), SQLDataType.DOUBLE, this, "")
+
+    /**
+     * The column <code>public.drawings.rotation</code>.
+     */
+    val ROTATION: TableField<DrawingsRecord, Double?> = createField(DSL.name("rotation"), SQLDataType.DOUBLE.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.DOUBLE)), this, "")
 
     private constructor(alias: Name, aliased: Table<DrawingsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<DrawingsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
@@ -157,7 +197,10 @@ open class Drawings(
     override fun getPrimaryKey(): UniqueKey<DrawingsRecord> = DRAWINGS_PKEY
     override fun getChecks(): List<Check<DrawingsRecord>> = listOf(
         Internal.createCheck(this, DSL.name("chk_drawings_scope"), "(((scope)::text = ANY ((ARRAY['STICKER'::character varying, 'BOARD'::character varying])::text[])))", true),
-        Internal.createCheck(this, DSL.name("chk_drawings_scope_sticker"), "((((scope)::text = 'STICKER'::text) = (sticker_id IS NOT NULL)))", true)
+        Internal.createCheck(this, DSL.name("chk_drawings_scope_sticker"), "((((scope)::text = 'STICKER'::text) = (sticker_id IS NOT NULL)))", true),
+        Internal.createCheck(this, DSL.name("chk_drawings_stroke_shape"), "((((type)::text = 'STROKE'::text) = ((stroke IS NOT NULL) AND (stroke_width IS NOT NULL))))", true),
+        Internal.createCheck(this, DSL.name("chk_drawings_text_shape"), "((((type)::text = 'TEXT'::text) = ((content IS NOT NULL) AND (font_size IS NOT NULL) AND (pos_x IS NOT NULL) AND (pos_y IS NOT NULL) AND (max_width IS NOT NULL))))", true),
+        Internal.createCheck(this, DSL.name("chk_drawings_type"), "(((type)::text = ANY ((ARRAY['STROKE'::character varying, 'TEXT'::character varying])::text[])))", true)
     )
     override fun `as`(alias: String): Drawings = Drawings(DSL.name(alias), this)
     override fun `as`(alias: Name): Drawings = Drawings(alias, this)

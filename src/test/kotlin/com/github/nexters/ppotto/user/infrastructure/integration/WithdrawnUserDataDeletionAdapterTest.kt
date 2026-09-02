@@ -81,11 +81,12 @@ class WithdrawnUserDataDeletionAdapterTest(
                 drawingRepository
                     .upsertAll(
                         listOf(
-                            NewDrawing(
+                            NewDrawing.Stroke(
                                 id = DrawingId(uuidV7()),
                                 boardId = board.id,
                                 stickerId = null,
                                 scope = DrawingScope.BOARD,
+                                zIndex = 0,
                                 stroke = mapOf("points" to listOf(1, 2)),
                                 color = "#000000",
                                 strokeWidth = 1.0,

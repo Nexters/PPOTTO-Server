@@ -45,11 +45,12 @@ class DrawingTest :
 private fun newDrawing(
     scope: DrawingScope,
     stickerId: StickerId?,
-) = NewDrawing(
+) = NewDrawing.Stroke(
     id = DrawingId(uuidV7()),
     boardId = BoardId(UUID.randomUUID()),
     stickerId = stickerId,
     scope = scope,
+    zIndex = 0,
     stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
     color = "#FFFFFF",
     strokeWidth = 2.0,

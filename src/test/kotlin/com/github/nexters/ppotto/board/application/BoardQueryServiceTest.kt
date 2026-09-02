@@ -33,11 +33,12 @@ class BoardQueryServiceTest(
             val board = boardRepository.save(user.id, "여름 휴가")
             val sticker = boardStickerItem()
             val drawing =
-                NewDrawing(
+                NewDrawing.Stroke(
                     id = DrawingId(uuidV7()),
                     boardId = board.id,
                     stickerId = sticker.id,
                     scope = DrawingScope.STICKER,
+                    zIndex = 0,
                     stroke = mapOf("points" to listOf(listOf(10.5, 22.0))),
                     color = "#FFD400",
                     strokeWidth = 4.0,

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
-@RequestMapping("/users", version = "1")
+@RequestMapping("/users", version = "1+")
 @Tag(name = "사용자", description = "내 계정 조회와 탈퇴")
 interface UserApi {
     @GetMapping("/me")

@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
-@RequestMapping("/terms", version = "1")
+@RequestMapping("/terms", version = "1+")
 @Tag(name = "약관", description = "현재 약관 조회와 사용자 동의")
 interface TermsApi {
     @GetMapping

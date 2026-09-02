@@ -2,7 +2,6 @@ package com.github.nexters.ppotto.board.presentation
 
 import com.github.nexters.ppotto.board.application.BoardCommandService
 import com.github.nexters.ppotto.board.application.BoardQueryService
-import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
@@ -35,15 +34,6 @@ class BoardController(
         boardCommandService
             .create(userId, request.name)
             .let(BoardResponse::from)
-            .let { ApiResponse.success(it) }
-
-    override fun get(
-        @AuthenticatedUser userId: UserId,
-        @PathVariable boardId: BoardId,
-    ): ApiResponse<BoardDetailResponse> =
-        boardQueryService
-            .getDetail(boardId, userId)
-            .let(BoardDetailResponse::from)
             .let { ApiResponse.success(it) }
 
     override fun rename(

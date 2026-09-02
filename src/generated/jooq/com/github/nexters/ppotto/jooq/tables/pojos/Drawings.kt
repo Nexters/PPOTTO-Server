@@ -23,12 +23,20 @@ data class Drawings(
     val boardId: BoardId,
     val stickerId: StickerId? = null,
     val scope: String,
-    val stroke: JSONB,
+    val stroke: JSONB? = null,
     val color: String,
-    val strokeWidth: Double,
+    val strokeWidth: Double? = null,
     val createdAt: Instant? = null,
     val updatedAt: Instant? = null,
-    val deletedAt: Instant? = null
+    val deletedAt: Instant? = null,
+    val type: String? = null,
+    val zIndex: Int? = null,
+    val content: String? = null,
+    val fontSize: Double? = null,
+    val posX: Double? = null,
+    val posY: Double? = null,
+    val maxWidth: Double? = null,
+    val rotation: Double? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -55,11 +63,19 @@ data class Drawings(
             return false
         if (this.scope != o.scope)
             return false
-        if (this.stroke != o.stroke)
+        if (this.stroke == null) {
+            if (o.stroke != null)
+                return false
+        }
+        else if (this.stroke != o.stroke)
             return false
         if (this.color != o.color)
             return false
-        if (this.strokeWidth != o.strokeWidth)
+        if (this.strokeWidth == null) {
+            if (o.strokeWidth != null)
+                return false
+        }
+        else if (this.strokeWidth != o.strokeWidth)
             return false
         if (this.createdAt == null) {
             if (o.createdAt != null)
@@ -79,6 +95,54 @@ data class Drawings(
         }
         else if (this.deletedAt != o.deletedAt)
             return false
+        if (this.type == null) {
+            if (o.type != null)
+                return false
+        }
+        else if (this.type != o.type)
+            return false
+        if (this.zIndex == null) {
+            if (o.zIndex != null)
+                return false
+        }
+        else if (this.zIndex != o.zIndex)
+            return false
+        if (this.content == null) {
+            if (o.content != null)
+                return false
+        }
+        else if (this.content != o.content)
+            return false
+        if (this.fontSize == null) {
+            if (o.fontSize != null)
+                return false
+        }
+        else if (this.fontSize != o.fontSize)
+            return false
+        if (this.posX == null) {
+            if (o.posX != null)
+                return false
+        }
+        else if (this.posX != o.posX)
+            return false
+        if (this.posY == null) {
+            if (o.posY != null)
+                return false
+        }
+        else if (this.posY != o.posY)
+            return false
+        if (this.maxWidth == null) {
+            if (o.maxWidth != null)
+                return false
+        }
+        else if (this.maxWidth != o.maxWidth)
+            return false
+        if (this.rotation == null) {
+            if (o.rotation != null)
+                return false
+        }
+        else if (this.rotation != o.rotation)
+            return false
         return true
     }
 
@@ -89,12 +153,20 @@ data class Drawings(
         result = prime * result + this.boardId.hashCode()
         result = prime * result + (if (this.stickerId == null) 0 else this.stickerId.hashCode())
         result = prime * result + this.scope.hashCode()
-        result = prime * result + this.stroke.hashCode()
+        result = prime * result + (if (this.stroke == null) 0 else this.stroke.hashCode())
         result = prime * result + this.color.hashCode()
-        result = prime * result + this.strokeWidth.hashCode()
+        result = prime * result + (if (this.strokeWidth == null) 0 else this.strokeWidth.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         result = prime * result + (if (this.deletedAt == null) 0 else this.deletedAt.hashCode())
+        result = prime * result + (if (this.type == null) 0 else this.type.hashCode())
+        result = prime * result + (if (this.zIndex == null) 0 else this.zIndex.hashCode())
+        result = prime * result + (if (this.content == null) 0 else this.content.hashCode())
+        result = prime * result + (if (this.fontSize == null) 0 else this.fontSize.hashCode())
+        result = prime * result + (if (this.posX == null) 0 else this.posX.hashCode())
+        result = prime * result + (if (this.posY == null) 0 else this.posY.hashCode())
+        result = prime * result + (if (this.maxWidth == null) 0 else this.maxWidth.hashCode())
+        result = prime * result + (if (this.rotation == null) 0 else this.rotation.hashCode())
         return result
     }
 
@@ -111,6 +183,14 @@ data class Drawings(
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
         sb.append(", ").append(deletedAt)
+        sb.append(", ").append(type)
+        sb.append(", ").append(zIndex)
+        sb.append(", ").append(content)
+        sb.append(", ").append(fontSize)
+        sb.append(", ").append(posX)
+        sb.append(", ").append(posY)
+        sb.append(", ").append(maxWidth)
+        sb.append(", ").append(rotation)
 
         sb.append(")")
         return sb.toString()

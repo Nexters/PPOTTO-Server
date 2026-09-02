@@ -41,7 +41,7 @@ data class BoardDetailResponse(
     @field:Schema(description = "보드에 배치된 스티커 목록")
     val stickers: List<StickerResponse>,
 
-    @field:Schema(description = "보드와 스티커 위의 그림 목록")
+    @field:Schema(description = "보드와 스티커 위의 그림 목록. v1은 선만 내려간다")
     val drawings: List<DrawingResponse>,
 ) {
     companion object {
@@ -50,7 +50,10 @@ data class BoardDetailResponse(
                 id = board.id,
                 name = board.name,
                 stickers = board.stickers.map(StickerResponse::from),
-                drawings = board.drawings.map(DrawingResponse::from),
+                drawings =
+                    board.drawings
+                        .filterIsInstance<Drawing.Stroke>()
+                        .map(DrawingResponse::from),
             )
     }
 }
@@ -140,8 +143,8 @@ data class DrawingResponse(
     val stickerId: StickerId?,
 
     @field:Schema(
-        description = "선 데이터. 포맷은 클라이언트 정의를 그대로 저장",
-        example = "{\"points\":[[10.5,22],[14.2,25.1],[19.8,27.4]]}",
+        description = "선 데이터. 포맷은 클라이언트 정의를 그대로 저장하며, 겹침 순서가 zIndex 키로 함께 들어 있다",
+        example = "{\"points\":[[10.5,22],[14.2,25.1],[19.8,27.4]],\"zIndex\":6}",
     )
     val stroke: Map<String, Any?>,
 
@@ -152,12 +155,12 @@ data class DrawingResponse(
     val strokeWidth: Double,
 ) {
     companion object {
-        fun from(drawing: Drawing): DrawingResponse =
+        fun from(drawing: Drawing.Stroke): DrawingResponse =
             DrawingResponse(
                 id = drawing.id,
                 scope = drawing.scope,
                 stickerId = drawing.stickerId,
-                stroke = drawing.stroke,
+                stroke = drawing.stroke.withLegacyZIndex(drawing.zIndex),
                 color = drawing.color,
                 strokeWidth = drawing.strokeWidth,
             )

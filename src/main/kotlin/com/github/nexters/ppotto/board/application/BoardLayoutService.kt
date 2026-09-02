@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.board.application
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
+import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
@@ -102,11 +103,32 @@ class BoardLayoutService(
         listOf(
             id.value.version() != UUID_VERSION_7,
             (scope == DrawingScope.STICKER) != (stickerId != null),
-            stroke.isEmpty(),
             color.isBlank(),
-            !strokeWidth.isFinite(),
-            strokeWidth <= 0,
+            isPayloadInvalid(),
         ).any { it }
+
+    private fun DrawingCreateCommand.isPayloadInvalid(): Boolean =
+        when (this) {
+            is DrawingCreateCommand.Stroke ->
+                listOf(
+                    stroke.isEmpty(),
+                    !strokeWidth.isFinite(),
+                    strokeWidth <= 0,
+                ).any { it }
+
+            is DrawingCreateCommand.Text ->
+                listOf(
+                    content.isBlank(),
+                    content.length > Drawing.Text.MAX_CONTENT_LENGTH,
+                    !fontSize.isFinite(),
+                    fontSize <= 0,
+                    !posX.isFinite(),
+                    !posY.isFinite(),
+                    !maxWidth.isFinite(),
+                    maxWidth <= 0,
+                    !rotation.isFinite(),
+                ).any { it }
+        }
 
     private fun validateDrawingOwnership(
         boardId: BoardId,
@@ -138,22 +160,64 @@ data class BoardLayoutUpdateCommand(
     val deletedDrawingIds: List<DrawingId>,
 )
 
-data class DrawingCreateCommand(
-    val id: DrawingId,
-    val scope: DrawingScope,
-    val stickerId: StickerId?,
-    val stroke: Map<String, Any?>,
-    val color: String,
-    val strokeWidth: Double,
-) {
-    fun toDomain(boardId: BoardId): NewDrawing =
-        NewDrawing(
-            id = id,
-            boardId = boardId,
-            stickerId = stickerId,
-            scope = scope,
-            stroke = stroke,
-            color = color,
-            strokeWidth = strokeWidth,
-        )
+sealed interface DrawingCreateCommand {
+    val id: DrawingId
+    val scope: DrawingScope
+    val stickerId: StickerId?
+    val color: String
+    val zIndex: Int
+
+    fun toDomain(boardId: BoardId): NewDrawing
+
+    data class Stroke(
+        override val id: DrawingId,
+        override val scope: DrawingScope,
+        override val stickerId: StickerId?,
+        override val color: String,
+        override val zIndex: Int,
+        val stroke: Map<String, Any?>,
+        val strokeWidth: Double,
+    ) : DrawingCreateCommand {
+        override fun toDomain(boardId: BoardId): NewDrawing =
+            NewDrawing.Stroke(
+                id = id,
+                boardId = boardId,
+                stickerId = stickerId,
+                scope = scope,
+                color = color,
+                zIndex = zIndex,
+                stroke = stroke,
+                strokeWidth = strokeWidth,
+            )
+    }
+
+    data class Text(
+        override val id: DrawingId,
+        override val scope: DrawingScope,
+        override val stickerId: StickerId?,
+        override val color: String,
+        override val zIndex: Int,
+        val content: String,
+        val fontSize: Double,
+        val posX: Double,
+        val posY: Double,
+        val maxWidth: Double,
+        val rotation: Double,
+    ) : DrawingCreateCommand {
+        override fun toDomain(boardId: BoardId): NewDrawing =
+            NewDrawing.Text(
+                id = id,
+                boardId = boardId,
+                stickerId = stickerId,
+                scope = scope,
+                color = color,
+                zIndex = zIndex,
+                content = content,
+                fontSize = fontSize,
+                posX = posX,
+                posY = posY,
+                maxWidth = maxWidth,
+                rotation = rotation,
+            )
+    }
 }

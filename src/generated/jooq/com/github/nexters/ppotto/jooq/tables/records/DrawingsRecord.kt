@@ -38,17 +38,17 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
         set(value): Unit = set(3, value)
         get(): String = get(3) as String
 
-    open var stroke: JSONB
+    open var stroke: JSONB?
         set(value): Unit = set(4, value)
-        get(): JSONB = get(4) as JSONB
+        get(): JSONB? = get(4) as JSONB?
 
     open var color: String
         set(value): Unit = set(5, value)
         get(): String = get(5) as String
 
-    open var strokeWidth: Double
+    open var strokeWidth: Double?
         set(value): Unit = set(6, value)
-        get(): Double = get(6) as Double
+        get(): Double? = get(6) as Double?
 
     open var createdAt: Instant?
         set(value): Unit = set(7, value)
@@ -62,6 +62,38 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
         set(value): Unit = set(9, value)
         get(): Instant? = get(9) as Instant?
 
+    open var type: String?
+        set(value): Unit = set(10, value)
+        get(): String? = get(10) as String?
+
+    open var zIndex: Int?
+        set(value): Unit = set(11, value)
+        get(): Int? = get(11) as Int?
+
+    open var content: String?
+        set(value): Unit = set(12, value)
+        get(): String? = get(12) as String?
+
+    open var fontSize: Double?
+        set(value): Unit = set(13, value)
+        get(): Double? = get(13) as Double?
+
+    open var posX: Double?
+        set(value): Unit = set(14, value)
+        get(): Double? = get(14) as Double?
+
+    open var posY: Double?
+        set(value): Unit = set(15, value)
+        get(): Double? = get(15) as Double?
+
+    open var maxWidth: Double?
+        set(value): Unit = set(16, value)
+        get(): Double? = get(16) as Double?
+
+    open var rotation: Double?
+        set(value): Unit = set(17, value)
+        get(): Double? = get(17) as Double?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -71,7 +103,7 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
     /**
      * Create a detached, initialised DrawingsRecord
      */
-    constructor(id: DrawingId? = null, boardId: BoardId, stickerId: StickerId? = null, scope: String, stroke: JSONB, color: String, strokeWidth: Double, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null): this() {
+    constructor(id: DrawingId? = null, boardId: BoardId, stickerId: StickerId? = null, scope: String, stroke: JSONB? = null, color: String, strokeWidth: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, type: String? = null, zIndex: Int? = null, content: String? = null, fontSize: Double? = null, posX: Double? = null, posY: Double? = null, maxWidth: Double? = null, rotation: Double? = null): this() {
         this.id = id
         this.boardId = boardId
         this.stickerId = stickerId
@@ -82,6 +114,14 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         this.deletedAt = deletedAt
+        this.type = type
+        this.zIndex = zIndex
+        this.content = content
+        this.fontSize = fontSize
+        this.posX = posX
+        this.posY = posY
+        this.maxWidth = maxWidth
+        this.rotation = rotation
         resetTouchedOnNotNull()
     }
 
@@ -100,6 +140,14 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
             this.deletedAt = value.deletedAt
+            this.type = value.type
+            this.zIndex = value.zIndex
+            this.content = value.content
+            this.fontSize = value.fontSize
+            this.posX = value.posX
+            this.posY = value.posY
+            this.maxWidth = value.maxWidth
+            this.rotation = value.rotation
             resetTouchedOnNotNull()
         }
     }

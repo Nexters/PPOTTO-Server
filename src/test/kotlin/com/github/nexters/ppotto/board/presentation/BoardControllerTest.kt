@@ -16,6 +16,8 @@ import org.springframework.context.annotation.Import
 @Import(BoardTestConfig::class)
 class BoardControllerTest(
     boardController: BoardController,
+    boardDetailController: BoardDetailController,
+    boardDetailV2Controller: BoardDetailV2Controller,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
 ) : IntegrationTest({
@@ -32,7 +34,11 @@ class BoardControllerTest(
                         .list(user.id)
                         .data!!
                         .map { it.id } shouldContainExactly listOf(created.id)
-                    boardController
+                    boardDetailController
+                        .get(user.id, created.id)
+                        .data!!
+                        .name shouldBe "여름 휴가"
+                    boardDetailV2Controller
                         .get(user.id, created.id)
                         .data!!
                         .name shouldBe "여름 휴가"
@@ -48,7 +54,7 @@ class BoardControllerTest(
                 Then("성공 응답으로 노출되지 않는다") {
                     val other = userRepository.saveTestUser()
                     shouldThrow<NotFoundException> {
-                        boardController.get(other.id, board.id)
+                        boardDetailController.get(other.id, board.id)
                     }
                 }
             }
