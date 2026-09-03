@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.jooq.tables.StickerPhotos
 import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
+import com.github.nexters.ppotto.jooq.tables.UserDeviceTokens
 import com.github.nexters.ppotto.jooq.tables.Users
 
 import kotlin.collections.List
@@ -82,6 +83,11 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
     val TERMS: Terms get() = Terms.TERMS
 
     /**
+     * The table <code>public.user_device_tokens</code>.
+     */
+    val USER_DEVICE_TOKENS: UserDeviceTokens get() = UserDeviceTokens.USER_DEVICE_TOKENS
+
+    /**
      * The table <code>public.users</code>.
      */
     val USERS: Users get() = Users.USERS
@@ -98,6 +104,7 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
         Stickers.STICKERS,
         TermAgreements.TERM_AGREEMENTS,
         Terms.TERMS,
+        UserDeviceTokens.USER_DEVICE_TOKENS,
         Users.USERS
     )
 }
