@@ -9,6 +9,7 @@ spring:
       - classpath:config/datasource.yml
       - classpath:config/flyway.yml
       - classpath:config/gcs.yml
+      - classpath:config/fcm.yml
       - classpath:config/redis.yml
       - classpath:config/auth.yml
       - classpath:config/vertexai.yml
