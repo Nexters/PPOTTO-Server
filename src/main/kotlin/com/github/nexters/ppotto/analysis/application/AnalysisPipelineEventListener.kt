@@ -7,12 +7,14 @@ import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.notification.domain.PushNotificationRequestedEvent
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import org.springframework.transaction.event.TransactionPhase
@@ -25,6 +27,7 @@ class AnalysisPipelineEventListener(
     private val analysisPipelineService: AnalysisPipelineService,
     private val analysisRepository: AnalysisRepository,
     private val analysisResultSaveService: AnalysisResultSaveService,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @Async(AsyncConfig.ANALYSIS_PIPELINE_TASK_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -70,6 +73,7 @@ class AnalysisPipelineEventListener(
             measuredStep(event.analysisId, "analysis-mark-completed") {
                 analysisRepository.markCompleted(event.analysisId, Instant.now())
             }
+            notifyCompletionBestEffort(analysis.userId, event.analysisId)
         }.onSuccess {
             log.info("analysis pipeline listener completed: analysisId={}, elapsedMs={}", event.analysisId, elapsedMs(startedAt))
         }.onFailure {
@@ -83,6 +87,41 @@ class AnalysisPipelineEventListener(
             )
             val errorMessage = "[$step] ${it.message ?: it::class.simpleName ?: "알 수 없는 오류"}"
             analysisRepository.markFailed(event.analysisId, errorMessage)
+            notifyFailureBestEffort(event.analysisId)
+        }
+    }
+
+    private fun notifyCompletionBestEffort(
+        userId: UUID,
+        analysisId: UUID,
+    ) {
+        runCatching {
+            eventPublisher.publishEvent(
+                PushNotificationRequestedEvent(
+                    userId = UserId(userId),
+                    title = NOTIFICATION_COMPLETED_TITLE,
+                    body = NOTIFICATION_COMPLETED_BODY,
+                    data = mapOf("analysisId" to analysisId.toString(), "type" to "ANALYSIS_COMPLETED"),
+                ),
+            )
+        }.onFailure {
+            log.warn("push notification publish skipped: analysisId={}, error={}", analysisId, it.message ?: it::class.simpleName)
+        }
+    }
+
+    private fun notifyFailureBestEffort(analysisId: UUID) {
+        runCatching {
+            val userId = analysisRepository.findById(analysisId)?.userId ?: error("분석을 찾을 수 없습니다: $analysisId")
+            eventPublisher.publishEvent(
+                PushNotificationRequestedEvent(
+                    userId = UserId(userId),
+                    title = NOTIFICATION_FAILED_TITLE,
+                    body = NOTIFICATION_FAILED_BODY,
+                    data = mapOf("analysisId" to analysisId.toString(), "type" to "ANALYSIS_FAILED"),
+                ),
+            )
+        }.onFailure {
+            log.warn("push notification publish skipped: analysisId={}, error={}", analysisId, it.message ?: it::class.simpleName)
         }
     }
 
@@ -157,6 +196,11 @@ class AnalysisPipelineEventListener(
     }
 
     companion object {
+        private const val NOTIFICATION_COMPLETED_TITLE = "스티커 생성 완료"
+        private const val NOTIFICATION_COMPLETED_BODY = "요청하신 스티커가 모두 준비됐어요"
+        private const val NOTIFICATION_FAILED_TITLE = "스티커 생성 실패"
+        private const val NOTIFICATION_FAILED_BODY = "스티커 생성에 실패했어요. 다시 시도해주세요"
+
         private val log = LoggerFactory.getLogger(AnalysisPipelineEventListener::class.java)
 
         private fun elapsedMs(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
