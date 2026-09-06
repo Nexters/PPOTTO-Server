@@ -4,6 +4,7 @@
 package com.github.nexters.ppotto.jooq.tables.records
 
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.UserDeviceTokens
 
 import java.time.Instant
@@ -23,9 +24,9 @@ open class UserDeviceTokensRecord private constructor() : UpdatableRecordImpl<Us
         set(value): Unit = set(0, value)
         get(): UUID? = get(0) as UUID?
 
-    open var userId: UUID
+    open var userId: UserId
         set(value): Unit = set(1, value)
-        get(): UUID = get(1) as UUID
+        get(): UserId = get(1) as UserId
 
     open var deviceId: String
         set(value): Unit = set(2, value)
@@ -56,7 +57,7 @@ open class UserDeviceTokensRecord private constructor() : UpdatableRecordImpl<Us
     /**
      * Create a detached, initialised UserDeviceTokensRecord
      */
-    constructor(id: UUID? = null, userId: UUID, deviceId: String, platform: String, fcmToken: String, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: UUID? = null, userId: UserId, deviceId: String, platform: String, fcmToken: String, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
         this.id = id
         this.userId = userId
         this.deviceId = deviceId

@@ -4,7 +4,9 @@
 package com.github.nexters.ppotto.jooq.tables
 
 
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.jooq.OffsetDateTimeInstantConverter
+import com.github.nexters.ppotto.global.jooq.UserIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IDX_USER_DEVICE_TOKENS_FCM_TOKEN
 import com.github.nexters.ppotto.jooq.indexes.UK_USER_DEVICE_TOKENS_USER_DEVICE
@@ -85,7 +87,7 @@ open class UserDeviceTokens(
     /**
      * The column <code>public.user_device_tokens.user_id</code>.
      */
-    val USER_ID: TableField<UserDeviceTokensRecord, UUID?> = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "")
+    val USER_ID: TableField<UserDeviceTokensRecord, UserId?> = createField(DSL.name("user_id"), SQLDataType.UUID.nullable(false), this, "", UserIdConverter())
 
     /**
      * The column <code>public.user_device_tokens.device_id</code>.

@@ -4,6 +4,8 @@
 package com.github.nexters.ppotto.jooq.tables.pojos
 
 
+import com.github.nexters.ppotto.global.identifier.UserId
+
 import java.io.Serializable
 import java.time.Instant
 import java.util.UUID
@@ -15,7 +17,7 @@ import java.util.UUID
 @Suppress("warnings")
 data class UserDeviceTokens(
     val id: UUID? = null,
-    val userId: UUID,
+    val userId: UserId,
     val deviceId: String,
     val platform: String,
     val fcmToken: String,
