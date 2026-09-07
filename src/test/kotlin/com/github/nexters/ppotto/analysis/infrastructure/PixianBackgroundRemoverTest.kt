@@ -33,14 +33,19 @@ class PixianBackgroundRemoverTest :
         server.start()
 
         val baseUri = "http://localhost:${server.address.port}"
+        val pixianClient =
+            RestClient
+                .builder()
+                .requestFactory(JdkClientHttpRequestFactory())
+                .build()
+        val pixianApi =
+            HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(pixianClient))
+                .build()
+                .createClient(PixianApi::class.java)
         val remover =
             PixianBackgroundRemover(
-                HttpServiceProxyFactory
-                    // 운영에서는 HttpServiceClientConfig가 JDK HttpClient로 고정하므로, 클래스패스에
-                    // 무엇이 있든 동일하게 동작하도록 테스트에서도 명시적으로 같은 팩토리를 사용한다.
-                    .builderFor(RestClientAdapter.create(RestClient.builder().requestFactory(JdkClientHttpRequestFactory()).build()))
-                    .build()
-                    .createClient(PixianApi::class.java),
+                pixianApi,
                 PixianProperties(
                     apiId = "test-id",
                     apiSecret = "test-secret",
