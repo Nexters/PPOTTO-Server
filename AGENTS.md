@@ -99,7 +99,7 @@ photo/
 | `Caddyfile` | Shared automatic HTTPS and reverse proxy configuration |
 | `Dockerfile` | Layered JDK 25 image. The AOT cache training step refreshes a full `prod`-profile context, so it must carry every config env var plus build-only mounted dummy GCS and Apple credentials |
 | `.env.template` | Local environment defaults, including a non-production provider-token encryption key, GCS upload/read signed URL expirations, external-service timeouts, the disabled-by-default withdrawn-user cleanup schedule, and an empty `SENTRY_DSN` that keeps Sentry inactive locally |
-| `build.gradle.kts` | Single-module build, including Spring Security, Redis, JWT, OAuth, and authenticated MockMvc test support |
+| `build.gradle.kts` | Single-module build, including Spring Security, Redis, JWT, OAuth, authenticated MockMvc test support, and CI-sized test JVM heap |
 
 ## Maintenance
 

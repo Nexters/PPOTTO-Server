@@ -121,4 +121,5 @@ tasks.jar {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    maxHeapSize = "2g"
 }
