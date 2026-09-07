@@ -1,0 +1,3 @@
+fcm:
+  credentials-path: ${FCM_CREDENTIALS_PATH}
+  timeout-millis: ${FCM_TIMEOUT_MILLIS}

@@ -43,9 +43,24 @@ class AsyncConfig {
     @Profile("test")
     fun testAnalysisPipelineTaskExecutor(): Executor = SyncTaskExecutor()
 
+    @Bean(PUSH_NOTIFICATION_TASK_EXECUTOR)
+    @Profile("!test")
+    fun pushNotificationTaskExecutor(): Executor =
+        SimpleAsyncTaskExecutor(
+            Thread
+                .ofVirtual()
+                .name("push-notification-", 0)
+                .factory(),
+        )
+
+    @Bean(PUSH_NOTIFICATION_TASK_EXECUTOR)
+    @Profile("test")
+    fun testPushNotificationTaskExecutor(): Executor = SyncTaskExecutor()
+
     companion object {
         const val ANALYSIS_CLEANUP_TASK_EXECUTOR = "analysisCleanupTaskExecutor"
         const val STICKER_IMAGE_CLEANUP_TASK_EXECUTOR = "stickerImageCleanupTaskExecutor"
         const val ANALYSIS_PIPELINE_TASK_EXECUTOR = "analysisPipelineTaskExecutor"
+        const val PUSH_NOTIFICATION_TASK_EXECUTOR = "pushNotificationTaskExecutor"
     }
 }

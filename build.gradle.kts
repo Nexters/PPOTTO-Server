@@ -34,6 +34,7 @@ repositories {
 dependencies {
     implementation(platform(libs.spring.cloud.dependencies))
 
+    implementation(libs.firebase.admin)
     implementation(libs.flyway.database.postgresql)
     implementation(libs.google.cloud.storage)
     implementation(libs.google.genai)
@@ -120,4 +121,5 @@ tasks.jar {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    maxHeapSize = "2g"
 }

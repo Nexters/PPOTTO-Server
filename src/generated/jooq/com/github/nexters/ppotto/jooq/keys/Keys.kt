@@ -14,6 +14,7 @@ import com.github.nexters.ppotto.jooq.tables.StickerPhotos
 import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
+import com.github.nexters.ppotto.jooq.tables.UserDeviceTokens
 import com.github.nexters.ppotto.jooq.tables.Users
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
@@ -24,6 +25,7 @@ import com.github.nexters.ppotto.jooq.tables.records.StickerPhotosRecord
 import com.github.nexters.ppotto.jooq.tables.records.StickersRecord
 import com.github.nexters.ppotto.jooq.tables.records.TermAgreementsRecord
 import com.github.nexters.ppotto.jooq.tables.records.TermsRecord
+import com.github.nexters.ppotto.jooq.tables.records.UserDeviceTokensRecord
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 
 import org.jooq.ForeignKey
@@ -50,6 +52,7 @@ val TERM_AGREEMENTS_PKEY: UniqueKey<TermAgreementsRecord> = Internal.createUniqu
 val UK_TERM_AGREEMENT: UniqueKey<TermAgreementsRecord> = Internal.createUniqueKey(TermAgreements.TERM_AGREEMENTS, DSL.name("uk_term_agreement"), arrayOf(TermAgreements.TERM_AGREEMENTS.USER_ID, TermAgreements.TERM_AGREEMENTS.TERM_ID), true)
 val TERMS_PKEY: UniqueKey<TermsRecord> = Internal.createUniqueKey(Terms.TERMS, DSL.name("terms_pkey"), arrayOf(Terms.TERMS.ID), true)
 val UK_TERMS_CODE_VERSION: UniqueKey<TermsRecord> = Internal.createUniqueKey(Terms.TERMS, DSL.name("uk_terms_code_version"), arrayOf(Terms.TERMS.CODE, Terms.TERMS.VERSION), true)
+val USER_DEVICE_TOKENS_PKEY: UniqueKey<UserDeviceTokensRecord> = Internal.createUniqueKey(UserDeviceTokens.USER_DEVICE_TOKENS, DSL.name("user_device_tokens_pkey"), arrayOf(UserDeviceTokens.USER_DEVICE_TOKENS.ID), true)
 val USERS_PKEY: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, DSL.name("users_pkey"), arrayOf(Users.USERS.ID), true)
 
 // -------------------------------------------------------------------------

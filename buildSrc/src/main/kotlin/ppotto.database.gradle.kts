@@ -57,7 +57,7 @@ jooq {
                     }
                     forcedType {
                         includeTypes = "(?i)UUID"
-                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id"
+                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id|user_device_tokens\\.user_id"
                         userType = "com.github.nexters.ppotto.global.identifier.UserId"
                         converter = "com.github.nexters.ppotto.global.jooq.UserIdConverter"
                     }

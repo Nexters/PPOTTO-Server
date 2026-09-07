@@ -14,6 +14,7 @@ import com.github.nexters.ppotto.jooq.tables.StickerPhotos
 import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
+import com.github.nexters.ppotto.jooq.tables.UserDeviceTokens
 import com.github.nexters.ppotto.jooq.tables.Users
 
 
@@ -62,6 +63,11 @@ val TERM_AGREEMENTS: TermAgreements = TermAgreements.TERM_AGREEMENTS
  * The table <code>public.terms</code>.
  */
 val TERMS: Terms = Terms.TERMS
+
+/**
+ * The table <code>public.user_device_tokens</code>.
+ */
+val USER_DEVICE_TOKENS: UserDeviceTokens = UserDeviceTokens.USER_DEVICE_TOKENS
 
 /**
  * The table <code>public.users</code>.

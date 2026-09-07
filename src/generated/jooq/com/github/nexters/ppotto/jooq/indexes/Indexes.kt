@@ -14,6 +14,7 @@ import com.github.nexters.ppotto.jooq.tables.StickerPhotos
 import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
+import com.github.nexters.ppotto.jooq.tables.UserDeviceTokens
 import com.github.nexters.ppotto.jooq.tables.Users
 
 import org.jooq.Index
@@ -31,6 +32,7 @@ val IDX_ANALYSIS_USER_CREATED: Index = Internal.createIndex(DSL.name("idx_analys
 val IDX_PHOTOS_ANALYSIS_ID: Index = Internal.createIndex(DSL.name("idx_photos_analysis_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.ANALYSIS_ID), false)
 val IDX_PHOTOS_BOARD_ID: Index = Internal.createIndex(DSL.name("idx_photos_board_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.BOARD_ID), false)
 val IDX_PHOTOS_BURST_GROUP_ID: Index = Internal.createIndex(DSL.name("idx_photos_burst_group_id"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.BURST_GROUP_ID), false)
+val IDX_USER_DEVICE_TOKENS_FCM_TOKEN: Index = Internal.createIndex(DSL.name("idx_user_device_tokens_fcm_token"), UserDeviceTokens.USER_DEVICE_TOKENS, arrayOf(UserDeviceTokens.USER_DEVICE_TOKENS.FCM_TOKEN), false)
 val IX_BOARD_USER_CREATED: Index = Internal.createIndex(DSL.name("ix_board_user_created"), Boards.BOARDS, arrayOf(Boards.BOARDS.USER_ID, Boards.BOARDS.CREATED_AT), false)
 val IX_DRAWING_BOARD: Index = Internal.createIndex(DSL.name("ix_drawing_board"), Drawings.DRAWINGS, arrayOf(Drawings.DRAWINGS.BOARD_ID), false)
 val IX_DRAWING_STICKER: Index = Internal.createIndex(DSL.name("ix_drawing_sticker"), Drawings.DRAWINGS, arrayOf(Drawings.DRAWINGS.STICKER_ID), false)
@@ -43,4 +45,5 @@ val IX_TERM_AGREEMENT_TERM: Index = Internal.createIndex(DSL.name("ix_term_agree
 val IX_TERMS_CODE_EFFECTIVE: Index = Internal.createIndex(DSL.name("ix_terms_code_effective"), Terms.TERMS, arrayOf(Terms.TERMS.CODE, Terms.TERMS.EFFECTIVE_AT), false)
 val UK_ANALYSIS_ACTIVE: Index = Internal.createIndex(DSL.name("uk_analysis_active"), Analysis.ANALYSIS, arrayOf(Analysis.ANALYSIS.USER_ID), true)
 val UK_PHOTOS_BURST_REPRESENTATIVE: Index = Internal.createIndex(DSL.name("uk_photos_burst_representative"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.BURST_GROUP_ID), true)
+val UK_USER_DEVICE_TOKENS_USER_DEVICE: Index = Internal.createIndex(DSL.name("uk_user_device_tokens_user_device"), UserDeviceTokens.USER_DEVICE_TOKENS, arrayOf(UserDeviceTokens.USER_DEVICE_TOKENS.USER_ID, UserDeviceTokens.USER_DEVICE_TOKENS.DEVICE_ID), true)
 val UK_USERS_PROVIDER_UID: Index = Internal.createIndex(DSL.name("uk_users_provider_uid"), Users.USERS, arrayOf(Users.USERS.PROVIDER, Users.USERS.PROVIDER_USER_ID), true)

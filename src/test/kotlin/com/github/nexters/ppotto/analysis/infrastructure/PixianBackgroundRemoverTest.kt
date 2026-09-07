@@ -8,6 +8,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.support.RestClientAdapter
 import org.springframework.web.service.invoker.HttpServiceProxyFactory
@@ -32,12 +33,19 @@ class PixianBackgroundRemoverTest :
         server.start()
 
         val baseUri = "http://localhost:${server.address.port}"
+        val pixianClient =
+            RestClient
+                .builder()
+                .requestFactory(JdkClientHttpRequestFactory())
+                .build()
+        val pixianApi =
+            HttpServiceProxyFactory
+                .builderFor(RestClientAdapter.create(pixianClient))
+                .build()
+                .createClient(PixianApi::class.java)
         val remover =
             PixianBackgroundRemover(
-                HttpServiceProxyFactory
-                    .builderFor(RestClientAdapter.create(RestClient.builder().build()))
-                    .build()
-                    .createClient(PixianApi::class.java),
+                pixianApi,
                 PixianProperties(
                     apiId = "test-id",
                     apiSecret = "test-secret",

@@ -1,0 +1,49 @@
+package com.github.nexters.ppotto.notification.infrastructure
+
+import com.github.nexters.ppotto.notification.domain.PushNotifier
+import com.github.nexters.ppotto.notification.domain.PushSendResult
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.MessagingErrorCode
+import com.google.firebase.messaging.MulticastMessage
+import com.google.firebase.messaging.Notification
+import org.springframework.context.annotation.Profile
+import org.springframework.stereotype.Component
+
+@Component
+@Profile("!test")
+class FcmPushNotifier(
+    private val firebaseMessaging: FirebaseMessaging,
+) : PushNotifier {
+    override fun sendToTokens(
+        tokens: List<String>,
+        title: String,
+        body: String,
+        data: Map<String, String>,
+    ): List<PushSendResult> {
+        val message =
+            MulticastMessage
+                .builder()
+                .addAllTokens(tokens)
+                .setNotification(
+                    Notification
+                        .builder()
+                        .setTitle(title)
+                        .setBody(body)
+                        .build(),
+                ).putAllData(data)
+                .build()
+
+        val response = firebaseMessaging.sendEachForMulticast(message)
+        return tokens.zip(response.responses) { token, sendResponse ->
+            PushSendResult(
+                token = token,
+                success = sendResponse.isSuccessful,
+                invalid = sendResponse.exception?.messagingErrorCode in INVALID_TOKEN_ERROR_CODES,
+            )
+        }
+    }
+
+    companion object {
+        private val INVALID_TOKEN_ERROR_CODES = setOf(MessagingErrorCode.UNREGISTERED, MessagingErrorCode.INVALID_ARGUMENT)
+    }
+}
