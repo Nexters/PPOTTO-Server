@@ -7,7 +7,7 @@ on:
     types:
       - completed
     branches:
-      - dev
+      - production
 
 permissions:
   contents: read
@@ -33,11 +33,11 @@ jobs:
         run: |
           set -euo pipefail
           case "$HEAD_BRANCH" in
-            dev)
-              echo "label=Dev" >> "$GITHUB_OUTPUT"
-              echo "branch=dev" >> "$GITHUB_OUTPUT"
-              echo "environment=development" >> "$GITHUB_OUTPUT"
-              echo "compose_file=compose.dev.yaml" >> "$GITHUB_OUTPUT"
+            production)
+              echo "label=Production" >> "$GITHUB_OUTPUT"
+              echo "branch=production" >> "$GITHUB_OUTPUT"
+              echo "environment=production" >> "$GITHUB_OUTPUT"
+              echo "compose_file=compose.production.yaml" >> "$GITHUB_OUTPUT"
               echo "health_url=https://dev-api.ppotto.co.kr/actuator/health" >> "$GITHUB_OUTPUT"
               ;;
             *)

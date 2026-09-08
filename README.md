@@ -13,36 +13,36 @@ docker compose up -d
 - API 문서: `http://localhost:8080/swagger-ui.html`
 - 헬스체크: `http://localhost:8080/actuator/health`
 
-### Dev 서버
+### Production 서버
 
-Dev 서버는 Caddy, API, PostgreSQL 18 + pgvector를 함께 실행한다. API와 DB 포트는
+Production 서버는 Caddy, API, PostgreSQL 18 + pgvector를 함께 실행한다. API와 DB 포트는
 외부에 공개하지 않고 Caddy의 80/443 포트만 공개한다.
 
 ```bash
-cp .env.template .env.dev
+cp .env.template .env.production
 mkdir -p ../secrets
-# ../secrets/gcs-dev-service-account.json 배치
-docker compose -f compose.deploy.yaml -f compose.dev.yaml config
-docker compose -f compose.deploy.yaml -f compose.dev.yaml up -d --build
+# ../secrets/gcs-production-service-account.json 배치
+docker compose -f compose.deploy.yaml -f compose.production.yaml config
+docker compose -f compose.deploy.yaml -f compose.production.yaml up -d --build
 ```
 
-`.env.dev`에서 `APP_DOMAIN`, DB 및 Swagger 비밀번호, `GCS_BUCKET`을 실제 Dev 환경
+`.env.production`에서 `APP_DOMAIN`, DB 및 Swagger 비밀번호, `GCS_BUCKET`을 실제 운영 환경
 값으로 변경한다. 앱은 서버 배포 설정을 사용하기 위해 `SPRING_PROFILES_ACTIVE=prod`로
-실행된다. CORS는 `compose.dev.yaml`이 `CORS_ALLOWED_ORIGINS=*`로 고정해 모든 origin을
-허용하므로 `.env.dev`에서 따로 설정하지 않아도 된다.
+실행된다. CORS는 `compose.production.yaml`이 `CORS_ALLOWED_ORIGINS=*`로 고정해 모든 origin을
+허용하므로 `.env.production`에서 따로 설정하지 않아도 된다.
 
-Sentry는 `.env.dev`의 `SENTRY_DSN`만 채우면 켜진다. `SENTRY_ENVIRONMENT=dev`와
-트레이싱·프로파일링 샘플링 비율 `1.0`은 `compose.dev.yaml`이 고정하므로 환경파일에 넣지 않는다.
+Sentry는 `.env.production`의 `SENTRY_DSN`만 채우면 켜진다. `SENTRY_ENVIRONMENT=production`과
+트레이싱·프로파일링 샘플링 비율 `1.0`은 `compose.production.yaml`이 고정하므로 환경파일에 넣지 않는다.
 `SENTRY_DSN`을 비워 두면 SDK가 비활성 상태로 뜨고 이벤트를 보내지 않는다.
 
 ### CD 설정
 
-`dev` push의 CI가 성공하면 CD 워크플로가 해당 커밋을 이미지로 빌드해
+`production` push의 CI가 성공하면 CD 워크플로가 해당 커밋을 이미지로 빌드해
 Container Registry에 커밋 SHA 태그로 푸시한다. 이후 서버에 SSH로 접속해 검증된 커밋만
-fast-forward하고 같은 SHA의 이미지를 pull해 실행한다. `dev`는 GitHub Environment
-`development`를 사용한다.
+fast-forward하고 같은 SHA의 이미지를 pull해 실행한다. `production` 브랜치는 GitHub Environment
+`production`을 사용한다.
 
-GitHub Environment `development`에 다음 Secret을 등록한다.
+GitHub Environment `production`에 다음 Secret을 등록한다.
 
 | Secret | 설명 |
 |---|---|
@@ -70,7 +70,7 @@ Server/
 ├── buildSrc/                    Flyway + jOOQ codegen 빌드 플러그인
 ├── compose.yaml                 로컬 PostgreSQL + pgvector (기본 포트 54782)
 ├── compose.deploy.yaml          서버 배포 공통 Caddy + API + PostgreSQL
-├── compose.dev.yaml             Dev 서버 환경별 override
+├── compose.production.yaml      Production 서버 환경별 override
 ├── Caddyfile                    HTTPS 및 API reverse proxy
 ├── Dockerfile                   멀티스테이지 + 레이어 분리 + non-root 실행
 └── src/
@@ -161,12 +161,12 @@ enum class PhotoErrorCode(
 
 ## 규칙
 
-- 브랜치: `dev` 기준으로 `feat/이슈번호-기능간단설명` 형식(예: `feat/1-user-board-image-entity`)으로 만들고, PR은 `dev`로 보냅니다.
+- 브랜치: `production` 기준으로 `feat/이슈번호-기능간단설명` 형식(예: `feat/1-user-board-image-entity`)으로 만들고, PR은 `production`으로 보냅니다.
 - 커밋 메시지: `$operator($domain): $message` 형식, 한글로 작성합니다. operator는 `feat` `fix` `refactor` `chore` `test` `docs` `style` `ci`.
 - 코드 스타일은 ktlint와 detekt가 강제합니다. 커밋 전 `./gradlew build`가 통과해야 합니다.
 - API 응답은 `ApiResponse` envelope로 감싸고, 에러 코드는 `도메인-번호` 형식(`COMMON-001`)을 씁니다.
 - DB 스키마 변경은 마이그레이션 작성 → `./gradlew flywayMigrate jooqCodegen` → 생성 코드 커밋 순서로 합니다.
-- `dev` 브랜치는 PR로만 머지되며(squash), CI가 빌드·테스트·린트를 검증합니다.
+- `production` 브랜치는 PR로만 머지되며(squash), CI가 빌드·테스트·린트를 검증합니다.
 
 ## 문서
 
