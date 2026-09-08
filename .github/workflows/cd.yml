@@ -13,45 +13,15 @@ permissions:
   contents: read
 
 jobs:
-  configure:
-    name: 배포 대상 결정
+  deploy:
+    name: Production 배포
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.target.outputs.label }}
-      branch: ${{ steps.target.outputs.branch }}
-      environment: ${{ steps.target.outputs.environment }}
-      compose_file: ${{ steps.target.outputs.compose_file }}
-      health_url: ${{ steps.target.outputs.health_url }}
-    steps:
-      - name: 브랜치별 설정 선택
-        id: target
-        env:
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
-        run: |
-          set -euo pipefail
-          case "$HEAD_BRANCH" in
-            production)
-              echo "label=Production" >> "$GITHUB_OUTPUT"
-              echo "branch=production" >> "$GITHUB_OUTPUT"
-              echo "environment=production" >> "$GITHUB_OUTPUT"
-              echo "compose_file=compose.production.yaml" >> "$GITHUB_OUTPUT"
-              echo "health_url=https://dev-api.ppotto.co.kr/actuator/health" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              exit 1
-              ;;
-          esac
-
-  deploy:
-    name: ${{ needs.configure.outputs.label }} 배포
-    needs: configure
-    runs-on: ubuntu-latest
-    environment: ${{ needs.configure.outputs.environment }}
+    environment: production
     concurrency:
-      group: ppotto-${{ needs.configure.outputs.environment }}-deploy
+      group: ppotto-production-deploy
       cancel-in-progress: false
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -60,9 +30,9 @@ jobs:
       DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
       DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
       DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
-      DEPLOY_BRANCH: ${{ needs.configure.outputs.branch }}
-      COMPOSE_FILE: ${{ needs.configure.outputs.compose_file }}
-      HEALTH_URL: ${{ needs.configure.outputs.health_url }}
+      DEPLOY_BRANCH: production
+      COMPOSE_FILE: compose.production.yaml
+      HEALTH_URL: https://dev-api.ppotto.co.kr/actuator/health
       REGISTRY_HOST: ${{ secrets.REGISTRY_HOST }}
       REGISTRY_REPOSITORY: ${{ secrets.REGISTRY_REPOSITORY }}
       REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
@@ -101,8 +71,8 @@ jobs:
           context: .
           push: true
           tags: ${{ env.REGISTRY_HOST }}/${{ env.REGISTRY_REPOSITORY }}:${{ env.DEPLOY_SHA }}
-          cache-from: type=gha,scope=${{ needs.configure.outputs.environment }}
-          cache-to: type=gha,mode=max,scope=${{ needs.configure.outputs.environment }}
+          cache-from: type=gha,scope=production
+          cache-to: type=gha,mode=max,scope=production
 
       - name: SSH 설정
         run: |
@@ -145,19 +115,15 @@ jobs:
           git merge --ff-only "$deploy_sha"
           test "$(git rev-parse HEAD)" = "$deploy_sha"
           APP_IMAGE="$image" SENTRY_RELEASE="$deploy_sha" docker compose \
-            -f compose.deploy.yaml \
             -f "$compose_file" \
             config -q
           APP_IMAGE="$image" SENTRY_RELEASE="$deploy_sha" docker compose \
-            -f compose.deploy.yaml \
             -f "$compose_file" \
             pull
           APP_IMAGE="$image" SENTRY_RELEASE="$deploy_sha" docker compose \
-            -f compose.deploy.yaml \
             -f "$compose_file" \
             up -d --no-build --remove-orphans
           APP_IMAGE="$image" SENTRY_RELEASE="$deploy_sha" docker compose \
-            -f compose.deploy.yaml \
             -f "$compose_file" \
             ps
           REMOTE

@@ -11,7 +11,7 @@ Backend server for ppotto (뽀또). Kotlin 2.3 / Spring Boot 4.1 / JDK 25 / Post
 | `./gradlew flywayMigrate jooqCodegen` | Apply migrations + regenerate jOOQ code (needs local DB: `docker compose up -d`) |
 | `./gradlew bootRun` | Run locally (reads `.env` via spring-dotenv) |
 | `./gradlew koverHtmlReport` | Test coverage report (`build/reports/kover/html`) |
-| `docker compose -f compose.deploy.yaml -f compose.production.yaml up -d --build` | Run the Production server stack |
+| `docker compose -f compose.production.yaml up -d --build` | Run the server stack |
 
 ## Architecture (DDD-lite)
 
@@ -92,8 +92,7 @@ photo/
 | `.gitattributes` | Marks `src/generated/**` as `linguist-generated` so PR diffs collapse generated files |
 | `.gitignore` | Ignores local build/tooling files, secrets, `.env`, the personal dev-server E2E script, and generated E2E report artifacts |
 | `compose.yaml` | Local PostgreSQL 18 + pgvector |
-| `compose.deploy.yaml` | Shared server deployment stack: Caddy + API + PostgreSQL + Valkey (Redis-compatible, backs refresh token storage) |
-| `compose.production.yaml` | Production deployment overrides for the single server; mounts GCS, Apple, and Firebase credentials from `../secrets`, opens CORS to `*`, and pins `SENTRY_ENVIRONMENT=production` with 1.0 traces and profile-session sample rates |
+| `compose.production.yaml` | The single server stack: Caddy + API + PostgreSQL + Valkey (Redis-compatible, backs refresh token storage). Reads `.env.production`, mounts GCS, Apple, and Firebase credentials from `../secrets`, opens CORS to `*`, and pins `SENTRY_ENVIRONMENT=production` with 1.0 traces and profile-session sample rates |
 | `Caddyfile` | Shared automatic HTTPS and reverse proxy configuration |
 | `Dockerfile` | Layered JDK 25 image. The AOT cache training step refreshes a full `prod`-profile context, so it must carry every config env var plus build-only mounted dummy GCS and Apple credentials |
 | `.env.template` | Local environment defaults, including a non-production provider-token encryption key, GCS upload/read signed URL expirations, external-service timeouts, the disabled-by-default withdrawn-user cleanup schedule, and an empty `SENTRY_DSN` that keeps Sentry inactive locally |

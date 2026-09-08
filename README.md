@@ -22,8 +22,8 @@ Production 서버는 Caddy, API, PostgreSQL 18 + pgvector를 함께 실행한다
 cp .env.template .env.production
 mkdir -p ../secrets
 # ../secrets/gcs-production-service-account.json 배치
-docker compose -f compose.deploy.yaml -f compose.production.yaml config
-docker compose -f compose.deploy.yaml -f compose.production.yaml up -d --build
+docker compose -f compose.production.yaml config
+docker compose -f compose.production.yaml up -d --build
 ```
 
 `.env.production`에서 `APP_DOMAIN`, DB 및 Swagger 비밀번호, `GCS_BUCKET`을 실제 운영 환경
@@ -69,8 +69,7 @@ Server/
 ├── build.gradle.kts             빌드 스크립트 (버전은 gradle/libs.versions.toml에서 관리)
 ├── buildSrc/                    Flyway + jOOQ codegen 빌드 플러그인
 ├── compose.yaml                 로컬 PostgreSQL + pgvector (기본 포트 54782)
-├── compose.deploy.yaml          서버 배포 공통 Caddy + API + PostgreSQL
-├── compose.production.yaml      Production 서버 환경별 override
+├── compose.production.yaml      서버 스택 Caddy + API + PostgreSQL + Valkey
 ├── Caddyfile                    HTTPS 및 API reverse proxy
 ├── Dockerfile                   멀티스테이지 + 레이어 분리 + non-root 실행
 └── src/
