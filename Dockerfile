@@ -22,6 +22,7 @@ COPY --from=extractor --chown=spring:spring /builder/extracted/snapshot-dependen
 COPY --from=extractor --chown=spring:spring /builder/extracted/application/ ./
 RUN --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-gcs-key.json,target=/tmp/dummy-gcs-key.json,readonly \
     --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-apple-key.p8,target=/tmp/dummy-apple-key.p8,readonly \
+    --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-fcm-key.json,target=/tmp/dummy-fcm-key.json,readonly \
     SPRING_PROFILES_ACTIVE=prod SPRING_FLYWAY_ENABLED=false \
     SERVER_PORT=8080 POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_DB=aot \
     POSTGRES_USER=aot POSTGRES_PASSWORD=aot CORS_ALLOWED_ORIGINS=http://localhost \
@@ -29,6 +30,7 @@ RUN --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-gcs-
     GCS_BUCKET=aot GCS_CREDENTIALS_PATH=/tmp/dummy-gcs-key.json \
     GCS_UPLOAD_SIGNED_URL_EXPIRATION_MINUTES=15 GCS_READ_SIGNED_URL_EXPIRATION_MINUTES=60 \
     GCS_TIMEOUT_MILLIS=5000 \
+    FCM_CREDENTIALS_PATH=/tmp/dummy-fcm-key.json FCM_TIMEOUT_MILLIS=5000 \
     USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64=YW90LWR1bW15LWFlcy1rZXktbm90LWEtcmVhbC1rZXk= \
     USER_WITHDRAWN_CLEANUP_ENABLED=false USER_WITHDRAWN_CLEANUP_RETENTION_DAYS=30 \
     USER_WITHDRAWN_CLEANUP_BATCH_SIZE=100 USER_WITHDRAWN_CLEANUP_CRON="0 0 4 * * *" \
@@ -37,6 +39,7 @@ RUN --mount=type=bind,from=build,source=/workspace/src/test/resources/dummy-gcs-
     OAUTH_CONNECT_TIMEOUT_MILLIS=3000 OAUTH_READ_TIMEOUT_MILLIS=5000 \
     KAKAO_APP_ID=1 KAKAO_ACCESS_TOKEN_INFO_URI=http://localhost/kakao/access-token-info \
     KAKAO_USER_INFO_URI=http://localhost/kakao/user-info \
+    KAKAO_CLIENT_ID=aot KAKAO_CLIENT_SECRET=dummy-kakao-secret KAKAO_TOKEN_URI=http://localhost/kakao/token \
     APPLE_CLIENT_ID=aot APPLE_TEAM_ID=aot APPLE_KEY_ID=aot \
     APPLE_PRIVATE_KEY_PATH=/tmp/dummy-apple-key.p8 APPLE_ISSUER=http://localhost \
     APPLE_JWKS_URI=http://localhost/apple/jwks APPLE_TOKEN_URI=http://localhost/apple/token \
