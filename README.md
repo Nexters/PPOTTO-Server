@@ -35,34 +35,14 @@ Sentry는 `.env.dev`의 `SENTRY_DSN`만 채우면 켜진다. `SENTRY_ENVIRONMENT
 트레이싱·프로파일링 샘플링 비율 `1.0`은 `compose.dev.yaml`이 고정하므로 환경파일에 넣지 않는다.
 `SENTRY_DSN`을 비워 두면 SDK가 비활성 상태로 뜨고 이벤트를 보내지 않는다.
 
-### Production 서버
-
-Production은 Dev와 프로젝트명, 환경파일, GCS 자격증명, Docker 볼륨이 모두 분리된다.
-
-```bash
-cp .env.template .env.production
-mkdir -p ../secrets
-# ../secrets/gcs-production-service-account.json 배치
-docker compose -f compose.deploy.yaml -f compose.production.yaml config
-docker compose -f compose.deploy.yaml -f compose.production.yaml up -d --build
-```
-
-Sentry는 `.env.production`의 `SENTRY_DSN`만 채우면 켜진다. `SENTRY_ENVIRONMENT=production`과
-트레이싱·프로파일링 샘플링 비율 `1.0`은 `compose.production.yaml`이 고정한다.
-온프렘이라 볼륨 제약이 없어 전량 수집한다. 볼륨이 문제되면 이 값만 낮추면 된다.
-
-두 Compose는 모두 80/443 포트를 사용하므로 같은 호스트에서 동시에 실행하지 않는다.
-Production과 Dev를 동시에 운영해야 할 때는 서버를 분리하거나 공용 프록시 구성을 사용한다.
-
 ### CD 설정
 
-`dev` 또는 `main` push의 CI가 성공하면 CD 워크플로가 해당 커밋을 이미지로 빌드해
+`dev` push의 CI가 성공하면 CD 워크플로가 해당 커밋을 이미지로 빌드해
 Container Registry에 커밋 SHA 태그로 푸시한다. 이후 서버에 SSH로 접속해 검증된 커밋만
 fast-forward하고 같은 SHA의 이미지를 pull해 실행한다. `dev`는 GitHub Environment
-`development`, `main`은 `production`을 사용한다. 두 환경의 배포 절차는 하나의 공통
-job을 사용하고, 브랜치별 설정만 먼저 선택한다.
+`development`를 사용한다.
 
-각 GitHub Environment에 다음 Secret을 등록한다.
+GitHub Environment `development`에 다음 Secret을 등록한다.
 
 | Secret | 설명 |
 |---|---|
@@ -76,9 +56,7 @@ job을 사용하고, 브랜치별 설정만 먼저 선택한다.
 | `REGISTRY_USERNAME` | Registry 로그인 계정 |
 | `REGISTRY_PASSWORD` | 이미지를 push할 수 있는 Registry token 또는 비밀번호 |
 
-Production Environment에는 GitHub의 required reviewer를 설정해 운영 배포 전에 승인을
-요구하는 것을 권장한다. 서버 작업 트리에 수정 사항이 있거나 fast-forward가 불가능하면
-배포는 중단되며, 강제 reset은 수행하지 않는다. Private Registry라면 배포 전에 서버에서도
+서버 작업 트리에 수정 사항이 있거나 fast-forward가 불가능하면 배포는 중단되며, 강제 reset은 수행하지 않는다. Private Registry라면 배포 전에 서버에서도
 `docker login REGISTRY_HOST`를 한 번 실행해 pull 권한을 저장해야 한다.
 
 GCS 서비스 계정 JSON은 저장소 밖 `/home/ppotto/secrets`에 보관하며 디렉터리는 `700`,
@@ -93,7 +71,6 @@ Server/
 ├── compose.yaml                 로컬 PostgreSQL + pgvector (기본 포트 54782)
 ├── compose.deploy.yaml          서버 배포 공통 Caddy + API + PostgreSQL
 ├── compose.dev.yaml             Dev 서버 환경별 override
-├── compose.production.yaml      Production 서버 환경별 override
 ├── Caddyfile                    HTTPS 및 API reverse proxy
 ├── Dockerfile                   멀티스테이지 + 레이어 분리 + non-root 실행
 └── src/
@@ -184,12 +161,12 @@ enum class PhotoErrorCode(
 
 ## 규칙
 
-- 브랜치: `dev` 기준으로 `feat/이슈번호-기능간단설명` 형식(예: `feat/1-user-board-image-entity`)으로 만들고, PR은 `main`이 아니라 `dev`로 보냅니다.
+- 브랜치: `dev` 기준으로 `feat/이슈번호-기능간단설명` 형식(예: `feat/1-user-board-image-entity`)으로 만들고, PR은 `dev`로 보냅니다.
 - 커밋 메시지: `$operator($domain): $message` 형식, 한글로 작성합니다. operator는 `feat` `fix` `refactor` `chore` `test` `docs` `style` `ci`.
 - 코드 스타일은 ktlint와 detekt가 강제합니다. 커밋 전 `./gradlew build`가 통과해야 합니다.
 - API 응답은 `ApiResponse` envelope로 감싸고, 에러 코드는 `도메인-번호` 형식(`COMMON-001`)을 씁니다.
 - DB 스키마 변경은 마이그레이션 작성 → `./gradlew flywayMigrate jooqCodegen` → 생성 코드 커밋 순서로 합니다.
-- main 브랜치는 PR로만 머지되며(squash), CI가 빌드·테스트·린트를 검증합니다.
+- `dev` 브랜치는 PR로만 머지되며(squash), CI가 빌드·테스트·린트를 검증합니다.
 
 ## 문서
 

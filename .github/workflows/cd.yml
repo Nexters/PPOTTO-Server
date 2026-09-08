@@ -8,7 +8,6 @@ on:
       - completed
     branches:
       - dev
-      - main
 
 permissions:
   contents: read
@@ -40,13 +39,6 @@ jobs:
               echo "environment=development" >> "$GITHUB_OUTPUT"
               echo "compose_file=compose.dev.yaml" >> "$GITHUB_OUTPUT"
               echo "health_url=https://dev-api.ppotto.co.kr/actuator/health" >> "$GITHUB_OUTPUT"
-              ;;
-            main)
-              echo "label=Production" >> "$GITHUB_OUTPUT"
-              echo "branch=main" >> "$GITHUB_OUTPUT"
-              echo "environment=production" >> "$GITHUB_OUTPUT"
-              echo "compose_file=compose.production.yaml" >> "$GITHUB_OUTPUT"
-              echo "health_url=https://api.ppotto.co.kr/actuator/health" >> "$GITHUB_OUTPUT"
               ;;
             *)
               exit 1
