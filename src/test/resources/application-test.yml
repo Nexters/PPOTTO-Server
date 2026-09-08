@@ -29,6 +29,9 @@ OAUTH_READ_TIMEOUT_MILLIS: 5000
 KAKAO_APP_ID: 123456
 KAKAO_ACCESS_TOKEN_INFO_URI: https://kapi.kakao.com/v1/user/access_token_info
 KAKAO_USER_INFO_URI: https://kapi.kakao.com/v2/user/me
+KAKAO_CLIENT_ID: test-rest-api-key
+KAKAO_CLIENT_SECRET: test-client-secret
+KAKAO_TOKEN_URI: https://kauth.kakao.com/oauth/token
 APPLE_CLIENT_ID: com.nexters.ppotto
 APPLE_TEAM_ID: TESTTEAM01
 APPLE_KEY_ID: TESTKEY001

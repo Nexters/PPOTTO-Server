@@ -287,6 +287,66 @@ Request example (애플 재로그인 (refresh token 보관 중이면 교환 생�
 #### Notes
 - 카카오 또는 애플 계정으로 로그인합니다. 처음 보는 계정이면 가입과 기본 보드 생성까지 한 번에 처리됩니다.  **카카오** - 클라이언트가 카카오 SDK로 받은 `accessToken`을 보내면, 서버가 먼저   `/v1/user/access_token_info`로 토큰의 `app_id`가 우리 앱인지 확인합니다   (다른 서비스에서 수집한 토큰으로 로그인하는 토큰 치환 공격 차단, 불일치 시 AUTH-001).   이후 `/v2/user/me`로 회원번호를 조회해 `providerUserId`로 사용합니다. - 이메일은 필수입니다. 동의하지 않았으면 403 `AUTH-004`로 거부되며,   클라이언트는 추가 동의(`account_email` 스코프)를 요청한 뒤 다시 로그인합니다. - 닉네임도 필수입니다. 서버가 `/v2/user/me`의 `kakao_account.profile.nickname`을 이름으로 저장하며,   동의하지 않았으면 403 `AUTH-005`로 거부됩니다. 카카오 요청에 `name`을 보내면 400입니다.  **애플** - `identityToken`(JWT)을 애플 JWKS로 검증합니다 (iss / aud / exp / nonce).   `nonce` 클레임은 함께 보낸 `rawNonce`의 SHA-256 해시와 대조합니다. - 토큰의 `sub`를 `providerUserId`로 사용합니다. - `authorizationCode`는 5분 안에 refresh token으로 교환해 탈퇴(revoke)용으로   보관합니다. 앱스토어 심사 필수 사항이며, 재로그인 시에는 교환이 실패해도   로그인은 통과됩니다. - 이름은 애플이 최초 인가 1회에만 클라이언트에 내려주므로, 최초 로그인 시 `fullName`을 조합해   `name`으로 함께 보내야 합니다. 신규 가입인데 `name`이 없으면 400 `AUTH-006`으로 거부되고,   기존 사용자의 재로그인은 `name` 없이 통과하며 저장된 이름을 유지합니다. - 이메일도 애플이 최초 인가 1회에만 `identityToken`에 담아주므로, 재로그인 토큰에는 `email` 클레임이 없습니다.   서버는 `email`이 없으면 `authorizationCode` 교환 응답의 `id_token`에서 확보하고(`sub` 일치 확인),   그래도 없으면 기존 사용자는 저장된 이메일을 유지한 채 로그인시키며 신규 가입만 400 `AUTH-007`로 거부합니다.  응답의 `pendingTerms`가 비어 있지 않으면 약관 동의 화면으로 이동합니다.
 
+### POST /auth/login/web
+
+- Operation ID: `webLogin`
+- Summary: 웹 소셜 로그인 (가입 겸용)
+
+#### Request Spec
+- 인증: 불필요
+
+- Body schema: provider(필수, `string`), authorizationCode(필수, `string`), redirectUri(필수, `string`)
+
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| provider | Y | `string` | `KAKAO` | 소셜 로그인 제공자. 현재 KAKAO만 지원하며 APPLE은 400 |
+| authorizationCode | Y | `string` | - | provider 인가 페이지가 redirect URI로 돌려준 authorization code. 1회, 수 분 안에만 유효 |
+| redirectUri | Y | `string` | - | 인가 요청에 사용한 redirect URI. provider 콘솔에 등록된 값과 정확히 같아야 함 |
+
+Request example:
+```json
+{
+  "provider": "KAKAO",
+  "authorizationCode": "sample-kakao-authorization-code",
+  "redirectUri": "https://ppotto.co.kr/oauth/kakao"
+}
+```
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 로그인 성공 | `POST /auth/login`과 동일 (`accessToken`, `refreshToken`, `accessTokenExpiresIn`, `isNewUser`, `pendingTerms`) |
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | COMMON-001 | 잘못된 입력입니다. | 필수 값 누락 또는 아직 지원하지 않는 provider |
+| 401 | AUTH-008 | 카카오 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요. | code 만료·재사용, redirect URI 불일치, client secret 불일치 |
+| 401 | AUTH-001 | 소셜 로그인 검증에 실패했습니다. | 교환된 토큰의 `app_id`가 우리 앱이 아님 |
+| 403 | AUTH-004 | 이메일 제공에 동의해야 가입할 수 있습니다. | 카카오 이메일 미동의 |
+| 403 | AUTH-005 | 닉네임 제공에 동의해야 가입할 수 있습니다. | 카카오 닉네임 미동의 |
+
+401 AUTH-008 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "AUTH-008",
+    "message": "카카오 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 앱의 `POST /auth/login`은 SDK가 발급한 토큰을 받는 경로라 웹은 이 엔드포인트를 따로 씁니다. 두 경로 모두 같은 카카오 앱의 회원번호를 `providerUserId`로 쓰므로 앱과 웹이 같은 계정으로 이어집니다.
+- 카카오 JS SDK v2는 브라우저에 access token을 주지 않고 `Kakao.Auth.authorize({ redirectUri })`로 인가 페이지에 보낸 뒤 `code`를 redirect URI로 돌려줍니다. 클라이언트는 그 `code`와 사용한 `redirectUri`를 그대로 보냅니다.
+- 서버가 REST API 키와 client secret으로 `code`를 access token으로 교환한 뒤에는 앱 로그인과 같은 검증(`app_id` 확인, 회원번호·이메일·닉네임 조회)을 그대로 수행합니다.
+- 카카오 콘솔 준비: [플랫폼]에 Web 사이트 도메인 등록, [카카오 로그인]에 Redirect URI 등록(로컬 개발 주소 포함), [보안]에서 client secret 활성화. 동의 항목에 이메일과 닉네임 포함.
+- 응답 처리는 `POST /auth/login`과 같습니다. 이후 `refresh`와 `logout`도 그대로 사용합니다.
+
 ### POST /auth/refresh
 
 - Operation ID: `refreshToken`

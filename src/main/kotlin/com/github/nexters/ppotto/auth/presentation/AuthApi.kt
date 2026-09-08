@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.RefreshRequest
 import com.github.nexters.ppotto.auth.presentation.dto.TokenPairResponse
+import com.github.nexters.ppotto.auth.presentation.dto.WebLoginRequest
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
@@ -63,6 +64,42 @@ interface AuthApi {
         ],
     )
     fun login(request: LoginRequest): ApiResponse<LoginResponse>
+
+    @PostMapping("/login/web")
+    @Operation(
+        operationId = "webLogin",
+        summary = "웹 소셜 로그인 (가입 겸용)",
+        description =
+            "브라우저가 provider 인가 페이지를 거쳐 받은 authorization code를 서버가 토큰으로 교환해 로그인함. " +
+                "앱 로그인과 같은 계정으로 이어지며 현재 KAKAO만 지원함",
+    )
+    @OpenApiResponse(
+        responseCode = "200",
+        useReturnTypeSchema = true,
+        description = "로그인 성공",
+    )
+    @InvalidInputApiResponse
+    @OpenApiResponse(
+        responseCode = "401",
+        description = "authorization code 교환 또는 소셜 로그인 검증에 실패함 (AUTH-001, AUTH-008)",
+        content = [
+            Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ApiErrorResponse::class),
+            ),
+        ],
+    )
+    @OpenApiResponse(
+        responseCode = "403",
+        description = "가입에 필요한 동의가 부족함 (AUTH-004, AUTH-005)",
+        content = [
+            Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ApiErrorResponse::class),
+            ),
+        ],
+    )
+    fun webLogin(request: WebLoginRequest): ApiResponse<LoginResponse>
 
     @PostMapping("/refresh")
     @Operation(

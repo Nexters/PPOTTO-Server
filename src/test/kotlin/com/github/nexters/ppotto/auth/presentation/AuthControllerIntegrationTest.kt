@@ -41,6 +41,32 @@ class AuthControllerIntegrationTest(
                 }
             }
 
+            When("웹 로그인 요청에 아직 지원하지 않는 APPLE provider를 보내면") {
+                Then("400을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/auth/login/web")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                    """{"provider":"APPLE","authorizationCode":"code","redirectUri":"https://ppotto.co.kr/oauth/apple"}""",
+                                ),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-001"))
+                }
+            }
+
+            When("웹 로그인 요청에 redirectUri가 없으면") {
+                Then("400을 반환한다") {
+                    mockMvc
+                        .perform(
+                            post("/auth/login/web")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""{"provider":"KAKAO","authorizationCode":"code"}"""),
+                        ).andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-001"))
+                }
+            }
+
             When("애플 로그인 요청의 name이 공백이면") {
                 Then("400을 반환한다") {
                     mockMvc

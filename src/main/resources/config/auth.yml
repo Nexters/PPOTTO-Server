@@ -10,6 +10,9 @@ auth:
     app-id: ${KAKAO_APP_ID}
     access-token-info-uri: ${KAKAO_ACCESS_TOKEN_INFO_URI}
     user-info-uri: ${KAKAO_USER_INFO_URI}
+    client-id: ${KAKAO_CLIENT_ID}
+    client-secret: ${KAKAO_CLIENT_SECRET}
+    token-uri: ${KAKAO_TOKEN_URI}
   apple:
     client-id: ${APPLE_CLIENT_ID}
     team-id: ${APPLE_TEAM_ID}
@@ -21,8 +24,6 @@ auth:
     revoke-uri: ${APPLE_REVOKE_URI}
     client-secret-expiration-days: ${APPLE_CLIENT_SECRET_EXPIRATION_DAYS}
     jwks-cache-seconds: ${APPLE_JWKS_CACHE_SECONDS}
-  dev-login:
-    enabled: ${DEV_LOGIN_ENABLED:false}
   jwt:
     issuer: ${JWT_ISSUER}
     secret: ${JWT_SECRET}

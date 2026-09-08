@@ -9,6 +9,13 @@ sealed interface LoginCommand {
         override val provider = OAuthProvider.KAKAO
     }
 
+    data class KakaoWeb(
+        val authorizationCode: String,
+        val redirectUri: String,
+    ) : LoginCommand {
+        override val provider = OAuthProvider.KAKAO
+    }
+
     data class Apple(
         val identityToken: String,
         val authorizationCode: String,

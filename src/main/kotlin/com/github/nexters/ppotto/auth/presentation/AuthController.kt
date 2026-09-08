@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.RefreshRequest
 import com.github.nexters.ppotto.auth.presentation.dto.TokenPairResponse
+import com.github.nexters.ppotto.auth.presentation.dto.WebLoginRequest
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
@@ -18,6 +19,14 @@ class AuthController(
 ) : AuthApi {
     override fun login(
         @Valid @RequestBody request: LoginRequest,
+    ): ApiResponse<LoginResponse> =
+        authService
+            .login(request.toCommand())
+            .let(LoginResponse::from)
+            .let { ApiResponse.success(it) }
+
+    override fun webLogin(
+        @Valid @RequestBody request: WebLoginRequest,
     ): ApiResponse<LoginResponse> =
         authService
             .login(request.toCommand())

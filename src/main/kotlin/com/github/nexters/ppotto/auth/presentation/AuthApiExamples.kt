@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.PendingTermResponse
 import com.github.nexters.ppotto.auth.presentation.dto.TokenPairResponse
+import com.github.nexters.ppotto.auth.presentation.dto.WebLoginRequest
 import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
@@ -58,6 +59,17 @@ private val APPLE_RELOGIN_REQUEST =
                 authorizationCode = "sample.0.mnpqr.apple-authorization-code",
                 rawNonce = "0F9E8D7C-6B5A-4938-A716-05F4E3D2C1B0",
                 name = null,
+            ),
+    )
+
+private val KAKAO_WEB_LOGIN_REQUEST =
+    ApiExample(
+        name = "카카오 웹 로그인",
+        value =
+            WebLoginRequest(
+                provider = OAuthProvider.KAKAO,
+                authorizationCode = "sample-kakao-authorization-code",
+                redirectUri = "https://ppotto.co.kr/oauth/kakao",
             ),
     )
 
@@ -164,6 +176,13 @@ private val SIGNUP_EMAIL_REQUIRED =
         message = "가입에 필요한 이메일을 확인할 수 없습니다. 다시 로그인해 주세요.",
     )
 
+private val KAKAO_CODE_EXCHANGE_FAILED =
+    ApiExamples.errorExample(
+        code = "AUTH-008",
+        summary = "카카오 authorization code 교환 실패 (만료, 재사용, redirect URI 불일치)",
+        message = "카카오 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요.",
+    )
+
 private val INVALID_REFRESH_TOKEN =
     ApiExamples.errorExample(
         code = "AUTH-002",
@@ -183,6 +202,17 @@ class AuthApiExamples : ApiExampleProvider {
                             "200" to listOf(NEW_USER_LOGIN_RESPONSE, RETURNING_USER_LOGIN_RESPONSE),
                             "400" to ApiExamples.INVALID_INPUT_RESPONSE + SIGNUP_NAME_REQUIRED + SIGNUP_EMAIL_REQUIRED,
                             "401" to listOf(SOCIAL_AUTHENTICATION_FAILED, APPLE_CODE_EXCHANGE_FAILED),
+                            "403" to listOf(KAKAO_EMAIL_CONSENT_REQUIRED, KAKAO_NICKNAME_CONSENT_REQUIRED),
+                        ),
+                ),
+            AuthApi::webLogin to
+                OperationExamples(
+                    request = listOf(KAKAO_WEB_LOGIN_REQUEST),
+                    responses =
+                        mapOf(
+                            "200" to listOf(NEW_USER_LOGIN_RESPONSE, RETURNING_USER_LOGIN_RESPONSE),
+                            "400" to ApiExamples.INVALID_INPUT_RESPONSE,
+                            "401" to listOf(KAKAO_CODE_EXCHANGE_FAILED, SOCIAL_AUTHENTICATION_FAILED),
                             "403" to listOf(KAKAO_EMAIL_CONSENT_REQUIRED, KAKAO_NICKNAME_CONSENT_REQUIRED),
                         ),
                 ),
