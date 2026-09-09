@@ -17,10 +17,10 @@ import java.util.Collections
 @Component
 @Order(SENTRY_HTTP_PAYLOAD_FILTER_ORDER)
 class SentryHttpPayloadFilter : OncePerRequestFilter() {
-    override fun shouldNotFilter(request: HttpServletRequest): Boolean =
-        request.servletPath.let { path ->
-            PublicPaths.isDocument(path) || path.startsWith(ACTUATOR_PATH_PREFIX)
-        }
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        val path = request.servletPath
+        return PublicPaths.isDocument(path) || PublicPaths.isActuator(path)
+    }
 
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -77,10 +77,9 @@ class SentryHttpPayloadFilter : OncePerRequestFilter() {
             }.getOrDefault(EMPTY_BODY)
 
     private companion object {
-        const val ACTUATOR_PATH_PREFIX = "/actuator"
         const val CACHE_LIMIT = HttpPayloadAttributes.REQUEST_CACHE_LIMIT_BYTES
         val EMPTY_BODY = ByteArray(0)
     }
 }
 
-const val SENTRY_HTTP_PAYLOAD_FILTER_ORDER: Int = Ordered.HIGHEST_PRECEDENCE + 2
+private const val SENTRY_HTTP_PAYLOAD_FILTER_ORDER: Int = Ordered.HIGHEST_PRECEDENCE + 2

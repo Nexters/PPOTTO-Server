@@ -1,6 +1,8 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldStartWith
@@ -9,8 +11,8 @@ import java.util.UUID
 class PhotoObjectKeysTest :
     BehaviorSpec({
         Given("analysisId와 photoId가 주어졌을 때") {
-            val analysisId = UUID.randomUUID()
-            val photoId = UUID.randomUUID()
+            val analysisId = AnalysisId(UUID.randomUUID())
+            val photoId = PhotoId(UUID.randomUUID())
 
             When("keyFor를 호출하면") {
                 Then("photos/{analysisId}/{photoId}.{ext} 형태의 키를 반환한다") {

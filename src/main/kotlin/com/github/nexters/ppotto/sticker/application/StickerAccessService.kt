@@ -18,25 +18,23 @@ class StickerAccessService(
         userId: UserId,
         stickerId: StickerId,
     ): Sticker =
-        (stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND))
-            .also { sticker ->
-                boardAccessService
-                    .getById(sticker.boardId)
-                    .takeIf { it.userId == userId }
-                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-            }
+        stickerRepository
+            .findById(stickerId)
+            ?.takeIf { boardAccessService.getById(it.boardId).userId == userId }
+            ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
 
     fun getWithOwnership(
         userId: UserId?,
         stickerId: StickerId,
     ): StickerWithOwnership =
-        (stickerRepository.findById(stickerId) ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND))
-            .let { sticker ->
+        stickerRepository
+            .findById(stickerId)
+            ?.let {
                 StickerWithOwnership(
-                    sticker = sticker,
-                    isOwner = userId != null && boardAccessService.getById(sticker.boardId).userId == userId,
+                    sticker = it,
+                    isOwner = userId != null && boardAccessService.getById(it.boardId).userId == userId,
                 )
-            }
+            } ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
 }
 
 data class StickerWithOwnership(

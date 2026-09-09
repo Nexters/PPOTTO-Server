@@ -2,12 +2,11 @@ package com.github.nexters.ppotto.auth.infrastructure.token
 
 import com.github.nexters.ppotto.auth.application.port.RefreshTokenStore
 import com.github.nexters.ppotto.auth.config.JwtAuthProperties
+import com.github.nexters.ppotto.auth.infrastructure.sha256Hex
 import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.script.DefaultRedisScript
 import org.springframework.stereotype.Component
-import java.nio.charset.StandardCharsets
-import java.security.MessageDigest
 import java.time.Duration
 import java.util.UUID
 
@@ -21,67 +20,52 @@ class RedisRefreshTokenStore(
     override fun save(
         userId: UserId,
         refreshToken: String,
-    ): Unit =
-        hash(refreshToken).let { tokenHash ->
-            redisTemplate.execute(
-                SAVE_SCRIPT,
-                listOf(userKey(userId), tokenKey(tokenHash)),
-                TOKEN_KEY_PREFIX,
-                tokenHash,
-                expirationSeconds.toString(),
-                userId.toString(),
-            )
-        }
+    ) {
+        val tokenHash = refreshToken.sha256Hex()
+        redisTemplate.execute(
+            SAVE_SCRIPT,
+            listOf(userKey(userId), tokenKey(tokenHash)),
+            TOKEN_KEY_PREFIX,
+            tokenHash,
+            expirationSeconds.toString(),
+            userId.toString(),
+        )
+    }
 
     override fun findUserId(refreshToken: String): UserId? =
         redisTemplate
             .opsForValue()
-            .get(tokenKey(hash(refreshToken)))
-            ?.let {
-                runCatching { UserId(UUID.fromString(it)) }.getOrNull()
-            }
+            .get(tokenKey(refreshToken.sha256Hex()))
+            ?.let { UserId(UUID.fromString(it)) }
 
     override fun rotate(
         userId: UserId,
         currentRefreshToken: String,
         newRefreshToken: String,
-    ): Boolean =
-        hash(currentRefreshToken).let { currentHash ->
-            hash(newRefreshToken).let { newHash ->
-                redisTemplate.execute(
-                    ROTATE_SCRIPT,
-                    listOf(userKey(userId), tokenKey(currentHash), tokenKey(newHash)),
-                    currentHash,
-                    newHash,
-                    userId.toString(),
-                    expirationSeconds.toString(),
-                ) == SUCCESS
-            }
-        }
+    ): Boolean {
+        val currentHash = currentRefreshToken.sha256Hex()
+        val newHash = newRefreshToken.sha256Hex()
+        return redisTemplate.execute(
+            ROTATE_SCRIPT,
+            listOf(userKey(userId), tokenKey(currentHash), tokenKey(newHash)),
+            currentHash,
+            newHash,
+            userId.toString(),
+            expirationSeconds.toString(),
+        ) == SUCCESS
+    }
 
     override fun delete(userId: UserId) {
-        redisTemplate
-            .execute(
-                DELETE_SCRIPT,
-                listOf(userKey(userId)),
-                TOKEN_KEY_PREFIX,
-            )
+        redisTemplate.execute(DELETE_SCRIPT, listOf(userKey(userId)), TOKEN_KEY_PREFIX)
     }
 
     private fun userKey(userId: UserId) = "$USER_KEY_PREFIX$userId"
 
     private fun tokenKey(tokenHash: String) = "$TOKEN_KEY_PREFIX$tokenHash"
 
-    private fun hash(token: String): String =
-        MessageDigest
-            .getInstance(SHA_256)
-            .digest(token.toByteArray(StandardCharsets.UTF_8))
-            .joinToString("") { "%02x".format(it) }
-
     private companion object {
         const val USER_KEY_PREFIX = "auth:refresh:user:"
         const val TOKEN_KEY_PREFIX = "auth:refresh:token:"
-        const val SHA_256 = "SHA-256"
         const val SUCCESS = 1L
 
         val SAVE_SCRIPT =

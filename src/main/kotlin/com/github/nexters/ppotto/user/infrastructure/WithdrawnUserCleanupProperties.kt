@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.infrastructure
 
+import com.github.nexters.ppotto.user.application.MAX_CLEANUP_BATCH_SIZE
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Positive
@@ -15,11 +16,9 @@ data class WithdrawnUserCleanupProperties(
     val retentionDays: Long,
 
     @field:Positive
-    @field:Max(MAX_BATCH_SIZE)
+    @field:Max(MAX_CLEANUP_BATCH_SIZE)
     val batchSize: Int,
 
     @field:NotBlank
     val cron: String,
 )
-
-private const val MAX_BATCH_SIZE = 1_000L

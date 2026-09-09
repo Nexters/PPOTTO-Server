@@ -1,14 +1,12 @@
 package com.github.nexters.ppotto.user.presentation
 
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.application.SocialUserCommand
 import com.github.nexters.ppotto.user.application.UserService
-import com.github.nexters.ppotto.user.domain.OAuthProvider
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
-import com.github.nexters.ppotto.user.support.UserTestConfig
 import io.kotest.matchers.nulls.shouldBeNull
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.context.annotation.Import
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
@@ -19,7 +17,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
 @AutoConfigureMockMvc
-@Import(UserTestConfig::class)
 class UserControllerTest(
     mockMvc: MockMvc,
     userService: UserService,
@@ -96,6 +93,21 @@ class UserControllerTest(
                     )
 
                 Then("인증 오류를 응답한다") {
+                    result
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
+                }
+            }
+
+            When("회원 탈퇴를 요청하면") {
+                val result =
+                    mockMvc.perform(
+                        delete("/users/me")
+                            .header("X-API-Version", "1"),
+                    )
+
+                Then("탈퇴를 실행하지 않고 인증 오류를 응답한다") {
                     result
                         .andExpect(status().isUnauthorized)
                         .andExpect(jsonPath("$.success").value(false))

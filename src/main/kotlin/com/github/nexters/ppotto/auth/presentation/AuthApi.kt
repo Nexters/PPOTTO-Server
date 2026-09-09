@@ -6,17 +6,13 @@ import com.github.nexters.ppotto.auth.presentation.dto.RefreshRequest
 import com.github.nexters.ppotto.auth.presentation.dto.TokenPairResponse
 import com.github.nexters.ppotto.auth.presentation.dto.WebLoginRequest
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
-import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
 @RequestMapping("/auth", version = "1+")
@@ -24,45 +20,18 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 interface AuthApi {
     @PostMapping("/login")
     @Operation(
+        operationId = "login",
         summary = "소셜 로그인",
         description = "카카오 또는 애플 계정을 검증하고 가입과 로그인을 함께 처리함",
-        requestBody =
-            OpenApiRequestBody(
-                required = true,
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = LoginRequest::class),
-                    ),
-                ],
-            ),
     )
     @OpenApiResponse(
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "로그인 성공",
     )
-    @InvalidInputApiResponse
-    @OpenApiResponse(
-        responseCode = "401",
-        description = "소셜 로그인 검증에 실패함 (AUTH-001, AUTH-003)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
-    @OpenApiResponse(
-        responseCode = "403",
-        description = "가입에 필요한 동의가 부족함 (AUTH-004)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
+    @SignupInvalidInputApiResponse
+    @LoginUnauthorizedApiResponse
+    @ConsentRequiredApiResponse
     fun login(request: LoginRequest): ApiResponse<LoginResponse>
 
     @PostMapping("/login/web")
@@ -79,30 +48,13 @@ interface AuthApi {
         description = "로그인 성공",
     )
     @InvalidInputApiResponse
-    @OpenApiResponse(
-        responseCode = "401",
-        description = "authorization code 교환 또는 소셜 로그인 검증에 실패함 (AUTH-001, AUTH-008)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
-    @OpenApiResponse(
-        responseCode = "403",
-        description = "가입에 필요한 동의가 부족함 (AUTH-004, AUTH-005)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
+    @WebLoginUnauthorizedApiResponse
+    @ConsentRequiredApiResponse
     fun webLogin(request: WebLoginRequest): ApiResponse<LoginResponse>
 
     @PostMapping("/refresh")
     @Operation(
+        operationId = "refresh",
         summary = "토큰 재발급",
         description = "유효한 refresh token을 회전하고 새 토큰 쌍을 발급함",
     )
@@ -111,16 +63,7 @@ interface AuthApi {
         useReturnTypeSchema = true,
         description = "재발급 성공",
     )
-    @OpenApiResponse(
-        responseCode = "401",
-        description = "refresh token이 유효하지 않음 (AUTH-002)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
+    @InvalidRefreshTokenApiResponse
     fun refresh(request: RefreshRequest): ApiResponse<TokenPairResponse>
 
     @PostMapping("/logout")

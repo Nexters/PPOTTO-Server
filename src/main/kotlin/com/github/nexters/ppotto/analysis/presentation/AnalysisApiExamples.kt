@@ -7,9 +7,12 @@ import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRespons
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadContentType
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadGroup
 import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadItem
-import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadUrlItem
+import com.github.nexters.ppotto.analysis.presentation.dto.PhotoUploadUrlResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.ReissueUploadUrlsResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
@@ -20,8 +23,8 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.reflect.KFunction
 
-private val ANALYSIS_ID = UUID.fromString("01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-private val BOARD_ID = UUID.fromString("01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
+private val ANALYSIS_ID = AnalysisId(UUID.fromString("01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f"))
+private val BOARD_ID = BoardId(UUID.fromString("01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b"))
 private val STARTED_AT = Instant.parse("2026-07-27T05:02:11Z")
 
 private val ANALYZING_STATUS =
@@ -91,12 +94,12 @@ private val CREATE_ANALYSIS_RESPONSE =
                     analysisId = ANALYSIS_ID,
                     uploads =
                         listOf(
-                            PhotoUploadUrlItem(
-                                photoId = UUID.fromString("01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f"),
+                            PhotoUploadUrlResponse(
+                                photoId = PhotoId(UUID.fromString("01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f")),
                                 uploadUrl = "https://storage.googleapis.com/ppotto-photos/01983f2e.jpg?X-Goog-Expires=900",
                             ),
-                            PhotoUploadUrlItem(
-                                photoId = UUID.fromString("01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a"),
+                            PhotoUploadUrlResponse(
+                                photoId = PhotoId(UUID.fromString("01983f2e-2b3c-7d4e-9f5a-6b7c8d9e0f1a")),
                                 uploadUrl = "https://storage.googleapis.com/ppotto-photos/01983f2f.webp?X-Goog-Expires=900",
                             ),
                         ),
@@ -148,7 +151,7 @@ private val START_UPLOAD_RESPONSE =
                 StartUploadResponse(
                     uploadedCount = 97,
                     failedCount = 1,
-                    failedPhotoIds = listOf(UUID.fromString("01983f2e-9f8e-7d6c-b5a4-3c2b1a0f9e8d")),
+                    failedPhotoIds = listOf(PhotoId(UUID.fromString("01983f2e-9f8e-7d6c-b5a4-3c2b1a0f9e8d"))),
                 ),
             ),
     )
@@ -161,8 +164,8 @@ private val REISSUE_UPLOAD_URLS_RESPONSE =
                 ReissueUploadUrlsResponse(
                     uploads =
                         listOf(
-                            PhotoUploadUrlItem(
-                                photoId = UUID.fromString("01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f"),
+                            PhotoUploadUrlResponse(
+                                photoId = PhotoId(UUID.fromString("01983f2e-1a2b-7c3d-8e4f-5a6b7c8d9e0f")),
                                 uploadUrl = "https://storage.googleapis.com/ppotto-photos/01983f2e.jpg?X-Goog-Expires=900",
                             ),
                         ),

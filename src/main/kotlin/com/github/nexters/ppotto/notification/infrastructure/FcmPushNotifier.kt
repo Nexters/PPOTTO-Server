@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.notification.infrastructure
 
-import com.github.nexters.ppotto.notification.domain.PushNotifier
-import com.github.nexters.ppotto.notification.domain.PushSendResult
+import com.github.nexters.ppotto.notification.application.port.PushNotifier
+import com.github.nexters.ppotto.notification.application.port.PushSendResult
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
@@ -38,12 +38,14 @@ class FcmPushNotifier(
             PushSendResult(
                 token = token,
                 success = sendResponse.isSuccessful,
-                invalid = sendResponse.exception?.messagingErrorCode in INVALID_TOKEN_ERROR_CODES,
+                invalid =
+                    sendResponse.exception
+                        ?.messagingErrorCode
+                        .marksTokenInvalid(),
             )
         }
     }
-
-    companion object {
-        private val INVALID_TOKEN_ERROR_CODES = setOf(MessagingErrorCode.UNREGISTERED, MessagingErrorCode.INVALID_ARGUMENT)
-    }
 }
+
+internal fun MessagingErrorCode?.marksTokenInvalid(): Boolean =
+    this == MessagingErrorCode.UNREGISTERED || this == MessagingErrorCode.SENDER_ID_MISMATCH

@@ -1,9 +1,8 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
-import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
+import com.github.nexters.ppotto.analysis.config.PixianProperties
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
-import com.github.nexters.ppotto.global.config.PixianProperties
-import com.github.nexters.ppotto.global.error.BusinessException
+import com.github.nexters.ppotto.analysis.domain.StickerBackgroundRemover
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
@@ -22,54 +21,24 @@ class PixianBackgroundRemover(
         imageBytes: ByteArray,
         mimeType: String,
     ): ByteArray {
-        val response = requestRemoveBackground(imageBytes, mimeType)
+        val resource = namedResource(imageBytes, mimeType)
+        val response = retryOnceOn5xx { callRemoveBackground(resource) }
         val creditsCharged = response.headers.getFirst(CREDITS_CHARGED_HEADER)
         log.info("pixian background removal succeeded: creditsCharged={}, test={}", creditsCharged, pixianProperties.testMode)
 
-        return requireResponseBody(response)
+        return response.body ?: throw RestClientException("pixian 배경 제거 응답 본문이 비어 있습니다.")
     }
 
-    private fun requestRemoveBackground(
-        imageBytes: ByteArray,
-        mimeType: String,
-    ): ResponseEntity<ByteArray> {
-        val resource = namedResource(imageBytes, mimeType)
-        return try {
-            callRemoveBackground(resource)
+    private fun <T> retryOnceOn5xx(block: () -> T): T =
+        try {
+            block()
         } catch (e: RestClientResponseException) {
-            if (!e.statusCode.is5xxServerError) {
-                log.warn(
-                    "pixian background removal failed: status={}, body={}",
-                    e.statusCode,
-                    e.getResponseBodyAsString(),
-                )
-                throw backgroundRemovalFailed(e)
-            }
-            log.warn(
-                "pixian background removal failed, retrying once: status={}, body={}",
-                e.statusCode,
-                e.getResponseBodyAsString(),
-            )
-            retryRemoveBackground(resource)
+            if (!e.statusCode.is5xxServerError) throw e
+            log.warn("pixian background removal failed, retrying once: status={}, body={}", e.statusCode, e.getResponseBodyAsString())
+            block()
         } catch (e: RestClientException) {
             log.warn("pixian background removal request failed, retrying once", e)
-            retryRemoveBackground(resource)
-        }
-    }
-
-    private fun retryRemoveBackground(resource: Resource): ResponseEntity<ByteArray> =
-        try {
-            callRemoveBackground(resource)
-        } catch (e: RestClientResponseException) {
-            log.warn(
-                "pixian background removal retry failed: status={}, body={}",
-                e.statusCode,
-                e.getResponseBodyAsString(),
-            )
-            throw backgroundRemovalFailed(e)
-        } catch (e: RestClientException) {
-            log.warn("pixian background removal retry failed", e)
-            throw backgroundRemovalFailed(e)
+            block()
         }
 
     private fun callRemoveBackground(resource: Resource): ResponseEntity<ByteArray> =
@@ -80,11 +49,6 @@ class PixianBackgroundRemover(
             pixianProperties.testMode.toString(),
             OUTPUT_FORMAT_PNG,
         )
-
-    private fun requireResponseBody(response: ResponseEntity<ByteArray>) = response.body ?: throw backgroundRemovalFailed()
-
-    private fun backgroundRemovalFailed(cause: Throwable? = null) =
-        BusinessException(AnalysisErrorCode.STICKER_BACKGROUND_REMOVAL_FAILED, cause = cause)
 
     private fun basicAuthorization(): String {
         val credentials = "${pixianProperties.apiId}:${pixianProperties.apiSecret}"

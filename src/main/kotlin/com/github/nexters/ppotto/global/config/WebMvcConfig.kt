@@ -6,14 +6,14 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class WebMvcConfig(
     private val currentUserArgumentResolver: CurrentUserArgumentResolver,
 ) : WebMvcConfigurer {
     override fun configureApiVersioning(configurer: ApiVersionConfigurer) {
         configurer
-            .useRequestHeader("X-API-Version")
-            .setDefaultVersion("1")
+            .useRequestHeader(ApiVersions.API_VERSION_HEADER)
+            .setDefaultVersion(ApiVersions.DEFAULT_API_VERSION)
     }
 
     override fun addArgumentResolvers(resolvers: MutableList<HandlerMethodArgumentResolver>) {

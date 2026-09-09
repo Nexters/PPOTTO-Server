@@ -6,10 +6,9 @@ import com.github.nexters.ppotto.analysis.infrastructure.integration.BoardAnalys
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.support.changeAnalysisStatus
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
-import com.github.nexters.ppotto.global.identifier.AnalysisId
-import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -21,7 +20,6 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jooq.DSLContext
 import org.springframework.context.ApplicationContext
-import java.util.UUID
 
 class BoardAnalysisContractTest(
     applicationContext: ApplicationContext,
@@ -71,7 +69,7 @@ class BoardAnalysisContractTest(
                 val user = userRepository.saveTestUser()
                 val board = boardRepository.save(user.id)
                 boardRepository.save(user.id)
-                analysisRepository.save(user.id.value, board.id.value).also { changeStatus(dslContext, it.id, status) }
+                analysisRepository.save(user.id, board.id).also { dslContext.changeAnalysisStatus(it.id, status) }
 
                 When("보드를 삭제하면") {
                     Then("실제 어댑터가 BOARD-005로 거부하고 보드를 유지한다") {
@@ -90,14 +88,14 @@ class BoardAnalysisContractTest(
                 val board = boardRepository.save(user.id)
                 boardRepository.save(user.id)
                 val analysis =
-                    analysisRepository.save(user.id.value, board.id.value).also { changeStatus(dslContext, it.id, status) }
+                    analysisRepository.save(user.id, board.id).also { dslContext.changeAnalysisStatus(it.id, status) }
 
                 When("보드를 삭제하면") {
                     boardCommandService.delete(board.id, user.id)
 
                     Then("삭제를 허용하고 종료된 분석 이력은 그대로 남긴다") {
                         boardRepository.findOwnedById(board.id, user.id).shouldBeNull()
-                        analysisRepository.findById(analysis.id)?.boardId shouldBe board.id.value
+                        analysisRepository.findById(analysis.id)?.boardId shouldBe board.id
                     }
                 }
             }
@@ -106,7 +104,7 @@ class BoardAnalysisContractTest(
         Given("진행 중인 분석이 대상인 보드가 마지막 하나뿐인 사용자가") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
-            analysisRepository.save(user.id.value, board.id.value)
+            analysisRepository.save(user.id, board.id)
 
             When("그 보드를 삭제하면") {
                 Then("분석 확인보다 먼저 BOARD-004로 거부한다") {
@@ -121,7 +119,7 @@ class BoardAnalysisContractTest(
             val owner = userRepository.saveTestUser()
             val board = boardRepository.save(owner.id)
             boardRepository.save(owner.id)
-            analysisRepository.save(owner.id.value, board.id.value)
+            analysisRepository.save(owner.id, board.id)
             val stranger = userRepository.saveTestUser()
 
             When("소유자가 아닌 사용자가 삭제를 요청하면") {
@@ -139,15 +137,3 @@ private fun activeAnalysisIndexDefinition(dslContext: DSLContext): String =
         .resultQuery("SELECT indexdef FROM pg_indexes WHERE indexname = ?", "uk_analysis_active")
         .fetchSingle()
         .get(0, String::class.java)
-
-private fun changeStatus(
-    dslContext: DSLContext,
-    analysisId: UUID,
-    status: AnalysisStatus,
-) {
-    dslContext
-        .update(ANALYSIS)
-        .set(ANALYSIS.STATUS, status.name)
-        .where(ANALYSIS.ID.eq(AnalysisId(analysisId)))
-        .execute()
-}

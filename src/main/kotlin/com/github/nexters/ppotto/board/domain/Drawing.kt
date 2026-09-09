@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.board.domain
 
+import com.github.nexters.ppotto.global.error.CommonErrorCode
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
@@ -77,7 +79,9 @@ sealed interface NewDrawing {
         override val type = DrawingType.STROKE
 
         init {
-            requireScopeMatchesSticker(scope, stickerId)
+            validateIdentity(id, scope, stickerId, color)
+            val invalid = stroke.isEmpty() || !strokeWidth.isPositiveFinite()
+            if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
         }
     }
 
@@ -98,12 +102,33 @@ sealed interface NewDrawing {
         override val type = DrawingType.TEXT
 
         init {
-            requireScopeMatchesSticker(scope, stickerId)
+            validateIdentity(id, scope, stickerId, color)
+            val invalid =
+                content.isBlank() ||
+                    content.length > Drawing.Text.MAX_CONTENT_LENGTH ||
+                    !fontSize.isPositiveFinite() ||
+                    !posX.isFinite() ||
+                    !posY.isFinite() ||
+                    !maxWidth.isPositiveFinite() ||
+                    !rotation.isFinite()
+            if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
         }
     }
 }
 
-private fun requireScopeMatchesSticker(
+private const val UUID_VERSION_7 = 7
+
+private fun validateIdentity(
+    id: DrawingId,
     scope: DrawingScope,
     stickerId: StickerId?,
-) = require((scope == DrawingScope.STICKER) == (stickerId != null))
+    color: String,
+) {
+    val invalid =
+        id.value.version() != UUID_VERSION_7 ||
+            (scope == DrawingScope.STICKER) != (stickerId != null) ||
+            color.isBlank()
+    if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
+}
+
+private fun Double.isPositiveFinite(): Boolean = isFinite() && this > 0

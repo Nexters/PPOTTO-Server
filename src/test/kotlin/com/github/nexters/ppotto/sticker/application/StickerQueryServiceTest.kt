@@ -5,22 +5,22 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
-import com.github.nexters.ppotto.global.identifier.AnalysisId
-import com.github.nexters.ppotto.global.identifier.PhotoId
-import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.imageStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Instant
 import java.util.UUID
 
@@ -28,6 +28,7 @@ class StickerQueryServiceTest(
     service: StickerQueryService,
     stickerRepository: StickerRepository,
     stickerRecapRepository: StickerRecapRepository,
+    stickerAccessService: StickerAccessService,
     photoRepository: PhotoRepository,
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
@@ -35,11 +36,11 @@ class StickerQueryServiceTest(
 ) : IntegrationTest({
         Given("이미지 스티커와 리캡 데이터가 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id.value,
+                    board.id,
                     listOf(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
@@ -48,19 +49,16 @@ class StickerQueryServiceTest(
             photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
             val sticker =
                 stickerRepository.save(
-                    AnalysisId(analysis.id),
+                    analysis.id,
                     board.id,
-                    StickerCreation(
-                        type = StickerType.IMAGE,
+                    imageStickerCreation(
+                        sourcePhotoId = photos.first().id,
+                        imageKey = "stickers/recap.png",
                         title = "리캡",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = PhotoId(photos.first().id),
-                        imageKey = "stickers/recap.png",
-                        textContent = null,
-                        mainColor = "#FF6B6B",
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
+            stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
             stickerRecapRepository.saveComments(
                 sticker.id,
                 listOf(
@@ -87,7 +85,7 @@ class StickerQueryServiceTest(
                     result.sticker.isNew shouldBe true
                     result.summary shouldBe "웃기고 귀여우면 일단 주워요"
                     result.comments.map { it.content } shouldContainExactly listOf("말풍선", "키워드")
-                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { PhotoId(it.id) }
+                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
                 }
 
                 Then("연사 그룹이 아니므로 isGroup은 false이고 groupId, groupPhotos는 비어있다") {
@@ -109,7 +107,8 @@ class StickerQueryServiceTest(
             }
 
             When("다른 사용자가 리캡 상세를 조회하면") {
-                val result = service.getRecap(UserId(UUID.randomUUID()), sticker.id)
+                val otherUser = userRepository.saveTestUser()
+                val result = service.getRecap(otherUser.id, sticker.id)
 
                 Then("같은 리캡 내용을 반환하되 isNew는 false다") {
                     result.sticker.id shouldBe sticker.id
@@ -125,19 +124,31 @@ class StickerQueryServiceTest(
                 Then("같은 리캡 내용을 반환하되 isNew는 false다") {
                     result.sticker.id shouldBe sticker.id
                     result.sticker.isNew shouldBe false
-                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { PhotoId(it.id) }
+                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
+                }
+            }
+
+            When("서명 시점의 트랜잭션 상태를 확인하면") {
+                val signingPort = TransactionObservingStickerImageStorage()
+                StickerQueryService(
+                    stickerRepository,
+                    stickerRecapRepository,
+                    stickerAccessService,
+                    emptyList(),
+                    listOf(signingPort),
+                ).getByBoardId(board.id)
+
+                Then("RSA 서명은 열린 트랜잭션 없이 실행된다") {
+                    signingPort.transactionActiveAtSigning shouldBe false
                 }
             }
 
             When("리캡 사진의 읽기 URL을 확인하면") {
                 val result = service.getRecap(board.userId, sticker.id)
 
-                Then("사진 오브젝트 키로 서명한 1시간 만료 URL을 반환한다") {
+                Then("각 사진의 오브젝트 키로 발급한 읽기 URL을 반환한다") {
                     result.photos.forEach {
-                        it.imageUrl.shouldStartWith(
-                            "https://storage.googleapis.com/ppotto-test-bucket/photos/${analysis.id}/${it.id}.jpg?",
-                        )
-                        it.imageUrl.shouldContain("X-Goog-Expires=3600")
+                        it.imageUrl.shouldContain("photos/${analysis.id}/${it.id}.jpg")
                     }
                 }
             }
@@ -145,12 +156,12 @@ class StickerQueryServiceTest(
 
         Given("연사 그룹 사진이 리캡에 연결된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             val burstGroupId = UUID.randomUUID()
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id.value,
+                    board.id,
                     listOf(
                         PhotoCreate(
                             PhotoContentType.JPEG,
@@ -170,25 +181,22 @@ class StickerQueryServiceTest(
             val representativePhoto = photos.single { it.isRepresentative }
             val sticker =
                 stickerRepository.save(
-                    AnalysisId(analysis.id),
+                    analysis.id,
                     board.id,
-                    StickerCreation(
-                        type = StickerType.IMAGE,
+                    imageStickerCreation(
+                        sourcePhotoId = representativePhoto.id,
+                        imageKey = "stickers/recap.png",
                         title = "리캡",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = PhotoId(representativePhoto.id),
-                        imageKey = "stickers/recap.png",
-                        textContent = null,
-                        mainColor = "#FF6B6B",
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
+            stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
 
             When("리캡 상세를 조회하면") {
                 val result = service.getRecap(board.userId, sticker.id)
 
                 Then("연사 그룹의 대표 사진만 반환한다") {
-                    result.photos.map { it.id } shouldContainExactly listOf(PhotoId(representativePhoto.id))
+                    result.photos.map { it.id } shouldContainExactly listOf(representativePhoto.id)
                 }
 
                 Then("대표 사진에 그룹 여부/ID와 나머지 사진 목록이 채워진다") {
@@ -197,36 +205,33 @@ class StickerQueryServiceTest(
 
                     photo.isGroup shouldBe true
                     photo.groupId shouldBe burstGroupId
-                    photo.groupPhotos.map { it.id } shouldContainExactly listOf(PhotoId(nonRepresentativePhoto.id))
+                    photo.groupPhotos.map { it.id } shouldContainExactly listOf(nonRepresentativePhoto.id)
                 }
             }
         }
 
         Given("업로드가 완료되지 않은 사진이 리캡에 연결된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             val pendingPhoto =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id.value,
+                        board.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             val sticker =
                 stickerRepository.save(
-                    AnalysisId(analysis.id),
+                    analysis.id,
                     board.id,
-                    StickerCreation(
-                        type = StickerType.IMAGE,
+                    imageStickerCreation(
+                        sourcePhotoId = pendingPhoto.id,
+                        imageKey = "stickers/recap.png",
                         title = "리캡",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = PhotoId(pendingPhoto.id),
-                        imageKey = "stickers/recap.png",
-                        textContent = null,
-                        mainColor = "#FF6B6B",
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(pendingPhoto.id)))
+            stickerRecapRepository.savePhotos(sticker.id, listOf(pendingPhoto.id))
 
             When("리캡 상세를 조회하면") {
                 Then("완료되지 않은 사진을 제외하고 계약 불일치로 실패한다") {
@@ -236,4 +241,34 @@ class StickerQueryServiceTest(
                 }
             }
         }
+
+        Given("스티커 조회 서비스의 트랜잭션 경계를 확인할 때") {
+            When("선언된 트랜잭션 애노테이션을 모으면") {
+                val declared =
+                    StickerQueryService::class.java.declaredMethods
+                        .filter { it.isAnnotationPresent(Transactional::class.java) }
+                        .map { it.name } +
+                        listOfNotNull(
+                            StickerQueryService::class.java
+                                .getAnnotation(Transactional::class.java)
+                                ?.let { "class" },
+                        )
+
+                Then("읽기 경로가 커넥션을 물지 않도록 하나도 선언되어 있지 않다") {
+                    declared.shouldBeEmpty()
+                }
+            }
+        }
     })
+
+private class TransactionObservingStickerImageStorage : StickerImageStoragePort {
+    var transactionActiveAtSigning: Boolean? = null
+        private set
+
+    override fun issueReadUrls(imageKeys: Collection<String>): Map<String, String> {
+        transactionActiveAtSigning = TransactionSynchronizationManager.isActualTransactionActive()
+        return imageKeys.associateWith { "https://example.test/$it" }
+    }
+
+    override fun deleteAll(imageKeys: Collection<String>) = Unit
+}

@@ -1,12 +1,12 @@
 package com.github.nexters.ppotto.user.presentation
 
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.OperationExamples
 import com.github.nexters.ppotto.global.response.ApiResponse
-import com.github.nexters.ppotto.user.domain.OAuthProvider
 import com.github.nexters.ppotto.user.presentation.dto.UserResponse
 import org.springframework.stereotype.Component
 import java.time.Instant

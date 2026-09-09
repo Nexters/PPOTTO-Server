@@ -25,14 +25,14 @@ class GcsReadUrlIssuer(
     fun issue(objectKeys: Collection<String>): Map<String, String> =
         objectKeys
             .toSet()
-            .takeIf(Set<String>::isNotEmpty)
+            .takeIf { it.isNotEmpty() }
             ?.let { keys ->
                 try {
                     issueCached(keys)
                 } catch (_: DataAccessException) {
                     keys.associateWith(::sign)
                 }
-            }.orEmpty()
+            } ?: emptyMap()
 
     private fun issueCached(objectKeys: Set<String>): Map<String, String> {
         val cacheKeys = objectKeys.associateWith(::cacheKey)

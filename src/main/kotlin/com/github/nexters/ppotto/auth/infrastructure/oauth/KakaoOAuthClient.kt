@@ -4,11 +4,11 @@ import com.github.nexters.ppotto.auth.application.port.OAuthClient
 import com.github.nexters.ppotto.auth.config.KakaoAuthProperties
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
 import com.github.nexters.ppotto.auth.domain.LoginCommand
-import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.global.error.ForbiddenException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClientException
 
@@ -19,14 +19,13 @@ internal class KakaoOAuthClient(
 ) : OAuthClient {
     override val provider = OAuthProvider.KAKAO
 
-    override fun authenticate(command: LoginCommand): SocialProfile =
-        accessTokenOf(command).let { accessToken ->
-            fetchTokenInfo(accessToken).let { tokenInfo ->
-                fetchUserInfo(accessToken)
-                    .also { validateIdentity(tokenInfo, it) }
-                    .let { SocialProfile(provider, it.id.toString(), requireEmail(it), requireNickname(it)) }
-            }
-        }
+    override fun authenticate(command: LoginCommand): SocialProfile {
+        val accessToken = accessTokenOf(command)
+        val tokenInfo = fetchTokenInfo(accessToken)
+        val userInfo = fetchUserInfo(accessToken)
+        validateIdentity(tokenInfo, userInfo)
+        return SocialProfile(provider, userInfo.id.toString(), requireEmail(userInfo), requireNickname(userInfo))
+    }
 
     override fun revoke(providerRefreshToken: String) = Unit
 
@@ -36,14 +35,15 @@ internal class KakaoOAuthClient(
     private fun fetchUserInfo(accessToken: String): KakaoUserInfo =
         request { kakaoOAuthApi.userInfo(properties.userInfoUri, "$BEARER $accessToken") }
 
-    private fun <T : Any> request(call: () -> T?): T =
-        try {
-            call() ?: throw UnauthorizedException(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)
-        } catch (e: UnauthorizedException) {
-            throw e
-        } catch (e: RestClientException) {
-            fail(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED, e)
-        }
+    private fun <T : Any> request(call: () -> T?): T {
+        val response =
+            try {
+                call()
+            } catch (e: RestClientException) {
+                fail(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED, e)
+            }
+        return response ?: fail(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)
+    }
 
     private fun accessTokenOf(command: LoginCommand): String =
         when (command) {
@@ -52,30 +52,31 @@ internal class KakaoOAuthClient(
             else -> throw InvalidInputException()
         }
 
-    private fun exchangeAuthorizationCode(command: LoginCommand.KakaoWeb): String =
-        try {
-            kakaoOAuthApi
-                .exchangeToken(
+    private fun exchangeAuthorizationCode(command: LoginCommand.KakaoWeb): String {
+        val response =
+            try {
+                kakaoOAuthApi.exchangeToken(
                     properties.tokenUri,
                     AUTHORIZATION_CODE,
                     properties.clientId,
                     properties.clientSecret,
                     command.redirectUri,
                     command.authorizationCode,
-                )?.accessToken
-                ?.takeIf(String::isNotBlank)
-                ?: fail(AuthErrorCode.KAKAO_CODE_EXCHANGE_FAILED)
-        } catch (e: RestClientException) {
-            fail(AuthErrorCode.KAKAO_CODE_EXCHANGE_FAILED, e)
-        }
+                )
+            } catch (e: RestClientException) {
+                fail(AuthErrorCode.KAKAO_CODE_EXCHANGE_FAILED, e)
+            }
+        return response?.accessToken?.takeIf(String::isNotBlank)
+            ?: fail(AuthErrorCode.KAKAO_CODE_EXCHANGE_FAILED)
+    }
 
     private fun validateIdentity(
         tokenInfo: KakaoTokenInfo,
         userInfo: KakaoUserInfo,
     ) {
-        tokenInfo
-            .takeIf { it.appId == properties.appId && it.id == userInfo.id }
-            ?: fail(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)
+        if (tokenInfo.appId != properties.appId || tokenInfo.id != userInfo.id) {
+            fail(AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED)
+        }
     }
 
     private fun requireEmail(userInfo: KakaoUserInfo): String =
@@ -94,10 +95,7 @@ internal class KakaoOAuthClient(
     private fun fail(
         errorCode: AuthErrorCode,
         cause: Exception? = null,
-    ): Nothing =
-        UnauthorizedException(errorCode)
-            .also { exception -> cause?.let(exception::addSuppressed) }
-            .let { throw it }
+    ): Nothing = throw UnauthorizedException(errorCode, cause = cause)
 
     private companion object {
         const val BEARER = "Bearer"

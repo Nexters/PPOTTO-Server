@@ -8,10 +8,11 @@ import org.springframework.core.task.SyncTaskExecutor
 import org.springframework.scheduling.annotation.EnableAsync
 import java.util.concurrent.Executor
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableAsync
 class AsyncConfig {
     @Bean(ANALYSIS_CLEANUP_TASK_EXECUTOR)
+    @Profile("!test")
     fun analysisCleanupTaskExecutor(): Executor =
         SimpleAsyncTaskExecutor(
             Thread
@@ -20,7 +21,12 @@ class AsyncConfig {
                 .factory(),
         )
 
+    @Bean(ANALYSIS_CLEANUP_TASK_EXECUTOR)
+    @Profile("test")
+    fun testAnalysisCleanupTaskExecutor(): Executor = SyncTaskExecutor()
+
     @Bean(STICKER_IMAGE_CLEANUP_TASK_EXECUTOR)
+    @Profile("!test")
     fun stickerImageCleanupTaskExecutor(): Executor =
         SimpleAsyncTaskExecutor(
             Thread
@@ -28,6 +34,10 @@ class AsyncConfig {
                 .name("sticker-image-cleanup-", 0)
                 .factory(),
         )
+
+    @Bean(STICKER_IMAGE_CLEANUP_TASK_EXECUTOR)
+    @Profile("test")
+    fun testStickerImageCleanupTaskExecutor(): Executor = SyncTaskExecutor()
 
     @Bean(ANALYSIS_PIPELINE_TASK_EXECUTOR)
     @Profile("!test")

@@ -8,9 +8,9 @@ import com.github.nexters.ppotto.auth.application.port.OAuthClient
 import com.github.nexters.ppotto.auth.application.port.RefreshTokenStore
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
 import com.github.nexters.ppotto.auth.domain.LoginCommand
-import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
@@ -46,15 +46,15 @@ class UserJourneyTestConfig {
 class StubKakaoOAuthClient : OAuthClient {
     override val provider = OAuthProvider.KAKAO
 
-    override fun authenticate(command: LoginCommand): SocialProfile =
-        (command as LoginCommand.Kakao).accessToken.let {
-            SocialProfile(
-                provider = provider,
-                providerUserId = it,
-                email = "$it@example.com",
-                name = "여정테스트사용자",
-            )
-        }
+    override fun authenticate(command: LoginCommand): SocialProfile {
+        val accessToken = (command as LoginCommand.Kakao).accessToken
+        return SocialProfile(
+            provider = provider,
+            providerUserId = accessToken,
+            email = "$accessToken@example.com",
+            name = "여정테스트사용자",
+        )
+    }
 
     override fun revoke(providerRefreshToken: String) = Unit
 }
@@ -75,12 +75,11 @@ class InMemoryRefreshTokenStore : RefreshTokenStore {
         userId: UserId,
         currentRefreshToken: String,
         newRefreshToken: String,
-    ): Boolean =
-        userIdsByToken
-            .remove(currentRefreshToken)
-            ?.takeIf { it == userId }
-            ?.let { userIdsByToken.put(newRefreshToken, it) == null }
-            ?: false
+    ): Boolean {
+        val removed = userIdsByToken.remove(currentRefreshToken) ?: return false
+        if (removed != userId) return false
+        return userIdsByToken.put(newRefreshToken, removed) == null
+    }
 
     override fun delete(userId: UserId) {
         userIdsByToken.entries.removeIf { it.value == userId }

@@ -2,6 +2,8 @@ package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
+import com.github.nexters.ppotto.sticker.application.port.singlePort
+import com.github.nexters.ppotto.sticker.domain.StickerImageDeletionRequestedEvent
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Async
@@ -19,7 +21,7 @@ class StickerImageCleanupEventListener(
         }
 
         runCatching {
-            stickerImageStoragePort().deleteAll(event.imageKeys)
+            stickerImageStoragePorts.singlePort("스티커 이미지 저장소").deleteAll(event.imageKeys)
         }.onFailure {
             log.warn(
                 "스티커 이미지 삭제 실패: stickerId={}, reason={}, imageKeys={}",
@@ -30,10 +32,6 @@ class StickerImageCleanupEventListener(
             )
         }
     }
-
-    private fun stickerImageStoragePort(): StickerImageStoragePort =
-        stickerImageStoragePorts.singleOrNull()
-            ?: error("스티커 이미지 저장소 application port 구현이 정확히 하나 필요합니다.")
 
     companion object {
         private val log = LoggerFactory.getLogger(StickerImageCleanupEventListener::class.java)

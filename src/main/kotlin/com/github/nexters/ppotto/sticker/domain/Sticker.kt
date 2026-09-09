@@ -61,91 +61,74 @@ class Sticker(
         private set
 
     init {
-        title
-            .also(::validateTitle)
-            .also { validateSummary(summary) }
-            .also { validateMainColor(mainColor) }
-            .let { validateContent(type, sourcePhotoId, imageKey, textContent) }
+        require(isValidTitle(title)) { "스티커 제목이 저장 규칙을 벗어났습니다: $title" }
+        require(isValidSummary(summary)) { "스티커 한 줄 요약이 저장 규칙을 벗어났습니다: $summary" }
+        require(isValidMainColor(mainColor)) { "스티커 메인 컬러가 hex 형식이 아닙니다: $mainColor" }
+        require(hasContent(type, sourcePhotoId, imageKey, textContent)) { "$type 스티커의 내용이 비어 있습니다." }
     }
 
-    fun rename(title: String): Unit =
-        title
-            .also(::validateTitle)
-            .let { this.title = it }
+    fun rename(title: String) {
+        this.title = title.takeIf { isValidTitle(it) } ?: throw InvalidInputException()
+    }
 
-    fun markViewed(viewedAt: Instant): Unit =
-        viewedAt
-            .takeIf { this.viewedAt == null }
-            ?.let { this.viewedAt = it }
-            ?: Unit
+    fun markViewed(viewedAt: Instant) {
+        if (this.viewedAt == null) {
+            this.viewedAt = viewedAt
+        }
+    }
 
-    fun updateLayout(layout: StickerLayout): Unit =
-        layout
-            .also {
-                posX = it.posX
-                posY = it.posY
-                scale = it.scale
-                rotation = it.rotation
-                zIndex = it.zIndex
-                badgeOffsetX = it.badgeOffsetX
-                badgeOffsetY = it.badgeOffsetY
-                badgeRotation = it.badgeRotation
-            }.let { it.title?.let(::rename) ?: Unit }
+    fun updateLayout(layout: StickerLayout) {
+        posX = layout.posX
+        posY = layout.posY
+        scale = layout.scale
+        rotation = layout.rotation
+        zIndex = layout.zIndex
+        badgeOffsetX = layout.badgeOffsetX
+        badgeOffsetY = layout.badgeOffsetY
+        badgeRotation = layout.badgeRotation
+        layout.title?.let(::rename)
+    }
 
     fun regenerateSticker(
         sourcePhotoId: PhotoId,
         imageKey: String,
         mainColor: String,
-    ): Unit =
-        validateMainColor(mainColor)
-            .let { validateContent(type, sourcePhotoId, imageKey, textContent) }
-            .let {
-                this.sourcePhotoId = sourcePhotoId
-                this.imageKey = imageKey
-                this.mainColor = mainColor
-            }
+    ) {
+        require(isValidMainColor(mainColor)) { "재생성된 스티커 메인 컬러가 hex 형식이 아닙니다: $mainColor" }
+        require(hasContent(type, sourcePhotoId, imageKey, textContent)) { "재생성된 $type 스티커의 내용이 비어 있습니다." }
+        this.sourcePhotoId = sourcePhotoId
+        this.imageKey = imageKey
+        this.mainColor = mainColor
+    }
 
-    fun delete(deletedAt: Instant): Unit =
-        deletedAt
-            .takeIf { this.deletedAt == null }
-            ?.let { this.deletedAt = it }
-            ?: Unit
+    fun delete(deletedAt: Instant) {
+        if (this.deletedAt == null) {
+            this.deletedAt = deletedAt
+        }
+    }
 
     companion object {
         const val MAX_TITLE_LENGTH = 15
         const val MAX_SUMMARY_LENGTH = 100
+        const val MAX_ANALYSIS_STICKER_COUNT = 6
         private val MAIN_COLOR_PATTERN = Regex("^#[0-9A-Fa-f]{6}$")
 
-        fun validateTitle(title: String) {
-            title
-                .takeUnless { it.isBlank() || it.length > MAX_TITLE_LENGTH }
-                ?: throw InvalidInputException()
-        }
+        fun isValidTitle(title: String): Boolean = title.isNotBlank() && title.length <= MAX_TITLE_LENGTH
 
-        fun validateSummary(summary: String) {
-            summary
-                .takeUnless { it.isBlank() || it.length > MAX_SUMMARY_LENGTH }
-                ?: throw InvalidInputException()
-        }
+        fun isValidSummary(summary: String): Boolean = summary.isNotBlank() && summary.length <= MAX_SUMMARY_LENGTH
 
-        fun validateMainColor(mainColor: String) {
-            mainColor
-                .takeIf { MAIN_COLOR_PATTERN.matches(it) }
-                ?: throw InvalidInputException()
-        }
+        fun isValidMainColor(mainColor: String): Boolean = MAIN_COLOR_PATTERN.matches(mainColor)
 
-        fun validateContent(
+        fun hasContent(
             type: StickerType,
             sourcePhotoId: PhotoId?,
             imageKey: String?,
             textContent: String?,
-        ) {
+        ): Boolean =
             when (type) {
                 StickerType.IMAGE -> sourcePhotoId != null && !imageKey.isNullOrBlank()
                 StickerType.TEXT -> !textContent.isNullOrBlank()
-            }.takeIf { it }
-                ?: throw InvalidInputException()
-        }
+            }
     }
 }
 
@@ -159,11 +142,18 @@ data class StickerCreation(
     val mainColor: String,
 ) {
     init {
-        title
-            .also(Sticker::validateTitle)
-            .also { Sticker.validateSummary(summary) }
-            .also { Sticker.validateMainColor(mainColor) }
-            .let { Sticker.validateContent(type, sourcePhotoId, imageKey, textContent) }
+        if (!Sticker.isValidTitle(title)) {
+            throw InvalidInputException()
+        }
+        if (!Sticker.isValidSummary(summary)) {
+            throw InvalidInputException()
+        }
+        if (!Sticker.isValidMainColor(mainColor)) {
+            throw InvalidInputException()
+        }
+        if (!Sticker.hasContent(type, sourcePhotoId, imageKey, textContent)) {
+            throw InvalidInputException()
+        }
     }
 }
 

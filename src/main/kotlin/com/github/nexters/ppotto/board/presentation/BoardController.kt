@@ -49,8 +49,8 @@ class BoardController(
     override fun delete(
         @AuthenticatedUser userId: UserId,
         @PathVariable boardId: BoardId,
-    ): ApiResponse<Unit> =
-        boardCommandService
-            .delete(boardId, userId)
-            .let { ApiResponse.success() }
+    ): ApiResponse<Unit> {
+        boardCommandService.delete(boardId, userId)
+        return ApiResponse.success()
+    }
 }

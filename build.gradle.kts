@@ -32,14 +32,11 @@ repositories {
 }
 
 dependencies {
-    implementation(platform(libs.spring.cloud.dependencies))
-
     implementation(libs.firebase.admin)
     implementation(libs.flyway.database.postgresql)
     implementation(libs.google.cloud.storage)
     implementation(libs.google.genai)
     implementation(libs.jackson.module.kotlin)
-    implementation(libs.jooq.kotlin)
     implementation(libs.kotlin.reflect)
     implementation(libs.sentry.async.profiler)
     implementation(libs.sentry.logback)
@@ -63,11 +60,9 @@ dependencies {
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.extensions.spring)
     testImplementation(libs.kotest.runner.junit5)
-    testImplementation(libs.spring.boot.starter.flyway.test)
     testImplementation(libs.spring.boot.starter.webmvc.test)
     testImplementation(libs.spring.security.test)
     testImplementation(libs.spring.boot.testcontainers)
-    testImplementation(libs.testcontainers.junit.jupiter)
     testImplementation(libs.testcontainers.postgresql)
 
     testRuntimeOnly(libs.junit.platform.launcher)

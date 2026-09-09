@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.auth.domain
 
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
+
 sealed interface LoginCommand {
     val provider: OAuthProvider
 

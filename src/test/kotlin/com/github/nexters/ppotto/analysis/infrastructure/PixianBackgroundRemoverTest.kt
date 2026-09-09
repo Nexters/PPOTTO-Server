@@ -1,8 +1,6 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
-import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
-import com.github.nexters.ppotto.global.config.PixianProperties
-import com.github.nexters.ppotto.global.error.BusinessException
+import com.github.nexters.ppotto.analysis.config.PixianProperties
 import com.sun.net.httpserver.HttpServer
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
@@ -10,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.client.support.RestClientAdapter
 import org.springframework.web.service.invoker.HttpServiceProxyFactory
 import java.net.InetSocketAddress
@@ -74,12 +73,10 @@ class PixianBackgroundRemoverTest :
             responsesByAttempt = listOf(400 to byteArrayOf())
 
             When("removeBackground를 호출하면") {
-                Then("재시도 없이 즉시 ANALYSIS-011 예외가 발생한다") {
-                    val exception =
-                        shouldThrow<BusinessException> {
-                            remover.removeBackground(byteArrayOf(1), "image/jpeg")
-                        }
-                    exception.errorCode shouldBe AnalysisErrorCode.STICKER_BACKGROUND_REMOVAL_FAILED
+                Then("재시도 없이 즉시 인프라 예외를 그대로 전파한다") {
+                    shouldThrow<RestClientResponseException> {
+                        remover.removeBackground(byteArrayOf(1), "image/jpeg")
+                    }
                     requestCount.get() shouldBe 1
                 }
             }
@@ -102,12 +99,10 @@ class PixianBackgroundRemoverTest :
             responsesByAttempt = listOf(503 to byteArrayOf())
 
             When("removeBackground를 호출하면") {
-                Then("정확히 2번만 시도하고 ANALYSIS-011 예외가 발생한다") {
-                    val exception =
-                        shouldThrow<BusinessException> {
-                            remover.removeBackground(byteArrayOf(1), "image/jpeg")
-                        }
-                    exception.errorCode shouldBe AnalysisErrorCode.STICKER_BACKGROUND_REMOVAL_FAILED
+                Then("정확히 2번만 시도하고 인프라 예외를 그대로 전파한다") {
+                    shouldThrow<RestClientResponseException> {
+                        remover.removeBackground(byteArrayOf(1), "image/jpeg")
+                    }
                     requestCount.get() shouldBe 2
                 }
             }

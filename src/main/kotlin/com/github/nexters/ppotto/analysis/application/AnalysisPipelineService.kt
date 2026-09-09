@@ -1,27 +1,26 @@
 package com.github.nexters.ppotto.analysis.application
 
-import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.StickerGenerator
 import com.github.nexters.ppotto.analysis.domain.StickerStorage
 import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
+import com.github.nexters.ppotto.analysis.domain.ThemeClassifier
 import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 @Service
 class AnalysisPipelineService(
-    private val geminiClassifier: GeminiClassifier,
+    private val themeClassifier: ThemeClassifier,
     private val stickerGenerator: StickerGenerator,
     private val stickerStorage: StickerStorage,
     private val progressTicker: SimulatedProgressTicker = SimulatedProgressTicker(),
@@ -30,19 +29,17 @@ class AnalysisPipelineService(
     private val activeGeminiVerifyCount = AtomicInteger(0)
 
     fun run(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         photos: List<PhotoRef>,
+        onStepFailed: (String) -> Unit = {},
         onProgress: (Int) -> Unit = {},
     ): AnalysisPipelineResult {
         val pipelineStartedAt = System.nanoTime()
         log.info("analysis pipeline started: analysisId={}, photoCount={}", analysisId, photos.size)
 
-        val photoRefById =
-            stepTimer.measuredStep(analysisId, "photo-indexing") {
-                photos.associateBy { it.photoId }
-            }
+        val photoRefById = photos.associateBy { it.photoId }
         val representativePhotos = photos.filter { it.isRepresentative }
-        val classifications = expandWithBurstSiblings(classify(analysisId, representativePhotos, onProgress), photos)
+        val classifications = expandWithBurstSiblings(classify(analysisId, representativePhotos, onProgress, onStepFailed), photos)
         onProgress(CLASSIFICATION_COMPLETED_PROGRESS)
 
         val themes = processThemes(analysisId, classifications, photoRefById, onProgress)
@@ -59,99 +56,88 @@ class AnalysisPipelineService(
     }
 
     private fun classify(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         photos: List<PhotoRef>,
         onProgress: (Int) -> Unit,
-    ): List<ThemeClassification> {
-        val classifications =
-            stepTimer.measuredStep(analysisId, "gemini-classification") {
+        onStepFailed: (String) -> Unit,
+    ): List<ThemeClassification> =
+        stepTimer
+            .measuredStep(analysisId, "gemini-classification", onStepFailed) {
                 progressTicker.run(
                     floor = CLASSIFICATION_STARTED_PROGRESS,
                     ceiling = CLASSIFICATION_COMPLETED_PROGRESS,
                     onProgress = onProgress,
                 ) {
-                    geminiClassifier.classifyAndRecap(photos)
+                    themeClassifier.classifyAndRecap(photos)
                 }
-            }
-        log.info("analysis pipeline classification result: analysisId={}, themeCount={}", analysisId, classifications.size)
-        return classifications
-    }
+            }.also { log.info("analysis pipeline classification result: analysisId={}, themeCount={}", analysisId, it.size) }
 
     private fun expandWithBurstSiblings(
         classifications: List<ThemeClassification>,
         photos: List<PhotoRef>,
     ): List<ThemeClassification> {
-        val photosByBurstGroupId = photos.filter { it.burstGroupId != null }.groupBy { it.burstGroupId }
-        val burstGroupIdByPhotoId = photos.associate { it.photoId to it.burstGroupId }
+        val siblingIdsByPhotoId = burstSiblingIdsByPhotoId(photos)
         return classifications.map { classification ->
             val expandedIds =
                 classification.categorizedPhotoIds
-                    .flatMap { photoId ->
-                        burstGroupIdByPhotoId[photoId]
-                            ?.let { photosByBurstGroupId[it] }
-                            ?.map { it.photoId }
-                            ?: listOf(photoId)
-                    }.distinct()
+                    .flatMap { photoId -> siblingIdsByPhotoId[photoId] ?: listOf(photoId) }
+                    .distinct()
             classification.copy(categorizedPhotoIds = expandedIds)
         }
     }
 
+    private fun burstSiblingIdsByPhotoId(photos: List<PhotoRef>): Map<PhotoId, List<PhotoId>> =
+        photos
+            .filter { it.burstGroupId != null }
+            .groupBy { it.burstGroupId }
+            .values
+            .flatMap { burstPhotos ->
+                val siblingIds = burstPhotos.map { it.photoId }
+                siblingIds.map { it to siblingIds }
+            }.toMap()
+
     private fun processThemes(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         classifications: List<ThemeClassification>,
-        photoRefById: Map<UUID, PhotoRef>,
+        photoRefById: Map<PhotoId, PhotoRef>,
         onProgress: (Int) -> Unit,
     ): List<ThemeAnalysisResult> {
         if (classifications.isEmpty()) return emptyList()
 
         val themesStartedAt = System.nanoTime()
         log.info("analysis pipeline themes started: analysisId={}, themeCount={}", analysisId, classifications.size)
-        val progressDispatcher = ThemeProgressDispatcher(analysisId, classifications.size, onProgress)
-        progressDispatcher.start()
-        val executor = Executors.newVirtualThreadPerTaskExecutor()
-        return try {
+        val progressEmitter = ThemeProgressEmitter(analysisId, classifications.size, onProgress)
+        return Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             val tasks =
                 classifications.mapIndexed { themeIndex, classification ->
-                    Callable {
-                        processThemeSafely(analysisId, themeIndex, classification, photoRefById, progressDispatcher)
-                    }
+                    Callable { processThemeSafely(analysisId, themeIndex, classification, photoRefById, progressEmitter) }
                 }
-            executor
-                .invokeAll(tasks)
-                .map { it.getOrThrow() }
-                .also { themes ->
-                    log.info(
-                        "analysis pipeline themes completed: analysisId={}, themeCount={}, stickerSuccessCount={}, elapsedMs={}",
-                        analysisId,
-                        themes.size,
-                        themes.count { it.stickerImageKey != null },
-                        elapsedMs(themesStartedAt),
-                    )
-                }
-        } finally {
-            progressDispatcher.stopAndJoin()
-            executor.shutdown()
+            val themes = executor.invokeAll(tasks).map { it.getOrThrow() }
+            log.info(
+                "analysis pipeline themes completed: analysisId={}, themeCount={}, stickerSuccessCount={}, emittedCount={}, elapsedMs={}",
+                analysisId,
+                themes.size,
+                themes.count { it.stickerImageKey != null },
+                progressEmitter.emittedCount(),
+                elapsedMs(themesStartedAt),
+            )
+            themes
         }
     }
 
     private fun processThemeSafely(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         themeIndex: Int,
         classification: ThemeClassification,
-        photoRefById: Map<UUID, PhotoRef>,
-        progressDispatcher: ThemeProgressDispatcher,
+        photoRefById: Map<PhotoId, PhotoRef>,
+        progressEmitter: ThemeProgressEmitter,
     ): ThemeAnalysisResult =
         runCatching {
-            processTheme(
-                analysisId = analysisId,
-                themeIndex = themeIndex,
-                classification = classification,
-                photoRefById = photoRefById,
-            ) { localProgress ->
-                progressDispatcher.publish(themeIndex, localProgress)
+            processTheme(analysisId, themeIndex, classification, photoRefById) { localProgress ->
+                progressEmitter.publish(themeIndex, localProgress)
             }
         }.getOrElse {
-            progressDispatcher.publish(themeIndex, THEME_COMPLETED_PROGRESS)
+            progressEmitter.publish(themeIndex, THEME_COMPLETED_PROGRESS)
             log.warn(
                 "analysis pipeline sticker theme failed, skipping sticker: " +
                     "analysisId={}, themeIndex={}, theme={}, sourcePhotoId={}, exceptionClass={}",
@@ -162,24 +148,14 @@ class AnalysisPipelineService(
                 it::class.simpleName,
                 it,
             )
-            ThemeAnalysisResult(
-                theme = classification.theme,
-                categorizedPhotoIds = classification.categorizedPhotoIds,
-                badge = classification.recap.badge,
-                text = classification.recap.text,
-                stickerTargetSubject = classification.stickerTargetSubject,
-                stickerSourcePhotoId = classification.stickerSourcePhotoId,
-                stickerImageKey = null,
-                stickerMainColor = classification.stickerMainColor,
-                comments = classification.comments,
-            )
+            classification.toThemeResult(classification.stickerSourcePhotoId, stickerImageKey = null, verifiedSubject = null)
         }
 
     private fun processTheme(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         themeIndex: Int,
         classification: ThemeClassification,
-        photoRefById: Map<UUID, PhotoRef>,
+        photoRefById: Map<PhotoId, PhotoRef>,
         onLocalProgress: (Int) -> Unit,
     ): ThemeAnalysisResult {
         val themeStartedAt = System.nanoTime()
@@ -191,165 +167,84 @@ class AnalysisPipelineService(
             classification.theme,
             sourcePhoto.photoId,
         )
-        val verifiedSubject = verifyStickerSubjectWithTiming(analysisId, themeIndex, classification, sourcePhoto, onLocalProgress)
+
+        val verifyStartedAt = System.nanoTime()
+        val verifiedSubject =
+            progressTicker.run(THEME_STARTED_PROGRESS, THEME_VERIFY_COMPLETED_PROGRESS, onLocalProgress) {
+                resolvedStickerSubject(analysisId, themeIndex, classification, sourcePhoto)
+            }
+        val verifyElapsedMs = elapsedMs(verifyStartedAt)
         onLocalProgress(THEME_VERIFY_COMPLETED_PROGRESS)
+
+        val cutoutStartedAt = System.nanoTime()
         val stickerImageKey =
-            verifiedSubject.value
-                ?.let { generateAndUploadStickerWithTiming(analysisId, themeIndex, classification, sourcePhoto, it, onLocalProgress) }
+            verifiedSubject?.let { subject ->
+                progressTicker.run(THEME_VERIFY_COMPLETED_PROGRESS, THEME_COMPLETED_PROGRESS, onLocalProgress) {
+                    generateAndUploadSticker(analysisId, themeIndex, classification.theme, sourcePhoto, subject.targetSubject)
+                }
+            }
         onLocalProgress(THEME_COMPLETED_PROGRESS)
+
         log.info(
             "analysis pipeline sticker theme completed: " +
                 "analysisId={}, themeIndex={}, theme={}, stickerGenerated={}, verifyElapsedMs={}, " +
-                "verifyFallback={}, cutoutUploadElapsedMs={}, totalElapsedMs={}",
+                "cutoutUploadElapsedMs={}, totalElapsedMs={}",
             analysisId,
             themeIndex,
             classification.theme,
-            stickerImageKey?.value != null,
-            verifiedSubject.elapsedMs,
-            verifiedSubject.fallback,
-            stickerImageKey?.elapsedMs,
+            stickerImageKey != null,
+            verifyElapsedMs,
+            elapsedMs(cutoutStartedAt),
             elapsedMs(themeStartedAt),
         )
-        return ThemeAnalysisResult(
-            theme = classification.theme,
-            categorizedPhotoIds = classification.categorizedPhotoIds,
-            badge = classification.recap.badge,
-            text = classification.recap.text,
-            stickerTargetSubject = verifiedSubject.value?.targetSubject ?: classification.stickerTargetSubject,
-            stickerSourcePhotoId = sourcePhoto.photoId,
-            stickerImageKey = stickerImageKey?.value,
-            stickerMainColor = verifiedSubject.value?.mainColor ?: classification.stickerMainColor,
-            comments = classification.comments,
-        )
-    }
-
-    private fun verifyStickerSubjectWithTiming(
-        analysisId: UUID,
-        themeIndex: Int,
-        classification: ThemeClassification,
-        sourcePhoto: PhotoRef,
-        onLocalProgress: (Int) -> Unit,
-    ): TimedPipelineResult<StickerSubjectVerification?> {
-        val startedAt = System.nanoTime()
-        val value =
-            progressTicker.run(
-                floor = THEME_STARTED_PROGRESS,
-                ceiling = THEME_VERIFY_COMPLETED_PROGRESS,
-                onProgress = onLocalProgress,
-            ) {
-                resolvedStickerSubject(analysisId, themeIndex, classification, sourcePhoto)
-            }
-        val elapsedMs = elapsedMs(startedAt)
-        log.info(
-            "analysis pipeline sticker verify stage completed: " +
-                "analysisId={}, themeIndex={}, theme={}, targetPresent={}, fallback={}, elapsedMs={}",
-            analysisId,
-            themeIndex,
-            classification.theme,
-            value.verification != null,
-            value.fallback,
-            elapsedMs,
-        )
-        return TimedPipelineResult(
-            value = value.verification,
-            elapsedMs = elapsedMs,
-            fallback = value.fallback,
-        )
-    }
-
-    private fun generateAndUploadStickerWithTiming(
-        analysisId: UUID,
-        themeIndex: Int,
-        classification: ThemeClassification,
-        sourcePhoto: PhotoRef,
-        verifiedSubject: StickerSubjectVerification,
-        onLocalProgress: (Int) -> Unit,
-    ): TimedPipelineResult<String?> {
-        val startedAt = System.nanoTime()
-        val value =
-            progressTicker.run(
-                floor = THEME_VERIFY_COMPLETED_PROGRESS,
-                ceiling = THEME_COMPLETED_PROGRESS,
-                onProgress = onLocalProgress,
-            ) {
-                generateAndUploadSticker(
-                    analysisId,
-                    themeIndex,
-                    classification.theme,
-                    sourcePhoto,
-                    verifiedSubject.targetSubject,
-                )
-            }
-        return TimedPipelineResult(value, elapsedMs(startedAt))
+        return classification.toThemeResult(sourcePhoto.photoId, stickerImageKey, verifiedSubject)
     }
 
     private fun resolvedStickerSubject(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         themeIndex: Int,
         classification: ThemeClassification,
         sourcePhoto: PhotoRef,
-    ): StickerSubjectResolution {
+    ): StickerSubjectVerification? {
         val verifyStartedAt = System.nanoTime()
         return runCatching {
-            stepTimer.measuredStep(analysisId, "sticker-verify[$themeIndex]") {
-                stepTimer.measuredGeminiCall(
-                    analysisId = analysisId,
-                    operation = "sticker-verify",
-                    themeIndex = themeIndex,
-                    theme = classification.theme,
-                    activeCount = activeGeminiVerifyCount,
-                ) {
-                    geminiClassifier.verifyStickerSubject(sourcePhoto, classification.stickerTargetSubject)
-                }
+            stepTimer.measuredGeminiCall(
+                analysisId = analysisId,
+                operation = "sticker-verify",
+                themeIndex = themeIndex,
+                theme = classification.theme,
+                activeCount = activeGeminiVerifyCount,
+            ) {
+                themeClassifier.verifyStickerSubject(sourcePhoto, classification.stickerTargetSubject)
             }
-        }.fold(
-            onSuccess = { StickerSubjectResolution(it, fallback = false) },
-            onFailure = {
-                log.warn(
-                    "analysis pipeline sticker verification failed, falling back to unverified targetSubject: " +
-                        "analysisId={}, themeIndex={}, theme={}, exceptionClass={}, elapsedMs={}",
-                    analysisId,
-                    themeIndex,
-                    classification.theme,
-                    it::class.simpleName,
-                    elapsedMs(verifyStartedAt),
-                    it,
-                )
-                StickerSubjectResolution(
-                    verification = StickerSubjectVerification(classification.stickerTargetSubject, classification.stickerMainColor),
-                    fallback = true,
-                )
-            },
-        )
+        }.getOrElse {
+            log.warn(
+                "analysis pipeline sticker verification failed, falling back to unverified targetSubject: " +
+                    "analysisId={}, themeIndex={}, theme={}, exceptionClass={}, elapsedMs={}",
+                analysisId,
+                themeIndex,
+                classification.theme,
+                it::class.simpleName,
+                elapsedMs(verifyStartedAt),
+                it,
+            )
+            StickerSubjectVerification(classification.stickerTargetSubject, classification.stickerMainColor)
+        }
     }
 
     private fun generateAndUploadSticker(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         themeIndex: Int,
         theme: String,
         sourcePhoto: PhotoRef,
         targetSubject: String,
     ): String? {
         val stickerStartedAt = System.nanoTime()
+        val objectKey = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhoto.photoId)
         return runCatching {
-            val bytes =
-                stepTimer.measuredStep(analysisId, "sticker-cutout[$themeIndex]") {
-                    stickerGenerator.generate(sourcePhoto.gcsUri, sourcePhoto.mimeType, targetSubject)
-                }
-            val objectKey = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhoto.photoId)
-            stepTimer.measuredStep(analysisId, "sticker-upload[$themeIndex]") {
-                stickerStorage.upload(objectKey, bytes)
-            }
-        }.onFailure {
-            log.warn(
-                "analysis pipeline sticker failed: analysisId={}, themeIndex={}, theme={}, sourcePhotoId={}, elapsedMs={}",
-                analysisId,
-                themeIndex,
-                theme,
-                sourcePhoto.photoId,
-                elapsedMs(stickerStartedAt),
-                it,
-            )
+            val bytes = stickerGenerator.generate(sourcePhoto.sourceUri, sourcePhoto.mimeType, targetSubject)
+            stickerStorage.upload(objectKey, bytes)
+            objectKey
         }.onSuccess {
             log.info(
                 "analysis pipeline sticker completed: analysisId={}, themeIndex={}, imageKey={}, elapsedMs={}",
@@ -358,8 +253,36 @@ class AnalysisPipelineService(
                 it,
                 elapsedMs(stickerStartedAt),
             )
-        }.getOrNull()
+        }.getOrElse {
+            log.warn(
+                "analysis pipeline sticker failed: analysisId={}, themeIndex={}, theme={}, sourcePhotoId={}, errorCode={}, elapsedMs={}",
+                analysisId,
+                themeIndex,
+                theme,
+                sourcePhoto.photoId,
+                AnalysisErrorCode.STICKER_BACKGROUND_REMOVAL_FAILED.code,
+                elapsedMs(stickerStartedAt),
+                it,
+            )
+            null
+        }
     }
+
+    private fun ThemeClassification.toThemeResult(
+        stickerSourcePhotoId: PhotoId,
+        stickerImageKey: String?,
+        verifiedSubject: StickerSubjectVerification?,
+    ): ThemeAnalysisResult =
+        ThemeAnalysisResult(
+            theme = theme,
+            categorizedPhotoIds = categorizedPhotoIds,
+            badge = recap.badge,
+            text = recap.text,
+            stickerSourcePhotoId = stickerSourcePhotoId,
+            stickerImageKey = stickerImageKey,
+            stickerMainColor = verifiedSubject?.mainColor ?: stickerMainColor,
+            comments = comments,
+        )
 
     companion object {
         const val CLASSIFICATION_STARTED_PROGRESS = 10
@@ -369,12 +292,8 @@ class AnalysisPipelineService(
         private const val THEME_STARTED_PROGRESS = 0
         private const val THEME_VERIFY_COMPLETED_PROGRESS = 25
         private const val THEME_COMPLETED_PROGRESS = 100
-        private const val PROGRESS_QUEUE_CAPACITY = 100
-        private const val PROGRESS_DISPATCHER_POLL_TIMEOUT_MS = 100L
 
         private val log = LoggerFactory.getLogger(AnalysisPipelineService::class.java)
-
-        private fun elapsedMs(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
 
         private fun stickerProgress(
             completedThemeProgress: Int,
@@ -388,82 +307,35 @@ class AnalysisPipelineService(
         }
     }
 
-    private class ThemeProgressDispatcher(
-        private val analysisId: UUID,
+    private class ThemeProgressEmitter(
+        private val analysisId: AnalysisId,
         private val totalThemeCount: Int,
         private val onProgress: (Int) -> Unit,
     ) {
-        private val queue = LinkedBlockingQueue<ThemeProgressEvent>(PROGRESS_QUEUE_CAPACITY)
-        private val stopped = AtomicBoolean(false)
-        private val droppedCount = AtomicInteger(0)
         private val localProgressByTheme = IntArray(totalThemeCount)
         private var lastEmittedProgress = CLASSIFICATION_COMPLETED_PROGRESS
         private var emittedCount = 0
-        private val thread =
-            Thread.ofVirtual().unstarted {
-                while (!stopped.get() || queue.isNotEmpty()) {
-                    val event = queue.poll(PROGRESS_DISPATCHER_POLL_TIMEOUT_MS, TimeUnit.MILLISECONDS) ?: continue
-                    apply(event)
-                }
-            }
 
-        fun start() {
-            thread.start()
-        }
+        fun emittedCount(): Int = emittedCount
 
+        @Synchronized
         fun publish(
             themeIndex: Int,
             localProgress: Int,
         ) {
-            val accepted =
-                queue.offer(ThemeProgressEvent(themeIndex, localProgress.coerceIn(THEME_STARTED_PROGRESS, THEME_COMPLETED_PROGRESS)))
-            if (!accepted) {
-                droppedCount.incrementAndGet()
-            }
-        }
+            val bounded = localProgress.coerceIn(THEME_STARTED_PROGRESS, THEME_COMPLETED_PROGRESS)
+            if (bounded <= localProgressByTheme[themeIndex]) return
 
-        fun stopAndJoin() {
-            stopped.set(true)
-            thread.join()
-            log.info(
-                "analysis pipeline progress dispatcher completed: " +
-                    "analysisId={}, themeCount={}, emittedCount={}, droppedCount={}, lastProgress={}",
-                analysisId,
-                totalThemeCount,
-                emittedCount,
-                droppedCount.get(),
-                lastEmittedProgress,
-            )
-        }
-
-        private fun apply(event: ThemeProgressEvent) {
-            if (event.localProgress <= localProgressByTheme[event.themeIndex]) return
-
-            localProgressByTheme[event.themeIndex] = event.localProgress
+            localProgressByTheme[themeIndex] = bounded
             val progress = stickerProgress(localProgressByTheme.sum(), totalThemeCount)
             if (progress <= lastEmittedProgress) return
 
             lastEmittedProgress = progress
             emittedCount += 1
+            log.debug("analysis pipeline progress emitted: analysisId={}, progress={}", analysisId, progress)
             onProgress(progress)
         }
     }
-
-    private data class ThemeProgressEvent(
-        val themeIndex: Int,
-        val localProgress: Int,
-    )
-
-    private data class TimedPipelineResult<T>(
-        val value: T,
-        val elapsedMs: Long,
-        val fallback: Boolean = false,
-    )
-
-    private data class StickerSubjectResolution(
-        val verification: StickerSubjectVerification?,
-        val fallback: Boolean,
-    )
 }
 
 private fun <T> Future<T>.getOrThrow(): T =

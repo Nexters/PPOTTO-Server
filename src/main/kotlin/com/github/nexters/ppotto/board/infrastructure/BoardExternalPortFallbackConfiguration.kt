@@ -25,10 +25,10 @@ class BoardExternalPortFallbackConfiguration {
     @ConditionalOnMissingBean
     fun boardStickerCommandPort(): BoardStickerCommandPort =
         object : BoardStickerCommandPort {
-            override fun validateOwnedByBoard(
+            override fun ownsAll(
                 boardId: BoardId,
                 stickerIds: Set<StickerId>,
-            ) = error("StickerCommandService 연동이 필요합니다.")
+            ): Boolean = error("StickerCommandService 연동이 필요합니다.")
 
             override fun updateLayouts(
                 boardId: BoardId,

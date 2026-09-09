@@ -1,9 +1,9 @@
 package com.github.nexters.ppotto.analysis.domain
 
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.PhotoId
 
 data class StickerRegenerationTarget(
     val stickerTargetSubject: String,
-    val stickerSourcePhotoId: UUID,
+    val stickerSourcePhotoId: PhotoId,
     val stickerMainColor: String,
 )

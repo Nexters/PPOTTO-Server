@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.global.openapi
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.github.nexters.ppotto.PpottoApplication
 import io.swagger.v3.core.converter.AnnotatedType
 import io.swagger.v3.core.converter.ModelConverter
 import io.swagger.v3.core.converter.ModelConverterContext
@@ -17,11 +18,12 @@ class KotlinRequiredModelConverter : ModelConverter {
         type: AnnotatedType,
         context: ModelConverterContext,
         chain: Iterator<ModelConverter>,
-    ): Schema<*>? =
-        (if (chain.hasNext()) chain.next().resolve(type, context, chain) else null)
-            .also { resolved ->
-                projectClassOf(type)?.let { markNonNullRequired(it, resolved.definitionIn(context)) }
-            }
+    ): Schema<*>? {
+        val resolved = if (chain.hasNext()) chain.next().resolve(type, context, chain) else null
+        val projectClass = projectClassOf(type) ?: return resolved
+        markNonNullRequired(projectClass, resolved.definitionIn(context))
+        return resolved
+    }
 
     private fun projectClassOf(type: AnnotatedType): Class<*>? =
         runCatching {
@@ -40,7 +42,8 @@ class KotlinRequiredModelConverter : ModelConverter {
     private fun markNonNullRequired(
         rawClass: Class<*>,
         schema: Schema<*>?,
-    ) = schema?.properties?.let { properties ->
+    ) {
+        val properties = schema?.properties ?: return
         rawClass.kotlin.memberProperties
             .filterNot { it.returnType.isMarkedNullable }
             .map(::jsonName)
@@ -63,6 +66,6 @@ class KotlinRequiredModelConverter : ModelConverter {
     }
 
     private companion object {
-        const val BASE_PACKAGE = "com.github.nexters.ppotto"
+        val BASE_PACKAGE: String = PpottoApplication::class.java.packageName
     }
 }

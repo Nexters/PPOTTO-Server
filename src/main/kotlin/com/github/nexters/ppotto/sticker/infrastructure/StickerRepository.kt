@@ -9,7 +9,9 @@ import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 data class StickerDeletionTarget(
     val id: StickerId,
@@ -37,14 +39,6 @@ class StickerRepository(
                 STICKERS.IMAGE_KEY,
                 STICKERS.TEXT_CONTENT,
                 STICKERS.MAIN_COLOR,
-                STICKERS.POS_X,
-                STICKERS.POS_Y,
-                STICKERS.SCALE,
-                STICKERS.ROTATION,
-                STICKERS.Z_INDEX,
-                STICKERS.BADGE_OFFSET_X,
-                STICKERS.BADGE_OFFSET_Y,
-                STICKERS.BADGE_ROTATION,
             ).values(
                 analysisId,
                 boardId,
@@ -55,14 +49,6 @@ class StickerRepository(
                 creation.imageKey,
                 creation.textContent,
                 creation.mainColor,
-                null,
-                null,
-                1.0,
-                0.0,
-                null,
-                0.0,
-                0.0,
-                0.0,
             ).returning()
             .fetchSingle()
             .toDomain()
@@ -93,39 +79,38 @@ class StickerRepository(
             .map { it.toDomain() }
 
     fun lockAnalysisResult(analysisId: AnalysisId) {
-        dslContext.execute(
-            "SELECT pg_advisory_xact_lock(hashtextextended(?::text, 0))",
-            analysisId.value,
-        )
+        check(TransactionSynchronizationManager.isActualTransactionActive()) {
+            "분석 결과 잠금은 트랜잭션 안에서만 획득할 수 있습니다."
+        }
+        dslContext
+            .select(DSL.field("pg_advisory_xact_lock(hashtextextended({0}::text, 0))", DSL.value(analysisId.value)))
+            .fetch()
     }
 
     fun validateOwnedByBoard(
         boardId: BoardId,
         stickerIds: Collection<StickerId>,
-    ): Boolean =
-        stickerIds.toSet().let { uniqueIds ->
-            uniqueIds.isEmpty() ||
-                dslContext
-                    .selectCount()
-                    .from(STICKERS)
-                    .where(STICKERS.BOARD_ID.eq(boardId))
-                    .and(STICKERS.ID.`in`(uniqueIds))
-                    .and(STICKERS.DELETED_AT.isNull)
-                    .fetchSingle(0, Int::class.java) == uniqueIds.size
+    ): Boolean {
+        val uniqueIds = stickerIds.toSet()
+        if (uniqueIds.isEmpty()) {
+            return true
         }
+        return dslContext
+            .selectCount()
+            .from(STICKERS)
+            .where(STICKERS.BOARD_ID.eq(boardId))
+            .and(STICKERS.ID.`in`(uniqueIds))
+            .and(STICKERS.DELETED_AT.isNull)
+            .fetchSingle(0, Int::class.java) == uniqueIds.size
+    }
 
     fun findDeletionTargetsByBoardIds(boardIds: Collection<BoardId>): List<StickerDeletionTarget> =
-        boardIds
-            .toSet()
-            .takeIf { it.isNotEmpty() }
-            ?.let { uniqueIds ->
-                dslContext
-                    .select(STICKERS.ID, STICKERS.IMAGE_KEY)
-                    .from(STICKERS)
-                    .where(STICKERS.BOARD_ID.`in`(uniqueIds))
-                    .fetch()
-                    .map { record -> StickerDeletionTarget(record.value1()!!, record.value2()) }
-            } ?: emptyList()
+        dslContext
+            .select(STICKERS.ID, STICKERS.IMAGE_KEY)
+            .from(STICKERS)
+            .where(STICKERS.BOARD_ID.`in`(boardIds.toSet()))
+            .fetch()
+            .map { record -> StickerDeletionTarget(record.value1()!!, record.value2()) }
 
     private fun StickersRecord.toDomain() =
         Sticker(

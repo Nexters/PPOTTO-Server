@@ -1,12 +1,12 @@
 package com.github.nexters.ppotto.auth.presentation
 
-import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.PendingTermResponse
 import com.github.nexters.ppotto.auth.presentation.dto.TokenPairResponse
 import com.github.nexters.ppotto.auth.presentation.dto.WebLoginRequest
 import com.github.nexters.ppotto.global.identifier.TermId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples

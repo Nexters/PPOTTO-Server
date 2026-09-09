@@ -19,8 +19,8 @@ class BoardLayoutController(
         @AuthenticatedUser userId: UserId,
         @PathVariable boardId: BoardId,
         @Valid @RequestBody request: BoardLayoutRequest,
-    ): ApiResponse<Unit> =
-        boardLayoutService
-            .update(boardId, userId, request.toCommand())
-            .let { ApiResponse.success() }
+    ): ApiResponse<Unit> {
+        boardLayoutService.update(boardId, userId, request.toCommand(boardId))
+        return ApiResponse.success()
+    }
 }

@@ -10,29 +10,25 @@ import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
 
 @Service
 class AnalysisQueryService(
     private val analysisRepository: AnalysisRepository,
     private val photoRepository: PhotoRepository,
 ) {
-    @Transactional(readOnly = true)
     fun hasActiveAnalysis(
         boardId: BoardId,
         userId: UserId,
-    ): Boolean = analysisRepository.existsActiveByBoardIdAndUserId(boardId.value, userId.value)
+    ): Boolean = analysisRepository.existsActiveByBoardIdAndUserId(boardId, userId)
 
-    @Transactional(readOnly = true)
-    fun getActiveAnalysis(userId: UUID): AnalysisStatusResult? =
+    fun getActiveAnalysis(userId: UserId): AnalysisStatusResult? =
         analysisRepository
             .findActiveByUserId(userId)
             ?.let(AnalysisStatusResult::from)
 
-    @Transactional(readOnly = true)
     fun getAnalysis(
-        analysisId: UUID,
-        userId: UUID,
+        analysisId: AnalysisId,
+        userId: UserId,
     ): AnalysisStatusResult =
         analysisRepository
             .findByIdAndUserId(analysisId, userId)
@@ -45,10 +41,10 @@ class AnalysisQueryService(
         boardId: BoardId,
         analysisId: AnalysisId,
         photoIds: Set<PhotoId>,
-    ): Boolean =
-        analysisRepository
-            .findById(analysisId.value)
-            ?.takeIf { it.userId == userId.value && it.boardId == boardId.value }
-            ?.let { photoRepository.countOwnedByAnalysis(analysisId.value, boardId.value, photoIds.map(PhotoId::value)) == photoIds.size }
-            ?: false
+    ): Boolean {
+        val analysis = analysisRepository.findById(analysisId) ?: return false
+        if (analysis.userId != userId || analysis.boardId != boardId) return false
+
+        return photoRepository.countOwnedByAnalysis(analysisId, boardId, photoIds) == photoIds.size
+    }
 }

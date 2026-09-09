@@ -5,8 +5,6 @@ value class EncryptedProviderRefreshToken(
     val value: String,
 ) {
     init {
-        value
-            .isNotBlank()
-            .let { require(it) }
+        require(value.isNotBlank()) { "암호화된 제공자 refresh token이 비어 있습니다." }
     }
 }

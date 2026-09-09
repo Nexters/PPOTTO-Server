@@ -1,11 +1,11 @@
 package com.github.nexters.ppotto.user.infrastructure
 
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.jooq.enums.OauthProvider
 import com.github.nexters.ppotto.jooq.tables.records.UsersRecord
 import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.user.domain.EncryptedProviderRefreshToken
-import com.github.nexters.ppotto.user.domain.OAuthProvider
 import com.github.nexters.ppotto.user.domain.User
 import org.jooq.DSLContext
 import org.jooq.impl.DSL.value
@@ -16,13 +16,13 @@ import java.time.Instant
 class UserRepository(
     private val dslContext: DSLContext,
 ) {
-    fun save(
+    fun saveIfAbsent(
         provider: OAuthProvider,
         providerUserId: String,
         email: String,
         name: String,
-        providerRefreshToken: EncryptedProviderRefreshToken? = null,
-    ): User =
+        providerRefreshToken: EncryptedProviderRefreshToken?,
+    ): User? =
         dslContext
             .insertInto(
                 USERS,
@@ -37,9 +37,20 @@ class UserRepository(
                 email,
                 name,
                 providerRefreshToken?.value,
-            ).returning()
-            .fetchOne()!!
-            .toDomain()
+            ).onConflict(USERS.PROVIDER, USERS.PROVIDER_USER_ID)
+            .where(USERS.DELETED_AT.isNull)
+            .doNothing()
+            .returning()
+            .fetchOne()
+            ?.toDomain()
+
+    fun save(
+        provider: OAuthProvider,
+        providerUserId: String,
+        email: String,
+        name: String,
+        providerRefreshToken: EncryptedProviderRefreshToken? = null,
+    ): User = saveIfAbsent(provider, providerUserId, email, name, providerRefreshToken)!!
 
     fun findById(id: UserId): User? =
         dslContext

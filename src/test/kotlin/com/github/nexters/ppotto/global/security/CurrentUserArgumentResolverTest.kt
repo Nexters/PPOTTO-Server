@@ -8,7 +8,9 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.core.MethodParameter
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.context.request.ServletWebRequest
 import java.util.UUID
@@ -22,6 +24,8 @@ class CurrentUserArgumentResolverTest :
         val requiredParameter = methodParameter(CurrentUserArgumentFixture::required)
         val optionalParameter = methodParameter(CurrentUserArgumentFixture::optional)
         val rawRequiredParameter = methodParameter(CurrentUserArgumentFixture::rawRequired)
+        val unannotatedParameter = methodParameter(CurrentUserArgumentFixture::unannotated)
+        val annotatedStringParameter = methodParameter(CurrentUserArgumentFixture::annotatedString)
 
         afterEach {
             SecurityContextHolder.clearContext()
@@ -33,6 +37,22 @@ class CurrentUserArgumentResolverTest :
                     resolver.supportsParameter(requiredParameter) shouldBe true
                     resolver.supportsParameter(optionalParameter) shouldBe true
                     resolver.supportsParameter(rawRequiredParameter) shouldBe true
+                }
+            }
+        }
+
+        Given("주석이 없는 UUID 파라미터가 있으면") {
+            When("지원 여부를 판정하면") {
+                Then("지원하지 않는다") {
+                    resolver.supportsParameter(unannotatedParameter) shouldBe false
+                }
+            }
+        }
+
+        Given("인증 주석은 있지만 UUID가 아닌 파라미터가 있으면") {
+            When("지원 여부를 판정하면") {
+                Then("지원하지 않는다") {
+                    resolver.supportsParameter(annotatedStringParameter) shouldBe false
                 }
             }
         }
@@ -67,6 +87,29 @@ class CurrentUserArgumentResolverTest :
             }
         }
 
+        Given("익명 인증 토큰이 컨텍스트에 있으면") {
+            SecurityContextHolder.getContext().authentication =
+                AnonymousAuthenticationToken(
+                    "key",
+                    "anonymousUser",
+                    listOf(SimpleGrantedAuthority("ROLE_ANONYMOUS")),
+                )
+
+            When("선택 인증 사용자 인자를 해석하면") {
+                Then("익명 사용자를 null로 넘겨 공개 API가 그대로 동작한다") {
+                    resolver.resolveArgument(optionalParameter, null, webRequest, null).shouldBeNull()
+                }
+            }
+
+            When("필수 인증 사용자 인자를 해석하면") {
+                Then("COMMON-004 예외를 던진다") {
+                    shouldThrow<UnauthorizedException> {
+                        resolver.resolveArgument(requiredParameter, null, webRequest, null)
+                    }
+                }
+            }
+        }
+
         Given("UUID가 아닌 principal이 있으면") {
             SecurityContextHolder.getContext().authentication =
                 UsernamePasswordAuthenticationToken("invalid", null)
@@ -75,6 +118,14 @@ class CurrentUserArgumentResolverTest :
                 Then("COMMON-004 예외를 던진다") {
                     shouldThrow<UnauthorizedException> {
                         resolver.resolveArgument(optionalParameter, null, webRequest, null)
+                    }
+                }
+            }
+
+            When("필수 인증 사용자 인자를 해석하면") {
+                Then("COMMON-004 예외를 던진다") {
+                    shouldThrow<UnauthorizedException> {
+                        resolver.resolveArgument(requiredParameter, null, webRequest, null)
                     }
                 }
             }
@@ -92,6 +143,12 @@ private class CurrentUserArgumentFixture {
 
     fun rawRequired(
         @AuthenticatedUser userId: UUID,
+    ) = userId
+
+    fun unannotated(userId: UUID) = userId
+
+    fun annotatedString(
+        @AuthenticatedUser userId: String,
     ) = userId
 }
 

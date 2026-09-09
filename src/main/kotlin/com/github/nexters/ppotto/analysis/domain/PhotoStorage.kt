@@ -1,21 +1,23 @@
 package com.github.nexters.ppotto.analysis.domain
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import java.time.Instant
 
 interface PhotoStorage {
-    fun issueUploadUrls(targets: List<PhotoUploadTarget>): List<String>
+    fun issueUploadUrls(photos: List<Photo>): Map<PhotoId, String>
 
-    fun issueReadUrls(objectKeys: Collection<String>): Map<String, String>
+    fun issueReadUrls(photos: List<Photo>): Map<PhotoId, String>
 
-    fun existingObjects(prefix: String): Map<String, BlobMeta>
+    fun sourceUri(photo: Photo): String
 
-    fun deleteByPrefix(prefix: String): Int
+    fun uploadedObjects(
+        analysisId: AnalysisId,
+        photos: List<Photo>,
+    ): Map<PhotoId, BlobMeta>
+
+    fun deleteAll(analysisId: AnalysisId): Int
 }
-
-data class PhotoUploadTarget(
-    val objectKey: String,
-    val contentType: String,
-)
 
 data class BlobMeta(
     val size: Long,

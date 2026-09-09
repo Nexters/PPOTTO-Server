@@ -65,7 +65,7 @@
 | boards | POST | /boards | 보드 생성 | 200 | 400, 401 | Y |
 | boards | GET | /boards/{boardId} | 보드 상세 조회 (보드 렌더링) | 200 | 401, 404 | Y |
 | boards | PATCH | /boards/{boardId} | 보드 이름 변경 | 200 | 400, 401, 404 | Y |
-| boards | DELETE | /boards/{boardId} | 보드 삭제 | 200 | 401, 404, 409 | Y |
+| boards | DELETE | /boards/{boardId} | 보드 삭제 | 200 | 400, 401, 404, 409 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 (편집 모드 종료 시) | 200 | 400, 401, 404 | Y |
 | boards | GET | /boards/{boardId} | 보드 상세 조회 — v2 (선 + 텍스트) | 200 | 401, 404 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 — v2 (선 + 텍스트) | 200 | 400, 401, 404 | Y |
@@ -73,7 +73,7 @@
 | stickers | PATCH | /stickers/{stickerId} | 스티커 제목 수정 | 200 | 400, 401, 404 | Y |
 | stickers | PATCH | /stickers/{stickerId}/comments | 리캡 코멘트 위치 일괄 수정 | 200 | 400, 401, 404 | Y |
 | stickers | DELETE | /stickers/{stickerId} | 스티커 묶음 삭제 | 200 | 401, 404 | Y |
-| stickers | POST | /stickers/{stickerId}/regenerate | 스티커 이미지 재생성 | 200 | 400, 401, 404, 409 | Y |
+| stickers | POST | /stickers/{stickerId}/regenerate | 스티커 이미지 재생성 | 200 | 400, 401, 404, 409, 502 | Y |
 | stickers | POST | /stickers/{stickerId}/view | 리캡 열람 처리 (빨간 점 제거) | 200 | 401, 404 | Y |
 | analysis | POST | /analysis | 분석 생성 + 업로드 URL 일괄 발급 | 200 | 400, 401, 404, 409, 429 | Y |
 | analysis | GET | /analysis/active | 진행 중 분석 조회 (앱 재진입 복구) | 200 | 401 | Y |
@@ -1145,6 +1145,7 @@ Request example:
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
+| 400 | STICKER-007 | 삭제할 수 없는 스티커가 포함되어 있습니다. | 보드의 스티커 중 이미 삭제되었거나 다른 보드로 옮겨진 스티커가 있음 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드 없음 또는 소유자 불일치 |
 | 409 | BOARD-004 | 마지막 보드는 삭제할 수 없습니다. | 마지막 보드는 삭제 불가 |
@@ -1340,6 +1341,7 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 | --- | --- | --- | --- |
 | 400 | COMMON-001 | 스웨거 예시 없음 | 필드 형식 오류 (제목 15자 초과 등) |
 | 400 | BOARD-001 | 편집할 수 없는 항목이 포함되어 있습니다. | 소유하지 않은 항목 포함 |
+| 400 | STICKER-008 | 편집할 수 없는 스티커가 포함되어 있습니다. | 저장 대상 스티커 중 이미 삭제되었거나 이 보드에 속하지 않는 스티커가 있음 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드 없음 또는 소유자 불일치 |
 
@@ -1491,6 +1493,7 @@ v1과 같다 (200, `data: null`).
 
 #### Failure Spec
 v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
+| 400 | STICKER-008 | 편집할 수 없는 스티커가 포함되어 있습니다. | 저장 대상 스티커 중 이미 삭제되었거나 이 보드에 속하지 않는 스티커가 있음 |
 
 | Status | Error Code | 발생 조건 |
 | --- | --- | --- |
@@ -1828,7 +1831,8 @@ Request example:
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | COMMON-001 | 잘못된 입력입니다. | 존재하지 않는 코멘트 id, 다른 스티커 소속 id, 하단 키워드 칩(원래 posX/posY가 없던 코멘트) id, id 중복, 좌표가 유한하지 않음 |
+| 400 | COMMON-001 | 잘못된 입력입니다. | 요청 바디 형식 오류 (comments 누락 또는 빈 배열) |
+| 400 | STICKER-004 | 수정할 수 없는 코멘트가 포함되어 있습니다. | 존재하지 않는 코멘트 id, 다른 스티커 소속 id, 하단 키워드 칩(원래 posX/posY가 없던 코멘트) id, id 중복, 좌표가 유한하지 않음 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | STICKER-001 | 스티커를 찾을 수 없습니다. | 스티커 없음 또는 소유자 불일치 |
 
@@ -1840,6 +1844,20 @@ Request example:
   "error": {
     "code": "COMMON-001",
     "message": "잘못된 입력입니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+400 STICKER-004 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "STICKER-004",
+    "message": "수정할 수 없는 코멘트가 포함되어 있습니다.",
     "fieldErrors": [],
     "timestamp": "2026-07-27T05:02:11Z"
   }
@@ -1876,7 +1894,7 @@ Request example:
 
 #### Notes
 - 리캡 상세 화면에서 사용자가 말풍선을 드래그로 옮긴 뒤, 바뀐 코멘트만 모아 한 번에 저장하는 용도입니다.
-- 이미 `posX`/`posY`가 있는 말풍선 코멘트만 대상입니다. 하단 `테마 분석` 키워드 칩(원래 `posX`/`posY`가 없던 코멘트)의 id로 위치를 새로 부여하는 것은 지원하지 않으며 400 `COMMON-001`을 반환합니다.
+- 이미 `posX`/`posY`가 있는 말풍선 코멘트만 대상입니다. 하단 `테마 분석` 키워드 칩(원래 `posX`/`posY`가 없던 코멘트)의 id로 위치를 새로 부여하는 것은 지원하지 않으며 400 `STICKER-004`를 반환합니다.
 - 스티커 자체의 보드 배치(위치·스케일·회전)는 이 API가 아니라 `PATCH /boards/{boardId}/layout`으로 저장합니다. 좌표계가 다르므로(코멘트는 스티커 기준 상대 좌표) 섞어 쓰면 안 됩니다.
 
 ### DELETE /stickers/{stickerId}
@@ -2042,19 +2060,35 @@ Request example:
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | COMMON-001 | 잘못된 입력입니다. | 이미지형 스티커가 아니거나 재생성 가능한 사진 구성이 없음 |
+| 400 | STICKER-005 | 이미지형 스티커만 재생성할 수 있습니다. | 텍스트형 스티커에 재생성을 요청함 |
+| 400 | STICKER-006 | 재생성할 사진 구성이 없습니다. | 재생성에 쓸 수 있는 사진 구성이 하나도 없음 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | STICKER-001 | 스티커를 찾을 수 없습니다. | 스티커 없음 또는 소유자 불일치 |
 | 409 | STICKER-002 | 이미 재생성이 진행 중입니다. | 같은 스티커에 대한 재생성이 이미 진행 중 |
+| 502 | ANALYSIS-011 | 스티커 배경 제거에 실패했습니다. | 원본 사진 읽기 또는 배경 제거·크롭 실패 |
 
-400 COMMON-001 example:
+400 STICKER-005 example:
 ```json
 {
   "success": false,
   "data": null,
   "error": {
-    "code": "COMMON-001",
-    "message": "잘못된 입력입니다.",
+    "code": "STICKER-005",
+    "message": "이미지형 스티커만 재생성할 수 있습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+400 STICKER-006 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "STICKER-006",
+    "message": "재생성할 사진 구성이 없습니다.",
     "fieldErrors": [],
     "timestamp": "2026-07-27T05:02:11Z"
   }
@@ -2104,7 +2138,7 @@ Request example:
 ```
 
 #### Notes
-- 이미지형 스티커만 재생성할 수 있습니다. 텍스트 스티커는 400 `COMMON-001`을 반환합니다.
+- 이미지형 스티커만 재생성할 수 있습니다. 텍스트 스티커는 400 `STICKER-005`, 재생성에 쓸 사진 구성이 없으면 400 `STICKER-006`을 반환합니다.
 - 기존 리캡의 사진 구성은 유지하고, 서버가 그 사진들 중 새 원본 사진과 피사체를 선택해 스티커 이미지와 `sourcePhotoId`만 교체합니다.
 - `title`, `summary`, `comments`, 보드 배치값, 빨간 점 상태는 변경하지 않습니다. 응답은 재생성 후 리캡 상세와 같은 형태입니다.
 - 같은 스티커에 대한 재생성은 동시에 하나만 진행됩니다. 진행 중에 다시 요청하면 409 `STICKER-002`를 반환하며, 성공적으로 끝난 직후에는 쿨다운 없이 바로 다음 재생성을 요청할 수 있습니다.

@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.board.presentation.dto.BoardDetailV2Response
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutRequest
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutV2Request
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
+import com.github.nexters.ppotto.board.presentation.dto.BoardStickerResponse
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.DrawingChangesRequest
 import com.github.nexters.ppotto.board.presentation.dto.DrawingChangesV2Request
@@ -16,7 +17,6 @@ import com.github.nexters.ppotto.board.presentation.dto.DrawingResponse
 import com.github.nexters.ppotto.board.presentation.dto.DrawingV2Response
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.StickerLayoutRequest
-import com.github.nexters.ppotto.board.presentation.dto.StickerResponse
 import com.github.nexters.ppotto.board.presentation.dto.withLegacyZIndex
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
@@ -142,7 +142,7 @@ private val RENAMED_BOARD_RESPONSE =
 
 private val DETAIL_STICKERS =
     listOf(
-        StickerResponse(
+        BoardStickerResponse(
             id = STICKER_ID,
             title = "동물 밈 짤줍",
             isNew = false,
@@ -160,7 +160,7 @@ private val DETAIL_STICKERS =
             badgeOffsetY = 96.0,
             badgeRotation = 0.0,
         ),
-        StickerResponse(
+        BoardStickerResponse(
             id = StickerId(UUID.fromString("01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
             title = "언제까지 일해요",
             isNew = true,
@@ -313,13 +313,11 @@ private val INVALID_LAYOUT =
         message = "편집 대상에 소유하지 않은 항목이 포함되어 있습니다.",
     )
 
-private val BOARD_NOT_FOUND_RESPONSE =
-    listOf(
-        ApiExamples.errorExample(
-            code = "BOARD-002",
-            summary = "보드 없음 또는 소유자 불일치",
-            message = "보드를 찾을 수 없습니다.",
-        ),
+private val BOARD_NOT_FOUND =
+    ApiExamples.errorExample(
+        code = "BOARD-002",
+        summary = "보드 없음 또는 소유자 불일치",
+        message = "보드를 찾을 수 없습니다.",
     )
 
 private val COUNT_LIMIT_EXCEEDED =
@@ -362,7 +360,6 @@ class BoardApiExamples : ApiExampleProvider {
                                     ),
                                     COUNT_LIMIT_EXCEEDED,
                                 ),
-                            "409" to ApiExamples.CONFLICT_RESPONSE,
                         ),
                 ),
             BoardDetailApi::get to
@@ -370,7 +367,7 @@ class BoardApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(BOARD_DETAIL_RESPONSE),
-                            "404" to BOARD_NOT_FOUND_RESPONSE,
+                            "404" to listOf(BOARD_NOT_FOUND),
                         ),
                 ),
             BoardApi::rename to
@@ -380,7 +377,7 @@ class BoardApiExamples : ApiExampleProvider {
                         mapOf(
                             "200" to listOf(RENAMED_BOARD_RESPONSE),
                             "400" to ApiExamples.INVALID_INPUT_RESPONSE,
-                            "404" to BOARD_NOT_FOUND_RESPONSE,
+                            "404" to listOf(BOARD_NOT_FOUND),
                         ),
                 ),
             BoardApi::delete to
@@ -388,7 +385,7 @@ class BoardApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to ApiExamples.EMPTY_SUCCESS,
-                            "404" to BOARD_NOT_FOUND_RESPONSE,
+                            "404" to listOf(BOARD_NOT_FOUND),
                             "409" to listOf(LAST_BOARD_CANNOT_BE_DELETED, ACTIVE_ANALYSIS_EXISTS),
                         ),
                 ),
@@ -404,7 +401,7 @@ class BoardApiExamples : ApiExampleProvider {
                                     ApiExamples.INVALID_INPUT.copy(summary = "필드 형식 오류 (제목 15자 초과 등)"),
                                     INVALID_LAYOUT,
                                 ),
-                            "404" to BOARD_NOT_FOUND_RESPONSE,
+                            "404" to listOf(BOARD_NOT_FOUND),
                         ),
                 ),
             BoardDetailV2Api::get to
@@ -412,7 +409,7 @@ class BoardApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(BOARD_DETAIL_V2_RESPONSE),
-                            "404" to BOARD_NOT_FOUND_RESPONSE,
+                            "404" to listOf(BOARD_NOT_FOUND),
                         ),
                 ),
             BoardLayoutV2Api::update to
@@ -431,7 +428,7 @@ class BoardApiExamples : ApiExampleProvider {
                                     ApiExamples.INVALID_INPUT.copy(summary = "필드 형식 오류 (문구 32자 초과, 색상 형식 오류 등)"),
                                     INVALID_LAYOUT,
                                 ),
-                            "404" to BOARD_NOT_FOUND_RESPONSE,
+                            "404" to listOf(BOARD_NOT_FOUND),
                         ),
                 ),
         )

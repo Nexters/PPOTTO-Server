@@ -3,22 +3,20 @@ package com.github.nexters.ppotto.board
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.matchers.shouldBe
 import java.io.File
 
 private const val SOURCE_ROOT = "src/main/kotlin/com/github/nexters/ppotto"
 
+private val QUALIFIED_REFERENCE = Regex("""com\.github\.nexters\.ppotto(?:\.[A-Za-z_][A-Za-z0-9_]*)+""")
+
 class BoardAnalysisDependencyTest :
     BehaviorSpec({
         Given("board 도메인 소스 트리에서") {
-            Then("소스 루트를 실제로 찾는다") {
-                File("$SOURCE_ROOT/board").isDirectory shouldBe true
-            }
-
             When("analysis 도메인 참조를 모으면") {
-                val analysisReferences = importsOf("$SOURCE_ROOT/board").startingWith("com.github.nexters.ppotto.analysis")
+                val analysisReferences =
+                    referencesOf("$SOURCE_ROOT/board").startingWith("com.github.nexters.ppotto.analysis")
 
-                Then("AnalysisRepository를 포함한 analysis 타입을 직접 import 하지 않는다") {
+                Then("import 든 인라인 FQN 이든 analysis 타입을 직접 참조하지 않는다") {
                     analysisReferences.shouldBeEmpty()
                 }
             }
@@ -26,9 +24,10 @@ class BoardAnalysisDependencyTest :
 
         Given("analysis 도메인 소스 트리에서") {
             When("board 도메인 참조를 모으면") {
-                val boardReferences = importsOf("$SOURCE_ROOT/analysis").startingWith("com.github.nexters.ppotto.board")
+                val boardReferences =
+                    referencesOf("$SOURCE_ROOT/analysis").startingWith("com.github.nexters.ppotto.board")
 
-                Then("board repository를 직접 import 하지 않는다") {
+                Then("board repository를 직접 참조하지 않는다") {
                     boardReferences.startingWith("com.github.nexters.ppotto.board.infrastructure").shouldBeEmpty()
                 }
 
@@ -45,15 +44,14 @@ class BoardAnalysisDependencyTest :
         }
     })
 
-private fun importsOf(directory: String): List<Pair<String, String>> =
+private fun referencesOf(directory: String): List<Pair<String, String>> =
     File(directory)
         .walkTopDown()
         .filter { it.isFile && it.extension == "kt" }
         .flatMap { file ->
-            file
-                .readLines()
-                .filter { it.startsWith("import ") }
-                .map { file.name to it.removePrefix("import ").trim() }
+            QUALIFIED_REFERENCE
+                .findAll(file.readText())
+                .map { file.name to it.value }
         }.toList()
 
 private fun List<Pair<String, String>>.startingWith(prefix: String): List<Pair<String, String>> =

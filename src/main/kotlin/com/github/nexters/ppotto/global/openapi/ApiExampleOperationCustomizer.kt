@@ -14,20 +14,19 @@ class ApiExampleOperationCustomizer(
     override fun customize(
         operation: Operation,
         handlerMethod: HandlerMethod,
-    ): Operation =
-        operation.also { customized ->
-            registry.find(handlerMethod)?.let { operationExamples ->
-                customized.requestBody
-                    ?.content
-                    .inject(operationExamples.request)
-                operationExamples.responses.forEach { (responseCode, examples) ->
-                    customized.responses
-                        ?.get(responseCode)
-                        ?.content
-                        .inject(examples)
-                }
-            }
+    ): Operation {
+        val operationExamples = registry.find(handlerMethod) ?: return operation
+        operation.requestBody
+            ?.content
+            .inject(operationExamples.request)
+        operationExamples.responses.forEach { (responseCode, examples) ->
+            operation.responses
+                ?.get(responseCode)
+                ?.content
+                .inject(examples)
         }
+        return operation
+    }
 
     private fun Content?.inject(examples: List<ApiExample>) {
         this?.values?.forEach { mediaType ->

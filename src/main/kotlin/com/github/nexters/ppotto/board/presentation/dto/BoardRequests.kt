@@ -2,20 +2,23 @@ package com.github.nexters.ppotto.board.presentation.dto
 
 import com.github.nexters.ppotto.board.domain.Board
 import io.swagger.v3.oas.annotations.media.Schema
-import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+
+const val BOARD_NAME_PATTERN = "(?s).*\\S.*"
 
 @Schema(description = "보드 생성 요청")
 data class CreateBoardRequest(
     @field:Size(min = 1, max = Board.MAX_NAME_LENGTH)
-    @field:Schema(description = "보드 이름. 생략하면 기본 이름을 생성함", example = "여름 휴가")
+    @field:Pattern(regexp = BOARD_NAME_PATTERN)
+    @field:Schema(description = "보드 이름. 공백만으로는 만들 수 없고 최대 10자. 생략하면 기본 이름을 생성함", example = "여름 휴가")
     val name: String? = null,
 )
 
 @Schema(description = "보드 이름 변경 요청")
 data class RenameBoardRequest(
-    @field:NotBlank
-    @field:Size(max = Board.MAX_NAME_LENGTH)
-    @field:Schema(description = "새 보드 이름. 최대 10자", example = "뽀또의 보드")
+    @field:Size(min = 1, max = Board.MAX_NAME_LENGTH)
+    @field:Pattern(regexp = BOARD_NAME_PATTERN)
+    @field:Schema(description = "새 보드 이름. 공백만으로는 바꿀 수 없고 최대 10자", example = "뽀또의 보드")
     val name: String,
 )

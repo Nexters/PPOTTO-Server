@@ -1,9 +1,9 @@
 package com.github.nexters.ppotto.board.presentation.dto
 
 import com.github.nexters.ppotto.board.application.BoardDetail
-import com.github.nexters.ppotto.board.application.DrawingCreateCommand
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -123,15 +123,15 @@ class BoardDetailResponseTest :
                     strokeWidth = 4.0,
                 )
 
-            When("커맨드로 변환되면") {
-                val command = request.toCommand().shouldBeInstanceOf<DrawingCreateCommand.Stroke>()
+            When("도메인 모델로 변환되면") {
+                val drawing = request.toDomain(BOARD_ID).shouldBeInstanceOf<NewDrawing.Stroke>()
 
                 Then("zIndex 는 정식 필드로 옮겨진다") {
-                    command.zIndex shouldBe 6
+                    drawing.zIndex shouldBe 6
                 }
 
                 Then("stroke JSON 에는 zIndex 가 남지 않는다") {
-                    command.stroke shouldBe mapOf("points" to listOf(listOf(1.0, 2.0)))
+                    drawing.stroke shouldBe mapOf("points" to listOf(listOf(1.0, 2.0)))
                 }
             }
         }

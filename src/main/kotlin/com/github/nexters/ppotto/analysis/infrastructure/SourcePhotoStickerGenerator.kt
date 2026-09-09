@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
+import com.github.nexters.ppotto.analysis.domain.SourcePhotoImageReader
+import com.github.nexters.ppotto.analysis.domain.StickerBackgroundRemover
 import com.github.nexters.ppotto.analysis.domain.StickerGenerator
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -11,16 +13,16 @@ class SourcePhotoStickerGenerator(
     private val stickerImageCropper: StickerImageCropper,
 ) : StickerGenerator {
     override fun generate(
-        sourceGcsUri: String,
+        sourceUri: String,
         sourceMimeType: String,
         targetSubject: String,
     ): ByteArray {
-        val sourceBytes = sourcePhotoImageReader.read(sourceGcsUri)
+        val sourceBytes = sourcePhotoImageReader.read(sourceUri)
         val removedBackgroundBytes = stickerBackgroundRemover.removeBackground(sourceBytes, sourceMimeType)
         val stickerBytes = stickerImageCropper.cropTransparentPadding(removedBackgroundBytes)
         log.info(
-            "source photo sticker generated: sourceGcsUri={}, sourceMimeType={}, targetSubject={}, sourceBytes={}, stickerBytes={}",
-            sourceGcsUri,
+            "source photo sticker generated: sourceUri={}, sourceMimeType={}, targetSubject={}, sourceBytes={}, stickerBytes={}",
+            sourceUri,
             sourceMimeType,
             targetSubject,
             sourceBytes.size,

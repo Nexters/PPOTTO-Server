@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.global.observability
 
 import com.google.genai.types.Content
+import com.google.genai.types.FileData
 import com.google.genai.types.GenerateContentConfig
 import com.google.genai.types.Part
 import kotlin.jvm.optionals.getOrNull
@@ -13,11 +14,12 @@ fun LlmSpanHandle.recordRequest(
         ?.systemInstruction()
         ?.getOrNull()
         ?.let(::systemInstructionText)
-        ?.takeIf { it.isNotBlank() }
+        ?.takeIf(String::isNotBlank)
         ?.let(::setSystemInstructions)
+
     content
         .toLlmMessage(LlmRole.USER)
-        ?.let { setInputMessages(listOf(it)) }
+        ?.let { message -> setInputMessages(listOf(message)) }
 }
 
 internal fun Content.toLlmMessage(defaultRole: LlmRole): LlmMessage? =
@@ -38,28 +40,22 @@ private fun Content.resolveRole(defaultRole: LlmRole): LlmRole =
             }
         } ?: defaultRole
 
-private fun Part.toLlmMessagePart(): LlmMessagePart? =
-    text()
-        .getOrNull()
-        ?.takeIf(String::isNotBlank)
-        ?.let(LlmMessagePart::Text)
-        ?: fileData()
-            .getOrNull()
-            ?.let { fileData ->
-                fileData
-                    .fileUri()
-                    .getOrNull()
-                    ?.let { uri ->
-                        LlmMessagePart.Uri(
-                            uri = uri,
-                            mimeType =
-                                fileData
-                                    .mimeType()
-                                    .getOrNull()
-                                    .orEmpty(),
-                        )
-                    }
-            }
+private fun Part.toLlmMessagePart(): LlmMessagePart? {
+    val text = text().getOrNull()
+    if (!text.isNullOrBlank()) return LlmMessagePart.Text(text)
+    return fileData().getOrNull()?.toUriPart()
+}
+
+private fun FileData.toUriPart(): LlmMessagePart.Uri? {
+    val uri = fileUri().getOrNull() ?: return null
+    return LlmMessagePart.Uri(
+        uri = uri,
+        mimeType =
+            mimeType()
+                .getOrNull()
+                .orEmpty(),
+    )
+}
 
 private fun systemInstructionText(instruction: Content): String =
     instruction

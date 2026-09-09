@@ -4,8 +4,6 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.global.identifier.AnalysisId
-import com.github.nexters.ppotto.global.identifier.BoardId
-import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.notification.domain.PushNotificationRequestedEvent
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
@@ -17,10 +15,12 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
-import java.util.UUID
 
 @Component
 class AnalysisPipelineEventListener(
@@ -28,138 +28,112 @@ class AnalysisPipelineEventListener(
     private val analysisRepository: AnalysisRepository,
     private val analysisResultSaveService: AnalysisResultSaveService,
     private val eventPublisher: ApplicationEventPublisher,
+    private val transactionTemplate: TransactionTemplate,
+    transactionManager: PlatformTransactionManager,
 ) {
+    private val stepTimer = PipelineStepTimer()
+
+    private val progressTransactionTemplate =
+        TransactionTemplate(transactionManager).apply {
+            propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
+        }
+
     @Async(AsyncConfig.ANALYSIS_PIPELINE_TASK_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handle(event: AnalysisStartRequestedEvent) {
         val startedAt = System.nanoTime()
-        log.info("analysis pipeline listener started: analysisId={}, photoCount={}", event.analysisId, event.photos.size)
+        val analysisId = event.analysisId
+        var failedStep: String? = null
+        val recordFailedStep: (String) -> Unit = { step -> failedStep = failedStep ?: step }
+
+        log.info("analysis pipeline listener started: analysisId={}, photoCount={}", analysisId, event.photos.size)
         runCatching {
             val pipelineResult =
-                measuredStep(event.analysisId, "pipeline-run") {
-                    analysisPipelineService.run(event.analysisId, event.photos) { progress ->
-                        updateProgressBestEffort(event.analysisId, progress)
-                    }
-                }
-
-            log.info("analysis pipeline result for analysisId={}: {}", event.analysisId, pipelineResult)
-
-            val analysis =
-                measuredStep(event.analysisId, "analysis-load") {
-                    analysisRepository.findById(event.analysisId)
-                        ?: error("분석을 찾을 수 없습니다: ${event.analysisId}")
-                }
-
-            val stickers =
-                measuredStep(event.analysisId, "sticker-result-mapping") {
-                    pipelineResult.toStickerResults(event.analysisId)
-                }
-
-            if (stickers.isNotEmpty()) {
-                measuredStep(event.analysisId, "analysis-result-save") {
-                    analysisResultSaveService.save(
-                        SaveAnalysisResultCommand(
-                            userId = UserId(analysis.userId),
-                            analysisId = AnalysisId(event.analysisId),
-                            boardId = BoardId(analysis.boardId),
-                            stickers = stickers,
-                        ),
+                stepTimer.measuredStep(analysisId, "pipeline-run", recordFailedStep) {
+                    analysisPipelineService.run(
+                        analysisId = analysisId,
+                        photos = event.photos,
+                        onProgress = { progress -> updateProgressBestEffort(analysisId, progress) },
+                        onStepFailed = recordFailedStep,
                     )
                 }
-            } else {
-                log.warn("analysis pipeline produced no savable stickers: analysisId={}", event.analysisId)
+            log.info("analysis pipeline result for analysisId={}: {}", analysisId, pipelineResult)
+
+            val analysis =
+                stepTimer.measuredStep(analysisId, "analysis-load", recordFailedStep) {
+                    analysisRepository.findById(analysisId) ?: error("분석을 찾을 수 없습니다: $analysisId")
+                }
+            val stickers = pipelineResult.toStickerResults(analysisId)
+            if (stickers.isEmpty()) {
+                log.warn("analysis pipeline produced no savable stickers: analysisId={}", analysisId)
             }
 
-            measuredStep(event.analysisId, "analysis-mark-completed") {
-                analysisRepository.markCompleted(event.analysisId, Instant.now())
+            stepTimer.measuredStep(analysisId, "analysis-result-save", recordFailedStep) {
+                transactionTemplate.executeWithoutResult {
+                    if (stickers.isNotEmpty()) {
+                        analysisResultSaveService.save(
+                            SaveAnalysisResultCommand(
+                                userId = analysis.userId,
+                                analysisId = analysisId,
+                                boardId = analysis.boardId,
+                                stickers = stickers,
+                            ),
+                        )
+                    }
+                    analysisRepository.markCompleted(analysisId, Instant.now())
+                }
             }
-            notifyCompletionBestEffort(analysis.userId, event.analysisId)
+            notifyBestEffort(analysis.userId, analysisId, NOTIFICATION_COMPLETED)
         }.onSuccess {
-            log.info("analysis pipeline listener completed: analysisId={}, elapsedMs={}", event.analysisId, elapsedMs(startedAt))
-        }.onFailure {
-            val step = (it as? AnalysisPipelineStepException)?.step ?: "unknown"
+            log.info("analysis pipeline listener completed: analysisId={}, elapsedMs={}", analysisId, elapsedMs(startedAt))
+        }.onFailure { failure ->
+            val step = failedStep ?: UNKNOWN_STEP
             log.error(
                 "analysis pipeline listener failed: analysisId={}, step={}, elapsedMs={}",
-                event.analysisId,
+                analysisId,
                 step,
                 elapsedMs(startedAt),
-                it,
+                failure,
             )
-            val errorMessage = "[$step] ${it.message ?: it::class.simpleName ?: "알 수 없는 오류"}"
-            analysisRepository.markFailed(event.analysisId, errorMessage)
-            notifyFailureBestEffort(event.analysisId)
+            analysisRepository.markFailed(analysisId, "[$step] ${failure.message ?: failure::class.simpleName ?: UNKNOWN_REASON}")
+            notifyFailureBestEffort(analysisId)
         }
     }
 
-    private fun notifyCompletionBestEffort(
-        userId: UUID,
-        analysisId: UUID,
+    private fun notifyFailureBestEffort(analysisId: AnalysisId) {
+        val userId = analysisRepository.findById(analysisId)?.userId
+        if (userId == null) {
+            log.warn("push notification publish skipped: analysisId={}, error={}", analysisId, "분석을 찾을 수 없습니다.")
+            return
+        }
+        notifyBestEffort(userId, analysisId, NOTIFICATION_FAILED)
+    }
+
+    private fun notifyBestEffort(
+        userId: UserId,
+        analysisId: AnalysisId,
+        notification: PipelineNotification,
     ) {
         runCatching {
             eventPublisher.publishEvent(
                 PushNotificationRequestedEvent(
-                    userId = UserId(userId),
-                    title = NOTIFICATION_COMPLETED_TITLE,
-                    body = NOTIFICATION_COMPLETED_BODY,
-                    data = mapOf("analysisId" to analysisId.toString(), "type" to "ANALYSIS_COMPLETED"),
+                    userId = userId,
+                    title = notification.title,
+                    body = notification.body,
+                    data = mapOf("analysisId" to analysisId.toString(), "type" to notification.type),
                 ),
             )
         }.onFailure {
             log.warn("push notification publish skipped: analysisId={}, error={}", analysisId, it.message ?: it::class.simpleName)
         }
-    }
-
-    private fun notifyFailureBestEffort(analysisId: UUID) {
-        runCatching {
-            val userId = analysisRepository.findById(analysisId)?.userId ?: error("분석을 찾을 수 없습니다: $analysisId")
-            eventPublisher.publishEvent(
-                PushNotificationRequestedEvent(
-                    userId = UserId(userId),
-                    title = NOTIFICATION_FAILED_TITLE,
-                    body = NOTIFICATION_FAILED_BODY,
-                    data = mapOf("analysisId" to analysisId.toString(), "type" to "ANALYSIS_FAILED"),
-                ),
-            )
-        }.onFailure {
-            log.warn("push notification publish skipped: analysisId={}, error={}", analysisId, it.message ?: it::class.simpleName)
-        }
-    }
-
-    private fun <T> measuredStep(
-        analysisId: UUID,
-        step: String,
-        block: () -> T,
-    ): T {
-        val startedAt = System.nanoTime()
-        log.info("analysis pipeline listener step started: analysisId={}, step={}", analysisId, step)
-        return runCatching(block)
-            .onSuccess {
-                log.info(
-                    "analysis pipeline listener step completed: analysisId={}, step={}, elapsedMs={}",
-                    analysisId,
-                    step,
-                    elapsedMs(startedAt),
-                )
-            }.onFailure {
-                log.error(
-                    "analysis pipeline listener step failed: analysisId={}, step={}, elapsedMs={}",
-                    analysisId,
-                    step,
-                    elapsedMs(startedAt),
-                    it,
-                )
-            }.getOrElse {
-                if (it is AnalysisPipelineStepException) throw it
-                throw AnalysisPipelineStepException(step, it)
-            }
     }
 
     private fun updateProgressBestEffort(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         progress: Int,
     ) {
         runCatching {
-            analysisRepository.updateProgress(analysisId, progress)
+            progressTransactionTemplate.executeWithoutResult { analysisRepository.updateProgress(analysisId, progress) }
         }.onFailure {
             log.warn(
                 "analysis progress update skipped: analysisId={}, progress={}, error={}",
@@ -170,12 +144,10 @@ class AnalysisPipelineEventListener(
         }
     }
 
-    private fun AnalysisPipelineResult.toStickerResults(analysisId: UUID): List<AnalysisStickerResult> =
-        themes
-            .map { theme -> theme.toStickerResult(analysisId) }
-            .filterNotNull()
+    private fun AnalysisPipelineResult.toStickerResults(analysisId: AnalysisId): List<AnalysisStickerResult> =
+        themes.mapNotNull { theme -> theme.toStickerResult(analysisId) }
 
-    private fun ThemeAnalysisResult.toStickerResult(analysisId: UUID): AnalysisStickerResult? {
+    private fun ThemeAnalysisResult.toStickerResult(analysisId: AnalysisId): AnalysisStickerResult? {
         val imageKey = stickerImageKey
         if (imageKey == null) {
             log.warn("스티커 생성 실패: analysisId={}, theme={}", analysisId, theme)
@@ -186,23 +158,31 @@ class AnalysisPipelineEventListener(
             type = StickerType.IMAGE,
             title = badge,
             summary = text,
-            sourcePhotoId = PhotoId(stickerSourcePhotoId),
+            sourcePhotoId = stickerSourcePhotoId,
             imageKey = imageKey,
             textContent = null,
             mainColor = stickerMainColor,
-            photoIds = categorizedPhotoIds.map(::PhotoId),
+            photoIds = categorizedPhotoIds,
             comments = comments.map { RecapCommentCreation(content = it.content, posX = it.posX, posY = it.posY) },
         )
     }
 
+    private data class PipelineNotification(
+        val title: String,
+        val body: String,
+        val type: String,
+    )
+
     companion object {
-        private const val NOTIFICATION_COMPLETED_TITLE = "스티커 생성 완료"
-        private const val NOTIFICATION_COMPLETED_BODY = "요청하신 스티커가 모두 준비됐어요"
-        private const val NOTIFICATION_FAILED_TITLE = "스티커 생성 실패"
-        private const val NOTIFICATION_FAILED_BODY = "스티커 생성에 실패했어요. 다시 시도해주세요"
+        private const val UNKNOWN_STEP = "unknown"
+        private const val UNKNOWN_REASON = "알 수 없는 오류"
+
+        private val NOTIFICATION_COMPLETED =
+            PipelineNotification("스티커 생성 완료", "요청하신 스티커가 모두 준비됐어요", "ANALYSIS_COMPLETED")
+
+        private val NOTIFICATION_FAILED =
+            PipelineNotification("스티커 생성 실패", "스티커 생성에 실패했어요. 다시 시도해주세요", "ANALYSIS_FAILED")
 
         private val log = LoggerFactory.getLogger(AnalysisPipelineEventListener::class.java)
-
-        private fun elapsedMs(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
     }
 }

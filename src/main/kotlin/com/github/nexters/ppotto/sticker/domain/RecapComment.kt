@@ -21,10 +21,12 @@ data class RecapCommentCreation(
     val posY: Double?,
 ) {
     init {
-        content
-            .takeUnless(String::isBlank)
-            ?.takeIf { (posX == null) == (posY == null) }
-            ?: throw InvalidInputException()
+        if (content.isBlank()) {
+            throw InvalidInputException()
+        }
+        if ((posX == null) != (posY == null)) {
+            throw InvalidInputException()
+        }
     }
 }
 

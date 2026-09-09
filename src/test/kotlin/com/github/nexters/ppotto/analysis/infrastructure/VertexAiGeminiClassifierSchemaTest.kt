@@ -1,10 +1,13 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
+import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
 import com.github.nexters.ppotto.global.error.BusinessException
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.google.genai.types.Schema
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -14,9 +17,9 @@ import java.util.UUID
 
 class VertexAiGeminiClassifierSchemaTest :
     BehaviorSpec({
-        val photo1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
-        val photo2 = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
-        val photo3 = UUID.fromString("550e8400-e29b-41d4-a716-446655440003")
+        val photo1 = PhotoId(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+        val photo2 = PhotoId(UUID.fromString("550e8400-e29b-41d4-a716-446655440002"))
+        val photo3 = PhotoId(UUID.fromString("550e8400-e29b-41d4-a716-446655440003"))
         val photos =
             listOf(
                 PhotoRef(photo1, "gs://bucket/1.jpg", "image/jpeg"),
@@ -27,7 +30,7 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 분류 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.classificationResponseSchema().containsEnum() shouldBe false
+                    VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
             }
         }
@@ -35,12 +38,11 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 스티커 재생성 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.stickerResponseSchema().containsEnum() shouldBe false
+                    VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
 
                 Then("sourcePhotoId를 targetSubject보다 먼저 생성하도록 순서를 강제한다") {
-                    VertexAiGeminiSchemas
-                        .stickerResponseSchema()
+                    VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA
                         .propertyOrdering()
                         .get() shouldContainExactly listOf("sourcePhotoId", "targetSubject", "mainColor")
                 }
@@ -50,7 +52,7 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 스티커 대상 재확인 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.verificationResponseSchema().containsEnum() shouldBe false
+                    VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
             }
         }
@@ -195,6 +197,111 @@ class VertexAiGeminiClassifierSchemaTest :
                         .map { it.content } shouldContainExactly listOf("미식", "여행", "일상")
                 }
             }
+
+            When("mainColor가 hex 형식이 아니면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(
+                            themeResponse(
+                                categorizedPhotoIds = listOf("P001"),
+                                sourcePhotoId = "P001",
+                                mainColor = "코랄색",
+                            ),
+                        ),
+                        aliases,
+                    )
+
+                Then("분류를 실패시키지 않고 기본 색상으로 낮춘다") {
+                    classifications.single().stickerMainColor shouldBe "#222222"
+                }
+            }
+
+            When("mainColor가 아예 없으면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(
+                            themeResponse(
+                                categorizedPhotoIds = listOf("P001"),
+                                sourcePhotoId = "P001",
+                                mainColor = null,
+                            ),
+                        ),
+                        aliases,
+                    )
+
+                Then("분류를 실패시키지 않고 기본 색상으로 낮춘다") {
+                    classifications.single().stickerMainColor shouldBe "#222222"
+                }
+            }
+
+            When("speechBubble의 좌표나 내용이 반쪽이면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(
+                            themeResponse(
+                                categorizedPhotoIds = listOf("P001"),
+                                sourcePhotoId = "P001",
+                                speechBubbles =
+                                    listOf(
+                                        GeminiSpeechBubbleResponse(content = "정상 말풍선", posX = -96.0, posY = -150.0),
+                                        GeminiSpeechBubbleResponse(content = "좌표 없음", posX = null, posY = -150.0),
+                                        GeminiSpeechBubbleResponse(content = "  ", posX = -10.0, posY = -20.0),
+                                    ),
+                                keywordChips = listOf("여행", "   "),
+                            ),
+                        ),
+                        aliases,
+                    )
+
+                Then("분류를 실패시키지 않고 망가진 항목만 버린다") {
+                    classifications
+                        .single()
+                        .comments
+                        .map { it.content to (it.posX to it.posY) } shouldContainExactly
+                        listOf(
+                            "정상 말풍선" to (-96.0 to -150.0),
+                            "여행" to (null to null),
+                        )
+                }
+            }
+
+            When("comments 자체가 없으면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(
+                            themeResponse(
+                                categorizedPhotoIds = listOf("P001"),
+                                sourcePhotoId = "P001",
+                                comments = null,
+                            ),
+                        ),
+                        aliases,
+                    )
+
+                Then("코멘트 없이 분류를 유지한다") {
+                    classifications
+                        .single()
+                        .comments
+                        .shouldBeEmpty()
+                }
+            }
+
+            When("alias를 못 찾아 테마가 전부 탈락한 결과를 classifyAndRecap과 같은 순서로 검증하면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(themeResponse(categorizedPhotoIds = listOf("PX98"), sourcePhotoId = "PX99")),
+                        aliases,
+                    )
+                val exception =
+                    shouldThrow<BusinessException> {
+                        ThemeClassificationValidator.validate(classifications, photos.map { it.photoId }.toSet())
+                    }
+
+                Then("검증을 건너뛰지 않고 ANALYSIS-007로 분석을 실패시킨다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
+                    exception.message shouldContain "테마 개수는 1 개 이상"
+                }
+            }
         }
 
         Given("Gemini 스티커 재생성 응답이 alias를 사용할 때") {
@@ -233,7 +340,8 @@ class VertexAiGeminiClassifierSchemaTest :
                         )
                     }
 
-                Then("명확한 Gemini 응답 오류를 반환한다") {
+                Then("ANALYSIS-007로 어떤 alias가 문제인지 알려준다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "입력 사진 alias 목록에 없습니다"
                 }
             }
@@ -318,6 +426,9 @@ private fun themeResponse(
     categorizedPhotoIds: List<String>,
     sourcePhotoId: String,
     keywordChips: List<String> = emptyList(),
+    speechBubbles: List<GeminiSpeechBubbleResponse> = emptyList(),
+    mainColor: String? = "#FF6B6B",
+    comments: GeminiCommentsResponse? = GeminiCommentsResponse(speechBubbles, keywordChips),
 ) = GeminiThemeResponse(
     theme = theme,
     categorizedPhotoIds = categorizedPhotoIds,
@@ -326,7 +437,7 @@ private fun themeResponse(
         GeminiStickerResponse(
             targetSubject = "피사체",
             sourcePhotoId = sourcePhotoId,
-            mainColor = "#FF6B6B",
+            mainColor = mainColor,
         ),
-    comments = GeminiCommentsResponse(speechBubbles = emptyList(), keywordChips = keywordChips),
+    comments = comments,
 )

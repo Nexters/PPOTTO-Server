@@ -93,14 +93,10 @@ class StickerCommandRepository(
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
-    fun hardDeleteByIds(stickerIds: Collection<StickerId>): Int =
-        stickerIds
-            .toSet()
-            .takeIf { it.isNotEmpty() }
-            ?.let { uniqueIds ->
-                dslContext
-                    .deleteFrom(STICKERS)
-                    .where(STICKERS.ID.`in`(uniqueIds))
-                    .execute()
-            } ?: 0
+    fun hardDeleteByIds(stickerIds: Collection<StickerId>) {
+        dslContext
+            .deleteFrom(STICKERS)
+            .where(STICKERS.ID.`in`(stickerIds.toSet()))
+            .execute()
+    }
 }

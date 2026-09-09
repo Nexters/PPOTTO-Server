@@ -28,7 +28,6 @@ class BoardQueryServiceTest(
     stickerPort: FakeBoardStickerPort,
 ) : IntegrationTest({
         Given("스티커와 드로잉이 있는 보드를 소유한 사용자가") {
-            stickerPort.reset()
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id, "여름 휴가")
             val sticker = boardStickerItem()

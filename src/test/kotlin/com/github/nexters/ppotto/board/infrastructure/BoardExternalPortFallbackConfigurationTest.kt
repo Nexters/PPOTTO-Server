@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.board.infrastructure
 
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -10,6 +11,20 @@ import java.util.UUID
 class BoardExternalPortFallbackConfigurationTest :
     BehaviorSpec({
         val configuration = BoardExternalPortFallbackConfiguration()
+
+        Given("분석 활성 여부 adapter가 없는 standalone 구성에서") {
+            val analysisActivityPort = configuration.boardAnalysisActivityPort()
+
+            When("보드 삭제 전 활성 분석을 확인해도") {
+                Then("연동 누락 오류를 던진다") {
+                    val exception =
+                        shouldThrow<IllegalStateException> {
+                            analysisActivityPort.hasActiveAnalysis(BoardId(UUID.randomUUID()), UserId(UUID.randomUUID()))
+                        }
+                    exception.message shouldBe "AnalysisQueryService 연동이 필요합니다."
+                }
+            }
+        }
 
         Given("스티커 조회 adapter가 없는 standalone 구성에서") {
             val queryPort = configuration.boardStickerQueryPort()
@@ -33,7 +48,7 @@ class BoardExternalPortFallbackConfigurationTest :
                 Then("연동 누락 오류를 던진다") {
                     val exception =
                         shouldThrow<IllegalStateException> {
-                            commandPort.validateOwnedByBoard(boardId, emptySet())
+                            commandPort.ownsAll(boardId, emptySet())
                         }
                     exception.message shouldBe "StickerCommandService 연동이 필요합니다."
                 }

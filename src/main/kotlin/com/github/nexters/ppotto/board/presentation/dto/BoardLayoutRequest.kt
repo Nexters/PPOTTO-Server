@@ -1,11 +1,11 @@
 package com.github.nexters.ppotto.board.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.github.nexters.ppotto.board.application.BoardLayoutService
 import com.github.nexters.ppotto.board.application.BoardLayoutUpdateCommand
-import com.github.nexters.ppotto.board.application.DrawingCreateCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.board.domain.NewDrawing
+import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import io.swagger.v3.oas.annotations.media.Schema
@@ -17,21 +17,22 @@ import jakarta.validation.constraints.Size
 
 @Schema(description = "보드 편집 결과 일괄 저장 요청. 편집 모드에서 바뀐 것만 보냄")
 data class BoardLayoutRequest(
+    @field:Valid
     @field:Schema(description = "변경된 스티커 배치")
-    val stickers: List<@Valid StickerLayoutRequest>? = null,
+    val stickers: List<StickerLayoutRequest>? = null,
 
     @field:Valid
     @field:Schema(description = "그림 생성과 삭제 변경분")
     val drawings: DrawingChangesRequest? = null,
 ) {
-    fun toCommand(): BoardLayoutUpdateCommand =
+    fun toCommand(boardId: BoardId): BoardLayoutUpdateCommand =
         BoardLayoutUpdateCommand(
             stickers = stickers.orEmpty().map(StickerLayoutRequest::toCommand),
             createdDrawings =
                 drawings
                     ?.created
                     .orEmpty()
-                    .map(DrawingCreateRequest::toCommand),
+                    .map { it.toDomain(boardId) },
             deletedDrawingIds = drawings?.deletedIds.orEmpty(),
         )
 }
@@ -42,7 +43,7 @@ data class StickerLayoutRequest(
     @get:JsonProperty("id")
     val id: StickerId,
 
-    @field:Size(min = 1, max = BoardLayoutService.MAX_STICKER_TITLE_LENGTH)
+    @field:Size(min = 1, max = BoardStickerLayoutCommand.MAX_TITLE_LENGTH)
     @field:Schema(description = "텍스트 모드에서 제목을 바꿨을 때만 보냄. 최대 15자", example = "고양이 모음집")
     val title: String? = null,
 
@@ -88,8 +89,9 @@ data class StickerLayoutRequest(
 
 @Schema(description = "그림 생성과 삭제 변경분")
 data class DrawingChangesRequest(
+    @field:Valid
     @field:Schema(description = "새로 그린 선. 클라이언트가 만든 id로 upsert하므로 재시도해도 멱등")
-    val created: List<@Valid DrawingCreateRequest>? = null,
+    val created: List<DrawingCreateRequest>? = null,
 
     @field:Schema(
         description = "삭제할 그림 ID 목록",
@@ -129,11 +131,12 @@ data class DrawingCreateRequest(
     @field:Schema(description = "선 굵기", example = "4")
     val strokeWidth: Double,
 ) {
-    fun toCommand(): DrawingCreateCommand =
-        DrawingCreateCommand.Stroke(
+    fun toDomain(boardId: BoardId): NewDrawing =
+        NewDrawing.Stroke(
             id = id,
-            scope = scope,
+            boardId = boardId,
             stickerId = stickerId,
+            scope = scope,
             color = color,
             zIndex = stroke.legacyZIndex(),
             stroke = stroke.withoutLegacyZIndex(),

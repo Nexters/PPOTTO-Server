@@ -1,5 +1,8 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.storage.ObjectKeyGenerator
 import java.util.UUID
 
@@ -8,14 +11,14 @@ object StickerObjectKeys {
     private val objectKeyGenerator = ObjectKeyGenerator()
 
     fun keyFor(
-        analysisId: UUID,
+        analysisId: AnalysisId,
         themeIndex: Int,
-        sourcePhotoId: UUID,
+        sourcePhotoId: PhotoId,
     ): String = "${objectKeyGenerator.prefix(NAMESPACE, analysisId.toString())}$themeIndex-$sourcePhotoId.png"
 
     fun keyForRegeneration(
-        stickerId: UUID,
-        sourcePhotoId: UUID,
+        stickerId: StickerId,
+        sourcePhotoId: PhotoId,
         regenerationId: UUID,
     ): String = "${objectKeyGenerator.prefix(NAMESPACE, stickerId.toString())}$sourcePhotoId-$regenerationId.png"
 }

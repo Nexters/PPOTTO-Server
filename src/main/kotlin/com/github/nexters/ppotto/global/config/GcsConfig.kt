@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.io.FileInputStream
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class GcsConfig {
     @Bean
     fun storage(gcsProperties: GcsProperties): Storage =

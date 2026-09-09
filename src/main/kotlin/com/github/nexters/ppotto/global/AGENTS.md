@@ -9,11 +9,12 @@ Shared module used by all domains. Contains no business logic.
 | `config/` | Spring configuration beans (see `config/AGENTS.md`) |
 | `error/` | Error codes, exceptions, global handler (see `error/AGENTS.md`) |
 | `identifier/` | `@JvmInline` typed UUID identifiers shared across domains (see `identifier/AGENTS.md`) |
-| `jooq/` | Custom jOOQ converters used by codegen `forcedType`: `OffsetDateTimeInstantConverter` plus one `UUID ↔ XxxId` converter per typed identifier, generating id columns as typed fields |
+| `jooq/` | Custom jOOQ converters used by codegen `forcedType`: `OffsetDateTimeInstantConverter` plus one `UUID ↔ XxxId` converter per typed identifier, generating id columns as typed fields. Each id converter is a one-expression `Converter.ofNullable(...)` delegation; generated code instantiates it by FQN, so the class names are pinned by `buildSrc/src/main/kotlin/ppotto.database.gradle.kts` |
 | `logging/` | Request logging filter (see `logging/AGENTS.md`) |
 | `observability/` | Sentry beans the starter cannot infer (authenticated user context, `/actuator/**` traces sampler) plus the `gen_ai.*` LLM span wrapper for Vertex AI Gemini calls (see `observability/AGENTS.md`) |
+| `oauth/` | `OAuthProvider` — the closed social-login provider set (`KAKAO`, `APPLE`) shared by `auth` and `user` (see `oauth/AGENTS.md`) |
 | `openapi/` | Reusable Swagger error response annotations, the documentation-only failure envelope schema, and the type-safe example registry that injects real DTO instances into the OpenAPI document (see `openapi/AGENTS.md`) |
-| `response/` | Response envelope models (see `response/AGENTS.md`) |
+| `response/` | The `ApiResponse` response envelope (see `response/AGENTS.md`) |
 | `security/` | Required and optional authenticated-user MVC argument contracts (see `security/AGENTS.md`) |
 | `storage/` | `ObjectKeyGenerator`, `GcsReadUrlIssuer`, and `ObjectStorageCleaner` — domain-agnostic GCS object key/prefix building, read signed URL issuing, and object deletion shared across domains (see `storage/AGENTS.md`) |
 

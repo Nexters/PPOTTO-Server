@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.user.application.port
 
-import com.github.nexters.ppotto.user.domain.OAuthProvider
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 
 fun interface SocialAccountRevoker {
     fun revoke(

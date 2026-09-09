@@ -1,10 +1,10 @@
 package com.github.nexters.ppotto.global.config
 
 object PublicPaths {
-    private const val HEALTH_PATH = "/actuator/health"
+    private const val ACTUATOR_PATH_PREFIX = "/actuator"
+    private const val HEALTH_PATH = "$ACTUATOR_PATH_PREFIX/health"
     private const val TERMS_PATH = "/terms"
     private const val STICKER_DETAIL_PATTERN = "/stickers/*"
-    private val STICKER_DETAIL_REGEX = Regex("/stickers/[^/]+")
     private val PUBLIC_API_EXACT_PATHS = setOf("/auth/login", "/auth/login/web", "/auth/refresh")
     private val DOCUMENT_PATH_PREFIXES = setOf("/swagger-ui", "/v3/api-docs")
 
@@ -19,5 +19,5 @@ object PublicPaths {
 
     fun isDocument(path: String): Boolean = DOCUMENT_PATH_PREFIXES.any(path::startsWith)
 
-    fun isOptionalAuthGet(path: String): Boolean = path == TERMS_PATH || STICKER_DETAIL_REGEX.matches(path)
+    fun isActuator(path: String): Boolean = path.startsWith(ACTUATOR_PATH_PREFIX)
 }

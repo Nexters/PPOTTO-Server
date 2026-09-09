@@ -2,6 +2,9 @@ package com.github.nexters.ppotto.sticker.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.sticker.application.RecapCommentResult
+import com.github.nexters.ppotto.sticker.application.RecapGroupPhotoResult
+import com.github.nexters.ppotto.sticker.application.RecapPhotoResult
 import com.github.nexters.ppotto.sticker.application.StickerRecapResult
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
@@ -26,21 +29,8 @@ data class RecapDetailResponse(
             RecapDetailResponse(
                 sticker = StickerResponse.from(result.sticker),
                 summary = result.summary,
-                comments =
-                    result.comments.map {
-                        RecapCommentResponse(it.id, it.content, it.posX, it.posY)
-                    },
-                photos =
-                    result.photos.map {
-                        RecapPhotoResponse(
-                            id = it.id,
-                            imageUrl = it.imageUrl,
-                            takenAt = it.takenAt,
-                            isGroup = it.isGroup,
-                            groupId = it.groupId,
-                            groupPhotos = it.groupPhotos.map { photo -> RecapGroupPhotoResponse(photo.id, photo.imageUrl, photo.takenAt) },
-                        )
-                    },
+                comments = result.comments.map(RecapCommentResponse::from),
+                photos = result.photos.map(RecapPhotoResponse::from),
             )
     }
 }
@@ -58,7 +48,17 @@ data class RecapCommentResponse(
 
     @field:Schema(description = "스티커 기준 상대 좌표 Y. posX와 항상 함께 null이거나 함께 채워진다", example = "-140")
     val posY: Double?,
-)
+) {
+    companion object {
+        fun from(result: RecapCommentResult) =
+            RecapCommentResponse(
+                id = result.id,
+                content = result.content,
+                posX = result.posX,
+                posY = result.posY,
+            )
+    }
+}
 
 @Schema(description = "분석 리캡 사진")
 data class RecapPhotoResponse(
@@ -83,7 +83,19 @@ data class RecapPhotoResponse(
 
     @field:Schema(description = "연사 그룹 내 나머지(비대표) 사진들. takenAt, id 오름차순. 그룹이 아니면 빈 배열")
     val groupPhotos: List<RecapGroupPhotoResponse>,
-)
+) {
+    companion object {
+        fun from(result: RecapPhotoResult) =
+            RecapPhotoResponse(
+                id = result.id,
+                imageUrl = result.imageUrl,
+                takenAt = result.takenAt,
+                isGroup = result.isGroup,
+                groupId = result.groupId,
+                groupPhotos = result.groupPhotos.map(RecapGroupPhotoResponse::from),
+            )
+    }
+}
 
 @Schema(description = "연사 그룹 내 나머지 사진")
 data class RecapGroupPhotoResponse(
@@ -99,4 +111,13 @@ data class RecapGroupPhotoResponse(
 
     @field:Schema(description = "촬영 시각", example = "2026-06-14T13:22:11+09:00")
     val takenAt: Instant,
-)
+) {
+    companion object {
+        fun from(result: RecapGroupPhotoResult) =
+            RecapGroupPhotoResponse(
+                id = result.id,
+                imageUrl = result.imageUrl,
+                takenAt = result.takenAt,
+            )
+    }
+}
