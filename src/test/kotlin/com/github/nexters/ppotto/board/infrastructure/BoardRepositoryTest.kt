@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.infrastructure
 
 import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -10,11 +11,13 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
+import javax.sql.DataSource
 
 class BoardRepositoryTest(
     boardRepository: BoardRepository,
     userRepository: UserRepository,
     transactionTemplate: TransactionTemplate,
+    dataSource: DataSource,
 ) : IntegrationTest({
         Given("저장된 보드가 있을 때") {
             val user = userRepository.saveTestUser()
@@ -60,11 +63,30 @@ class BoardRepositoryTest(
             }
 
             When("트랜잭션 안에서 잠금을 요청하면") {
-                Then("잠금을 잡고 정상 종료한다") {
-                    transactionTemplate.executeWithoutResult {
+                val takenInsideTransaction =
+                    transactionTemplate.execute {
                         boardRepository.lockCommandsByUserId(user.id)
+                        dataSource.tryCommandLock(user.id)
                     }
+
+                Then("잠금이 걸려 있는 동안 다른 커넥션은 같은 잠금을 잡지 못한다") {
+                    takenInsideTransaction shouldBe false
+                }
+
+                Then("트랜잭션이 끝나면 다른 커넥션이 같은 잠금을 잡을 수 있다") {
+                    dataSource.tryCommandLock(user.id) shouldBe true
                 }
             }
         }
     })
+
+private fun DataSource.tryCommandLock(userId: UserId): Boolean =
+    connection.use { connection ->
+        connection.prepareStatement("select pg_try_advisory_xact_lock(hashtextextended(?::text, 0))").use { statement ->
+            statement.setString(1, "board-user:$userId")
+            statement.executeQuery().use { resultSet ->
+                check(resultSet.next()) { "advisory 잠금 시도 결과가 비어 있습니다." }
+                resultSet.getBoolean(1)
+            }
+        }
+    }

@@ -5,32 +5,12 @@ import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.sentry.Sentry
-import io.sentry.SentryOptions
 import io.sentry.SpanStatus
-import io.sentry.protocol.SentryTransaction
-import java.util.concurrent.CopyOnWriteArrayList
 
 class LlmTracerTest :
     BehaviorSpec({
-        val captured = CopyOnWriteArrayList<SentryTransaction>()
-
-        beforeSpec {
-            Sentry.init { options ->
-                options.dsn = TEST_DSN
-                options.tracesSampleRate = 1.0
-                options.isEnableUncaughtExceptionHandler = false
-                options.isEnableBackpressureHandling = false
-                options.isEnableAutoSessionTracking = false
-                options.beforeSend = SentryOptions.BeforeSendCallback { _, _ -> null }
-                options.beforeSendTransaction =
-                    SentryOptions.BeforeSendTransactionCallback { transaction, _ ->
-                        captured.add(transaction)
-                        null
-                    }
-            }
-        }
-
-        afterSpec { Sentry.close() }
+        val sentry = withSentry()
+        val captured = sentry.transactions
 
         Given("부모 스팬이 없는 비동기 경로에서") {
             When("LLM 호출을 trace로 감싸면") {
@@ -155,16 +135,20 @@ class LlmTracerTest :
         Given("LLM 호출이 실패하면") {
             When("trace 블록에서 예외가 나면") {
                 captured.clear()
-
-                Then("예외를 스팬에 남기고 INTERNAL_ERROR로 종료한 뒤 다시 던진다") {
+                val thrown =
                     shouldThrow<IllegalStateException> {
                         LlmTracer.trace(LlmPipeline.STICKER_REGENERATION, MODEL) {
                             error("gemini 호출 실패")
                         }
                     }
 
-                    captured
-                        .single()
+                Then("호출자에게 예외를 그대로 다시 던진다") {
+                    thrown.message shouldBe "gemini 호출 실패"
+                }
+
+                Then("스팬을 INTERNAL_ERROR로 종료한다") {
+                    sentry
+                        .singleTransaction()
                         .contexts.trace
                         .shouldNotBeNull()
                         .status shouldBe SpanStatus.INTERNAL_ERROR
@@ -174,4 +158,3 @@ class LlmTracerTest :
     })
 
 private const val MODEL = "gemini-2.5-flash"
-private const val TEST_DSN = "https://public@localhost/1"

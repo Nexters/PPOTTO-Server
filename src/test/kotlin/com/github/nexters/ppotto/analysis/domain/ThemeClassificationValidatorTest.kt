@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.global.identifier.PhotoId
 import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import java.util.UUID
 
@@ -74,6 +75,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("테마 개수 하한 위반으로 실제 개수까지 알려준다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 개수는 1 개 이상 6 개 이하여야 합니다"
                     exception.message shouldContain "실제: 0개"
                 }
@@ -91,6 +93,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("테마 개수 상한 위반으로 실제 개수까지 알려준다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 개수는 1 개 이상 6 개 이하여야 합니다"
                     exception.message shouldContain "실제: 7개"
                 }
@@ -107,6 +110,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("몇 번째 테마의 어떤 필드가 비었는지 알려준다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 #1: theme이 비어있습니다"
                 }
             }
@@ -122,6 +126,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("몇 번째 테마의 어떤 필드가 비었는지 알려준다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 #1: recap.badge가 비어있습니다"
                 }
             }
@@ -137,6 +142,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("몇 번째 테마의 어떤 필드가 비었는지 알려준다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 #1: recap.text가 비어있습니다"
                 }
             }
@@ -152,6 +158,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("몇 번째 테마의 어떤 필드가 비었는지 알려준다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 #1: stickerTargetSubject가 비어있습니다"
                 }
             }
@@ -168,6 +175,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("사진이 하나도 없는 테마는 저장하지 않는다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 #1: categorizedPhotoIds가 비어있습니다"
                 }
             }
@@ -183,6 +191,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("테마 내 사진 중복을 중복 ID와 함께 거부한다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 #1: 같은 사진 ID가 여러 번 포함되었습니다"
                 }
             }
@@ -198,6 +207,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("요청하지 않은 사진 ID를 거부한다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 #1: 입력에 없는 사진 ID가 포함되었습니다"
                 }
             }
@@ -217,6 +227,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("사진 한 장은 테마 하나에만 속해야 한다는 규칙으로 거부한다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "여러 테마에 중복 분류"
                 }
             }
@@ -233,6 +244,7 @@ class ThemeClassificationValidatorTest :
                     }
 
                 Then("스티커 원본은 그 테마가 분류한 사진 중에서만 고를 수 있다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-007"
                     exception.message shouldContain "테마 #1: stickerSourcePhotoId"
                     exception.message shouldContain "categorizedPhotoIds에 없습니다"
                 }

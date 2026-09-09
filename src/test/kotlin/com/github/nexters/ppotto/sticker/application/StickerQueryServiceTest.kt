@@ -5,20 +5,22 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
-import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.imageStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Instant
 import java.util.UUID
 
@@ -26,6 +28,7 @@ class StickerQueryServiceTest(
     service: StickerQueryService,
     stickerRepository: StickerRepository,
     stickerRecapRepository: StickerRecapRepository,
+    stickerAccessService: StickerAccessService,
     photoRepository: PhotoRepository,
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
@@ -48,14 +51,11 @@ class StickerQueryServiceTest(
                 stickerRepository.save(
                     analysis.id,
                     board.id,
-                    StickerCreation(
-                        type = StickerType.IMAGE,
-                        title = "리캡",
-                        summary = "웃기고 귀여우면 일단 주워요",
+                    imageStickerCreation(
                         sourcePhotoId = photos.first().id,
                         imageKey = "stickers/recap.png",
-                        textContent = null,
-                        mainColor = "#FF6B6B",
+                        title = "리캡",
+                        summary = "웃기고 귀여우면 일단 주워요",
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
@@ -107,7 +107,8 @@ class StickerQueryServiceTest(
             }
 
             When("다른 사용자가 리캡 상세를 조회하면") {
-                val result = service.getRecap(UserId(UUID.randomUUID()), sticker.id)
+                val otherUser = userRepository.saveTestUser()
+                val result = service.getRecap(otherUser.id, sticker.id)
 
                 Then("같은 리캡 내용을 반환하되 isNew는 false다") {
                     result.sticker.id shouldBe sticker.id
@@ -124,6 +125,21 @@ class StickerQueryServiceTest(
                     result.sticker.id shouldBe sticker.id
                     result.sticker.isNew shouldBe false
                     result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
+                }
+            }
+
+            When("서명 시점의 트랜잭션 상태를 확인하면") {
+                val signingPort = TransactionObservingStickerImageStorage()
+                StickerQueryService(
+                    stickerRepository,
+                    stickerRecapRepository,
+                    stickerAccessService,
+                    emptyList(),
+                    listOf(signingPort),
+                ).getByBoardId(board.id)
+
+                Then("RSA 서명은 열린 트랜잭션 없이 실행된다") {
+                    signingPort.transactionActiveAtSigning shouldBe false
                 }
             }
 
@@ -167,14 +183,11 @@ class StickerQueryServiceTest(
                 stickerRepository.save(
                     analysis.id,
                     board.id,
-                    StickerCreation(
-                        type = StickerType.IMAGE,
-                        title = "리캡",
-                        summary = "웃기고 귀여우면 일단 주워요",
+                    imageStickerCreation(
                         sourcePhotoId = representativePhoto.id,
                         imageKey = "stickers/recap.png",
-                        textContent = null,
-                        mainColor = "#FF6B6B",
+                        title = "리캡",
+                        summary = "웃기고 귀여우면 일단 주워요",
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
@@ -211,14 +224,11 @@ class StickerQueryServiceTest(
                 stickerRepository.save(
                     analysis.id,
                     board.id,
-                    StickerCreation(
-                        type = StickerType.IMAGE,
-                        title = "리캡",
-                        summary = "웃기고 귀여우면 일단 주워요",
+                    imageStickerCreation(
                         sourcePhotoId = pendingPhoto.id,
                         imageKey = "stickers/recap.png",
-                        textContent = null,
-                        mainColor = "#FF6B6B",
+                        title = "리캡",
+                        summary = "웃기고 귀여우면 일단 주워요",
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(pendingPhoto.id))
@@ -231,4 +241,34 @@ class StickerQueryServiceTest(
                 }
             }
         }
+
+        Given("스티커 조회 서비스의 트랜잭션 경계를 확인할 때") {
+            When("선언된 트랜잭션 애노테이션을 모으면") {
+                val declared =
+                    StickerQueryService::class.java.declaredMethods
+                        .filter { it.isAnnotationPresent(Transactional::class.java) }
+                        .map { it.name } +
+                        listOfNotNull(
+                            StickerQueryService::class.java
+                                .getAnnotation(Transactional::class.java)
+                                ?.let { "class" },
+                        )
+
+                Then("읽기 경로가 커넥션을 물지 않도록 하나도 선언되어 있지 않다") {
+                    declared.shouldBeEmpty()
+                }
+            }
+        }
     })
+
+private class TransactionObservingStickerImageStorage : StickerImageStoragePort {
+    var transactionActiveAtSigning: Boolean? = null
+        private set
+
+    override fun issueReadUrls(imageKeys: Collection<String>): Map<String, String> {
+        transactionActiveAtSigning = TransactionSynchronizationManager.isActualTransactionActive()
+        return imageKeys.associateWith { "https://example.test/$it" }
+    }
+
+    override fun deleteAll(imageKeys: Collection<String>) = Unit
+}

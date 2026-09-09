@@ -5,14 +5,13 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
-import com.github.nexters.ppotto.board.domain.DrawingScope
-import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
-import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.board.support.awaitBlockedLock
+import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.global.identifier.BoardId
-import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -20,6 +19,7 @@ import io.kotest.assertions.assertSoftly
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import org.jooq.DSLContext
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
@@ -29,6 +29,8 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
+private const val AWAIT_SECONDS = 10L
+
 @Import(BoardLayoutConcurrencyTestConfiguration::class)
 class BoardLayoutConcurrencyTest(
     boardLayoutService: BoardLayoutService,
@@ -37,28 +39,19 @@ class BoardLayoutConcurrencyTest(
     drawingRepository: DrawingRepository,
     userRepository: UserRepository,
     stickerPort: CoordinatedBoardStickerPort,
+    dslContext: DSLContext,
 ) : IntegrationTest({
+        beforeTest { stickerPort.reset() }
+
         Given("삭제 가능한 보드의 레이아웃 검증이 끝난 상태에서") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
-            val drawingId = DrawingId(uuidV7())
+            val drawing = newDrawing(boardId = board.id)
             val layoutCommand =
                 BoardLayoutUpdateCommand(
                     stickers = emptyList(),
-                    createdDrawings =
-                        listOf(
-                            NewDrawing.Stroke(
-                                id = drawingId,
-                                boardId = board.id,
-                                scope = DrawingScope.BOARD,
-                                zIndex = 0,
-                                stickerId = null,
-                                stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
-                                color = "#FFFFFF",
-                                strokeWidth = 2.0,
-                            ),
-                        ),
+                    createdDrawings = listOf(drawing),
                     deletedDrawingIds = emptyList(),
                 )
 
@@ -67,34 +60,29 @@ class BoardLayoutConcurrencyTest(
                 val deleteStarted = CountDownLatch(1)
                 val layoutFuture =
                     executor.submit(
-                        Callable {
-                            runCatching {
-                                boardLayoutService.update(board.id, user.id, layoutCommand)
-                            }
-                        },
+                        Callable { runCatching { boardLayoutService.update(board.id, user.id, layoutCommand) } },
                     )
                 check(stickerPort.awaitLayoutValidation())
                 val deleteFuture =
                     executor.submit(
                         Callable {
                             deleteStarted.countDown()
-                            runCatching {
-                                boardCommandService.delete(board.id, user.id)
-                            }
+                            runCatching { boardCommandService.delete(board.id, user.id) }
                         },
                     )
-                check(deleteStarted.await(10, TimeUnit.SECONDS))
-                val deleteReachedStickerPortBeforeRelease = stickerPort.awaitDeleteInvocation()
+                check(deleteStarted.await(AWAIT_SECONDS, TimeUnit.SECONDS))
+                dslContext.awaitBlockedLock()
                 stickerPort.releaseLayout()
                 val layoutResult = layoutFuture.get(30, TimeUnit.SECONDS)
                 val deleteResult = deleteFuture.get(30, TimeUnit.SECONDS)
+                val drawingRowsAtDelete = stickerPort.drawingRowsAtDelete
                 executor.shutdownNow()
 
-                Then("삭제가 레이아웃 트랜잭션 뒤에 실행되어 드로잉을 남기지 않는다") {
+                Then("삭제가 레이아웃이 커밋한 드로잉을 관찰한 뒤 실행되어 드로잉을 남기지 않는다") {
                     assertSoftly {
-                        deleteReachedStickerPortBeforeRelease shouldBe false
                         layoutResult.isSuccess shouldBe true
                         deleteResult.isSuccess shouldBe true
+                        drawingRowsAtDelete shouldBe 1
                         boardRepository.findOwnedById(board.id, user.id).shouldBeNull()
                         drawingRepository.findByBoardId(board.id).shouldBeEmpty()
                     }
@@ -111,15 +99,22 @@ class BoardLayoutConcurrencyTestConfiguration {
 
     @Bean
     @Primary
-    fun coordinatedBoardStickerPort(): CoordinatedBoardStickerPort = CoordinatedBoardStickerPort()
+    fun coordinatedBoardStickerPort(dslContext: DSLContext): CoordinatedBoardStickerPort = CoordinatedBoardStickerPort(dslContext)
 }
 
-class CoordinatedBoardStickerPort :
-    BoardStickerQueryPort,
+class CoordinatedBoardStickerPort(
+    private val dslContext: DSLContext,
+) : BoardStickerQueryPort,
     BoardStickerCommandPort {
-    private val layoutValidation = CountDownLatch(1)
-    private val layoutRelease = CountDownLatch(1)
-    private val deleteInvocation = CountDownLatch(1)
+    @Volatile
+    private var layoutValidation = CountDownLatch(1)
+
+    @Volatile
+    private var layoutRelease = CountDownLatch(1)
+
+    @Volatile
+    var drawingRowsAtDelete: Int = -1
+        private set
 
     override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = emptyList()
 
@@ -128,7 +123,7 @@ class CoordinatedBoardStickerPort :
         stickerIds: Set<StickerId>,
     ): Boolean {
         layoutValidation.countDown()
-        check(layoutRelease.await(10, TimeUnit.SECONDS))
+        check(layoutRelease.await(AWAIT_SECONDS, TimeUnit.SECONDS))
         return true
     }
 
@@ -138,14 +133,18 @@ class CoordinatedBoardStickerPort :
     ) = Unit
 
     override fun deleteAllByBoardId(boardId: BoardId) {
-        deleteInvocation.countDown()
+        drawingRowsAtDelete = dslContext.fetchCount(DRAWINGS, DRAWINGS.BOARD_ID.eq(boardId))
     }
 
-    fun awaitLayoutValidation(): Boolean = layoutValidation.await(10, TimeUnit.SECONDS)
-
-    fun awaitDeleteInvocation(): Boolean = deleteInvocation.await(1, TimeUnit.SECONDS)
+    fun awaitLayoutValidation(): Boolean = layoutValidation.await(AWAIT_SECONDS, TimeUnit.SECONDS)
 
     fun releaseLayout() {
         layoutRelease.countDown()
+    }
+
+    fun reset() {
+        layoutValidation = CountDownLatch(1)
+        layoutRelease = CountDownLatch(1)
+        drawingRowsAtDelete = -1
     }
 }

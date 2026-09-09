@@ -1,19 +1,26 @@
 package com.github.nexters.ppotto.user.application
 
+import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.runConcurrently
+import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
+import com.github.nexters.ppotto.user.infrastructure.AesGcmProviderRefreshTokenCipher
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import com.github.nexters.ppotto.user.support.FakeSocialAccountRevoker
 import com.github.nexters.ppotto.user.support.FakeUserSessionRevoker
 import com.github.nexters.ppotto.user.support.Revocation
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jooq.DSLContext
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
 import java.util.UUID
 import com.github.nexters.ppotto.jooq.enums.OauthProvider as JooqOAuthProvider
@@ -36,8 +43,10 @@ private fun appleCommand(
 class UserServiceTest(
     userService: UserService,
     userRepository: UserRepository,
+    tokenCipher: AesGcmProviderRefreshTokenCipher,
     revoker: FakeSocialAccountRevoker,
     sessionRevoker: FakeUserSessionRevoker,
+    transactionTemplate: TransactionTemplate,
     dslContext: DSLContext,
 ) : IntegrationTest({
         Given("가입한 적 없는 Apple 소셜 계정이 있을 때") {
@@ -175,8 +184,6 @@ class UserServiceTest(
         }
 
         Given("제공자 refresh token을 가진 사용자가 있을 때") {
-            revoker.clear()
-            sessionRevoker.clear()
             val result =
                 userService.findOrCreate(
                     appleCommand(
@@ -194,7 +201,7 @@ class UserServiceTest(
                     revoker.revocations shouldContainExactly listOf(Revocation(OAuthProvider.APPLE, "revoke-me"))
                 }
 
-                Then("서비스 세션을 해지한다") {
+                Then("트랜잭션이 없으므로 반환 시점에 이미 서비스 세션을 해지해 둔다") {
                     sessionRevoker.revokedUserIds shouldContainExactly listOf(result.user.id)
                 }
 
@@ -205,8 +212,6 @@ class UserServiceTest(
         }
 
         Given("제공자 refresh token이 없는 사용자가 있을 때") {
-            revoker.clear()
-            sessionRevoker.clear()
             val result =
                 userService.findOrCreate(
                     appleCommand(
@@ -270,6 +275,159 @@ class UserServiceTest(
 
                 Then("탈퇴한 계정을 되살리지 않고 null을 반환한다") {
                     rejoined.shouldBeNull()
+                }
+            }
+        }
+
+        Given("제공자 계정 해지가 실패하는 사용자가 있을 때") {
+            val result =
+                userService.findOrCreate(
+                    appleCommand(
+                        providerUserId = "revoke-fail-${UUID.randomUUID()}",
+                        email = "revokefail@example.com",
+                        name = "해지실패사용자",
+                        providerRefreshToken = "revoke-me",
+                    ),
+                )!!
+            revoker.failure = IllegalStateException("소셜 계정 해지에 실패했습니다.")
+
+            When("회원 탈퇴를 처리하면") {
+                val exception =
+                    shouldThrow<IllegalStateException> { userService.withdraw(result.user.id, WITHDRAWN_AT) }
+
+                Then("해지 실패를 그대로 전파한다") {
+                    exception.message shouldBe "소셜 계정 해지에 실패했습니다."
+                }
+
+                Then("아무것도 쓰지 않고 사용자를 활성 상태로 남긴다") {
+                    userRepository.findById(result.user.id).shouldNotBeNull()
+                }
+
+                Then("서비스 세션도 해지하지 않는다") {
+                    sessionRevoker.revokedUserIds.shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("해지 시점의 사용자 행 상태를 관찰하는 해지 어댑터가 있을 때") {
+            val user =
+                userService
+                    .findOrCreate(
+                        appleCommand(
+                            providerUserId = "revoke-order-${UUID.randomUUID()}",
+                            email = "revokeorder@example.com",
+                            name = "해지순서사용자",
+                            providerRefreshToken = "revoke-me",
+                        ),
+                    )!!
+                    .user
+            var activeWhenRevoked: Boolean? = null
+            val observingService =
+                UserService(
+                    userRepository = userRepository,
+                    tokenCipher = tokenCipher,
+                    socialAccountRevoker =
+                        SocialAccountRevoker { _, _ ->
+                            activeWhenRevoked = userRepository.findById(user.id) != null
+                        },
+                    userSessionRevoker = sessionRevoker,
+                )
+
+            When("회원 탈퇴를 처리하면") {
+                observingService.withdraw(user.id, WITHDRAWN_AT)
+
+                Then("제공자 해지 시점에는 사용자 행이 아직 활성이다") {
+                    activeWhenRevoked shouldBe true
+                }
+
+                Then("해지 뒤에야 사용자 행을 탈퇴로 쓴다") {
+                    userRepository.findById(user.id).shouldBeNull()
+                }
+            }
+        }
+
+        Given("호출자가 탈퇴를 트랜잭션으로 감쌌을 때") {
+            val user =
+                userService
+                    .findOrCreate(
+                        appleCommand(
+                            providerUserId = "withdraw-tx-${UUID.randomUUID()}",
+                            email = "withdrawtx@example.com",
+                            name = "트랜잭션사용자",
+                            providerRefreshToken = "revoke-me",
+                        ),
+                    )!!
+                    .user
+
+            When("트랜잭션이 커밋되면") {
+                val revokedInsideTransaction =
+                    transactionTemplate.execute {
+                        userService.withdraw(user.id, WITHDRAWN_AT)
+                        sessionRevoker.revokedUserIds.toList()
+                    }!!
+
+                Then("트랜잭션 안에서는 아직 세션을 해지하지 않는다") {
+                    revokedInsideTransaction.shouldBeEmpty()
+                }
+
+                Then("커밋 후에 세션을 해지한다") {
+                    sessionRevoker.revokedUserIds shouldContainExactly listOf(user.id)
+                }
+            }
+
+            When("트랜잭션이 롤백되면") {
+                transactionTemplate.executeWithoutResult { status ->
+                    userService.withdraw(user.id, WITHDRAWN_AT)
+                    status.setRollbackOnly()
+                }
+
+                Then("세션을 해지하지 않는다") {
+                    sessionRevoker.revokedUserIds.shouldBeEmpty()
+                }
+
+                Then("사용자를 활성 상태로 남긴다") {
+                    userRepository.findById(user.id).shouldNotBeNull()
+                }
+            }
+        }
+
+        Given("같은 사용자에 대해 탈퇴 요청이 동시에 시작될 때") {
+            val user =
+                userService
+                    .findOrCreate(
+                        appleCommand(
+                            providerUserId = "withdraw-race-${UUID.randomUUID()}",
+                            email = "withdrawrace@example.com",
+                            name = "동시탈퇴사용자",
+                            providerRefreshToken = "revoke-me",
+                        ),
+                    )!!
+                    .user
+
+            When("두 요청이 동시에 탈퇴를 처리하면") {
+                val results = runConcurrently(2) { userService.withdraw(user.id, WITHDRAWN_AT) }
+
+                Then("한 요청만 성공한다") {
+                    results.count { it.isSuccess } shouldBe 1
+                }
+
+                Then("나머지 한 요청은 USER-001 오류를 받는다") {
+                    val failure =
+                        results
+                            .mapNotNull { it.exceptionOrNull() }
+                            .single()
+                            .shouldBeInstanceOf<NotFoundException>()
+                    failure.errorCode.code shouldBe "USER-001"
+                }
+
+                Then("사용자는 한 번만 탈퇴 처리된다") {
+                    userRepository.findById(user.id).shouldBeNull()
+                    dslContext.fetchCount(
+                        USERS,
+                        USERS.ID
+                            .eq(user.id)
+                            .and(USERS.DELETED_AT.isNotNull),
+                    ) shouldBe 1
                 }
             }
         }

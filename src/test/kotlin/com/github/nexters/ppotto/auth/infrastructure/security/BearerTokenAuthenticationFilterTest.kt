@@ -9,6 +9,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import org.springframework.mock.web.MockHttpServletRequest
@@ -134,6 +135,99 @@ class BearerTokenAuthenticationFilterTest :
 
                 Then("익명 요청으로 다음 필터에 진행한다") {
                     invoked.shouldBeTrue()
+                }
+            }
+        }
+
+        Given("유효한 access token으로 선택 인증 약관 경로를 호출할 때") {
+            val request =
+                MockHttpServletRequest("GET", "/terms").apply {
+                    servletPath = "/terms"
+                    addHeader("Authorization", "Bearer valid-token")
+                }
+            val response = MockHttpServletResponse()
+            var invoked = false
+
+            When("인증 필터를 통과하면") {
+                filter.doFilter(request, response) { _, _ -> invoked = true }
+                val authentication = SecurityContextHolder.getContext().authentication
+
+                Then("다음 필터로 진행한다") {
+                    invoked.shouldBeTrue()
+                }
+
+                Then("토큰을 해석해 principal을 채운다") {
+                    authentication?.principal shouldBe userId
+                }
+            }
+        }
+
+        Given("유효한 access token으로 선택 인증 스티커 상세 경로를 호출할 때") {
+            val path = "/stickers/${UUID.randomUUID()}"
+            val request =
+                MockHttpServletRequest("GET", path).apply {
+                    servletPath = path
+                    addHeader("Authorization", "Bearer valid-token")
+                }
+            val response = MockHttpServletResponse()
+            var invoked = false
+
+            When("인증 필터를 통과하면") {
+                filter.doFilter(request, response) { _, _ -> invoked = true }
+                val authentication = SecurityContextHolder.getContext().authentication
+
+                Then("다음 필터로 진행한다") {
+                    invoked.shouldBeTrue()
+                }
+
+                Then("토큰을 해석해 principal을 채운다") {
+                    authentication?.principal shouldBe userId
+                }
+            }
+        }
+
+        Given("access token을 담아 OpenAPI 문서 경로를 호출할 때") {
+            val request =
+                MockHttpServletRequest("GET", "/v3/api-docs").apply {
+                    servletPath = "/v3/api-docs"
+                    addHeader("Authorization", "Bearer valid-token")
+                }
+            val response = MockHttpServletResponse()
+            var invoked = false
+
+            When("인증 필터를 통과하면") {
+                filter.doFilter(request, response) { _, _ -> invoked = true }
+                val authentication = SecurityContextHolder.getContext().authentication
+
+                Then("다음 필터로 진행한다") {
+                    invoked.shouldBeTrue()
+                }
+
+                Then("필터를 건너뛰어 인증을 만들지 않는다") {
+                    authentication.shouldBeNull()
+                }
+            }
+        }
+
+        Given("access token을 담아 Swagger UI 경로를 호출할 때") {
+            val request =
+                MockHttpServletRequest("GET", "/swagger-ui/index.html").apply {
+                    servletPath = "/swagger-ui/index.html"
+                    addHeader("Authorization", "Bearer valid-token")
+                }
+            val response = MockHttpServletResponse()
+            var invoked = false
+
+            When("인증 필터를 통과하면") {
+                filter.doFilter(request, response) { _, _ -> invoked = true }
+                val authentication = SecurityContextHolder.getContext().authentication
+
+                Then("다음 필터로 진행한다") {
+                    invoked.shouldBeTrue()
+                }
+
+                Then("필터를 건너뛰어 인증을 만들지 않는다") {
+                    authentication.shouldBeNull()
                 }
             }
         }

@@ -3,14 +3,17 @@ package com.github.nexters.ppotto.analysis.infrastructure
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import org.jooq.DSLContext
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
@@ -20,6 +23,7 @@ class PhotoRepositoryTest(
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    dslContext: DSLContext,
 ) : IntegrationTest({
         Given("Analysis가 등록된 상태에서 여러 Photo를 배치로 저장하면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
@@ -63,38 +67,26 @@ class PhotoRepositoryTest(
             }
         }
 
-        Given("PENDING 상태의 Photo가 저장된 상태에서") {
+        Given("PENDING 상태의 Photo가 한 장 저장된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
+            val photo =
+                photoRepository
+                    .saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
+                    .single()
+            val microsecondPrecisionUploadedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
 
             When("기대 상태(PENDING)를 걸고 COMPLETED로 배치 갱신하면") {
-                val saved =
-                    photoRepository.saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
-                val microsecondPrecisionUploadedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
-                val updated =
-                    photoRepository.markCompletedBatch(
-                        saved.associate { it.id to microsecondPrecisionUploadedAt },
-                    )
+                val updated = photoRepository.markCompletedBatch(mapOf(photo.id to microsecondPrecisionUploadedAt))
 
-                Then("갱신된 행 수를 반환하고 업로드 시각을 기록한다") {
+                Then("갱신된 행 수를 반환한다") {
                     updated shouldBe 1
-                    val completed = photoRepository.findAllByAnalysisId(analysis.id).first { it.id == saved.first().id }
+                }
+
+                Then("업로드 시각을 그대로 기록한다") {
+                    val completed = photoRepository.findAllByAnalysisId(analysis.id).first { it.id == photo.id }
                     completed.uploadStatus shouldBe UploadStatus.COMPLETED
                     completed.uploadedAt shouldBe microsecondPrecisionUploadedAt
-                }
-            }
-
-            When("이미 다른 상태로 바뀐 뒤 다시 기대 상태(PENDING)를 걸고 갱신하면") {
-                val saved =
-                    photoRepository.saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
-                photoRepository.markCompletedBatch(saved.associate { it.id to Instant.now() })
-                photoRepository.markFailedBatch(saved.map { it.id })
-
-                Then("기존 COMPLETED를 FAILED로 갱신하지 않는다 (PENDING이 아니므로)") {
-                    photoRepository
-                        .findAllByAnalysisId(analysis.id)
-                        .first()
-                        .uploadStatus shouldBe UploadStatus.COMPLETED
                 }
             }
 
@@ -103,6 +95,53 @@ class PhotoRepositoryTest(
 
                 Then("쿼리 없이 0건을 반환한다") {
                     updated shouldBe 0
+                }
+            }
+        }
+
+        Given("이미 COMPLETED로 바뀐 Photo가 한 장 있는 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photo =
+                photoRepository
+                    .saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
+                    .single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
+
+            When("기대 상태(PENDING)를 걸고 FAILED로 갱신하면") {
+                val updated = photoRepository.markFailedBatch(listOf(photo.id))
+
+                Then("PENDING이 아니므로 한 행도 갱신하지 않는다") {
+                    updated shouldBe 0
+                }
+
+                Then("기존 COMPLETED 상태를 그대로 둔다") {
+                    photoRepository
+                        .findAllByAnalysisId(analysis.id)
+                        .first { it.id == photo.id }
+                        .uploadStatus shouldBe UploadStatus.COMPLETED
+                }
+            }
+        }
+
+        Given("DB에 애플리케이션이 모르는 content_type이 저장된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photo =
+                photoRepository
+                    .saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
+                    .single()
+            dslContext
+                .update(PHOTOS)
+                .set(PHOTOS.CONTENT_TYPE, "image/gif")
+                .where(PHOTOS.ID.eq(photo.id))
+                .execute()
+
+            When("해당 분석의 Photo를 조회하면") {
+                val exception = shouldThrow<IllegalStateException> { photoRepository.findAllByAnalysisId(analysis.id) }
+
+                Then("클라이언트 입력 오류(400)가 아니라 서버 오류로 실패한다") {
+                    exception.message shouldBe "unknown photos.content_type: image/gif"
                 }
             }
         }

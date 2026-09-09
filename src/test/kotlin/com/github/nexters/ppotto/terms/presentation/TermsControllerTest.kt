@@ -41,6 +41,7 @@ class TermsControllerTest(
                     result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.length()").value(1))
                         .andExpect(jsonPath("$.data[?(@.id == '${term.id}')].code").value(hasItem(code)))
                         .andExpect(jsonPath("$.data[?(@.id == '${term.id}')].version").value(hasItem("1.0")))
                         .andExpect(jsonPath("$.data[?(@.id == '${term.id}')].isRequired").value(hasItem(true)))
@@ -135,6 +136,7 @@ class TermsControllerTest(
                     result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.length()").value(1))
                         .andExpect(jsonPath("$.data[?(@.id == '${term.id}')].code").value(hasItem(code)))
                         .andExpect(jsonPath("$.data[?(@.id == '${term.id}')].agreed").value(hasItem(false)))
                 }

@@ -28,4 +28,6 @@ Because `term_agreements.user_id` is a real foreign key, withdrawn-user cleanup 
 
 Tests build users with the shared `support/UserTestFixtures.kt:saveTestUser()` and terms with `terms/support/TermsTestFixtures.kt:saveTerm()`, and authenticate through `SecurityMockMvcRequestPostProcessors.authentication(...)` like every other controller test. There is no terms-specific test security filter.
 
+`TERMS` is truncated before each root `Given`, so specs assert the **whole** current-terms set rather than filtering the response down to their own code. Do not reintroduce a `filter { it.code == ... }` workaround: it lets an implementation that returns an extra term pass.
+
 Update this file when the terms package layout changes.

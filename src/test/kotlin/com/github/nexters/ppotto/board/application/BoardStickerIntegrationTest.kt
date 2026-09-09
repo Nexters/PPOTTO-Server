@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.changeAnalysisStatus
 import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.global.error.ConflictException
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
@@ -28,6 +29,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.maps.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext
 import org.springframework.context.ApplicationContext
@@ -38,6 +40,7 @@ class BoardStickerIntegrationTest(
     boardLayoutService: BoardLayoutService,
     boardCommandService: BoardCommandService,
     stickerCommandService: StickerCommandService,
+    stickerCommandPort: BoardStickerCommandPort,
     boardRepository: BoardRepository,
     drawingRepository: DrawingRepository,
     stickerRepository: StickerRepository,
@@ -104,18 +107,65 @@ class BoardStickerIntegrationTest(
                 )
 
                 Then("스티커 command mapping과 드로잉 저장을 같은 트랜잭션에서 반영한다") {
-                    stickerRepository.findById(sticker.id)?.let {
-                        it.title shouldBe "변경 제목"
-                        it.posX shouldBe 11.0
-                        it.posY shouldBe 12.0
-                        it.scale shouldBe 0.7
-                        it.rotation shouldBe 3.0
-                        it.zIndex shouldBe 5
-                        it.badgeOffsetX shouldBe 4.0
-                        it.badgeOffsetY shouldBe 6.0
-                        it.badgeRotation shouldBe 8.0
-                    }
+                    stickerRepository
+                        .findById(sticker.id)
+                        .shouldNotBeNull()
+                        .apply {
+                            title shouldBe "변경 제목"
+                            posX shouldBe 11.0
+                            posY shouldBe 12.0
+                            scale shouldBe 0.7
+                            rotation shouldBe 3.0
+                            zIndex shouldBe 5
+                            badgeOffsetX shouldBe 4.0
+                            badgeOffsetY shouldBe 6.0
+                            badgeRotation shouldBe 8.0
+                        }
                     drawingRepository.findByBoardId(board.id).map { it.id } shouldContainExactly listOf(drawing.id)
+                }
+            }
+        }
+
+        Given("다른 보드의 스티커를 소유한 사용자가") {
+            val user = userRepository.saveTestUser()
+            val board = boardRepository.save(user.id)
+            val otherBoard = boardRepository.save(user.id)
+            val otherAnalysis = analysisRepository.save(user.id, otherBoard.id)
+            val otherSticker = stickerRepository.save(otherAnalysis.id, otherBoard.id, textStickerCreation())
+
+            When("그 스티커 배치를 다른 보드의 레이아웃으로 저장하면") {
+                Then("실제 스티커 연동 port가 소유권을 부정해 BOARD-001로 거부하고 제목을 바꾸지 않는다") {
+                    val exception =
+                        shouldThrow<InvalidInputException> {
+                            boardLayoutService.update(
+                                board.id,
+                                user.id,
+                                BoardLayoutUpdateCommand(
+                                    stickers = listOf(updatedLayout(otherSticker.id)),
+                                    createdDrawings = emptyList(),
+                                    deletedDrawingIds = emptyList(),
+                                ),
+                            )
+                        }
+                    exception.errorCode shouldBe BoardErrorCode.INVALID_LAYOUT
+                    stickerRepository
+                        .findById(otherSticker.id)
+                        .shouldNotBeNull()
+                        .title shouldBe otherSticker.title
+                }
+            }
+
+            When("보드 guard를 건너뛰고 실제 adapter에 직접 배치를 저장하면") {
+                Then("STICKER-008로 거부하고 제목을 바꾸지 않는다") {
+                    val exception =
+                        shouldThrow<InvalidInputException> {
+                            stickerCommandPort.updateLayouts(board.id, listOf(updatedLayout(otherSticker.id)))
+                        }
+                    exception.errorCode.code shouldBe "STICKER-008"
+                    stickerRepository
+                        .findById(otherSticker.id)
+                        .shouldNotBeNull()
+                        .title shouldBe otherSticker.title
                 }
             }
         }

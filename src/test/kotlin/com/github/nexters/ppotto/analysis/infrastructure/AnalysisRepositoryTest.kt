@@ -138,7 +138,7 @@ class AnalysisRepositoryTest(
             }
         }
 
-        Given("UPLOADING 상태의 Analysis가 있을 때") {
+        Given("UPLOADING 상태의 Analysis에 중간 진행률 갱신을 시도할 때") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val saved = analysisRepository.save(board.userId, board.id)
 
@@ -296,7 +296,7 @@ class AnalysisRepositoryTest(
             }
         }
 
-        Given("UPLOADING 상태의 Analysis가 있을 때") {
+        Given("UPLOADING 상태의 Analysis를 취소 사유로 실패 처리할 때") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val saved = analysisRepository.save(board.userId, board.id)
 

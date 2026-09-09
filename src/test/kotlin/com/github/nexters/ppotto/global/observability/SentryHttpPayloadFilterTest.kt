@@ -1,14 +1,10 @@
 package com.github.nexters.ppotto.global.observability
 
 import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import io.sentry.Sentry
-import io.sentry.SentryOptions
-import io.sentry.protocol.SentryTransaction
 import jakarta.servlet.ServletRequest
 import jakarta.servlet.ServletResponse
 import jakarta.servlet.http.HttpServlet
@@ -17,33 +13,14 @@ import jakarta.servlet.http.HttpServletResponse
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
-import java.util.concurrent.CopyOnWriteArrayList
 
 class SentryHttpPayloadFilterTest :
     BehaviorSpec({
-        val captured = CopyOnWriteArrayList<SentryTransaction>()
+        val sentry = withSentry()
         val filter = SentryHttpPayloadFilter()
 
-        beforeSpec {
-            Sentry.init { options ->
-                options.dsn = TEST_DSN
-                options.tracesSampleRate = 1.0
-                options.isEnableUncaughtExceptionHandler = false
-                options.isEnableBackpressureHandling = false
-                options.isEnableAutoSessionTracking = false
-                options.beforeSend = SentryOptions.BeforeSendCallback { _, _ -> null }
-                options.beforeSendTransaction =
-                    SentryOptions.BeforeSendTransactionCallback { transaction, _ ->
-                        captured.add(transaction)
-                        null
-                    }
-            }
-        }
-
-        afterSpec { Sentry.close() }
-
         Given("인증 요청과 토큰이 담긴 응답이면") {
-            captured.clear()
+            sentry.clear()
             val request =
                 MockHttpServletRequest("POST", "/auth/login").apply {
                     servletPath = "/auth/login"
@@ -77,12 +54,7 @@ class SentryHttpPayloadFilterTest :
                 }
 
                 Then("요청/응답 헤더가 트랜잭션 span에 붙는다") {
-                    val data =
-                        captured
-                            .single()
-                            .contexts.trace
-                            .shouldNotBeNull()
-                            .data
+                    val data = sentry.singleTransactionData()
 
                     data["http.request.header.authorization"] shouldBe "[Filtered]"
                     data["http.request.header.x-api-version"] shouldBe "1"
@@ -90,13 +62,7 @@ class SentryHttpPayloadFilterTest :
                 }
 
                 Then("요청 본문의 OAuth 토큰을 마스킹해 담는다") {
-                    val data =
-                        captured
-                            .single()
-                            .contexts.trace
-                            .shouldNotBeNull()
-                            .data
-                    val body = data["http.request.body.data"] as String
+                    val body = sentry.singleTransactionData()["http.request.body.data"] as String
 
                     body shouldNotContain "kakao-oauth-token"
                     body shouldContain "[Filtered]"
@@ -104,13 +70,7 @@ class SentryHttpPayloadFilterTest :
                 }
 
                 Then("응답 본문의 JWT를 마스킹해 담는다") {
-                    val data =
-                        captured
-                            .single()
-                            .contexts.trace
-                            .shouldNotBeNull()
-                            .data
-                    val body = data["http.response.body.data"] as String
+                    val body = sentry.singleTransactionData()["http.response.body.data"] as String
 
                     body shouldNotContain "real-jwt"
                     body shouldNotContain "real-refresh"
@@ -121,7 +81,7 @@ class SentryHttpPayloadFilterTest :
         }
 
         Given("앱이 본문을 읽기 전에 거부한 요청이면") {
-            captured.clear()
+            sentry.clear()
             val request =
                 MockHttpServletRequest("POST", "/boards").apply {
                     servletPath = "/boards"
@@ -140,12 +100,7 @@ class SentryHttpPayloadFilterTest :
                 transaction.finish()
 
                 Then("읽히지 않은 요청 본문도 마스킹해 담는다") {
-                    val body =
-                        captured
-                            .single()
-                            .contexts.trace
-                            .shouldNotBeNull()
-                            .data["http.request.body.data"] as String
+                    val body = sentry.singleTransactionData()["http.request.body.data"] as String
 
                     body shouldContain "거부된 보드"
                     body shouldNotContain "p@ss"
@@ -155,21 +110,47 @@ class SentryHttpPayloadFilterTest :
         }
 
         Given("swagger 문서 요청이면") {
-            val request = MockHttpServletRequest("GET", "/swagger-ui/index.html").apply { servletPath = "/swagger-ui/index.html" }
+            sentry.clear()
+            val request = jsonRequest("GET", "/swagger-ui/index.html")
+            val response = MockHttpServletResponse()
 
-            When("필터 적용 여부를 판정하면") {
-                Then("응답 버퍼링을 하지 않도록 건너뛴다") {
-                    filter.shouldNotFilterFor(request).shouldBeTrue()
+            When("트랜잭션이 열린 상태에서 필터를 태우면") {
+                val transaction = Sentry.startTransaction("GET /swagger-ui/index.html", "http.server")
+                transaction.makeCurrent().use {
+                    filter.doFilter(request, response, jsonEchoChain())
+                }
+                transaction.finish()
+
+                Then("응답을 버퍼링하지 않고 그대로 흘려보낸다") {
+                    response.contentAsString shouldBe ECHO_BODY
+                }
+
+                Then("span에 http.* 속성을 하나도 남기지 않는다") {
+                    sentry
+                        .singleTransactionData()
+                        .keys
+                        .none { it.startsWith("http.") } shouldBe true
                 }
             }
         }
 
         Given("actuator 요청이면") {
-            val request = MockHttpServletRequest("GET", "/actuator/health").apply { servletPath = "/actuator/health" }
+            sentry.clear()
+            val request = jsonRequest("GET", "/actuator/health")
+            val response = MockHttpServletResponse()
 
-            When("필터 적용 여부를 판정하면") {
-                Then("건너뛴다") {
-                    filter.shouldNotFilterFor(request).shouldBeTrue()
+            When("트랜잭션이 열린 상태에서 필터를 태우면") {
+                val transaction = Sentry.startTransaction("GET /actuator/health", "http.server")
+                transaction.makeCurrent().use {
+                    filter.doFilter(request, response, jsonEchoChain())
+                }
+                transaction.finish()
+
+                Then("헬스체크 본문은 span에 담지 않는다") {
+                    sentry
+                        .singleTransactionData()
+                        .keys
+                        .none { it.startsWith("http.") } shouldBe true
                 }
             }
         }
@@ -192,6 +173,27 @@ class SentryHttpPayloadFilterTest :
         }
     })
 
+private const val ECHO_BODY = """{"ok":true}"""
+
+private fun jsonRequest(
+    method: String,
+    path: String,
+): MockHttpServletRequest =
+    MockHttpServletRequest(method, path).apply {
+        servletPath = path
+        contentType = "application/json"
+        characterEncoding = "UTF-8"
+        setContent("""{"marker":"필터-건너뜀"}""".toByteArray())
+    }
+
+private fun jsonEchoChain(): MockFilterChain =
+    servletChain { _, res ->
+        res.contentType = "application/json"
+        res.characterEncoding = "UTF-8"
+        res.writer.write(ECHO_BODY)
+        res.status = 200
+    }
+
 private fun servletChain(handle: (HttpServletRequest, HttpServletResponse) -> Unit): MockFilterChain =
     MockFilterChain(
         object : HttpServlet() {
@@ -203,11 +205,3 @@ private fun servletChain(handle: (HttpServletRequest, HttpServletResponse) -> Un
             }
         },
     )
-
-private fun SentryHttpPayloadFilter.shouldNotFilterFor(request: MockHttpServletRequest): Boolean =
-    SentryHttpPayloadFilter::class.java
-        .getDeclaredMethod("shouldNotFilter", HttpServletRequest::class.java)
-        .apply { isAccessible = true }
-        .invoke(this, request) as Boolean
-
-private const val TEST_DSN = "https://public@localhost/1"

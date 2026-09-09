@@ -33,7 +33,7 @@ class AuthSecurityConfig {
 
     @Bean
     @Order(API_CHAIN_ORDER)
-    @Profile("!test")
+    @Profile("!test | secured")
     fun apiSecurityFilterChain(
         http: HttpSecurity,
         bearerTokenAuthenticationFilter: BearerTokenAuthenticationFilter,
@@ -57,7 +57,7 @@ class AuthSecurityConfig {
 
     @Bean
     @Order(Ordered.LOWEST_PRECEDENCE)
-    @Profile("test")
+    @Profile("test & !secured")
     fun defaultSecurityFilterChain(
         http: HttpSecurity,
         bearerTokenAuthenticationFilter: BearerTokenAuthenticationFilter,

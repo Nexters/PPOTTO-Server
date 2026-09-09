@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.terms.application
 
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.jooq.tables.references.TERM_AGREEMENTS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -30,14 +31,14 @@ class TermsServiceTest(
                 .execute()
 
             When("현재 약관과 미동의 약관을 조회하면") {
-                val current = termsService.findCurrentTerms(userId).filter { it.code == code }
-                val pending = termsService.findPendingTerms(userId).filter { it.code == code }
+                val current = termsService.findCurrentTerms(userId)
+                val pending = termsService.findPendingTerms(userId)
 
-                Then("현재 버전만 미동의 상태로 반환한다") {
+                Then("현재 버전 하나만 미동의 상태로 반환한다") {
                     current.map { it.id to it.agreed } shouldContainExactly listOf(currentTerm.id to false)
                 }
 
-                Then("현재 버전이 미동의 목록에 포함된다") {
+                Then("미동의 목록도 현재 버전 하나뿐이다") {
                     pending.map { it.id } shouldContainExactly listOf(currentTerm.id)
                 }
             }
@@ -68,13 +69,8 @@ class TermsServiceTest(
             val userId = userRepository.saveTestUser().id
             val requiredTerm = dslContext.saveTerm("AGREED-REQUIRED-${UUID.randomUUID()}", isRequired = true)
             val optionalTerm = dslContext.saveTerm("AGREED-OPTIONAL-${UUID.randomUUID()}")
-            val requiredTermIds =
-                termsService
-                    .findCurrentTerms(userId)
-                    .filter { it.isRequired }
-                    .map { it.id }
-            termsService.agree(userId, requiredTermIds)
-            termsService.agree(userId, requiredTermIds)
+            termsService.agree(userId, listOf(requiredTerm.id))
+            termsService.agree(userId, listOf(requiredTerm.id))
 
             When("선택 약관만 추가로 동의하면") {
                 termsService.agree(userId, listOf(optionalTerm.id))
@@ -85,36 +81,81 @@ class TermsServiceTest(
                         .from(TERM_AGREEMENTS)
                         .where(TERM_AGREEMENTS.USER_ID.eq(userId))
                         .fetch(TERM_AGREEMENTS.TERM_ID)
-                        .filterNotNull()
-                        .filter { it == requiredTerm.id || it == optionalTerm.id } shouldContainExactlyInAnyOrder
-                        listOf(requiredTerm.id, optionalTerm.id)
+                        .filterNotNull() shouldContainExactlyInAnyOrder listOf(requiredTerm.id, optionalTerm.id)
                 }
             }
         }
 
         Given("현재 유효하지 않은 약관 아이디가 요청에 포함된 상태에서") {
             val userId = userRepository.saveTestUser().id
-            dslContext.saveTerm("CURRENT-${UUID.randomUUID()}", isRequired = true)
+            val currentTerm = dslContext.saveTerm("CURRENT-${UUID.randomUUID()}", isRequired = true)
             val futureTerm =
                 dslContext.saveTerm(
                     code = "FUTURE-${UUID.randomUUID()}",
                     effectiveAt = Instant.now().plusSeconds(3_600),
                 )
-            val currentRequiredTermIds =
-                termsService
-                    .findCurrentTerms(userId)
-                    .filter { it.isRequired }
-                    .map { it.id }
-            termsService.agree(userId, currentRequiredTermIds)
+            termsService.agree(userId, listOf(currentTerm.id))
 
             When("아직 시행되지 않은 약관까지 포함해 동의를 요청하면") {
                 val exception =
                     shouldThrow<InvalidInputException> {
-                        termsService.agree(userId, currentRequiredTermIds + futureTerm.id)
+                        termsService.agree(userId, listOf(currentTerm.id, futureTerm.id))
                     }
 
                 Then("COMMON-001 오류가 발생한다") {
                     exception.errorCode.code shouldBe "COMMON-001"
+                }
+            }
+
+            When("존재하지 않는 약관 아이디로 동의를 요청하면") {
+                val exception =
+                    shouldThrow<InvalidInputException> {
+                        termsService.agree(userId, listOf(TermId(UUID.randomUUID())))
+                    }
+
+                Then("COMMON-001 오류가 발생한다") {
+                    exception.errorCode.code shouldBe "COMMON-001"
+                }
+
+                Then("기존 동의 이력을 그대로 둔다") {
+                    dslContext
+                        .select(TERM_AGREEMENTS.TERM_ID)
+                        .from(TERM_AGREEMENTS)
+                        .where(TERM_AGREEMENTS.USER_ID.eq(userId))
+                        .fetch(TERM_AGREEMENTS.TERM_ID)
+                        .filterNotNull() shouldContainExactly listOf(currentTerm.id)
+                }
+            }
+        }
+
+        Given("두 사용자가 같은 필수 약관에 동의한 상태에서") {
+            val withdrawnUserId = userRepository.saveTestUser().id
+            val remainingUserId = userRepository.saveTestUser().id
+            val requiredTerm = dslContext.saveTerm("DELETE-${UUID.randomUUID()}", isRequired = true)
+            termsService.agree(withdrawnUserId, listOf(requiredTerm.id))
+            termsService.agree(remainingUserId, listOf(requiredTerm.id))
+
+            When("한 사용자의 동의 이력을 삭제하면") {
+                termsService.deleteAgreements(withdrawnUserId)
+
+                Then("그 사용자의 동의 이력만 사라진다") {
+                    dslContext.fetchCount(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(withdrawnUserId)) shouldBe 0
+                    dslContext.fetchCount(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(remainingUserId)) shouldBe 1
+                }
+
+                Then("공용 마스터 데이터인 약관 자체는 남는다") {
+                    termsService.findCurrentTerms(withdrawnUserId).map { it.id } shouldContainExactly
+                        listOf(requiredTerm.id)
+                }
+            }
+
+            When("동의 이력이 없는 사용자의 동의 이력을 다시 삭제하면") {
+                termsService.deleteAgreements(withdrawnUserId)
+                termsService.deleteAgreements(withdrawnUserId)
+
+                Then("멱등하게 끝나고 다른 사용자 이력은 유지된다") {
+                    dslContext.fetchCount(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(withdrawnUserId)) shouldBe 0
+                    dslContext.fetchCount(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID.eq(remainingUserId)) shouldBe 1
                 }
             }
         }

@@ -19,6 +19,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.transaction.support.TransactionOperations
 import java.util.UUID
@@ -178,6 +179,63 @@ class AuthServiceTest :
 
                 Then("비활성 사용자의 기존 token은 회전하지 않는다") {
                     refreshStore.findUserId(refreshToken) shouldBe userId
+                }
+            }
+        }
+
+        Given("로그인해 refresh token을 발급받은 사용자가 있을 때") {
+            val refreshStore = FakeRefreshTokenStore()
+            val service = authService(FakeOAuthClient(), AuthUserPort { AuthUser(userId, false) }, refreshStore)
+            val issued = service.login(KAKAO_LOGIN).tokenPair
+
+            When("로그아웃하면") {
+                service.logout(userId)
+
+                Then("저장된 refresh token 세션이 사라진다") {
+                    refreshStore.findUserId(issued.refreshToken).shouldBeNull()
+                }
+
+                Then("로그아웃 전에 받은 refresh token으로는 AUTH-002가 발생한다") {
+                    val exception = shouldThrow<UnauthorizedException> { service.refresh(issued.refreshToken) }
+                    exception.errorCode shouldBe AuthErrorCode.INVALID_REFRESH_TOKEN
+                }
+            }
+        }
+
+        Given("한 provider에 client가 두 개 등록되었을 때") {
+            When("AuthService를 만들면") {
+                val exception =
+                    shouldThrow<IllegalStateException> {
+                        AuthService(
+                            oauthClients = listOf(FakeOAuthClient(), FakeOAuthClient()),
+                            signupTransaction = noTransaction,
+                            tokenProvider = tokenProvider,
+                            refreshTokenStore = FakeRefreshTokenStore(),
+                            authUserPort = AuthUserPort { AuthUser(userId, false) },
+                            authTermsPort = termsPort,
+                            authActiveUserPort = activeUserPort,
+                        )
+                    }
+
+                Then("provider별 client가 하나뿐이라는 규칙을 즉시 위반으로 알린다") {
+                    exception.message shouldBe "OAuth provider별 client는 하나만 등록할 수 있습니다."
+                }
+            }
+        }
+
+        Given("요청한 provider의 client가 등록되지 않았을 때") {
+            val service =
+                authService(
+                    FakeOAuthClient(provider = OAuthProvider.APPLE),
+                    AuthUserPort { AuthUser(userId, false) },
+                    FakeRefreshTokenStore(),
+                )
+
+            When("카카오로 로그인하면") {
+                val exception = shouldThrow<IllegalStateException> { service.login(KAKAO_LOGIN) }
+
+                Then("연결되지 않은 provider임을 버그로 드러낸다") {
+                    exception.message shouldBe "OAuth provider client가 연결되지 않았습니다."
                 }
             }
         }

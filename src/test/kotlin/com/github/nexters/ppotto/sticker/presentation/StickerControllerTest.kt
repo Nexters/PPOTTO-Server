@@ -6,13 +6,14 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
-import com.github.nexters.ppotto.sticker.domain.StickerCreation
-import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.imageStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 import org.hamcrest.Matchers.containsString
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -58,14 +59,10 @@ class StickerControllerTest(
                 stickerRepository.save(
                     analysis.id,
                     board.id,
-                    StickerCreation(
-                        type = StickerType.IMAGE,
-                        title = "원래 제목",
-                        summary = "웃기고 귀여우면 일단 주워요",
+                    imageStickerCreation(
                         sourcePhotoId = photo.id,
                         imageKey = "stickers/controller.png",
-                        textContent = null,
-                        mainColor = "#FF6B6B",
+                        summary = "웃기고 귀여우면 일단 주워요",
                     ),
                 )
             stickerRecapRepository.savePhotos(sticker.id, listOf(photo.id))
@@ -156,10 +153,21 @@ class StickerControllerTest(
 
             When("리캡을 두 번 열람 처리하면") {
                 mockMvc.perform(post("/stickers/${sticker.id}/view").authenticatedAs(board.userId.value))
+                val firstViewedAt = checkNotNull(stickerRepository.findById(sticker.id)?.viewedAt)
                 val result = mockMvc.perform(post("/stickers/${sticker.id}/view").authenticatedAs(board.userId.value))
 
                 Then("두 번째 호출도 성공한다") {
                     result.andExpect(status().isOk)
+                }
+
+                Then("최초 열람 시각을 덮어쓰지 않는다") {
+                    stickerRepository.findById(sticker.id)?.viewedAt shouldBe firstViewedAt
+                }
+
+                Then("이후 리캡 조회에서 isNew가 false로 뒤집힌다") {
+                    mockMvc
+                        .perform(get("/stickers/${sticker.id}").authenticatedAs(board.userId.value))
+                        .andExpect(jsonPath("$.data.sticker.isNew").value(false))
                 }
             }
 
@@ -255,6 +263,17 @@ class StickerControllerTest(
                     result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
+                }
+
+                Then("이후 리캡 조회는 STICKER-001 404다") {
+                    mockMvc
+                        .perform(get("/stickers/${sticker.id}").authenticatedAs(board.userId.value))
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("STICKER-001"))
+                }
+
+                Then("활성 스티커에서도 사라진다") {
+                    stickerRepository.findById(sticker.id).shouldBeNull()
                 }
             }
 

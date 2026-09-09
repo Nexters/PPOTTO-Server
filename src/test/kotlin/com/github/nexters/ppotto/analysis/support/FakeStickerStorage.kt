@@ -9,14 +9,18 @@ class FakeStickerStorage :
     ResettableFake {
     val uploaded: MutableMap<String, ByteArray> = ConcurrentHashMap()
 
+    var uploadFailure: Throwable? = null
+
     override fun upload(
         objectKey: String,
         bytes: ByteArray,
     ) {
+        uploadFailure?.let { throw it }
         uploaded[objectKey] = bytes
     }
 
     override fun reset() {
         uploaded.clear()
+        uploadFailure = null
     }
 }

@@ -7,7 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class FakeStickerGenerator :
     StickerGenerator,
     ResettableFake {
-    var onGenerate: (() -> Unit)? = null
+    var onGenerate: ((String) -> Unit)? = null
 
     val requestedTargetSubjects: MutableList<String> = CopyOnWriteArrayList()
 
@@ -17,7 +17,7 @@ class FakeStickerGenerator :
         targetSubject: String,
     ): ByteArray {
         requestedTargetSubjects += targetSubject
-        onGenerate?.invoke()
+        onGenerate?.invoke(targetSubject)
         return byteArrayOf(1, 2, 3)
     }
 

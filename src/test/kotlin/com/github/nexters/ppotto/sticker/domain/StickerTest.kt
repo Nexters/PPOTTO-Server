@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.sticker.support.stickerLayout
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -17,7 +18,7 @@ class StickerTest :
             val sticker = imageSticker()
 
             When("제목과 배치를 변경하면") {
-                sticker.updateLayout(layout(title = "새 제목"))
+                sticker.updateLayout(stickerLayout(title = "새 제목"))
 
                 Then("제목과 모든 배치값이 변경된다") {
                     sticker.title shouldBe "새 제목"
@@ -49,6 +50,69 @@ class StickerTest :
 
                 Then("최초 삭제 시각을 유지한다") {
                     sticker.deletedAt shouldBe firstDeletedAt
+                }
+            }
+        }
+
+        Given("이미지 스티커의 제목을 규칙 밖의 값으로 바꿀 때") {
+            When("15자를 초과한 제목으로 이름을 바꾸면") {
+                val target = imageSticker()
+                val exception = shouldThrow<InvalidInputException> { target.rename("가".repeat(16)) }
+
+                Then("클라이언트 입력 등급인 COMMON-001로 거부한다") {
+                    exception.errorCode.code shouldBe "COMMON-001"
+                }
+
+                Then("제목은 그대로 남는다") {
+                    target.title shouldBe "이미지"
+                }
+            }
+
+            When("공백뿐인 제목으로 이름을 바꾸면") {
+                val target = imageSticker()
+                shouldThrow<InvalidInputException> { target.rename(" ") }
+
+                Then("제목은 그대로 남는다") {
+                    target.title shouldBe "이미지"
+                }
+            }
+
+            When("잘못된 제목이 섞인 배치로 변경하면") {
+                val target = imageSticker()
+                shouldThrow<InvalidInputException> { target.updateLayout(stickerLayout(title = " ")) }
+
+                Then("제목은 그대로 남는다") {
+                    target.title shouldBe "이미지"
+                }
+            }
+        }
+
+        Given("DB 행이나 어댑터 출력이 저장 규칙을 벗어났을 때") {
+            When("hex 형식이 아닌 메인 컬러로 스티커를 복원하면") {
+                Then("구현 버그 등급인 IllegalArgumentException 을 던진다") {
+                    shouldThrow<IllegalArgumentException> { imageSticker(mainColor = "red") }
+                }
+            }
+
+            When("이미지 키가 빈 이미지 스티커를 복원하면") {
+                Then("구현 버그 등급인 IllegalArgumentException 을 던진다") {
+                    shouldThrow<IllegalArgumentException> { imageSticker(imageKey = " ") }
+                }
+            }
+
+            When("hex 형식이 아닌 메인 컬러로 재생성하면") {
+                Then("구현 버그 등급인 IllegalArgumentException 을 던진다") {
+                    shouldThrow<IllegalArgumentException> {
+                        imageSticker().regenerateSticker(PhotoId(UUID.randomUUID()), "stickers/new.png", "#GGGGGG")
+                    }
+                }
+            }
+
+            When("이미지 키가 빈 채로 재생성하면") {
+                Then("구현 버그 등급인 IllegalArgumentException 을 던진다") {
+                    shouldThrow<IllegalArgumentException> {
+                        imageSticker().regenerateSticker(PhotoId(UUID.randomUUID()), " ", "#FF6B6B")
+                    }
                 }
             }
         }
@@ -136,41 +200,30 @@ class StickerTest :
         }
     })
 
-private fun imageSticker() =
-    Sticker(
-        id = StickerId(UUID.randomUUID()),
-        analysisId = AnalysisId(UUID.randomUUID()),
-        boardId = BoardId(UUID.randomUUID()),
-        type = StickerType.IMAGE,
-        title = "이미지",
-        summary = "웃기고 귀여우면 일단 주워요",
-        viewedAt = null,
-        sourcePhotoId = PhotoId(UUID.randomUUID()),
-        imageKey = "stickers/image.png",
-        textContent = null,
-        mainColor = "#FF6B6B",
-        posX = 0.0,
-        posY = 0.0,
-        scale = 1.0,
-        rotation = 0.0,
-        zIndex = 0,
-        badgeOffsetX = 0.0,
-        badgeOffsetY = 0.0,
-        badgeRotation = 0.0,
-        createdAt = Instant.parse("2026-07-30T00:00:00Z"),
-        updatedAt = Instant.parse("2026-07-30T00:00:00Z"),
-        deletedAt = null,
-    )
-
-private fun layout(title: String? = null) =
-    StickerLayout(
-        title = title,
-        posX = 10.0,
-        posY = 20.0,
-        scale = 0.8,
-        rotation = 5.0,
-        zIndex = 2,
-        badgeOffsetX = 3.0,
-        badgeOffsetY = 4.0,
-        badgeRotation = 6.0,
-    )
+private fun imageSticker(
+    imageKey: String? = "stickers/image.png",
+    mainColor: String = "#FF6B6B",
+) = Sticker(
+    id = StickerId(UUID.randomUUID()),
+    analysisId = AnalysisId(UUID.randomUUID()),
+    boardId = BoardId(UUID.randomUUID()),
+    type = StickerType.IMAGE,
+    title = "이미지",
+    summary = "웃기고 귀여우면 일단 주워요",
+    viewedAt = null,
+    sourcePhotoId = PhotoId(UUID.randomUUID()),
+    imageKey = imageKey,
+    textContent = null,
+    mainColor = mainColor,
+    posX = 0.0,
+    posY = 0.0,
+    scale = 1.0,
+    rotation = 0.0,
+    zIndex = 0,
+    badgeOffsetX = 0.0,
+    badgeOffsetY = 0.0,
+    badgeRotation = 0.0,
+    createdAt = Instant.parse("2026-07-30T00:00:00Z"),
+    updatedAt = Instant.parse("2026-07-30T00:00:00Z"),
+    deletedAt = null,
+)

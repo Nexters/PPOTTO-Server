@@ -5,9 +5,13 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
+import com.github.nexters.ppotto.analysis.support.FakeStickerGenerator
+import com.github.nexters.ppotto.analysis.support.FakeStickerStorage
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
@@ -26,11 +30,15 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.maps.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.springframework.context.ApplicationContext
+import org.springframework.http.HttpStatus
+import org.springframework.web.client.RestClientException
 import java.time.Instant
 import java.util.UUID
 
@@ -43,6 +51,9 @@ class AnalysisStickerIntegrationTest(
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    private val stickerRegenerationAdapter: AnalysisStickerRegenerationAdapter,
+    private val stickerGenerator: FakeStickerGenerator,
+    private val stickerStorage: FakeStickerStorage,
 ) : IntegrationTest({
         Given("분석과 스티커 연동 어댑터가 기동된 상태에서") {
             When("연동 port 빈을 조회하면") {
@@ -174,6 +185,78 @@ class AnalysisStickerIntegrationTest(
                         )
                     }
                     stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("업로드된 사진을 가진 분석에서 스티커 재생성을 요청할 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photo =
+                photoRepository
+                    .saveAll(
+                        analysis.id,
+                        board.id,
+                        listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
+                    ).single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
+            val stickerId = StickerId(UUID.randomUUID())
+
+            When("배경 제거가 실패하면") {
+                stickerGenerator.onGenerate = { throw RestClientException("Pixian 502") }
+                val exception =
+                    shouldThrow<BusinessException> {
+                        stickerRegenerationAdapter.regenerate(analysis.id, board.id, stickerId, listOf(photo.id), photo.id)
+                    }
+
+                Then("파이프라인처럼 삼키지 않고 ANALYSIS-011을 클라이언트까지 올린다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-011"
+                    exception.errorCode.status shouldBe HttpStatus.BAD_GATEWAY
+                }
+
+                Then("스티커 이미지는 업로드하지 않는다") {
+                    stickerStorage.uploaded.keys
+                        .shouldBeEmpty()
+                }
+            }
+
+            When("생성된 스티커 업로드가 실패하면") {
+                stickerStorage.uploadFailure = IllegalStateException("업로드 실패")
+                val exception =
+                    shouldThrow<BusinessException> {
+                        stickerRegenerationAdapter.regenerate(analysis.id, board.id, stickerId, listOf(photo.id), photo.id)
+                    }
+
+                Then("같은 ANALYSIS-011로 매핑한다") {
+                    exception.errorCode.code shouldBe "ANALYSIS-011"
+                }
+            }
+
+            When("배경 제거와 업로드가 모두 성공하면") {
+                val result = stickerRegenerationAdapter.regenerate(analysis.id, board.id, stickerId, listOf(photo.id), photo.id)
+
+                Then("스티커 아이디로 묶은 재생성 오브젝트 키를 반환하고 그 키로 업로드한다") {
+                    result.shouldNotBeNull()
+                    result.sourcePhotoId shouldBe photo.id
+                    result.imageKey shouldStartWith "stickers/$stickerId/${photo.id}-"
+                    stickerStorage.uploaded.keys shouldContainExactly listOf(result.imageKey)
+                }
+            }
+
+            When("사용할 수 있는 사진이 하나도 없으면") {
+                val result =
+                    stickerRegenerationAdapter.regenerate(
+                        analysis.id,
+                        board.id,
+                        stickerId,
+                        listOf(PhotoId(UUID.randomUUID())),
+                        photo.id,
+                    )
+
+                Then("Gemini를 부르지 않고 null을 돌려준다") {
+                    result.shouldBeNull()
+                    stickerStorage.uploaded.keys
+                        .shouldBeEmpty()
                 }
             }
         }

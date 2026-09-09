@@ -75,7 +75,6 @@ class BoardCommandServiceTest(
         }
 
         Given("분석이 진행 중인 보드가 있는 사용자가") {
-            analysisActivityPort.reset()
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
@@ -94,8 +93,6 @@ class BoardCommandServiceTest(
         }
 
         Given("삭제 가능한 보드와 드로잉이 있는 사용자가") {
-            analysisActivityPort.reset()
-            stickerPort.reset()
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)

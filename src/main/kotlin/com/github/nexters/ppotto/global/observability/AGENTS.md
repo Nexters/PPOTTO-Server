@@ -96,6 +96,8 @@ So when checking whether an attribute reached storage, **query all 40 `attribute
 - The user context still carries only `user.id` from the SecurityContext principal. Adding an email would mean a per-event cross-domain lookup, which `global` is not allowed to do.
 - Returning a non-null value from `SentryTracesSampler` overrides `sentry.traces-sample-rate` entirely. Return `null` for anything that should keep following the configured rate.
 - Incoming `sentry-trace` / `baggage` headers are continued by the starter's `SentryTracingFilter`. Do not re-implement trace propagation here.
+- `Sentry.init` / `Sentry.close` are **JVM-global**. Every spec that needs a real recording SDK goes through the shared `withSentry { }` helper in `src/test/.../global/observability/SentryTestSupport.kt`; none calls `Sentry.init` itself. Two specs with different options would otherwise depend on Kotest running specs sequentially, and the first one to run would decide what the second sees.
+- Sentry's transport is the one genuinely asynchronous producer this repo tests. `SentryHttpPayloadEndToEndTest` therefore waits on a condition variable signalled from `BeforeSendTransactionCallback` / `BeforeSendLogCallback` — the server closes the transaction after the response is committed, so reading the recorder straight after `HttpClient.send` is a race. A polling `eventually` would also be defensible here and nowhere else in the suite; a latch is preferred because it fails with the count actually collected.
 
 ## Profiling
 

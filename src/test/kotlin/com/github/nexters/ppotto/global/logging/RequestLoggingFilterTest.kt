@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 
+private const val SECRET = "raw-secret-value"
+
 class RequestLoggingFilterTest :
     BehaviorSpec({
         val filter = RequestLoggingFilter()
@@ -63,6 +65,73 @@ class RequestLoggingFilterTest :
 
                     message shouldContain "authorization=***"
                     message shouldNotContain "raw-access-token"
+                }
+            }
+        }
+
+        Given("HttpPayloadAttributes가 민감하다고 규정한 헤더가 모두 담긴 요청이 주어졌을 때") {
+            val request =
+                MockHttpServletRequest("POST", "/auth/login").apply {
+                    addHeader("Authorization", "Bearer $SECRET")
+                    addHeader("Proxy-Authorization", "Basic $SECRET")
+                    addHeader("Cookie", "session=$SECRET")
+                    addHeader("Set-Cookie", "refresh=$SECRET")
+                    addHeader("X-API-Key", SECRET)
+                    addHeader("X-Refresh-Token", SECRET)
+                    addHeader("X-Client-Secret", SECRET)
+                    addHeader("X-Csrf-Token", SECRET)
+                    addHeader("X-Api-Key-Hint", SECRET)
+                    addHeader("X-Request-Id", "req-1")
+                }
+            val response = MockHttpServletResponse()
+
+            When("요청 로그를 남기면") {
+                val message =
+                    captureRequestLogs {
+                        filter.doFilter(request, response) { _, _ -> }
+                    }.single()
+
+                Then("고정 목록에 있는 민감 헤더를 전부 마스킹한다") {
+                    message shouldContain "Authorization=***"
+                    message shouldContain "Proxy-Authorization=***"
+                    message shouldContain "Cookie=***"
+                    message shouldContain "Set-Cookie=***"
+                    message shouldContain "X-API-Key=***"
+                }
+
+                Then("민감 조각이 이름에 들어간 헤더도 마스킹한다") {
+                    message shouldContain "X-Refresh-Token=***"
+                    message shouldContain "X-Client-Secret=***"
+                    message shouldContain "X-Csrf-Token=***"
+                    message shouldContain "X-Api-Key-Hint=***"
+                }
+
+                Then("어떤 헤더 값도 원문으로 남지 않는다") {
+                    message shouldNotContain SECRET
+                }
+
+                Then("민감하지 않은 헤더는 값을 그대로 남긴다") {
+                    message shouldContain "X-Request-Id=req-1"
+                }
+            }
+        }
+
+        Given("같은 헤더가 여러 번 들어온 요청이 주어졌을 때") {
+            val request =
+                MockHttpServletRequest("GET", "/boards").apply {
+                    addHeader("Accept-Language", "ko")
+                    addHeader("Accept-Language", "en")
+                }
+            val response = MockHttpServletResponse()
+
+            When("요청 로그를 남기면") {
+                val message =
+                    captureRequestLogs {
+                        filter.doFilter(request, response) { _, _ -> }
+                    }.single()
+
+                Then("값을 쉼표로 이어 한 항목으로 남긴다") {
+                    message shouldContain "Accept-Language=ko,en"
                 }
             }
         }

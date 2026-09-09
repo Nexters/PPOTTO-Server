@@ -8,6 +8,7 @@ import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jose.JWSHeader
 import com.nimbusds.jose.crypto.MACSigner
 import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.PlainJWT
 import com.nimbusds.jwt.SignedJWT
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
@@ -40,6 +41,9 @@ class JwtTokenProviderTest :
 
                 Then("access token에서 같은 사용자 아이디를 검증한다") {
                     provider.verifyAccessToken(first.accessToken) shouldBe userId
+                }
+
+                Then("access token 만료까지 남은 초를 함께 반환한다") {
                     first.accessTokenExpiresIn shouldBe 3600
                 }
 
@@ -72,7 +76,7 @@ class JwtTokenProviderTest :
                     issuer = issuer,
                     secret = secret,
                     subject = UUID.randomUUID().toString(),
-                    expiresAt = Instant.now().minusSeconds(1),
+                    expiresAt = PAST,
                 )
 
             When("access token을 검증하면") {
@@ -154,6 +158,46 @@ class JwtTokenProviderTest :
             }
         }
 
+        Given("다른 secret으로 HS256 서명한 access token이 주어졌을 때") {
+            val token =
+                accessToken(
+                    issuer = issuer,
+                    secret = "forged-secret-that-is-also-at-least-32-bytes-long",
+                    subject = UUID.randomUUID().toString(),
+                )
+
+            When("access token을 검증하면") {
+                val exception = shouldThrow<UnauthorizedException> { provider.verifyAccessToken(token) }
+
+                Then("COMMON-004 인증 예외가 발생한다") {
+                    exception.errorCode shouldBe CommonErrorCode.UNAUTHORIZED
+                }
+            }
+        }
+
+        Given("서명을 지우고 alg를 none으로 바꾼 token이 주어졌을 때") {
+            val token =
+                PlainJWT(
+                    JWTClaimsSet
+                        .Builder()
+                        .issuer(issuer)
+                        .subject(UUID.randomUUID().toString())
+                        .issueTime(Date.from(ISSUED_AT))
+                        .expirationTime(Date.from(FUTURE))
+                        .jwtID(UUID.randomUUID().toString())
+                        .claim("token_use", "access")
+                        .build(),
+                ).serialize()
+
+            When("access token을 검증하면") {
+                val exception = shouldThrow<UnauthorizedException> { provider.verifyAccessToken(token) }
+
+                Then("COMMON-004 인증 예외가 발생한다") {
+                    exception.errorCode shouldBe CommonErrorCode.UNAUTHORIZED
+                }
+            }
+        }
+
         Given("JWT 형식이 아닌 token이 주어졌을 때") {
             When("access token을 검증하면") {
                 val exception = shouldThrow<UnauthorizedException> { provider.verifyAccessToken("not-a-jwt") }
@@ -165,11 +209,15 @@ class JwtTokenProviderTest :
         }
     })
 
+private val FUTURE = Instant.parse("2100-01-01T00:00:00Z")
+private val PAST = Instant.parse("2020-01-01T00:00:00Z")
+private val ISSUED_AT = Instant.parse("2026-01-01T00:00:00Z")
+
 private fun accessToken(
     issuer: String,
     secret: String,
     subject: String,
-    expiresAt: Instant = Instant.now().plusSeconds(3600),
+    expiresAt: Instant = FUTURE,
     tokenUse: String = "access",
     algorithm: JWSAlgorithm = JWSAlgorithm.HS256,
 ): String {
@@ -178,7 +226,7 @@ private fun accessToken(
             .Builder()
             .issuer(issuer)
             .subject(subject)
-            .issueTime(Date.from(Instant.now()))
+            .issueTime(Date.from(ISSUED_AT))
             .expirationTime(Date.from(expiresAt))
             .jwtID(UUID.randomUUID().toString())
             .claim("token_use", tokenUse)

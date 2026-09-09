@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.RecapCommentPosition
+import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
@@ -39,6 +40,8 @@ class RecapCommentCommandServiceTest(
             val bubbleComment = comments.first { it.content == "말풍선" }
             val chipComment = comments.first { it.content == "키워드" }
 
+            fun bubblePosition() = stickerRecapRepository.findComments(sticker.id).first { it.id == bubbleComment.id }
+
             When("말풍선 코멘트 위치를 수정하면") {
                 service.updatePositions(
                     board.userId,
@@ -47,14 +50,36 @@ class RecapCommentCommandServiceTest(
                 )
 
                 Then("바뀐 위치가 저장된다") {
-                    val found = stickerRecapRepository.findComments(sticker.id).first { it.id == bubbleComment.id }
-                    found.posX shouldBe 10.5
-                    found.posY shouldBe -20.5
+                    bubblePosition().posX shouldBe 10.5
+                    bubblePosition().posY shouldBe -20.5
+                }
+            }
+
+            When("정상 말풍선과 키워드 칩을 한 배치로 보내면") {
+                val exception =
+                    shouldThrow<InvalidInputException> {
+                        service.updatePositions(
+                            board.userId,
+                            sticker.id,
+                            listOf(
+                                RecapCommentPosition(bubbleComment.id, 99.0, 98.0),
+                                RecapCommentPosition(chipComment.id, 1.0, 2.0),
+                            ),
+                        )
+                    }
+
+                Then("STICKER-004 오류로 배치 전체를 거부한다") {
+                    exception.errorCode shouldBe StickerErrorCode.UNEDITABLE_RECAP_COMMENT
+                }
+
+                Then("함께 보낸 정상 말풍선도 원래 위치 그대로다") {
+                    bubblePosition().posX shouldBe 3.0
+                    bubblePosition().posY shouldBe 4.0
                 }
             }
 
             When("키워드 칩 코멘트의 위치를 수정하려 하면") {
-                Then("유효하지 않은 입력으로 거부한다") {
+                val exception =
                     shouldThrow<InvalidInputException> {
                         service.updatePositions(
                             board.userId,
@@ -62,11 +87,14 @@ class RecapCommentCommandServiceTest(
                             listOf(RecapCommentPosition(chipComment.id, 1.0, 2.0)),
                         )
                     }
+
+                Then("STICKER-004 오류로 거부한다") {
+                    exception.errorCode shouldBe StickerErrorCode.UNEDITABLE_RECAP_COMMENT
                 }
             }
 
             When("존재하지 않는 코멘트 id로 위치를 수정하려 하면") {
-                Then("유효하지 않은 입력으로 거부한다") {
+                val exception =
                     shouldThrow<InvalidInputException> {
                         service.updatePositions(
                             board.userId,
@@ -74,11 +102,14 @@ class RecapCommentCommandServiceTest(
                             listOf(RecapCommentPosition(uuidV7(), 1.0, 2.0)),
                         )
                     }
+
+                Then("STICKER-004 오류로 거부한다") {
+                    exception.errorCode shouldBe StickerErrorCode.UNEDITABLE_RECAP_COMMENT
                 }
             }
 
             When("중복된 코멘트 id로 위치를 수정하려 하면") {
-                Then("유효하지 않은 입력으로 거부한다") {
+                val exception =
                     shouldThrow<InvalidInputException> {
                         service.updatePositions(
                             board.userId,
@@ -89,11 +120,18 @@ class RecapCommentCommandServiceTest(
                             ),
                         )
                     }
+
+                Then("STICKER-004 오류로 거부한다") {
+                    exception.errorCode shouldBe StickerErrorCode.UNEDITABLE_RECAP_COMMENT
+                }
+
+                Then("말풍선 위치는 원래 그대로다") {
+                    bubblePosition().posX shouldBe 3.0
                 }
             }
 
             When("비유한(NaN) 좌표로 위치를 수정하려 하면") {
-                Then("유효하지 않은 입력으로 거부한다") {
+                val exception =
                     shouldThrow<InvalidInputException> {
                         service.updatePositions(
                             board.userId,
@@ -101,13 +139,15 @@ class RecapCommentCommandServiceTest(
                             listOf(RecapCommentPosition(bubbleComment.id, Double.NaN, 2.0)),
                         )
                     }
+
+                Then("STICKER-004 오류로 거부한다") {
+                    exception.errorCode shouldBe StickerErrorCode.UNEDITABLE_RECAP_COMMENT
                 }
             }
 
             When("다른 사용자가 코멘트 위치를 수정하려 하면") {
                 val otherUser = userRepository.saveTestUser()
-
-                Then("스티커 없음 예외로 소유권을 숨긴다") {
+                val exception =
                     shouldThrow<NotFoundException> {
                         service.updatePositions(
                             otherUser.id,
@@ -115,6 +155,13 @@ class RecapCommentCommandServiceTest(
                             listOf(RecapCommentPosition(bubbleComment.id, 1.0, 2.0)),
                         )
                     }
+
+                Then("STICKER-001 오류로 소유권을 숨긴다") {
+                    exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
+                }
+
+                Then("말풍선 위치는 원래 그대로다") {
+                    bubblePosition().posX shouldBe 3.0
                 }
             }
         }

@@ -8,6 +8,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.support.awaitBlockedLock
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -63,15 +64,14 @@ class BoardAnalysisDeletionConcurrencyTest(
                     executor.submit(
                         Callable { runCatching { analysisService.createAnalysis(user.id, board.id, photos) } },
                     )
-                val createBlockedBeforeRelease = runCatching { createFuture.get(1, TimeUnit.SECONDS) }.isFailure
+                dslContext.awaitBlockedLock()
                 stickerPort.releaseDelete()
                 val deleteResult = deleteFuture.get(30, TimeUnit.SECONDS)
                 val createResult = createFuture.get(30, TimeUnit.SECONDS)
                 executor.shutdownNow()
 
-                Then("분석 생성이 삭제 뒤로 직렬화되어 삭제된 보드에 분석이 남지 않는다") {
+                Then("분석 생성이 삭제 뒤로 직렬화되어 BOARD-002로 거부되고 삭제된 보드에 분석이 남지 않는다") {
                     assertSoftly {
-                        createBlockedBeforeRelease shouldBe true
                         deleteResult.isSuccess shouldBe true
                         createResult
                             .exceptionOrNull()
@@ -112,7 +112,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                     executor.submit(
                         Callable { runCatching { boardCommandService.delete(board.id, user.id) } },
                     )
-                val deleteBlockedBeforeCommit = runCatching { deleteFuture.get(1, TimeUnit.SECONDS) }.isFailure
+                dslContext.awaitBlockedLock()
                 createCommitAllowed.countDown()
                 val createResult = createFuture.get(30, TimeUnit.SECONDS)
                 val deleteResult = deleteFuture.get(30, TimeUnit.SECONDS)
@@ -120,7 +120,6 @@ class BoardAnalysisDeletionConcurrencyTest(
 
                 Then("삭제가 분석 생성 뒤로 직렬화되어 BOARD-005로 거부되고 보드와 분석이 남는다") {
                     assertSoftly {
-                        deleteBlockedBeforeCommit shouldBe true
                         createResult.isSuccess shouldBe true
                         deleteResult
                             .exceptionOrNull()

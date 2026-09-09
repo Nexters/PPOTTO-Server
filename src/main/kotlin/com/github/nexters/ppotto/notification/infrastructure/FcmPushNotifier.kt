@@ -38,13 +38,14 @@ class FcmPushNotifier(
             PushSendResult(
                 token = token,
                 success = sendResponse.isSuccessful,
-                invalid = sendResponse.exception?.messagingErrorCode in INVALID_TOKEN_ERROR_CODES,
+                invalid =
+                    sendResponse.exception
+                        ?.messagingErrorCode
+                        .marksTokenInvalid(),
             )
         }
     }
-
-    companion object {
-        private val INVALID_TOKEN_ERROR_CODES =
-            setOf(MessagingErrorCode.UNREGISTERED, MessagingErrorCode.SENDER_ID_MISMATCH)
-    }
 }
+
+internal fun MessagingErrorCode?.marksTokenInvalid(): Boolean =
+    this == MessagingErrorCode.UNREGISTERED || this == MessagingErrorCode.SENDER_ID_MISMATCH

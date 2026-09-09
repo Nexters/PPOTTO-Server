@@ -10,6 +10,7 @@ import org.jooq.DSLContext
 import org.springframework.context.ApplicationContext
 import org.springframework.scheduling.support.CronExpression
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class WithdrawnUserCleanupSchedulerTest(
     applicationContext: ApplicationContext,
@@ -46,6 +47,22 @@ class WithdrawnUserCleanupSchedulerTest(
 
                 Then("보존 기간이 지나지 않아 사용자 행을 남긴다") {
                     dslContext.fetchExists(USERS, USERS.ID.eq(withdrawn.id)) shouldBe true
+                }
+            }
+        }
+
+        Given("보존 기간보다 하루 더 전에 탈퇴한 사용자가 있을 때") {
+            val withdrawnAt = Instant.now().minus(properties.retentionDays + 1, ChronoUnit.DAYS)
+            val withdrawn =
+                userRepository
+                    .saveTestUser()
+                    .let { userRepository.withdraw(it.withdraw(withdrawnAt))!! }
+
+            When("스케줄러를 직접 실행하면") {
+                WithdrawnUserCleanupScheduler(cleanupService, properties).cleanup()
+
+                Then("보존 기간이 지나 사용자 행을 하드 삭제한다") {
+                    dslContext.fetchExists(USERS, USERS.ID.eq(withdrawn.id)) shouldBe false
                 }
             }
         }

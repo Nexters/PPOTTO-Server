@@ -24,6 +24,8 @@ class FakePhotoStorage(
 
     var deleteAllFailure: Throwable? = null
 
+    var onUploadedObjects: (() -> Unit)? = null
+
     override fun issueUploadUrls(photos: List<Photo>): Map<PhotoId, String> {
         issueUploadUrlsFailure?.let { throw it }
         return photos.associate { photo -> photo.id to "https://fake-signed-url/${PhotoObjectKeys.keyFor(photo)}" }
@@ -40,7 +42,10 @@ class FakePhotoStorage(
     override fun uploadedObjects(
         analysisId: AnalysisId,
         photos: List<Photo>,
-    ): Map<PhotoId, BlobMeta> = photos.mapNotNull { photo -> objects[PhotoObjectKeys.keyFor(photo)]?.let { photo.id to it } }.toMap()
+    ): Map<PhotoId, BlobMeta> {
+        onUploadedObjects?.invoke()
+        return photos.mapNotNull { photo -> objects[PhotoObjectKeys.keyFor(photo)]?.let { photo.id to it } }.toMap()
+    }
 
     override fun deleteAll(analysisId: AnalysisId): Int {
         deleteAllFailure?.let { throw it }
@@ -73,6 +78,7 @@ class FakePhotoStorage(
         deletedAnalysisIds.clear()
         issueUploadUrlsFailure = null
         deleteAllFailure = null
+        onUploadedObjects = null
     }
 
     fun clear() = reset()

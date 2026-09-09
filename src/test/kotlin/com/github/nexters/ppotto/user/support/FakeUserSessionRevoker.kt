@@ -17,6 +17,4 @@ class FakeUserSessionRevoker :
     override fun reset() {
         revokedUserIds.clear()
     }
-
-    fun clear() = reset()
 }

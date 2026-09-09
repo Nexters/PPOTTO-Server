@@ -4,9 +4,7 @@ import com.github.nexters.ppotto.support.ObjectStorageTestConfiguration
 import com.github.nexters.ppotto.support.TestcontainersConfiguration
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.BehaviorSpec
-import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainAll
-import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -25,7 +23,11 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+
+private val ARRIVAL_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(10)
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
@@ -64,30 +66,15 @@ class SentryHttpPayloadEndToEndTest(
                 HttpResponse.BodyHandlers.ofString(),
             )
 
-        fun spanDataOf(marker: String): Map<String, Any> =
-            recorder.transactions
-                .mapNotNull {
-                    it.contexts.trace
-                        ?.data
-                }.lastOrNull { (it["http.request.body.data"] as? String)?.contains(marker) == true }
-                ?: error(
-                    "no transaction carrying marker=$marker; captured=${recorder.transactions.size}; " +
-                        "keys=${recorder.transactions.map {
-                            it.contexts.trace
-                                ?.data
-                                ?.keys
-                                ?.sorted()
-                        }}",
-                )
-
         Given("컨트롤러가 본문을 읽는 요청이면") {
             val body = """{"provider":"KAKAO","accessToken":"secret-oauth-token","name":"본문읽힘마커"}"""
 
             When("실제 톰캣으로 요청을 보내면") {
                 post("/auth/login", body)
+                val data = recorder.awaitSpanData("본문읽힘마커")
 
                 Then("요청 본문이 마스킹되어 span에 담긴다") {
-                    val recorded = spanDataOf("본문읽힘마커")["http.request.body.data"] as? String
+                    val recorded = data["http.request.body.data"] as? String
 
                     recorded.shouldNotBeNull()
                     recorded shouldContain "본문읽힘마커"
@@ -95,7 +82,7 @@ class SentryHttpPayloadEndToEndTest(
                 }
 
                 Then("응답 본문도 span에 담긴다") {
-                    (spanDataOf("본문읽힘마커")["http.response.body.data"] as? String).shouldNotBeNull()
+                    (data["http.response.body.data"] as? String).shouldNotBeNull()
                 }
             }
         }
@@ -105,13 +92,14 @@ class SentryHttpPayloadEndToEndTest(
 
             When("잘못된 Bearer 토큰으로 요청을 보내면") {
                 val response = post("/boards", body, bearer = "not-a-real-jwt")
+                val data = recorder.awaitSpanData("조기거부마커")
 
                 Then("401로 끊긴다") {
                     response.statusCode() shouldBe 401
                 }
 
                 Then("읽히지 않은 요청 본문도 span에 담긴다") {
-                    val recorded = spanDataOf("조기거부마커")["http.request.body.data"] as? String
+                    val recorded = data["http.request.body.data"] as? String
 
                     recorded.shouldNotBeNull()
                     recorded shouldContain "조기거부마커"
@@ -125,9 +113,10 @@ class SentryHttpPayloadEndToEndTest(
 
             When("실제 톰캣으로 요청을 보내면") {
                 post("/api/v1/auth/refresh", body)
+                val data = recorder.awaitSpanData("미매핑마커")
 
                 Then("컨트롤러가 없어도 요청 본문이 span에 담긴다") {
-                    val recorded = spanDataOf("미매핑마커")["http.request.body.data"] as? String
+                    val recorded = data["http.request.body.data"] as? String
 
                     recorded.shouldNotBeNull()
                     recorded shouldContain "미매핑마커"
@@ -139,11 +128,10 @@ class SentryHttpPayloadEndToEndTest(
         Given("정상 요청이면") {
             When("실제 톰캣으로 요청을 보내면") {
                 post("/auth/login", """{"provider":"KAKAO","name":"예산마커"}""")
+                val data = recorder.awaitSpanData("예산마커")
 
                 Then("바디 4개 속성이 모두 담긴다") {
-                    val ours = spanDataOf("예산마커").keys.filter { it.startsWith("http.") }
-
-                    ours shouldContainAll
+                    data.keys.filter { it.startsWith("http.") } shouldContainAll
                         listOf(
                             "http.request.body.data",
                             "http.request.body.size",
@@ -153,22 +141,18 @@ class SentryHttpPayloadEndToEndTest(
                 }
 
                 Then("헤더는 개별 http.*.header.* 속성으로 담긴다") {
-                    val data = spanDataOf("예산마커")
-
                     data.keys.any { it.startsWith("http.request.header.") } shouldBe true
                     data.keys.any { it.startsWith("http.response.header.") } shouldBe true
                     data["http.request.header.content-type"] shouldBe "application/json"
                 }
 
                 Then("모든 속성 값이 스칼라다") {
-                    spanDataOf("예산마커").forEach { (key, value) ->
+                    data.forEach { (key, value) ->
                         withClue(key) { (value is String || value is Number || value is Boolean) shouldBe true }
                     }
                 }
 
                 Then("민감 헤더는 마스킹된다") {
-                    val data = spanDataOf("예산마커")
-
                     data["http.request.header.cookie"] shouldBe "[Filtered]"
                     data.values.none { it is String && it.contains("real-cookie-value") } shouldBe true
                 }
@@ -179,19 +163,13 @@ class SentryHttpPayloadEndToEndTest(
             When("실제 요청을 처리하면") {
                 post("/auth/login", """{"provider":"KAKAO","name":"로그마커"}""")
 
-                Then("Sentry Logs로 로그 레코드가 흘러간다") {
-                    logRecorder.logs.shouldNotBeEmpty()
-                }
+                Then("INFO 레벨 요청 로그가 Sentry Logs로 흘러간다") {
+                    val log =
+                        logRecorder.awaitLog("/auth/login 요청 로그") {
+                            it.level == SentryLogLevel.INFO && it.body?.contains("/auth/login") == true
+                        }
 
-                Then("INFO 레벨 로그가 포함된다") {
-                    logRecorder.logs
-                        .map { it.level }
-                        .toSet() shouldContain SentryLogLevel.INFO
-                }
-
-                Then("요청 로그 본문이 담긴다") {
-                    logRecorder.logs
-                        .any { it.body?.contains("/auth/login") == true } shouldBe true
+                    log.level shouldBe SentryLogLevel.INFO
                 }
             }
         }
@@ -204,7 +182,7 @@ class SentryHttpPayloadEndToEndTest(
         @Bean
         fun recordingBeforeSendTransaction(recorder: RecordingTransactions): SentryOptions.BeforeSendTransactionCallback =
             SentryOptions.BeforeSendTransactionCallback { transaction, _ ->
-                recorder.transactions.add(transaction)
+                recorder.record(transaction)
                 null
             }
 
@@ -217,16 +195,66 @@ class SentryHttpPayloadEndToEndTest(
         @Bean
         fun recordingBeforeSendLog(recorder: RecordingLogs): SentryOptions.Logs.BeforeSendLogCallback =
             SentryOptions.Logs.BeforeSendLogCallback { log ->
-                recorder.logs.add(log)
+                recorder.record(log)
                 null
             }
     }
 }
 
+/**
+ * Sentry SDK가 트랜잭션/로그를 자체 큐에서 비동기로 넘기고, 서버 스레드는 응답 커밋 뒤에 트랜잭션을 닫는다.
+ * 이 spec에서만 진짜 비동기가 존재하므로, 폴링(`eventually`) 대신 도착 시 깨우는 조건 변수로 기다린다.
+ */
+class ArrivalBuffer<T> {
+    private val lock = ReentrantLock()
+    private val arrived = lock.newCondition()
+    private val recorded = mutableListOf<T>()
+
+    fun record(item: T) {
+        lock.withLock {
+            recorded += item
+            arrived.signalAll()
+        }
+    }
+
+    fun <R : Any> await(
+        description: String,
+        extract: (List<T>) -> R?,
+    ): R =
+        lock.withLock {
+            var remaining = ARRIVAL_TIMEOUT_NANOS
+            var found = extract(recorded)
+            while (found == null) {
+                check(remaining > 0) { "$description 이(가) 10초 안에 Sentry로 전달되지 않았습니다. 수집된 항목=${recorded.size}" }
+                remaining = arrived.awaitNanos(remaining)
+                found = extract(recorded)
+            }
+            found
+        }
+}
+
 class RecordingTransactions {
-    val transactions: MutableList<SentryTransaction> = CopyOnWriteArrayList()
+    private val buffer = ArrivalBuffer<SentryTransaction>()
+
+    fun record(transaction: SentryTransaction) = buffer.record(transaction)
+
+    fun awaitSpanData(marker: String): Map<String, Any> =
+        buffer.await("요청 본문에 $marker 를 담은 트랜잭션") { transactions ->
+            transactions
+                .mapNotNull {
+                    it.contexts.trace
+                        ?.data
+                }.lastOrNull { (it["http.request.body.data"] as? String)?.contains(marker) == true }
+        }
 }
 
 class RecordingLogs {
-    val logs: MutableList<SentryLogEvent> = CopyOnWriteArrayList()
+    private val buffer = ArrivalBuffer<SentryLogEvent>()
+
+    fun record(log: SentryLogEvent) = buffer.record(log)
+
+    fun awaitLog(
+        description: String,
+        predicate: (SentryLogEvent) -> Boolean,
+    ): SentryLogEvent = buffer.await(description) { logs -> logs.firstOrNull(predicate) }
 }

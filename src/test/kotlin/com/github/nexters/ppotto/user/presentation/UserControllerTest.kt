@@ -99,5 +99,20 @@ class UserControllerTest(
                         .andExpect(jsonPath("$.error.code").value("COMMON-004"))
                 }
             }
+
+            When("회원 탈퇴를 요청하면") {
+                val result =
+                    mockMvc.perform(
+                        delete("/users/me")
+                            .header("X-API-Version", "1"),
+                    )
+
+                Then("탈퇴를 실행하지 않고 인증 오류를 응답한다") {
+                    result
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(jsonPath("$.success").value(false))
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
+                }
+            }
         }
     })

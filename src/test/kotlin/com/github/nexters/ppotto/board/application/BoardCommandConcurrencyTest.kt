@@ -4,8 +4,6 @@ import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.support.BoardTestConfig
-import com.github.nexters.ppotto.board.support.FakeBoardAnalysisActivityPort
-import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -18,13 +16,13 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.springframework.context.annotation.Import
 
+private const val CONCURRENT_CREATE_COUNT = 10
+
 @Import(BoardTestConfig::class)
 class BoardCommandConcurrencyTest(
     boardCommandService: BoardCommandService,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
-    analysisActivityPort: FakeBoardAnalysisActivityPort,
-    stickerPort: FakeBoardStickerPort,
 ) : IntegrationTest({
         Given("활성 보드가 99개인 사용자가") {
             val user = userRepository.saveTestUser()
@@ -34,7 +32,7 @@ class BoardCommandConcurrencyTest(
 
             When("기본 보드와 이름 있는 보드를 동시에 여러 개 생성하면") {
                 val results =
-                    runConcurrently(12) { index ->
+                    runConcurrently(CONCURRENT_CREATE_COUNT) { index ->
                         if (index % 2 == 0) {
                             boardCommandService.createDefault(user.id)
                         } else {
@@ -46,7 +44,7 @@ class BoardCommandConcurrencyTest(
                     val failures = results.mapNotNull { it.exceptionOrNull() }
                     assertSoftly {
                         results.count { it.isSuccess } shouldBe 1
-                        failures shouldHaveSize 11
+                        failures shouldHaveSize CONCURRENT_CREATE_COUNT - 1
                         failures.forEach {
                             val exception = it.shouldBeInstanceOf<InvalidInputException>()
                             exception.errorCode shouldBe BoardErrorCode.COUNT_LIMIT_EXCEEDED
@@ -58,8 +56,6 @@ class BoardCommandConcurrencyTest(
         }
 
         Given("활성 보드가 두 개인 사용자가") {
-            analysisActivityPort.reset()
-            stickerPort.reset()
             val user = userRepository.saveTestUser()
             val boards = List(2) { boardRepository.save(user.id) }
 

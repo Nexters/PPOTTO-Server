@@ -8,12 +8,12 @@ import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
-import com.github.nexters.ppotto.global.identifier.PhotoId
-import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
-import com.github.nexters.ppotto.sticker.domain.StickerType
+import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.imageStickerResult
+import com.github.nexters.ppotto.sticker.support.textStickerResult
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.runConcurrently
 import com.github.nexters.ppotto.support.saveTestUser
@@ -28,6 +28,7 @@ import java.time.Instant
 class AnalysisResultSaveServiceTest(
     service: AnalysisResultSaveService,
     stickerRepository: StickerRepository,
+    stickerCommandRepository: StickerCommandRepository,
     stickerRecapRepository: StickerRecapRepository,
     photoRepository: PhotoRepository,
     analysisRepository: AnalysisRepository,
@@ -53,8 +54,8 @@ class AnalysisResultSaveServiceTest(
                     boardId = board.id,
                     stickers =
                         listOf(
-                            imageResult(photo.id),
-                            textResult(),
+                            imageStickerResult(photo.id),
+                            textStickerResult(),
                         ),
                 )
 
@@ -79,7 +80,7 @@ class AnalysisResultSaveServiceTest(
                     board.userId,
                     analysis.id,
                     board.id,
-                    List(7) { textResult() },
+                    List(7) { textStickerResult() },
                 )
 
             When("분석 결과를 저장하면") {
@@ -106,7 +107,7 @@ class AnalysisResultSaveServiceTest(
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
-            val invalidResult = imageResult(photo.id).copy(photoIds = listOf(photo.id, photo.id))
+            val invalidResult = imageStickerResult(photo.id).copy(photoIds = listOf(photo.id, photo.id))
 
             When("자식 저장 중 DB 제약 위반이 발생하면") {
                 Then("스티커 저장도 롤백한다") {
@@ -133,7 +134,7 @@ class AnalysisResultSaveServiceTest(
                     board.userId,
                     analysis.id,
                     board.id,
-                    listOf(textResult(), textResult()),
+                    listOf(textStickerResult(), textStickerResult()),
                 )
 
             When("같은 요청을 두 번 저장하면") {
@@ -147,6 +148,32 @@ class AnalysisResultSaveServiceTest(
             }
         }
 
+        Given("한 분석의 스티커 6개를 모두 소프트 삭제한 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val command =
+                SaveAnalysisResultCommand(
+                    board.userId,
+                    analysis.id,
+                    board.id,
+                    List(6) { textStickerResult() },
+                )
+            val first = service.save(command)
+            first.stickerIds.forEach { stickerCommandRepository.softDelete(it, Instant.now()) }
+
+            When("같은 분석 결과를 다시 저장하면") {
+                val second = service.save(command)
+
+                Then("최초 저장 결과의 스티커 id를 그대로 반환한다") {
+                    second.stickerIds shouldContainExactly first.stickerIds
+                }
+
+                Then("수명 6개를 소프트 삭제분까지 세어 새로 저장하지 않는다") {
+                    stickerRepository.findAllByAnalysisId(analysis.id).map { it.id } shouldContainExactly first.stickerIds
+                }
+            }
+        }
+
         Given("동일한 분석 결과 저장 요청이 동시에 도착할 때") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
@@ -155,7 +182,7 @@ class AnalysisResultSaveServiceTest(
                     board.userId,
                     analysis.id,
                     board.id,
-                    List(6) { textResult() },
+                    List(6) { textStickerResult() },
                 )
 
             When("두 트랜잭션이 동시에 저장하면") {
@@ -202,7 +229,7 @@ class AnalysisResultSaveServiceTest(
                                 ownerBoard.userId,
                                 otherAnalysis.id,
                                 ownerBoard.id,
-                                listOf(textResult()),
+                                listOf(textStickerResult()),
                             ),
                         )
                     }
@@ -211,7 +238,7 @@ class AnalysisResultSaveServiceTest(
             }
 
             When("다른 사용자의 사진을 sourcePhotoId로 저장하면") {
-                val result = imageResult(ownerPhoto.id).copy(sourcePhotoId = otherPhoto.id)
+                val result = imageStickerResult(ownerPhoto.id).copy(sourcePhotoId = otherPhoto.id)
 
                 Then("저장 전에 거부한다") {
                     shouldThrow<NotFoundException> {
@@ -228,8 +255,30 @@ class AnalysisResultSaveServiceTest(
                 }
             }
 
+            When("남의 보드에 자기 userId로 저장하면") {
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        service.save(
+                            SaveAnalysisResultCommand(
+                                otherBoard.userId,
+                                ownerAnalysis.id,
+                                ownerBoard.id,
+                                listOf(textStickerResult()),
+                            ),
+                        )
+                    }
+
+                Then("STICKER-001 오류로 보드 소유권을 숨긴다") {
+                    exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
+                }
+
+                Then("스티커를 하나도 저장하지 않는다") {
+                    stickerRepository.findAllByBoardId(ownerBoard.id).shouldBeEmpty()
+                }
+            }
+
             When("다른 사용자의 사진을 리캡 photoIds로 저장하면") {
-                val result = imageResult(ownerPhoto.id).copy(photoIds = listOf(otherPhoto.id))
+                val result = imageStickerResult(ownerPhoto.id).copy(photoIds = listOf(otherPhoto.id))
 
                 Then("저장 전에 거부한다") {
                     shouldThrow<NotFoundException> {
@@ -266,7 +315,7 @@ class AnalysisResultSaveServiceTest(
                                 board.userId,
                                 analysis.id,
                                 board.id,
-                                listOf(textResult()),
+                                listOf(textStickerResult()),
                             ),
                         )
                     }
@@ -275,33 +324,3 @@ class AnalysisResultSaveServiceTest(
             }
         }
     })
-
-private fun imageResult(photoId: PhotoId) =
-    AnalysisStickerResult(
-        type = StickerType.IMAGE,
-        title = "이미지 스티커",
-        summary = "웃기고 귀여우면 일단 주워요",
-        sourcePhotoId = photoId,
-        imageKey = "stickers/image.png",
-        textContent = null,
-        mainColor = "#FF6B6B",
-        photoIds = listOf(photoId),
-        comments =
-            listOf(
-                RecapCommentCreation("말풍선", 3.0, 4.0),
-                RecapCommentCreation("키워드 칩", null, null),
-            ),
-    )
-
-private fun textResult() =
-    AnalysisStickerResult(
-        type = StickerType.TEXT,
-        title = "텍스트 스티커",
-        summary = "한 줄 요약",
-        sourcePhotoId = null,
-        imageKey = null,
-        textContent = "텍스트",
-        mainColor = "#FF6B6B",
-        photoIds = emptyList(),
-        comments = emptyList(),
-    )

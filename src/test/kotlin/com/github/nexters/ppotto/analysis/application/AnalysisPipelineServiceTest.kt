@@ -13,13 +13,16 @@ import com.github.nexters.ppotto.global.identifier.PhotoId
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import org.springframework.web.client.RestClientException
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 private fun photoRef(
     suffix: String,
@@ -52,11 +55,12 @@ class AnalysisPipelineServiceTest :
             val analysisId = AnalysisId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
             val photos = listOf(photoRef("01"), photoRef("02"), photoRef("03"))
             val allThemesInFlight = CountDownLatch(photos.size)
+            val themesThatSawEveryThemeInFlight = AtomicInteger(0)
             val stickerGenerator =
                 FakeStickerGenerator().apply {
                     onGenerate = {
                         allThemesInFlight.countDown()
-                        check(allThemesInFlight.await(10, TimeUnit.SECONDS))
+                        if (allThemesInFlight.await(5, TimeUnit.SECONDS)) themesThatSawEveryThemeInFlight.incrementAndGet()
                     }
                 }
             val themeClassifier = FakeThemeClassifier().apply { onClassify = { themePerPhoto(photos) } }
@@ -71,8 +75,8 @@ class AnalysisPipelineServiceTest :
             When("파이프라인을 실행하면") {
                 val result = service.run(analysisId, photos) { progress += it }
 
-                Then("모든 테마가 동시에 스티커를 만들어 병렬로 처리된다") {
-                    allThemesInFlight.count shouldBe 0L
+                Then("테마 3개가 모두 서로가 스티커 생성 중인 것을 보고 병렬로 처리된다") {
+                    themesThatSawEveryThemeInFlight.get() shouldBe photos.size
                 }
 
                 Then("진행률은 분류 완료 45에서 시작해 스티커 완료 90으로 끝난다") {
@@ -214,6 +218,80 @@ class AnalysisPipelineServiceTest :
                         .single()
                         .categorizedPhotoIds
                         .toSet() shouldBe (listOf(representativePhoto) + siblingPhotos).map { it.photoId }.toSet()
+                }
+            }
+        }
+
+        Given("테마 3개 중 두 번째 테마의 배경 제거만 실패하는 파이프라인이") {
+            val analysisId = AnalysisId(UUID.fromString("550e8400-e29b-41d4-a716-446655440050"))
+            val photos = listOf(photoRef("51"), photoRef("52"), photoRef("53"))
+            val stickerGenerator =
+                FakeStickerGenerator().apply {
+                    onGenerate = { targetSubject ->
+                        if (targetSubject == "피사체1") throw RestClientException("Pixian 502")
+                    }
+                }
+            val stickerStorage = FakeStickerStorage()
+            val themeClassifier = FakeThemeClassifier().apply { onClassify = { themePerPhoto(photos) } }
+            val service =
+                AnalysisPipelineService(
+                    themeClassifier = themeClassifier,
+                    stickerGenerator = stickerGenerator,
+                    stickerStorage = stickerStorage,
+                )
+
+            When("파이프라인을 실행하면") {
+                val result = service.run(analysisId, photos)
+
+                Then("실패한 테마만 스티커 이미지 키가 null로 남는다") {
+                    result.themes.map { it.stickerImageKey } shouldContainExactly
+                        listOf(
+                            "stickers/$analysisId/0-${photos[0].photoId}.png",
+                            null,
+                            "stickers/$analysisId/2-${photos[2].photoId}.png",
+                        )
+                }
+
+                Then("실패한 테마도 분류 결과(테마명·뱃지·리캡)는 그대로 살아남는다") {
+                    val failedTheme = result.themes[1]
+                    failedTheme.theme shouldBe "테마1"
+                    failedTheme.badge shouldBe "뱃지1"
+                    failedTheme.text shouldBe "리캡1"
+                }
+
+                Then("실패한 테마의 오브젝트는 업로드하지 않는다") {
+                    stickerStorage.uploaded.keys shouldContainExactlyInAnyOrder
+                        listOf(
+                            "stickers/$analysisId/0-${photos[0].photoId}.png",
+                            "stickers/$analysisId/2-${photos[2].photoId}.png",
+                        )
+                }
+            }
+        }
+
+        Given("스티커 업로드가 실패하는 파이프라인이") {
+            val analysisId = AnalysisId(UUID.fromString("550e8400-e29b-41d4-a716-446655440060"))
+            val photo = photoRef("61")
+            val stickerStorage = FakeStickerStorage().apply { uploadFailure = IllegalStateException("업로드 실패") }
+            val themeClassifier = FakeThemeClassifier().apply { onClassify = { themePerPhoto(listOf(photo)) } }
+            val service =
+                AnalysisPipelineService(
+                    themeClassifier = themeClassifier,
+                    stickerGenerator = FakeStickerGenerator(),
+                    stickerStorage = stickerStorage,
+                )
+
+            When("파이프라인을 실행하면") {
+                val result = service.run(analysisId, listOf(photo))
+
+                Then("분석을 실패시키지 않고 스티커 이미지 키만 null로 남긴다") {
+                    result.themes
+                        .single()
+                        .stickerImageKey
+                        .shouldBeNull()
+                    result.themes
+                        .single()
+                        .theme shouldBe "테마0"
                 }
             }
         }

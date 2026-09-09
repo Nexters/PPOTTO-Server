@@ -51,66 +51,70 @@ class OpenApiExampleWiringTest(
                             .startsWith(APPLICATION_PACKAGE)
                     }.distinctBy { it.method }
 
-            Then("검사 대상 핸들러 메서드를 하나 이상 찾는다") {
-                handlerMethods.size shouldBeGreaterThan 0
-            }
+            When("예시 레지스트리와 대조하면") {
+                Then("검사 대상 핸들러 메서드를 하나 이상 찾는다") {
+                    handlerMethods.size shouldBeGreaterThan 0
+                }
 
-            Then("모든 핸들러 메서드에 예시가 배선되어 있다") {
-                handlerMethods
-                    .filter { registry.find(it) == null }
-                    .map(HandlerMethod::label)
-                    .shouldBeEmpty()
-            }
+                Then("모든 핸들러 메서드에 예시가 배선되어 있다") {
+                    handlerMethods
+                        .filter { registry.find(it) == null }
+                        .map(HandlerMethod::label)
+                        .shouldBeEmpty()
+                }
 
-            Then("배선된 예시에 대응하는 핸들러 메서드가 없는 항목이 없다") {
-                handlerMethods.count { registry.find(it) != null } shouldBe registry.size
-            }
+                Then("배선된 예시에 대응하는 핸들러 메서드가 없는 항목이 없다") {
+                    handlerMethods.count { registry.find(it) != null } shouldBe registry.size
+                }
 
-            Then("모든 핸들러 메서드가 응답 예시를 하나 이상 가진다") {
-                handlerMethods
-                    .filter {
-                        registry
-                            .find(it)
-                            ?.responses
-                            .orEmpty()
-                            .isEmpty()
-                    }.map(HandlerMethod::label)
-                    .shouldBeEmpty()
+                Then("모든 핸들러 메서드가 응답 예시를 하나 이상 가진다") {
+                    handlerMethods
+                        .filter {
+                            registry
+                                .find(it)
+                                ?.responses
+                                .orEmpty()
+                                .isEmpty()
+                        }.map(HandlerMethod::label)
+                        .shouldBeEmpty()
+                }
             }
         }
 
-        Given("OpenAPI 문서를 조회하면") {
-            val document =
-                mockMvc
-                    .perform(get("/v3/api-docs"))
-                    .andReturn()
-                    .response
-                    .contentAsString
-                    .let(objectMapper::readTree)
+        Given("애플리케이션이 OpenAPI 문서를 노출할 때") {
+            When("문서를 조회하면") {
+                val document =
+                    mockMvc
+                        .perform(get("/v3/api-docs"))
+                        .andReturn()
+                        .response
+                        .contentAsString
+                        .let(objectMapper::readTree)
 
-            Then("본문이 있는 모든 응답에 예시가 하나 이상 있다") {
-                document
-                    .operations()
-                    .flatMap { (operationName, operation) ->
-                        operation["responses"].entries().flatMap { (responseCode, response) ->
-                            response["content"]
-                                .entries()
-                                .filter { (_, mediaType) -> mediaType["examples"].entries().isEmpty() }
-                                .map { (name, _) -> "$operationName $responseCode $name" }
-                        }
-                    }.shouldBeEmpty()
-            }
+                Then("본문이 있는 모든 응답에 예시가 하나 이상 있다") {
+                    document
+                        .operations()
+                        .flatMap { (operationName, operation) ->
+                            operation["responses"].entries().flatMap { (responseCode, response) ->
+                                response["content"]
+                                    .entries()
+                                    .filter { (_, mediaType) -> mediaType["examples"].entries().isEmpty() }
+                                    .map { (name, _) -> "$operationName $responseCode $name" }
+                            }
+                        }.shouldBeEmpty()
+                }
 
-            Then("모든 예시가 값을 담고 있다") {
-                document
-                    .exampleHolders()
-                    .flatMap { (holderName, holder) ->
-                        holder["content"].entries().flatMap { (_, mediaType) ->
-                            mediaType["examples"].entries().map { (name, example) -> "$holderName $name" to example }
-                        }
-                    }.filter { (_, example) -> example["value"] == null || example["value"].isNull }
-                    .map { (name, _) -> name }
-                    .shouldBeEmpty()
+                Then("모든 예시가 값을 담고 있다") {
+                    document
+                        .exampleHolders()
+                        .flatMap { (holderName, holder) ->
+                            holder["content"].entries().flatMap { (_, mediaType) ->
+                                mediaType["examples"].entries().map { (name, example) -> "$holderName $name" to example }
+                            }
+                        }.filter { (_, example) -> example["value"] == null || example["value"].isNull }
+                        .map { (name, _) -> name }
+                        .shouldBeEmpty()
+                }
             }
         }
     })

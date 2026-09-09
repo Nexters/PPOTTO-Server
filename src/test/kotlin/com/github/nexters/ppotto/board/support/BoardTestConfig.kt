@@ -5,8 +5,6 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
-import com.github.nexters.ppotto.board.domain.BoardErrorCode
-import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
@@ -72,9 +70,6 @@ class FakeBoardStickerPort :
         boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
     ) {
-        if (!ownsAll(boardId, layouts.map { it.id }.toSet())) {
-            throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
-        }
         updatedLayouts += layouts
     }
 

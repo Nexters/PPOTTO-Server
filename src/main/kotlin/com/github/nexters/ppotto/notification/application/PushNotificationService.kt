@@ -5,13 +5,21 @@ import com.github.nexters.ppotto.notification.application.port.PushSendResult
 import com.github.nexters.ppotto.notification.domain.PushNotificationRequestedEvent
 import com.github.nexters.ppotto.notification.infrastructure.DeviceTokenRepository
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
 @Service
 class PushNotificationService(
     private val deviceTokenRepository: DeviceTokenRepository,
     private val pushNotifier: PushNotifier,
+    private val sleepMillis: (Long) -> Unit,
 ) {
+    @Autowired
+    constructor(
+        deviceTokenRepository: DeviceTokenRepository,
+        pushNotifier: PushNotifier,
+    ) : this(deviceTokenRepository, pushNotifier, { millis -> Thread.sleep(millis) })
+
     fun send(event: PushNotificationRequestedEvent) {
         val tokens = deviceTokenRepository.findFcmTokensByUserId(event.userId)
         if (tokens.isEmpty()) {
@@ -44,7 +52,7 @@ class PushNotificationService(
                 event.userId,
                 failure,
             )
-            Thread.sleep(delayMillis)
+            sleepMillis(delayMillis)
             delayMillis *= RETRY_BACKOFF_MULTIPLIER
         }
         return emptyList()

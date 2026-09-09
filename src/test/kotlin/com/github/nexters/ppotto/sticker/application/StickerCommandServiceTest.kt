@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.analysis.support.FakeStickerStorage
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.newDrawing
@@ -12,6 +13,8 @@ import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.DrawingId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationResult
@@ -26,7 +29,6 @@ import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
-import io.kotest.assertions.throwables.shouldNotThrowAny
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
@@ -34,6 +36,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import org.jooq.DSLContext
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
@@ -52,7 +55,18 @@ class StickerCommandServiceTest(
     transactionTemplate: TransactionTemplate,
     eventPublisher: ApplicationEventPublisher,
     objectStorageCleaner: RecordingObjectStorageCleaner,
+    stickerStorage: FakeStickerStorage,
+    dslContext: DSLContext,
 ) : IntegrationTest({
+        fun imageKeyOf(stickerId: StickerId) = stickerRepository.findById(stickerId)?.imageKey
+
+        fun regenerationLockOf(stickerId: StickerId) =
+            dslContext
+                .select(STICKERS.REGENERATION_LOCKED_UNTIL)
+                .from(STICKERS)
+                .where(STICKERS.ID.eq(stickerId))
+                .fetchOne(STICKERS.REGENERATION_LOCKED_UNTIL)
+
         fun serviceWith(
             drawingCommandPorts: List<StickerDrawingCommandPort> = emptyList(),
             regenerationPorts: List<StickerRegenerationPort> = emptyList(),
@@ -86,13 +100,11 @@ class StickerCommandServiceTest(
 
             When("두 번 열람 처리하면") {
                 service.markViewed(board.userId, sticker.id)
+                val firstViewedAt = checkNotNull(stickerRepository.findById(sticker.id)?.viewedAt)
                 service.markViewed(board.userId, sticker.id)
 
-                Then("열람 시각이 채워진 채 유지된다") {
-                    stickerRepository
-                        .findById(sticker.id)
-                        ?.viewedAt
-                        .shouldNotBeNull()
+                Then("최초 열람 시각을 덮어쓰지 않는다") {
+                    stickerRepository.findById(sticker.id)?.viewedAt shouldBe firstViewedAt
                 }
             }
 
@@ -183,7 +195,6 @@ class StickerCommandServiceTest(
             stickerRecapRepository.savePhotos(sticker.id, photoIds)
 
             When("재생성을 요청하면") {
-                objectStorageCleaner.clear()
                 service.regenerate(board.userId, sticker.id)
 
                 Then("스티커 이미지만 바뀌고 리캡 문구는 그대로다") {
@@ -221,7 +232,6 @@ class StickerCommandServiceTest(
                                 },
                             ),
                     )
-                objectStorageCleaner.clear()
                 val exception =
                     shouldThrow<NotFoundException> {
                         deletingService.regenerate(board.userId, conflictedSticker.id)
@@ -248,40 +258,43 @@ class StickerCommandServiceTest(
                         imageStickerCreation(sourcePhotoId = photoIds.first()),
                     )
                 stickerRecapRepository.savePhotos(lockedSticker.id, photoIds)
-                val now = Instant.now()
-                stickerCommandRepository.tryClaimRegenerationLock(lockedSticker.id, now, now.plusSeconds(300))
-                var portCalled = false
-                val recordingService =
-                    serviceWith(
-                        regenerationPorts =
-                            listOf(
-                                StickerRegenerationPort { _, _, _, _, previousSourcePhotoId ->
-                                    portCalled = true
-                                    StickerRegenerationResult(previousSourcePhotoId, "stickers/should-not-happen.png", "#FF6B6B")
-                                },
-                            ),
-                    )
+                val lockUntil = Instant.parse("2126-01-01T00:00:00Z")
+                stickerCommandRepository.tryClaimRegenerationLock(lockedSticker.id, Instant.now(), lockUntil)
                 val exception =
                     shouldThrow<ConflictException> {
-                        recordingService.regenerate(board.userId, lockedSticker.id)
+                        service.regenerate(board.userId, lockedSticker.id)
                     }
 
                 Then("STICKER-002 오류로 거부한다") {
                     exception.errorCode shouldBe StickerErrorCode.STICKER_REGENERATION_IN_PROGRESS
                 }
 
-                Then("외부 재생성은 호출하지 않는다") {
-                    portCalled shouldBe false
+                Then("스티커 이미지는 그대로다") {
+                    imageKeyOf(lockedSticker.id) shouldBe "stickers/original.png"
+                }
+
+                Then("새 이미지를 업로드하지 않는다") {
+                    stickerStorage.uploaded.keys
+                        .none { it.startsWith("stickers/${lockedSticker.id}/") } shouldBe true
+                }
+
+                Then("먼저 잡힌 락을 건드리지 않는다") {
+                    regenerationLockOf(lockedSticker.id) shouldBe lockUntil
                 }
             }
 
             When("재생성에 성공한 직후 다시 요청하면") {
                 service.regenerate(board.userId, sticker.id)
+                val firstImageKey = imageKeyOf(sticker.id)
+                service.regenerate(board.userId, sticker.id)
 
-                Then("쿨다운 없이 즉시 성공한다") {
-                    shouldNotThrowAny {
-                        service.regenerate(board.userId, sticker.id)
-                    }
+                Then("쿨다운 없이 이미지를 한 번 더 교체한다") {
+                    imageKeyOf(sticker.id) shouldNotBe firstImageKey
+                    imageKeyOf(sticker.id) shouldNotBe "stickers/original.png"
+                }
+
+                Then("재생성 락을 남기지 않는다") {
+                    regenerationLockOf(sticker.id).shouldBeNull()
                 }
             }
 
@@ -308,11 +321,14 @@ class StickerCommandServiceTest(
                 shouldThrow<IllegalStateException> {
                     flakyService.regenerate(board.userId, failingSticker.id)
                 }
+                flakyService.regenerate(board.userId, failingSticker.id)
 
-                Then("재생성 락이 남지 않아 재시도가 성공한다") {
-                    shouldNotThrowAny {
-                        flakyService.regenerate(board.userId, failingSticker.id)
-                    }
+                Then("재시도가 이미지를 교체한다") {
+                    imageKeyOf(failingSticker.id) shouldBe "stickers/retry-success.png"
+                }
+
+                Then("재생성 락을 남기지 않는다") {
+                    regenerationLockOf(failingSticker.id).shouldBeNull()
                 }
             }
 
@@ -326,11 +342,14 @@ class StickerCommandServiceTest(
                 stickerRecapRepository.savePhotos(staleLockedSticker.id, photoIds)
                 val past = Instant.now().minusSeconds(600)
                 stickerCommandRepository.tryClaimRegenerationLock(staleLockedSticker.id, past, past)
+                service.regenerate(board.userId, staleLockedSticker.id)
 
-                Then("락을 재선점해 재생성에 성공한다") {
-                    shouldNotThrowAny {
-                        service.regenerate(board.userId, staleLockedSticker.id)
-                    }
+                Then("만료된 락을 재선점해 이미지를 교체한다") {
+                    imageKeyOf(staleLockedSticker.id) shouldNotBe "stickers/original.png"
+                }
+
+                Then("재생성 락을 남기지 않는다") {
+                    regenerationLockOf(staleLockedSticker.id).shouldBeNull()
                 }
             }
 
@@ -424,10 +443,17 @@ class StickerCommandServiceTest(
             stickerRecapRepository.savePhotos(sticker.id, photoIds)
 
             When("재생성을 요청하면") {
-                Then("재생성할 수 있는 사진이 없어 거부한다") {
+                val exception =
                     shouldThrow<InvalidInputException> {
                         service.regenerate(board.userId, sticker.id)
                     }
+
+                Then("STICKER-006 오류로 거부한다") {
+                    exception.errorCode shouldBe StickerErrorCode.REGENERATION_PHOTOS_NOT_FOUND
+                }
+
+                Then("스티커 이미지는 그대로다") {
+                    imageKeyOf(sticker.id) shouldBe "stickers/original.png"
                 }
             }
         }

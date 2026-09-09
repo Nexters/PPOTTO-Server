@@ -24,8 +24,6 @@ class FakeSocialAccountRevoker :
         revocations.clear()
         failure = null
     }
-
-    fun clear() = reset()
 }
 
 data class Revocation(
