@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.user.application
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.transaction.afterCommit
 import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
 import com.github.nexters.ppotto.user.application.port.UserSessionRevoker
 import com.github.nexters.ppotto.user.domain.EncryptedProviderRefreshToken
@@ -13,8 +14,6 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.springframework.transaction.support.TransactionSynchronization
-import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Instant
 
 @Service
@@ -51,7 +50,7 @@ class UserService(
         userRepository.withdraw(user.withdraw(withdrawnAt))
             ?: throw NotFoundException(UserErrorCode.USER_NOT_FOUND)
 
-        revokeSessionAfterCommit(id)
+        afterCommit { userSessionRevoker.revoke(id) }
     }
 
     private fun create(
@@ -94,20 +93,6 @@ class UserService(
             return
         }
         socialAccountRevoker.revoke(user.provider, tokenCipher.decrypt(providerRefreshToken))
-    }
-
-    private fun revokeSessionAfterCommit(id: UserId) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            userSessionRevoker.revoke(id)
-            return
-        }
-        TransactionSynchronizationManager.registerSynchronization(
-            object : TransactionSynchronization {
-                override fun afterCommit() {
-                    userSessionRevoker.revoke(id)
-                }
-            },
-        )
     }
 
     companion object {

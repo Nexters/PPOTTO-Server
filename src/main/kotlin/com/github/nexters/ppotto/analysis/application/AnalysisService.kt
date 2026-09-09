@@ -13,19 +13,16 @@ import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.ConflictException
-import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
-import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
-import java.util.UUID
 
 @Service
 class AnalysisService(
@@ -39,11 +36,9 @@ class AnalysisService(
     fun createAnalysis(
         userId: UserId,
         boardId: BoardId,
-        photoGroups: List<PhotoUploadGroupRequest>,
+        command: CreateAnalysisCommand,
     ): AnalysisCreationResult {
-        validateGroupCount(photoGroups.size)
-        val photoCreates = resolveBurstGroups(photoGroups)
-
+        val photoCreates = command.toPhotoCreates()
         val savedPhotos =
             checkNotNull(
                 transactionTemplate.execute { savePendingPhotos(userId, boardId, photoCreates) },
@@ -56,8 +51,7 @@ class AnalysisService(
         userId: UserId,
         analysisId: AnalysisId,
     ): UploadVerificationResult {
-        val analysis = findOwnedAnalysis(analysisId, userId)
-        validateUploading(analysis.status)
+        findOwnedAnalysis(analysisId, userId).requireUploading()
         return performUploadVerification(analysisId)
     }
 
@@ -65,8 +59,7 @@ class AnalysisService(
         userId: UserId,
         analysisId: AnalysisId,
     ): List<PhotoUploadUrlItem> {
-        val analysis = findOwnedAnalysis(analysisId, userId)
-        validateUploading(analysis.status)
+        findOwnedAnalysis(analysisId, userId).requireUploading()
 
         return photoRepository
             .findPendingByAnalysisId(analysisId)
@@ -110,11 +103,7 @@ class AnalysisService(
     }
 
     private fun performUploadVerification(analysisId: AnalysisId): UploadVerificationResult {
-        val startedAt = System.nanoTime()
-        log.info("analysis upload verification started: analysisId={}", analysisId)
         val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
-        log.info("analysis upload verification pending photos loaded: analysisId={}, pendingCount={}", analysisId, pendingPhotos.size)
-
         val uploadedObjects = photoStorage.uploadedObjects(analysisId, pendingPhotos)
         val completedUpdates =
             pendingPhotos
@@ -122,38 +111,18 @@ class AnalysisService(
                     val meta = uploadedObjects[photo.id]
                     if (meta != null && meta.size > 0) photo.id to meta.createdAt else null
                 }.toMap()
-
-        if (completedUpdates.isEmpty()) {
-            log.warn(
-                "analysis upload verification failed: analysisId={}, pendingCount={}, elapsedMs={}",
-                analysisId,
-                pendingPhotos.size,
-                elapsedMs(startedAt),
-            )
-            throw ConflictException(AnalysisErrorCode.NO_UPLOADED_PHOTOS)
-        }
+        if (completedUpdates.isEmpty()) throw ConflictException(AnalysisErrorCode.NO_UPLOADED_PHOTOS)
 
         val failedIds = pendingPhotos.map { it.id } - completedUpdates.keys
         val photoRefs = pendingPhotos.filter { it.id in completedUpdates }.map { it.toRef() }
 
         transactionTemplate.executeWithoutResult {
-            val locked =
-                checkNotNull(analysisRepository.findByIdForUpdate(analysisId)) { "분석을 찾을 수 없습니다: $analysisId" }
-            if (locked.status != AnalysisStatus.UPLOADING) {
-                throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
-            }
+            checkNotNull(analysisRepository.findByIdForUpdate(analysisId)) { "분석을 찾을 수 없습니다: $analysisId" }.requireUploading()
 
             photoRepository.markCompletedBatch(completedUpdates)
             if (failedIds.isNotEmpty()) photoRepository.markFailedBatch(failedIds)
             analysisRepository.markAnalyzing(analysisId, Instant.now())
             eventPublisher.publishEvent(AnalysisStartRequestedEvent(analysisId, photoRefs))
-            log.info(
-                "analysis upload verification completed: analysisId={}, uploadedCount={}, failedCount={}, elapsedMs={}",
-                analysisId,
-                completedUpdates.size,
-                failedIds.size,
-                elapsedMs(startedAt),
-            )
         }
 
         return UploadVerificationResult(completedUpdates.size, failedIds.size, failedIds)
@@ -193,39 +162,4 @@ class AnalysisService(
         ) {
             throw ConflictException(AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS)
         }
-
-    companion object {
-        const val MIN_GROUP_COUNT = 20
-        const val MAX_GROUP_COUNT = 100
-        const val MAX_BURST_GROUP_SIZE = 10
-
-        private val log = LoggerFactory.getLogger(AnalysisService::class.java)
-    }
 }
-
-private fun validateUploading(status: AnalysisStatus) {
-    if (status != AnalysisStatus.UPLOADING) {
-        throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
-    }
-}
-
-private fun validateGroupCount(size: Int) {
-    if (size !in AnalysisService.MIN_GROUP_COUNT..AnalysisService.MAX_GROUP_COUNT) {
-        throw InvalidInputException(AnalysisErrorCode.GROUP_COUNT_OUT_OF_RANGE)
-    }
-}
-
-private fun resolveBurstGroups(groups: List<PhotoUploadGroupRequest>): List<PhotoCreate> =
-    groups.flatMap { group ->
-        if (group.items.size > AnalysisService.MAX_BURST_GROUP_SIZE) {
-            throw InvalidInputException(AnalysisErrorCode.BURST_GROUP_SIZE_EXCEEDED)
-        }
-        if (group.items.size == 1) {
-            return@flatMap group.items.map { PhotoCreate(it.contentType, it.takenAt, burstGroupId = null, isRepresentative = true) }
-        }
-        if (group.items.count { it.isRepresentative } != 1) {
-            throw InvalidInputException(AnalysisErrorCode.INVALID_BURST_GROUP)
-        }
-        val burstGroupId = UUID.randomUUID()
-        group.items.map { PhotoCreate(it.contentType, it.takenAt, burstGroupId, it.isRepresentative) }
-    }

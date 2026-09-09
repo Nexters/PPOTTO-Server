@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.analysis.presentation
 
 import com.github.nexters.ppotto.analysis.application.AnalysisService
+import com.github.nexters.ppotto.analysis.application.CreateAnalysisCommand
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
@@ -250,7 +251,7 @@ class AnalysisControllerTest(
 
         Given("이미 활성 분석이 있는 사용자가 분석 생성을 요청할 때") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            analysisService.createAnalysis(board.userId, board.id, photoUploadGroups())
+            analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoUploadGroups()))
 
             When("새 분석 생성을 요청하면") {
                 val response =
@@ -272,7 +273,7 @@ class AnalysisControllerTest(
 
         Given("모든 사진이 업로드된 UPLOADING 분석에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val created = analysisService.createAnalysis(board.userId, board.id, photoUploadGroups())
+            val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoUploadGroups()))
             photoStorage.markUploaded(photoRepository.findPendingByAnalysisId(created.analysisId))
 
             When("업로드 완료를 통보하면") {
@@ -291,7 +292,7 @@ class AnalysisControllerTest(
 
         Given("사진이 한 장도 업로드되지 않은 UPLOADING 분석에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val created = analysisService.createAnalysis(board.userId, board.id, photoUploadGroups())
+            val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoUploadGroups()))
 
             When("업로드 완료를 통보하면") {
                 val response = mockMvc.perform(post("/analysis/${created.analysisId}/start").authenticatedAs(board.userId))
@@ -365,7 +366,7 @@ class AnalysisControllerTest(
 
         Given("다른 사용자의 analysisId로 업로드 완료를 통보할 때") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
-            val created = analysisService.createAnalysis(ownerBoard.userId, ownerBoard.id, photoUploadGroups())
+            val created = analysisService.createAnalysis(ownerBoard.userId, ownerBoard.id, CreateAnalysisCommand(photoUploadGroups()))
             val otherUserId = userRepository.saveTestUser().id
 
             When("업로드 완료를 통보하면") {
@@ -532,7 +533,7 @@ class AnalysisControllerTest(
 
         Given("UPLOADING 상태의 분석을 취소할 때") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val created = analysisService.createAnalysis(board.userId, board.id, photoUploadGroups())
+            val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoUploadGroups()))
 
             When("취소를 요청하면") {
                 val response = mockMvc.perform(delete("/analysis/${created.analysisId}").authenticatedAs(board.userId))
@@ -609,7 +610,7 @@ class AnalysisControllerTest(
 
         Given("UPLOADING 상태의 분석에 업로드 URL 재발급을 요청할 때") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val created = analysisService.createAnalysis(board.userId, board.id, photoUploadGroups())
+            val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoUploadGroups()))
 
             When("업로드 URL 재발급을 요청하면") {
                 val response = mockMvc.perform(post("/analysis/${created.analysisId}/reissue").authenticatedAs(board.userId))
@@ -642,7 +643,7 @@ class AnalysisControllerTest(
 
         Given("다른 사용자의 analysisId로 업로드 URL 재발급을 요청할 때") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
-            val created = analysisService.createAnalysis(ownerBoard.userId, ownerBoard.id, photoUploadGroups())
+            val created = analysisService.createAnalysis(ownerBoard.userId, ownerBoard.id, CreateAnalysisCommand(photoUploadGroups()))
             val otherUserId = userRepository.saveTestUser().id
 
             When("업로드 URL 재발급을 요청하면") {

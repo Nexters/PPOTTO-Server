@@ -75,16 +75,17 @@ class AnalysisResultSaveServiceTest(
         Given("분석 결과 스티커가 7개인 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
-            val command =
-                SaveAnalysisResultCommand(
-                    board.userId,
-                    analysis.id,
-                    board.id,
-                    List(7) { textStickerResult() },
-                )
 
-            When("분석 결과를 저장하면") {
-                val exception = shouldThrow<InvalidInputException> { service.save(command) }
+            When("저장 명령을 만들면") {
+                val exception =
+                    shouldThrow<InvalidInputException> {
+                        SaveAnalysisResultCommand(
+                            board.userId,
+                            analysis.id,
+                            board.id,
+                            List(7) { textStickerResult() },
+                        )
+                    }
 
                 Then("STICKER-003 오류가 발생한다") {
                     exception.errorCode shouldBe StickerErrorCode.ANALYSIS_STICKER_COUNT_EXCEEDED

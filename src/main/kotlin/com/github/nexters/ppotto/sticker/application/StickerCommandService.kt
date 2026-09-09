@@ -93,12 +93,7 @@ class StickerCommandService(
         val previousSourcePhotoId = checkNotNull(sticker.sourcePhotoId) { "이미지형 스티커의 소스 사진이 비어 있습니다." }
         val previousImageKey = sticker.imageKey
 
-        val now = Instant.now()
-        if (!stickerCommandRepository.tryClaimRegenerationLock(stickerId, now, now.plus(REGENERATION_LOCK_TTL))) {
-            throw ConflictException(StickerErrorCode.STICKER_REGENERATION_IN_PROGRESS)
-        }
-
-        try {
+        withRegenerationLock(stickerId) {
             val result =
                 stickerRegenerationPorts.singlePort("스티커 재생성").regenerate(
                     analysisId = sticker.analysisId,
@@ -116,6 +111,19 @@ class StickerCommandService(
                     reason = StickerImageDeletionReason.REGENERATED_IMAGE_REPLACED,
                 )
             }
+        }
+    }
+
+    private fun <T> withRegenerationLock(
+        stickerId: StickerId,
+        block: () -> T,
+    ): T {
+        val now = Instant.now()
+        if (!stickerCommandRepository.tryClaimRegenerationLock(stickerId, now, now.plus(REGENERATION_LOCK_TTL))) {
+            throw ConflictException(StickerErrorCode.STICKER_REGENERATION_IN_PROGRESS)
+        }
+        try {
+            return block()
         } finally {
             stickerCommandRepository.releaseRegenerationLock(stickerId)
         }

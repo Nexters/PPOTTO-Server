@@ -6,28 +6,13 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import org.jooq.DSLContext
-import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
-import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.Instant
 
 @Repository
 class BoardRepository(
     private val dslContext: DSLContext,
 ) {
-    fun lockCommandsByUserId(userId: UserId) {
-        check(TransactionSynchronizationManager.isActualTransactionActive()) {
-            "사용자 단위 보드 명령 잠금은 트랜잭션 안에서만 잡을 수 있습니다."
-        }
-        dslContext
-            .select(
-                DSL.field(
-                    "pg_advisory_xact_lock(hashtextextended({0}::text, 0))",
-                    DSL.value("board-user:$userId"),
-                ),
-            ).fetch()
-    }
-
     fun save(
         userId: UserId,
         name: String = Board.defaultName(1),

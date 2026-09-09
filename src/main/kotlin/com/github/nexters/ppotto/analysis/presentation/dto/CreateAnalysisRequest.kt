@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
+import com.github.nexters.ppotto.analysis.application.CreateAnalysisCommand
 import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
@@ -29,7 +30,7 @@ data class CreateAnalysisRequest(
     )
     val photos: List<@Valid PhotoUploadGroup>,
 ) {
-    fun toServiceRequests(): List<PhotoUploadGroupRequest> = photos.map { it.toServiceRequest() }
+    fun toCommand(): CreateAnalysisCommand = CreateAnalysisCommand(photos.map { it.toGroupRequest() })
 }
 
 @Schema(description = "사진 그룹. 연사가 아니면 원소 1개, 연사면 여러 장(최대 10장)")
@@ -38,7 +39,7 @@ data class PhotoUploadGroup(
     @field:ArraySchema(arraySchema = Schema(description = "그룹에 속한 사진들. 촬영 시각 오름차순"))
     val items: List<@Valid PhotoUploadItem>,
 ) {
-    fun toServiceRequest(): PhotoUploadGroupRequest =
+    fun toGroupRequest(): PhotoUploadGroupRequest =
         PhotoUploadGroupRequest(
             items.map {
                 PhotoUploadItemRequest(

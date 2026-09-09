@@ -1,6 +1,8 @@
 package com.github.nexters.ppotto.board.application.port
 
 import com.github.nexters.ppotto.board.domain.BoardStickerType
+import com.github.nexters.ppotto.global.error.CommonErrorCode
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 
@@ -51,6 +53,19 @@ data class BoardStickerLayoutCommand(
     val badgeOffsetY: Double,
     val badgeRotation: Double,
 ) {
+    init {
+        val invalid =
+            !posX.isFinite() ||
+                !posY.isFinite() ||
+                !scale.isFinite() ||
+                scale <= 0 ||
+                !rotation.isFinite() ||
+                !badgeOffsetX.isFinite() ||
+                !badgeOffsetY.isFinite() ||
+                !badgeRotation.isFinite()
+        if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
+    }
+
     companion object {
         const val MAX_TITLE_LENGTH = 15
     }

@@ -11,8 +11,11 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.lock.AdvisoryLock
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+
+const val BOARD_USER_LOCK_NAMESPACE = "board-user"
 
 @Service
 class BoardCommandService(
@@ -23,14 +26,15 @@ class BoardCommandService(
     private val stickerCommandPort: BoardStickerCommandPort,
 ) {
     @Transactional
+    @AdvisoryLock(namespace = BOARD_USER_LOCK_NAMESPACE, key = "#userId")
     fun createDefault(userId: UserId): Board = create(userId, null)
 
     @Transactional
+    @AdvisoryLock(namespace = BOARD_USER_LOCK_NAMESPACE, key = "#userId")
     fun create(
         userId: UserId,
         name: String?,
     ): Board {
-        boardRepository.lockCommandsByUserId(userId)
         val count = boardRepository.countByUserId(userId)
         if (count >= Board.MAX_COUNT) {
             throw InvalidInputException(BoardErrorCode.COUNT_LIMIT_EXCEEDED)
@@ -47,11 +51,11 @@ class BoardCommandService(
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
     @Transactional
+    @AdvisoryLock(namespace = BOARD_USER_LOCK_NAMESPACE, key = "#userId")
     fun delete(
         boardId: BoardId,
         userId: UserId,
     ) {
-        boardRepository.lockCommandsByUserId(userId)
         boardAccessService.getOwnedByIdForUpdate(boardId, userId)
         validateDeletable(boardId, userId)
 

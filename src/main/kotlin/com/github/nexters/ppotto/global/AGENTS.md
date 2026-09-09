@@ -12,6 +12,9 @@ Shared module used by all domains. Contains no business logic.
 | `jooq/` | Custom jOOQ converters used by codegen `forcedType`: `OffsetDateTimeInstantConverter` plus one `UUID ↔ XxxId` converter per typed identifier, generating id columns as typed fields. Each id converter is a one-expression `Converter.ofNullable(...)` delegation; generated code instantiates it by FQN, so the class names are pinned by `buildSrc/src/main/kotlin/ppotto.database.gradle.kts` |
 | `logging/` | Request logging filter (see `logging/AGENTS.md`) |
 | `observability/` | Sentry beans the starter cannot infer (authenticated user context, `/actuator/**` traces sampler) plus the `gen_ai.*` LLM span wrapper for Vertex AI Gemini calls (see `observability/AGENTS.md`) |
+| `lock/` | `@AdvisoryLock` annotation and its aspect: Postgres advisory lock taken inside the annotated method's transaction (see `lock/AGENTS.md`) |
+| `retry/` | `RetryPolicy` + `retrying { }` higher-order function returning `Result` (see `retry/AGENTS.md`) |
+| `transaction/` | `afterCommit { }` post-commit hook with no-transaction fallback (see `transaction/AGENTS.md`) |
 | `oauth/` | `OAuthProvider` — the closed social-login provider set (`KAKAO`, `APPLE`) shared by `auth` and `user` (see `oauth/AGENTS.md`) |
 | `openapi/` | Reusable Swagger error response annotations, the documentation-only failure envelope schema, and the type-safe example registry that injects real DTO instances into the OpenAPI document (see `openapi/AGENTS.md`) |
 | `response/` | The `ApiResponse` response envelope (see `response/AGENTS.md`) |

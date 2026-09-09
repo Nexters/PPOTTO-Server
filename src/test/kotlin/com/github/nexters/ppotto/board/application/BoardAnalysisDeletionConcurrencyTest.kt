@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.analysis.application.AnalysisService
+import com.github.nexters.ppotto.analysis.application.CreateAnalysisCommand
 import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
@@ -62,7 +63,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                 check(stickerPort.awaitDeleteInvocation())
                 val createFuture =
                     executor.submit(
-                        Callable { runCatching { analysisService.createAnalysis(user.id, board.id, photos) } },
+                        Callable { runCatching { analysisService.createAnalysis(user.id, board.id, CreateAnalysisCommand(photos)) } },
                     )
                 dslContext.awaitBlockedLock()
                 stickerPort.releaseDelete()
@@ -100,7 +101,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                         Callable {
                             runCatching {
                                 transactionTemplate.executeWithoutResult {
-                                    analysisService.createAnalysis(user.id, board.id, photos)
+                                    analysisService.createAnalysis(user.id, board.id, CreateAnalysisCommand(photos))
                                     createLocked.countDown()
                                     check(createCommitAllowed.await(10, TimeUnit.SECONDS))
                                 }

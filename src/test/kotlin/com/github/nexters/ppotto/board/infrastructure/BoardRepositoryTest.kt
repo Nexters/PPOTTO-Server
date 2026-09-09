@@ -1,11 +1,11 @@
 package com.github.nexters.ppotto.board.infrastructure
 
+import com.github.nexters.ppotto.board.application.BoardCommandService
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
@@ -15,6 +15,7 @@ import javax.sql.DataSource
 
 class BoardRepositoryTest(
     boardRepository: BoardRepository,
+    boardCommandService: BoardCommandService,
     userRepository: UserRepository,
     transactionTemplate: TransactionTemplate,
     dataSource: DataSource,
@@ -51,26 +52,18 @@ class BoardRepositoryTest(
             }
         }
 
-        Given("사용자 단위 명령 잠금을 잡으려는 호출부에서") {
+        Given("보드를 생성하는 사용자가") {
             val user = userRepository.saveTestUser()
 
-            When("트랜잭션 없이 잠금을 요청하면") {
-                Then("autocommit으로 곧바로 풀리지 않도록 거부한다") {
-                    shouldThrow<IllegalStateException> {
-                        boardRepository.lockCommandsByUserId(user.id)
-                    }
-                }
-            }
-
-            When("트랜잭션 안에서 잠금을 요청하면") {
-                val takenInsideTransaction =
+            When("보드 생성이 트랜잭션 안에서 진행되는 동안") {
+                val takenDuringCreate =
                     transactionTemplate.execute {
-                        boardRepository.lockCommandsByUserId(user.id)
+                        boardCommandService.create(user.id, "잠금 확인용")
                         dataSource.tryCommandLock(user.id)
                     }
 
-                Then("잠금이 걸려 있는 동안 다른 커넥션은 같은 잠금을 잡지 못한다") {
-                    takenInsideTransaction shouldBe false
+                Then("다른 커넥션은 board-user 잠금을 잡지 못한다") {
+                    takenDuringCreate shouldBe false
                 }
 
                 Then("트랜잭션이 끝나면 다른 커넥션이 같은 잠금을 잡을 수 있다") {
