@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.jooq.tables.references.STICKER_PHOTOS
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.jooq.tables.references.TERM_AGREEMENTS
 import com.github.nexters.ppotto.jooq.tables.references.USERS
+import com.github.nexters.ppotto.jooq.tables.references.USER_DEVICE_TOKENS
 import org.jooq.DSLContext
 import org.jooq.Table
 import org.springframework.stereotype.Component
@@ -36,6 +37,7 @@ class DatabaseCleaner(
                 PHOTOS,
                 ANALYSIS,
                 BOARDS,
+                USER_DEVICE_TOKENS,
                 TERM_AGREEMENTS,
                 TERMS,
                 USERS,

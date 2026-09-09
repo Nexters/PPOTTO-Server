@@ -1,12 +1,10 @@
 package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
-import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
-import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.RecapCommentPosition
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
@@ -17,9 +15,7 @@ import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
-import org.springframework.context.annotation.Import
 
-@Import(AnalysisTestConfig::class)
 class RecapCommentCommandServiceTest(
     service: RecapCommentCommandService,
     stickerRepository: StickerRepository,
@@ -30,8 +26,8 @@ class RecapCommentCommandServiceTest(
 ) : IntegrationTest({
         Given("스티커에 말풍선과 키워드 칩 코멘트가 있는 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
-            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             val comments =
                 stickerRecapRepository.saveComments(
                     sticker.id,

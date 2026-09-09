@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.global.openapi
 
+import com.github.nexters.ppotto.PpottoApplication
 import com.github.nexters.ppotto.support.IntegrationTest
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.ints.shouldBeGreaterThan
@@ -13,7 +14,7 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 
-private const val APPLICATION_PACKAGE = "com.github.nexters.ppotto"
+private val APPLICATION_PACKAGE: String = PpottoApplication::class.java.packageName
 
 private fun JsonNode?.entries(): List<Pair<String, JsonNode>> =
     this

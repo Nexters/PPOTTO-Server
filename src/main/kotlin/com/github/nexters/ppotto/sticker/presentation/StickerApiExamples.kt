@@ -53,7 +53,7 @@ private val KEYWORD_COMMENTS =
         keywordComment("01983f2d-9c0d-7e1f-a2b3-4c5d6e7f8a9b", "감도 높은 취향"),
         keywordComment("01983f2d-a0d1-7f2a-b3c4-5d6e7f8a9b0c", "밈잘알"),
         keywordComment("01983f2d-b1e2-7a3b-c4d5-6e7f8a9b0c1d", "밈 고르는 안목 보소"),
-        keywordComment("01983f2d-c2f3-7b4c-d5e6-7f8a9b0c1d2e", "근데 소랑 돌고래가 같이 나는 사진은 뭐임? 🤔"),
+        keywordComment("01983f2d-c2f3-7b4c-d5e6-7f8a9b0c1d2e", "근데 소랑 돌고래가 같이 나는 사진은 뭐임?"),
     )
 
 private val RECAP_DETAIL_RESPONSE =
@@ -158,6 +158,28 @@ private val STICKER_REGENERATION_IN_PROGRESS_RESPONSE =
         ),
     )
 
+private val UNEDITABLE_RECAP_COMMENT_RESPONSE =
+    ApiExamples.INVALID_INPUT_RESPONSE +
+        ApiExamples.errorExample(
+            code = "STICKER-004",
+            summary = "코멘트 id 중복, 키워드 칩 id, 다른 스티커 소속 id, 유한하지 않은 좌표",
+            message = "수정할 수 없는 코멘트가 포함되어 있습니다.",
+        )
+
+private val NOT_REGENERATABLE_STICKER_RESPONSE =
+    listOf(
+        ApiExamples.errorExample(
+            code = "STICKER-005",
+            summary = "이미지형 스티커가 아님",
+            message = "이미지형 스티커만 재생성할 수 있습니다.",
+        ),
+        ApiExamples.errorExample(
+            code = "STICKER-006",
+            summary = "재생성할 사진 구성 없음",
+            message = "재생성할 사진 구성이 없습니다.",
+        ),
+    )
+
 @Component
 class StickerApiExamples : ApiExampleProvider {
     override val examples: Map<KFunction<*>, OperationExamples> =
@@ -186,7 +208,7 @@ class StickerApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to ApiExamples.EMPTY_SUCCESS,
-                            "400" to ApiExamples.INVALID_INPUT_RESPONSE,
+                            "400" to UNEDITABLE_RECAP_COMMENT_RESPONSE,
                             "404" to STICKER_NOT_FOUND_RESPONSE,
                         ),
                 ),
@@ -195,7 +217,7 @@ class StickerApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(RECAP_DETAIL_RESPONSE),
-                            "400" to ApiExamples.INVALID_INPUT_RESPONSE,
+                            "400" to NOT_REGENERATABLE_STICKER_RESPONSE,
                             "404" to STICKER_NOT_FOUND_RESPONSE,
                             "409" to STICKER_REGENERATION_IN_PROGRESS_RESPONSE,
                         ),

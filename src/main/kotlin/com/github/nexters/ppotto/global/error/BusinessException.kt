@@ -9,24 +9,29 @@ open class BusinessException(
 open class InvalidInputException(
     errorCode: ErrorCode = CommonErrorCode.INVALID_INPUT,
     message: String = errorCode.message,
-) : BusinessException(errorCode, message)
+    cause: Throwable? = null,
+) : BusinessException(errorCode, message, cause)
 
 open class UnauthorizedException(
     errorCode: ErrorCode = CommonErrorCode.UNAUTHORIZED,
     message: String = errorCode.message,
-) : BusinessException(errorCode, message)
+    cause: Throwable? = null,
+) : BusinessException(errorCode, message, cause)
 
 open class ForbiddenException(
     errorCode: ErrorCode = CommonErrorCode.FORBIDDEN,
     message: String = errorCode.message,
-) : BusinessException(errorCode, message)
+    cause: Throwable? = null,
+) : BusinessException(errorCode, message, cause)
 
 open class NotFoundException(
     errorCode: ErrorCode = CommonErrorCode.RESOURCE_NOT_FOUND,
     message: String = errorCode.message,
-) : BusinessException(errorCode, message)
+    cause: Throwable? = null,
+) : BusinessException(errorCode, message, cause)
 
 open class ConflictException(
     errorCode: ErrorCode = CommonErrorCode.CONFLICT,
     message: String = errorCode.message,
-) : BusinessException(errorCode, message)
+    cause: Throwable? = null,
+) : BusinessException(errorCode, message, cause)

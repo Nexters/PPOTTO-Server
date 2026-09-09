@@ -6,7 +6,7 @@ import com.github.nexters.ppotto.global.identifier.PhotoId
 import java.time.Instant
 import java.util.UUID
 
-interface RecapPhotoQueryPort {
+fun interface RecapPhotoQueryPort {
     fun getByIds(
         analysisId: AnalysisId,
         boardId: BoardId,

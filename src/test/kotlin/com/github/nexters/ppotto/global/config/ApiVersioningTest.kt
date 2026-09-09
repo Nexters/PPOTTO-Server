@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.global.config
 
+import com.github.nexters.ppotto.PpottoApplication
 import com.github.nexters.ppotto.support.IntegrationTest
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -7,7 +8,7 @@ import io.kotest.matchers.ints.shouldBeGreaterThan
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
 
-private const val APPLICATION_PACKAGE = "com.github.nexters.ppotto"
+private val APPLICATION_PACKAGE: String = PpottoApplication::class.java.packageName
 
 private val FROZEN_V1_HANDLERS =
     listOf(
@@ -32,12 +33,12 @@ class ApiVersioningTest(
                 endpoints.size shouldBeGreaterThan 0
             }
 
-            SUPPORTED_API_VERSIONS.forEach { version ->
+            ApiVersions.SUPPORTED_API_VERSIONS.forEach { version ->
                 When("클라이언트가 X-API-Version $version 로 모든 엔드포인트를 호출하면") {
                     val unreachable =
                         endpoints
                             .filterValues { mappings ->
-                                mappings.none { (_, handler) -> version in acceptedVersionsOf(handler.beanType) }
+                                mappings.none { (_, handler) -> version in ApiVersions.acceptedVersionsOf(handler.beanType) }
                             }.map { (endpoint, _) -> endpoint.toString() }
 
                     Then("400으로 떨어지는 엔드포인트가 없다") {
@@ -52,7 +53,7 @@ class ApiVersioningTest(
                         .filterValues {
                             it.beanType.packageName
                                 .startsWith(APPLICATION_PACKAGE)
-                        }.filterValues { isVersionPinned(it.beanType) }
+                        }.filterValues { ApiVersions.isVersionPinned(it.beanType) }
                         .map { (_, handler) ->
                             "${handler.beanType.simpleName}#${handler.method.name.substringBefore('-')}"
                         }

@@ -17,12 +17,9 @@ class GcsObjectStorageCleaner(
             .map { it.name }
             .let(::deleteAll)
 
-    override fun deleteAll(objectKeys: Collection<String>): Int =
-        objectKeys
-            .toSet()
-            .takeIf { it.isNotEmpty() }
-            ?.map { BlobId.of(gcsProperties.bucket, it) }
-            ?.let { storage.delete(it) }
-            ?.count { it }
-            ?: 0
+    override fun deleteAll(objectKeys: Collection<String>): Int {
+        val blobIds = objectKeys.toSet().map { BlobId.of(gcsProperties.bucket, it) }
+        if (blobIds.isEmpty()) return 0
+        return storage.delete(blobIds).count { it }
+    }
 }

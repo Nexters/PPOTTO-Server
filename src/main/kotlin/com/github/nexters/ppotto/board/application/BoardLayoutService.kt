@@ -3,15 +3,11 @@ package com.github.nexters.ppotto.board.application
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
-import com.github.nexters.ppotto.board.domain.Drawing
-import com.github.nexters.ppotto.board.domain.DrawingScope
-import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
-import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
@@ -29,195 +25,76 @@ class BoardLayoutService(
         boardId: BoardId,
         userId: UserId,
         command: BoardLayoutUpdateCommand,
-    ): Unit =
-        command
-            .also {
-                boardRepository.lockCommandsByUserId(userId)
-                boardAccessService.getOwnedById(boardId, userId)
-                validateCommand(it)
-                validateDrawingOwnership(boardId, it)
-            }.also {
-                (
-                    it.stickers
-                        .map { sticker -> sticker.id }
-                        .toSet() +
-                        it.createdDrawings.mapNotNull { drawing -> drawing.stickerId }
-                ).let { stickerIds -> stickerCommandPort.validateOwnedByBoard(boardId, stickerIds) }
-            }.also {
-                stickerCommandPort.updateLayouts(boardId, it.stickers)
-            }.also {
-                drawingRepository.upsertAll(it.createdDrawings.map { drawing -> drawing.toDomain(boardId) })
-            }.let {
-                check(drawingRepository.softDeleteByIds(boardId, it.deletedDrawingIds) == it.deletedDrawingIds.size)
-            }
+    ) {
+        boardRepository.lockCommandsByUserId(userId)
+        boardAccessService.getOwnedById(boardId, userId)
+        validateDrawingIds(command)
+        validateStickerLayouts(command.stickers)
+        validateDrawingOwnership(boardId, command)
 
-    private fun validateCommand(command: BoardLayoutUpdateCommand): Unit =
-        command
-            .also(::validateDrawingIds)
-            .also { validateStickerLayouts(it.stickers) }
-            .let { validateDrawings(it.createdDrawings) }
+        if (!stickerCommandPort.ownsAll(boardId, referencedStickerIds(command))) {
+            throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
+        }
+
+        stickerCommandPort.updateLayouts(boardId, command.stickers)
+        drawingRepository.upsertAll(command.createdDrawings)
+
+        val softDeleted = drawingRepository.softDeleteByIds(boardId, command.deletedDrawingIds)
+        check(softDeleted == command.deletedDrawingIds.size) { "소유권을 확인한 그림의 소프트 삭제가 반영되지 않았습니다." }
+    }
+
+    private fun referencedStickerIds(command: BoardLayoutUpdateCommand): Set<StickerId> =
+        command.stickers
+            .map { it.id }
+            .toSet() + command.createdDrawings.mapNotNull { it.stickerId }
 
     private fun validateDrawingIds(command: BoardLayoutUpdateCommand) {
-        command.createdDrawings
-            .map { it.id }
-            .let { createdIds ->
-                createdIds
-                    .toSet()
-                    .takeIf { it.size == createdIds.size }
-                    ?.let { uniqueCreatedIds ->
-                        command.deletedDrawingIds
-                            .toSet()
-                            .takeIf { it.size == command.deletedDrawingIds.size }
-                            ?.takeIf { deletedIds -> uniqueCreatedIds.none(deletedIds::contains) }
-                    }
-            } ?: throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
+        val createdIds =
+            command.createdDrawings
+                .map { it.id }
+                .toSet()
+        val deletedIds = command.deletedDrawingIds.toSet()
+        val invalid =
+            createdIds.size != command.createdDrawings.size ||
+                deletedIds.size != command.deletedDrawingIds.size ||
+                createdIds.any(deletedIds::contains)
+        if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
     }
 
     private fun validateStickerLayouts(stickers: List<BoardStickerLayoutCommand>) {
-        stickers
-            .map { it.id }
-            .takeIf { it.size == it.toSet().size && stickers.none { sticker -> sticker.isInvalid() } }
-            ?: throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
-    }
-
-    private fun validateDrawings(drawings: List<DrawingCreateCommand>) {
-        drawings
-            .takeUnless { it.any { drawing -> drawing.isInvalid() } }
-            ?: throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
+        val uniqueIds = stickers.map { it.id }.toSet()
+        val invalid = uniqueIds.size != stickers.size || stickers.any { it.isInvalid() }
+        if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
     }
 
     private fun BoardStickerLayoutCommand.isInvalid(): Boolean =
-        listOf(
-            title != null && (title.isBlank() || title.length > MAX_STICKER_TITLE_LENGTH),
-            !posX.isFinite(),
-            !posY.isFinite(),
-            !scale.isFinite(),
-            scale <= 0,
-            !rotation.isFinite(),
-            !badgeOffsetX.isFinite(),
-            !badgeOffsetY.isFinite(),
-            !badgeRotation.isFinite(),
-        ).any { it }
-
-    private fun DrawingCreateCommand.isInvalid(): Boolean =
-        listOf(
-            id.value.version() != UUID_VERSION_7,
-            (scope == DrawingScope.STICKER) != (stickerId != null),
-            color.isBlank(),
-            isPayloadInvalid(),
-        ).any { it }
-
-    private fun DrawingCreateCommand.isPayloadInvalid(): Boolean =
-        when (this) {
-            is DrawingCreateCommand.Stroke ->
-                listOf(
-                    stroke.isEmpty(),
-                    !strokeWidth.isFinite(),
-                    strokeWidth <= 0,
-                ).any { it }
-
-            is DrawingCreateCommand.Text ->
-                listOf(
-                    content.isBlank(),
-                    content.length > Drawing.Text.MAX_CONTENT_LENGTH,
-                    !fontSize.isFinite(),
-                    fontSize <= 0,
-                    !posX.isFinite(),
-                    !posY.isFinite(),
-                    !maxWidth.isFinite(),
-                    maxWidth <= 0,
-                    !rotation.isFinite(),
-                ).any { it }
-        }
+        !posX.isFinite() ||
+            !posY.isFinite() ||
+            !scale.isFinite() ||
+            scale <= 0 ||
+            !rotation.isFinite() ||
+            !badgeOffsetX.isFinite() ||
+            !badgeOffsetY.isFinite() ||
+            !badgeRotation.isFinite()
 
     private fun validateDrawingOwnership(
         boardId: BoardId,
         command: BoardLayoutUpdateCommand,
     ) {
-        command.createdDrawings
-            .map { it.id }
-            .toSet()
-            .let(drawingRepository::findBoardIdsByIds)
-            .values
-            .any { it != boardId }
-            .takeUnless { it }
-            ?.let {
-                command.deletedDrawingIds
-                    .toSet()
-                    .takeIf { drawingRepository.findActiveIds(boardId, it) == it }
-            } ?: throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
-    }
+        val createdIds =
+            command.createdDrawings
+                .map { it.id }
+                .toSet()
+        val foreignCreated =
+            drawingRepository
+                .findBoardIdsByIds(createdIds)
+                .values
+                .any { it != boardId }
+        if (foreignCreated) throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
 
-    companion object {
-        const val MAX_STICKER_TITLE_LENGTH = 15
-        const val UUID_VERSION_7 = 7
-    }
-}
-
-data class BoardLayoutUpdateCommand(
-    val stickers: List<BoardStickerLayoutCommand>,
-    val createdDrawings: List<DrawingCreateCommand>,
-    val deletedDrawingIds: List<DrawingId>,
-)
-
-sealed interface DrawingCreateCommand {
-    val id: DrawingId
-    val scope: DrawingScope
-    val stickerId: StickerId?
-    val color: String
-    val zIndex: Int
-
-    fun toDomain(boardId: BoardId): NewDrawing
-
-    data class Stroke(
-        override val id: DrawingId,
-        override val scope: DrawingScope,
-        override val stickerId: StickerId?,
-        override val color: String,
-        override val zIndex: Int,
-        val stroke: Map<String, Any?>,
-        val strokeWidth: Double,
-    ) : DrawingCreateCommand {
-        override fun toDomain(boardId: BoardId): NewDrawing =
-            NewDrawing.Stroke(
-                id = id,
-                boardId = boardId,
-                stickerId = stickerId,
-                scope = scope,
-                color = color,
-                zIndex = zIndex,
-                stroke = stroke,
-                strokeWidth = strokeWidth,
-            )
-    }
-
-    data class Text(
-        override val id: DrawingId,
-        override val scope: DrawingScope,
-        override val stickerId: StickerId?,
-        override val color: String,
-        override val zIndex: Int,
-        val content: String,
-        val fontSize: Double,
-        val posX: Double,
-        val posY: Double,
-        val maxWidth: Double,
-        val rotation: Double,
-    ) : DrawingCreateCommand {
-        override fun toDomain(boardId: BoardId): NewDrawing =
-            NewDrawing.Text(
-                id = id,
-                boardId = boardId,
-                stickerId = stickerId,
-                scope = scope,
-                color = color,
-                zIndex = zIndex,
-                content = content,
-                fontSize = fontSize,
-                posX = posX,
-                posY = posY,
-                maxWidth = maxWidth,
-                rotation = rotation,
-            )
+        val deletedIds = command.deletedDrawingIds.toSet()
+        if (drawingRepository.findActiveIds(boardId, deletedIds) != deletedIds) {
+            throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
+        }
     }
 }

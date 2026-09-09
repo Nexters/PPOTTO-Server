@@ -79,7 +79,7 @@ Server/
     │   │   ├── config/          시큐리티, CORS, Swagger 설정
     │   │   ├── error/           에러 코드, 예외 계층, 전역 예외 핸들러
     │   │   ├── logging/         요청 로깅 (requestId MDC)
-    │   │   └── response/        ApiResponse, PageResponse
+    │   │   └── response/        ApiResponse
     │   └── {domain}/            도메인 패키지 (아래 구조로 추가)
     │       ├── presentation/    Controller, 요청/응답 dto
     │       ├── application/     Service, QueryService

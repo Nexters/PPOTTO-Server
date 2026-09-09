@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBod
 interface DeviceTokenApi {
     @PostMapping
     @Operation(
+        operationId = "register",
         summary = "디바이스 토큰 등록/갱신",
         description = "deviceId 기준으로 upsert함. FCM 토큰이 회전돼도 같은 deviceId를 보내면 같은 기기 행이 갱신됨",
         requestBody =
@@ -40,6 +41,7 @@ interface DeviceTokenApi {
 
     @DeleteMapping
     @Operation(
+        operationId = "unregister",
         summary = "디바이스 토큰 해제",
         description = "로그아웃 등으로 더 이상 알림을 받지 않을 기기의 토큰을 삭제함",
         parameters = [

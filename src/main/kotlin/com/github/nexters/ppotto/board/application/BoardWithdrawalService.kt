@@ -12,14 +12,12 @@ class BoardWithdrawalService(
     private val boardWithdrawalRepository: BoardWithdrawalRepository,
     private val drawingRepository: DrawingRepository,
 ) {
-    @Transactional(readOnly = true)
     fun findAllBoardIds(userId: UserId): List<BoardId> = boardWithdrawalRepository.findAllIdsByUserId(userId)
 
     @Transactional
     fun deleteAllByUserId(userId: UserId) {
-        boardWithdrawalRepository
-            .findAllIdsByUserId(userId)
-            .let(drawingRepository::hardDeleteAllByBoardIds)
-            .let { boardWithdrawalRepository.hardDeleteAllByUserId(userId) }
+        val boardIds = boardWithdrawalRepository.findAllIdsByUserId(userId)
+        drawingRepository.hardDeleteAllByBoardIds(boardIds)
+        boardWithdrawalRepository.hardDeleteAllByUserId(userId)
     }
 }

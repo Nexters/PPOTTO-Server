@@ -51,14 +51,4 @@ interface LlmSpanHandle {
     fun setOutputMessages(messages: List<LlmMessage>)
 
     fun setSystemInstructions(instructions: String)
-
-    fun setAttribute(
-        key: String,
-        value: String,
-    )
-
-    fun setAttribute(
-        key: String,
-        value: Long,
-    )
 }

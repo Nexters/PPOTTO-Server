@@ -11,19 +11,19 @@ import com.github.nexters.ppotto.auth.application.port.TokenProvider
 import com.github.nexters.ppotto.auth.config.AuthTransactionConfig.Companion.SIGNUP_TRANSACTION_TIMEOUT_SECONDS
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
 import com.github.nexters.ppotto.auth.domain.LoginCommand
-import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.PendingTerm
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.application.BoardCommandService
-import com.github.nexters.ppotto.board.application.BoardDrawingCommandService
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.runConcurrently
@@ -45,10 +45,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
 import java.util.UUID
-import com.github.nexters.ppotto.user.domain.OAuthProvider as UserOAuthProvider
 
 class AuthDomainIntegrationTest(
-    authService: AuthService,
     authUserPort: AuthUserPort,
     authTermsPort: AuthTermsPort,
     userRepository: UserRepository,
@@ -57,11 +55,6 @@ class AuthDomainIntegrationTest(
     applicationContext: ApplicationContext,
 ) : IntegrationTest({
         Given("production auth 도메인 adapter가 연결된 상태에서") {
-            Then("AuthService bean을 생성한다") {
-                authService.javaClass.simpleName
-                    .isNotBlank() shouldBe true
-            }
-
             Then("가입 구간은 공유 template과 분리된 전용 트랜잭션 bean으로 timeout을 제한한다") {
                 applicationContext
                     .getBean(SIGNUP_TRANSACTION, TransactionTemplate::class.java)
@@ -90,7 +83,7 @@ class AuthDomainIntegrationTest(
                     second.isNewUser shouldBe false
                     second.userId shouldBe first.userId
                     userRepository
-                        .findBySocialAccount(UserOAuthProvider.APPLE, providerUserId)
+                        .findBySocialAccount(OAuthProvider.APPLE, providerUserId)
                         ?.id shouldBe first.userId
                     boardRepository.findByUserId(first.userId) shouldHaveSize 1
                 }
@@ -121,7 +114,7 @@ class AuthDomainIntegrationTest(
                             .userId,
                     ) shouldHaveSize 1
                     userRepository
-                        .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
+                        .findBySocialAccount(OAuthProvider.KAKAO, providerUserId)
                         ?.id shouldBe users.first().userId
                 }
             }
@@ -190,7 +183,7 @@ class AuthSignupRollbackIntegrationTest(
                 Then("사용자와 기본 보드를 롤백하고 token을 발급하거나 저장하지 않는다") {
                     exception.message shouldBe "약관 조회 실패"
                     userRepository
-                        .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
+                        .findBySocialAccount(OAuthProvider.KAKAO, providerUserId)
                         .shouldBeNull()
                     boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 0
                     loginEffects.tokenIssueCount shouldBe 0
@@ -221,7 +214,7 @@ class AuthSignupRollbackIntegrationTest(
                     exception.errorCode shouldBe AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED
                     loginEffects.boardCountInTransaction shouldBe 1
                     userRepository
-                        .findBySocialAccount(UserOAuthProvider.APPLE, providerUserId)
+                        .findBySocialAccount(OAuthProvider.APPLE, providerUserId)
                         .shouldBeNull()
                     boardRepository.findByUserId(loginEffects.userId!!) shouldHaveSize 0
                     loginEffects.tokenIssueCount shouldBe 0
@@ -254,27 +247,30 @@ class AuthSignupRollbackIntegrationTest(
 class AuthSignupBoardRollbackIntegrationTest(
     authUserPort: AuthUserPort,
     userRepository: UserRepository,
+    @Qualifier(SIGNUP_TRANSACTION) signupTransaction: TransactionOperations,
 ) : IntegrationTest({
         Given("신규 가입 중 기본 보드 생성이 실패할 때") {
             val providerUserId = "board-rollback-${UUID.randomUUID()}"
 
-            When("로그인 트랜잭션 없이 가입 port를 직접 호출하면") {
+            When("가입 트랜잭션 안에서 가입 port를 호출하면") {
                 val exception =
                     shouldThrow<IllegalStateException> {
-                        authUserPort.findOrCreate(
-                            SocialProfile(
-                                provider = OAuthProvider.KAKAO,
-                                providerUserId = providerUserId,
-                                email = "board-rollback@example.com",
-                                name = "보드롤백사용자",
-                            ),
-                        )
+                        signupTransaction.execute {
+                            authUserPort.findOrCreate(
+                                SocialProfile(
+                                    provider = OAuthProvider.KAKAO,
+                                    providerUserId = providerUserId,
+                                    email = "board-rollback@example.com",
+                                    name = "보드롤백사용자",
+                                ),
+                            )
+                        }
                     }
 
                 Then("사용자 생성까지 함께 롤백해 유령 계정을 남기지 않는다") {
                     exception.message shouldBe "기본 보드 생성 실패"
                     userRepository
-                        .findBySocialAccount(UserOAuthProvider.KAKAO, providerUserId)
+                        .findBySocialAccount(OAuthProvider.KAKAO, providerUserId)
                         .shouldBeNull()
                 }
             }
@@ -288,14 +284,14 @@ class FailingBoardAuthTestConfig {
     fun failingBoardCommandService(
         boardRepository: BoardRepository,
         boardAccessService: BoardAccessService,
-        drawingCommandService: BoardDrawingCommandService,
+        drawingRepository: DrawingRepository,
         analysisActivityPort: BoardAnalysisActivityPort,
         stickerCommandPort: BoardStickerCommandPort,
     ): BoardCommandService =
         FailingBoardCommandService(
             boardRepository,
             boardAccessService,
-            drawingCommandService,
+            drawingRepository,
             analysisActivityPort,
             stickerCommandPort,
         )
@@ -304,10 +300,10 @@ class FailingBoardAuthTestConfig {
 open class FailingBoardCommandService(
     boardRepository: BoardRepository,
     boardAccessService: BoardAccessService,
-    drawingCommandService: BoardDrawingCommandService,
+    drawingRepository: DrawingRepository,
     analysisActivityPort: BoardAnalysisActivityPort,
     stickerCommandPort: BoardStickerCommandPort,
-) : BoardCommandService(boardRepository, boardAccessService, drawingCommandService, analysisActivityPort, stickerCommandPort) {
+) : BoardCommandService(boardRepository, boardAccessService, drawingRepository, analysisActivityPort, stickerCommandPort) {
     override fun createDefault(userId: UserId): Board = error("기본 보드 생성 실패")
 }
 

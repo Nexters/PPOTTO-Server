@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.user.domain
 
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import java.time.Instant
 
 data class User(
@@ -17,14 +18,13 @@ data class User(
     val isActive: Boolean
         get() = deletedAt == null
 
-    fun withdraw(at: Instant): User =
-        this
-            .also { require(it.isActive) }
-            .copy(
-                email = "deleted+$id@users.invalid",
-                name = "탈퇴한 사용자",
-                providerRefreshToken = null,
-                updatedAt = at,
-                deletedAt = at,
-            )
+    fun withdraw(at: Instant): User {
+        require(isActive) { "이미 탈퇴한 사용자입니다." }
+        return copy(
+            email = "deleted+$id@users.invalid",
+            name = "탈퇴한 사용자",
+            providerRefreshToken = null,
+            deletedAt = at,
+        )
+    }
 }

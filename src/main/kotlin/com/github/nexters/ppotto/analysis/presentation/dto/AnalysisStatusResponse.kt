@@ -2,17 +2,18 @@ package com.github.nexters.ppotto.analysis.presentation.dto
 
 import com.github.nexters.ppotto.analysis.application.AnalysisStatusResult
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
-import java.util.UUID
 
 @Schema(description = "분석 상태")
 data class AnalysisStatusResponse(
     @field:Schema(description = "분석 ID (uuidv7)", example = "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
-    val id: UUID,
+    val id: AnalysisId,
 
     @field:Schema(description = "결과 스티커가 붙을 보드 ID", example = "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
-    val boardId: UUID,
+    val boardId: BoardId,
 
     @field:Schema(
         description = "UPLOADING 업로드 중 / ANALYZING 분석·생성·배치 중 / COMPLETED 완료 / FAILED 실패·취소·만료",

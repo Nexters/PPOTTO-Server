@@ -1,51 +1,79 @@
 package com.github.nexters.ppotto.analysis.support
 
 import com.github.nexters.ppotto.analysis.domain.BlobMeta
+import com.github.nexters.ppotto.analysis.domain.Photo
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
-import com.github.nexters.ppotto.analysis.domain.PhotoUploadTarget
+import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.storage.GcsReadUrlIssuer
+import com.github.nexters.ppotto.support.ResettableFake
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
-class FakePhotoStorage : PhotoStorage {
-    private val objects = mutableMapOf<String, BlobMeta>()
-    val deletedPrefixes = mutableListOf<String>()
+class FakePhotoStorage(
+    private val gcsReadUrlIssuer: GcsReadUrlIssuer,
+) : PhotoStorage,
+    ResettableFake {
+    private val objects = ConcurrentHashMap<String, BlobMeta>()
 
-    override fun issueUploadUrls(targets: List<PhotoUploadTarget>): List<String> =
-        targets.map {
-            objects[it.objectKey] = BlobMeta(size = 1, createdAt = Instant.now())
-            "https://fake-signed-url/${it.objectKey}"
-        }
+    val deletedAnalysisIds = CopyOnWriteArrayList<AnalysisId>()
 
-    override fun issueReadUrls(objectKeys: Collection<String>): Map<String, String> =
-        objectKeys.toSet().associateWith { "https://fake-read-url/$it" }
+    var issueUploadUrlsFailure: Throwable? = null
 
-    override fun existingObjects(prefix: String): Map<String, BlobMeta> = objects.filterKeys { it.startsWith(prefix) }
+    var deleteAllFailure: Throwable? = null
 
-    override fun deleteByPrefix(prefix: String): Int =
-        prefix
-            .also(deletedPrefixes::add)
-            .let { objects.keys.filter { key -> key.startsWith(it) } }
-            .onEach { objects -= it }
-            .size
+    override fun issueUploadUrls(photos: List<Photo>): Map<PhotoId, String> {
+        issueUploadUrlsFailure?.let { throw it }
+        return photos.associate { photo -> photo.id to "https://fake-signed-url/${PhotoObjectKeys.keyFor(photo)}" }
+    }
 
-    fun markMissing(objectKey: String) {
-        objects -= objectKey
+    override fun issueReadUrls(photos: List<Photo>): Map<PhotoId, String> {
+        val objectKeyByPhotoId = photos.associate { it.id to PhotoObjectKeys.keyFor(it) }
+        val readUrls = gcsReadUrlIssuer.issue(objectKeyByPhotoId.values)
+        return objectKeyByPhotoId.mapValues { (_, objectKey) -> readUrls.getValue(objectKey) }
+    }
+
+    override fun sourceUri(photo: Photo): String = "gs://fake-bucket/${PhotoObjectKeys.keyFor(photo)}"
+
+    override fun uploadedObjects(
+        analysisId: AnalysisId,
+        photos: List<Photo>,
+    ): Map<PhotoId, BlobMeta> = photos.mapNotNull { photo -> objects[PhotoObjectKeys.keyFor(photo)]?.let { photo.id to it } }.toMap()
+
+    override fun deleteAll(analysisId: AnalysisId): Int {
+        deleteAllFailure?.let { throw it }
+        deletedAnalysisIds += analysisId
+        val deletedKeys = objects.keys.filter { it.startsWith(PhotoObjectKeys.prefixFor(analysisId)) }
+        deletedKeys.forEach { objects -= it }
+        return deletedKeys.size
+    }
+
+    fun markMissing(photo: Photo) {
+        objects -= PhotoObjectKeys.keyFor(photo)
     }
 
     fun markUploaded(
-        objectKey: String,
+        photo: Photo,
         size: Long = 1,
         createdAt: Instant = Instant.now(),
     ) {
-        objects[objectKey] = BlobMeta(size, createdAt)
+        objects[PhotoObjectKeys.keyFor(photo)] = BlobMeta(size, createdAt)
     }
 
-    fun reset() {
-        objects.clear()
-        deletedPrefixes.clear()
+    fun markUploaded(photos: Collection<Photo>) {
+        photos.forEach { markUploaded(it) }
     }
 
-    fun clear() {
+    fun uploadedObjectCount(): Int = objects.size
+
+    override fun reset() {
         objects.clear()
-        deletedPrefixes.clear()
+        deletedAnalysisIds.clear()
+        issueUploadUrlsFailure = null
+        deleteAllFailure = null
     }
+
+    fun clear() = reset()
 }

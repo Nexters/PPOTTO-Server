@@ -12,5 +12,7 @@ class GcsStickerImageStorage(
 ) : StickerImageStoragePort {
     override fun issueReadUrls(imageKeys: Collection<String>): Map<String, String> = gcsReadUrlIssuer.issue(imageKeys)
 
-    override fun deleteAll(imageKeys: Collection<String>): Int = objectStorageCleaner.deleteAll(imageKeys)
+    override fun deleteAll(imageKeys: Collection<String>) {
+        objectStorageCleaner.deleteAll(imageKeys)
+    }
 }

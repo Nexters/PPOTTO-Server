@@ -14,12 +14,10 @@ import org.springframework.transaction.annotation.Transactional
 class BoardAccessService(
     private val boardRepository: BoardRepository,
 ) {
-    @Transactional(readOnly = true)
     fun getById(id: BoardId): Board =
         boardRepository.findById(id)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
-    @Transactional(readOnly = true)
     fun getOwnedById(
         boardId: BoardId,
         userId: UserId,

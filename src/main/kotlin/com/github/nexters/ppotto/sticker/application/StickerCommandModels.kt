@@ -10,26 +10,5 @@ data class StickerTitleResult(
 
 data class StickerLayoutCommand(
     val id: StickerId,
-    val title: String? = null,
-    val posX: Double,
-    val posY: Double,
-    val scale: Double,
-    val rotation: Double,
-    val zIndex: Int,
-    val badgeOffsetX: Double,
-    val badgeOffsetY: Double,
-    val badgeRotation: Double,
-) {
-    fun toDomain() =
-        StickerLayout(
-            title = title,
-            posX = posX,
-            posY = posY,
-            scale = scale,
-            rotation = rotation,
-            zIndex = zIndex,
-            badgeOffsetX = badgeOffsetX,
-            badgeOffsetY = badgeOffsetY,
-            badgeRotation = badgeRotation,
-        )
-}
+    val layout: StickerLayout,
+)

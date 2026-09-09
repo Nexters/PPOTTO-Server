@@ -55,10 +55,10 @@ class GlobalExceptionHandler {
         respond(HttpStatus.NOT_ACCEPTABLE, ErrorResponse.of(CommonErrorCode.NOT_ACCEPTABLE), e)
 
     @ExceptionHandler(ErrorResponseException::class)
-    fun handleErrorResponseException(e: ErrorResponseException): ResponseEntity<ApiResponse<Unit>> =
-        HttpStatus
-            .valueOf(e.statusCode.value())
-            .let { respond(it, ErrorResponse.of(commonErrorCodeOf(it)), e) }
+    fun handleErrorResponseException(e: ErrorResponseException): ResponseEntity<ApiResponse<Unit>> {
+        val status = HttpStatus.valueOf(e.statusCode.value())
+        return respond(status, ErrorResponse.of(commonErrorCodeOf(status)), e)
+    }
 
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<ApiResponse<Unit>> =
@@ -66,21 +66,18 @@ class GlobalExceptionHandler {
 
     private fun commonErrorCodeOf(status: HttpStatus): CommonErrorCode =
         CommonErrorCode.entries.firstOrNull { it.status == status }
-            ?: status
-                .takeIf(HttpStatus::is5xxServerError)
-                ?.let { CommonErrorCode.INTERNAL_ERROR }
-            ?: CommonErrorCode.INVALID_INPUT
+            ?: if (status.is5xxServerError) CommonErrorCode.INTERNAL_ERROR else CommonErrorCode.INVALID_INPUT
 
     private fun respond(
         status: HttpStatus,
         error: ErrorResponse,
         e: Exception,
-    ): ResponseEntity<ApiResponse<Unit>> =
-        e
-            .also {
-                status
-                    .takeIf(HttpStatus::is5xxServerError)
-                    ?.let { log.error("unhandled exception", e) }
-                    ?: log.warn("{}: {}", e::class.simpleName, e.message, e)
-            }.let { ResponseEntity.status(status).body(ApiResponse.error(error)) }
+    ): ResponseEntity<ApiResponse<Unit>> {
+        if (status.is5xxServerError) {
+            log.error("unhandled exception", e)
+        } else {
+            log.warn("{}: {}", e::class.simpleName, e.message)
+        }
+        return ResponseEntity.status(status).body(ApiResponse.error(error))
+    }
 }

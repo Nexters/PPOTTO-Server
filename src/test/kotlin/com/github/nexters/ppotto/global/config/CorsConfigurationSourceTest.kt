@@ -1,16 +1,18 @@
 package com.github.nexters.ppotto.global.config
 
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.cors.CorsConfiguration
 
 class CorsConfigurationSourceTest :
     BehaviorSpec({
-        val securityConfig = SecurityConfig()
+        val corsConfig = CorsConfig()
 
         fun configurationFor(allowedOrigins: List<String>): CorsConfiguration? =
-            securityConfig
+            corsConfig
                 .corsConfigurationSource(CorsProperties(allowedOrigins))
                 .getCorsConfiguration(MockHttpServletRequest("OPTIONS", "/terms"))
 
@@ -18,10 +20,14 @@ class CorsConfigurationSourceTest :
             val configuration = configurationFor(listOf("*"))
 
             When("임의의 origin을 검사하면") {
-                Then("credentials를 허용한 채로 해당 origin을 그대로 반환한다") {
-                    configuration?.allowCredentials shouldBe true
+                Then("해당 origin을 그대로 반환한다") {
                     configuration?.checkOrigin("https://any.example.com") shouldBe "https://any.example.com"
                     configuration?.checkOrigin("http://localhost:3000") shouldBe "http://localhost:3000"
+                }
+
+                Then("Bearer 인증이라 credentials는 허용하지 않는다") {
+                    configuration shouldNotBe null
+                    configuration?.allowCredentials.shouldBeNull()
                 }
             }
         }
@@ -37,7 +43,7 @@ class CorsConfigurationSourceTest :
 
             When("목록에 없는 origin을 검사하면") {
                 Then("거부한다") {
-                    configuration?.checkOrigin("https://evil.example.com") shouldBe null
+                    configuration?.checkOrigin("https://evil.example.com").shouldBeNull()
                 }
             }
         }

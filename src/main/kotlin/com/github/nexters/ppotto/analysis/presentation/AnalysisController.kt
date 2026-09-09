@@ -7,13 +7,14 @@ import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.ReissueUploadUrlsResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
 
 @RestController
 class AnalysisController(
@@ -21,7 +22,7 @@ class AnalysisController(
     private val analysisQueryService: AnalysisQueryService,
 ) : AnalysisApi {
     override fun create(
-        @AuthenticatedUser userId: UUID,
+        @AuthenticatedUser userId: UserId,
         @Valid @RequestBody request: CreateAnalysisRequest,
     ): ApiResponse<CreateAnalysisResponse> =
         analysisService
@@ -30,7 +31,7 @@ class AnalysisController(
             .let { ApiResponse.success(it) }
 
     override fun getActive(
-        @AuthenticatedUser userId: UUID,
+        @AuthenticatedUser userId: UserId,
     ): ApiResponse<AnalysisStatusResponse?> =
         analysisQueryService
             .getActiveAnalysis(userId)
@@ -38,8 +39,8 @@ class AnalysisController(
             .let { ApiResponse.success(it) }
 
     override fun reissue(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable analysisId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable analysisId: AnalysisId,
     ): ApiResponse<ReissueUploadUrlsResponse> =
         analysisService
             .reissueUploadUrls(userId, analysisId)
@@ -47,8 +48,8 @@ class AnalysisController(
             .let { ApiResponse.success(it) }
 
     override fun start(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable analysisId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable analysisId: AnalysisId,
     ): ApiResponse<StartUploadResponse> =
         analysisService
             .startUpload(userId, analysisId)
@@ -56,8 +57,8 @@ class AnalysisController(
             .let { ApiResponse.success(it) }
 
     override fun get(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable analysisId: UUID,
+        @AuthenticatedUser userId: UserId,
+        @PathVariable analysisId: AnalysisId,
     ): ApiResponse<AnalysisStatusResponse> =
         analysisQueryService
             .getAnalysis(analysisId, userId)
@@ -65,10 +66,10 @@ class AnalysisController(
             .let { ApiResponse.success(it) }
 
     override fun cancel(
-        @AuthenticatedUser userId: UUID,
-        @PathVariable analysisId: UUID,
-    ): ApiResponse<Unit> =
-        analysisService
-            .cancelAnalysis(userId, analysisId)
-            .let { ApiResponse.success() }
+        @AuthenticatedUser userId: UserId,
+        @PathVariable analysisId: AnalysisId,
+    ): ApiResponse<Unit> {
+        analysisService.cancelAnalysis(userId, analysisId)
+        return ApiResponse.success()
+    }
 }

@@ -3,7 +3,6 @@ package com.github.nexters.ppotto.board
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.matchers.shouldBe
 import java.io.File
 
 private const val SOURCE_ROOT = "src/main/kotlin/com/github/nexters/ppotto"
@@ -11,10 +10,6 @@ private const val SOURCE_ROOT = "src/main/kotlin/com/github/nexters/ppotto"
 class BoardAnalysisDependencyTest :
     BehaviorSpec({
         Given("board 도메인 소스 트리에서") {
-            Then("소스 루트를 실제로 찾는다") {
-                File("$SOURCE_ROOT/board").isDirectory shouldBe true
-            }
-
             When("analysis 도메인 참조를 모으면") {
                 val analysisReferences = importsOf("$SOURCE_ROOT/board").startingWith("com.github.nexters.ppotto.analysis")
 

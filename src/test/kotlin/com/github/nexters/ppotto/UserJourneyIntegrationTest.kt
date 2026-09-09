@@ -192,7 +192,7 @@ class UserJourneyIntegrationTest(
                         .response
                         .getContentAsString(Charsets.UTF_8)
                         .let { JsonPath.read<String>(it, "$.data.photos[0].imageUrl") }
-                        .shouldStartWith("https://fake-read-url/photos/$analysisId/")
+                        .shouldStartWith("https://storage.googleapis.com/ppotto-test-bucket/photos/$analysisId/")
 
                     mockMvc
                         .perform(post("/stickers/$stickerId/view").authorized(accessToken))

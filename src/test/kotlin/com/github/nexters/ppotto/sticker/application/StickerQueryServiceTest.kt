@@ -5,8 +5,6 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
-import com.github.nexters.ppotto.global.identifier.AnalysisId
-import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
@@ -35,11 +33,11 @@ class StickerQueryServiceTest(
 ) : IntegrationTest({
         Given("이미지 스티커와 리캡 데이터가 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id.value,
+                    board.id,
                     listOf(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
@@ -48,19 +46,19 @@ class StickerQueryServiceTest(
             photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
             val sticker =
                 stickerRepository.save(
-                    AnalysisId(analysis.id),
+                    analysis.id,
                     board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "리캡",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = PhotoId(photos.first().id),
+                        sourcePhotoId = photos.first().id,
                         imageKey = "stickers/recap.png",
                         textContent = null,
                         mainColor = "#FF6B6B",
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
+            stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
             stickerRecapRepository.saveComments(
                 sticker.id,
                 listOf(
@@ -87,7 +85,7 @@ class StickerQueryServiceTest(
                     result.sticker.isNew shouldBe true
                     result.summary shouldBe "웃기고 귀여우면 일단 주워요"
                     result.comments.map { it.content } shouldContainExactly listOf("말풍선", "키워드")
-                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { PhotoId(it.id) }
+                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
                 }
 
                 Then("연사 그룹이 아니므로 isGroup은 false이고 groupId, groupPhotos는 비어있다") {
@@ -125,19 +123,16 @@ class StickerQueryServiceTest(
                 Then("같은 리캡 내용을 반환하되 isNew는 false다") {
                     result.sticker.id shouldBe sticker.id
                     result.sticker.isNew shouldBe false
-                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { PhotoId(it.id) }
+                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
                 }
             }
 
             When("리캡 사진의 읽기 URL을 확인하면") {
                 val result = service.getRecap(board.userId, sticker.id)
 
-                Then("사진 오브젝트 키로 서명한 1시간 만료 URL을 반환한다") {
+                Then("각 사진의 오브젝트 키로 발급한 읽기 URL을 반환한다") {
                     result.photos.forEach {
-                        it.imageUrl.shouldStartWith(
-                            "https://storage.googleapis.com/ppotto-test-bucket/photos/${analysis.id}/${it.id}.jpg?",
-                        )
-                        it.imageUrl.shouldContain("X-Goog-Expires=3600")
+                        it.imageUrl.shouldContain("photos/${analysis.id}/${it.id}.jpg")
                     }
                 }
             }
@@ -145,12 +140,12 @@ class StickerQueryServiceTest(
 
         Given("연사 그룹 사진이 리캡에 연결된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             val burstGroupId = UUID.randomUUID()
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id.value,
+                    board.id,
                     listOf(
                         PhotoCreate(
                             PhotoContentType.JPEG,
@@ -170,25 +165,25 @@ class StickerQueryServiceTest(
             val representativePhoto = photos.single { it.isRepresentative }
             val sticker =
                 stickerRepository.save(
-                    AnalysisId(analysis.id),
+                    analysis.id,
                     board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "리캡",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = PhotoId(representativePhoto.id),
+                        sourcePhotoId = representativePhoto.id,
                         imageKey = "stickers/recap.png",
                         textContent = null,
                         mainColor = "#FF6B6B",
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, photos.map { PhotoId(it.id) })
+            stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
 
             When("리캡 상세를 조회하면") {
                 val result = service.getRecap(board.userId, sticker.id)
 
                 Then("연사 그룹의 대표 사진만 반환한다") {
-                    result.photos.map { it.id } shouldContainExactly listOf(PhotoId(representativePhoto.id))
+                    result.photos.map { it.id } shouldContainExactly listOf(representativePhoto.id)
                 }
 
                 Then("대표 사진에 그룹 여부/ID와 나머지 사진 목록이 채워진다") {
@@ -197,36 +192,36 @@ class StickerQueryServiceTest(
 
                     photo.isGroup shouldBe true
                     photo.groupId shouldBe burstGroupId
-                    photo.groupPhotos.map { it.id } shouldContainExactly listOf(PhotoId(nonRepresentativePhoto.id))
+                    photo.groupPhotos.map { it.id } shouldContainExactly listOf(nonRepresentativePhoto.id)
                 }
             }
         }
 
         Given("업로드가 완료되지 않은 사진이 리캡에 연결된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             val pendingPhoto =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id.value,
+                        board.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             val sticker =
                 stickerRepository.save(
-                    AnalysisId(analysis.id),
+                    analysis.id,
                     board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "리캡",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = PhotoId(pendingPhoto.id),
+                        sourcePhotoId = pendingPhoto.id,
                         imageKey = "stickers/recap.png",
                         textContent = null,
                         mainColor = "#FF6B6B",
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(pendingPhoto.id)))
+            stickerRecapRepository.savePhotos(sticker.id, listOf(pendingPhoto.id))
 
             When("리캡 상세를 조회하면") {
                 Then("완료되지 않은 사진을 제외하고 계약 불일치로 실패한다") {

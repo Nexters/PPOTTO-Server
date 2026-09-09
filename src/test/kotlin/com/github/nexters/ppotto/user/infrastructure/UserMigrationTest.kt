@@ -98,6 +98,7 @@ class UserMigrationTest(
                     }
                 } finally {
                     connection.createStatement().use {
+                        it.execute("RESET search_path")
                         it.execute("DROP SCHEMA $schema CASCADE")
                     }
                 }

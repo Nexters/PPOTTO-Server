@@ -4,7 +4,6 @@ import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
 import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
-import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
@@ -35,7 +34,7 @@ import java.util.concurrent.TimeUnit
 
 private const val PHOTO_COUNT = 90
 
-@Import(AnalysisTestConfig::class, BoardAnalysisDeletionConcurrencyTestConfiguration::class)
+@Import(BoardAnalysisDeletionConcurrencyTestConfiguration::class)
 class BoardAnalysisDeletionConcurrencyTest(
     analysisService: AnalysisService,
     boardCommandService: BoardCommandService,
@@ -62,7 +61,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                 check(stickerPort.awaitDeleteInvocation())
                 val createFuture =
                     executor.submit(
-                        Callable { runCatching { analysisService.createAnalysis(user.id.value, board.id.value, photos) } },
+                        Callable { runCatching { analysisService.createAnalysis(user.id, board.id, photos) } },
                     )
                 val createBlockedBeforeRelease = runCatching { createFuture.get(1, TimeUnit.SECONDS) }.isFailure
                 stickerPort.releaseDelete()
@@ -101,7 +100,7 @@ class BoardAnalysisDeletionConcurrencyTest(
                         Callable {
                             runCatching {
                                 transactionTemplate.executeWithoutResult {
-                                    analysisService.createAnalysis(user.id.value, board.id.value, photos)
+                                    analysisService.createAnalysis(user.id, board.id, photos)
                                     createLocked.countDown()
                                     check(createCommitAllowed.await(10, TimeUnit.SECONDS))
                                 }
@@ -154,10 +153,10 @@ class BlockingBoardStickerCommandPort : BoardStickerCommandPort {
     @Volatile
     private var deleteRelease = CountDownLatch(1)
 
-    override fun validateOwnedByBoard(
+    override fun ownsAll(
         boardId: BoardId,
         stickerIds: Set<StickerId>,
-    ) = Unit
+    ): Boolean = true
 
     override fun updateLayouts(
         boardId: BoardId,

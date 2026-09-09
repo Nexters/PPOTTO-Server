@@ -31,6 +31,11 @@ object HttpPayloadAttributes {
         contentType: String?,
         characterEncoding: String?,
     ): Map<String, Any> = bodyAttributes(RESPONSE_BODY_KEY, RESPONSE_BODY_SIZE_KEY, body, contentType, characterEncoding)
+
+    fun isSensitiveHeader(name: String): Boolean {
+        val lowered = name.lowercase()
+        return lowered in SENSITIVE_HEADERS || SENSITIVE_KEY_FRAGMENTS.any(lowered::contains)
+    }
 }
 
 private fun bodyAttributes(
@@ -80,27 +85,24 @@ private fun maskedHeaderValue(
     values: List<String>,
 ): String =
     when {
-        isSensitiveHeader(name) -> HttpPayloadAttributes.FILTERED
+        HttpPayloadAttributes.isSensitiveHeader(name) -> HttpPayloadAttributes.FILTERED
         else -> truncated(values.joinToString(HEADER_VALUE_SEPARATOR))
     }
 
-private fun isSensitiveHeader(name: String): Boolean =
-    name.lowercase().let { lowered ->
-        lowered in SENSITIVE_HEADERS || SENSITIVE_KEY_FRAGMENTS.any(lowered::contains)
-    }
+private fun isSensitiveKey(name: String): Boolean {
+    val lowered = name.lowercase()
+    return SENSITIVE_KEY_FRAGMENTS.any(lowered::contains)
+}
 
-private fun isSensitiveKey(name: String): Boolean =
-    name.lowercase().let { lowered ->
-        SENSITIVE_KEY_FRAGMENTS.any(lowered::contains)
-    }
-
-private fun isJson(contentType: String?): Boolean =
-    contentType
-        ?.substringBefore(CONTENT_TYPE_PARAMETER_SEPARATOR)
-        ?.trim()
-        ?.lowercase()
-        ?.let { it == APPLICATION_JSON || it.endsWith(JSON_SUFFIX) }
-        ?: false
+private fun isJson(contentType: String?): Boolean {
+    val type =
+        contentType
+            ?.substringBefore(CONTENT_TYPE_PARAMETER_SEPARATOR)
+            ?.trim()
+            ?.lowercase()
+            ?: return false
+    return type == APPLICATION_JSON || type.endsWith(JSON_SUFFIX)
+}
 
 private fun charsetOf(characterEncoding: String?): Charset =
     characterEncoding

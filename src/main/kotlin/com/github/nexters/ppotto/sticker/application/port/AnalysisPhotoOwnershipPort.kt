@@ -5,7 +5,7 @@ import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.UserId
 
-interface AnalysisPhotoOwnershipPort {
+fun interface AnalysisPhotoOwnershipPort {
     fun matches(scope: AnalysisPhotoOwnershipScope): Boolean
 }
 

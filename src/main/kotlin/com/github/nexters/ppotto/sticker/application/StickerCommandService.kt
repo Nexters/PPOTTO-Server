@@ -9,8 +9,12 @@ import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationPort
+import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationResult
+import com.github.nexters.ppotto.sticker.application.port.singlePort
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
+import com.github.nexters.ppotto.sticker.domain.StickerImageDeletionReason
+import com.github.nexters.ppotto.sticker.domain.StickerImageDeletionRequestedEvent
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
@@ -38,56 +42,54 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
         title: String,
-    ): StickerTitleResult =
-        stickerAccessService
-            .getOwned(userId, stickerId)
-            .apply { rename(title) }
-            .takeIf { stickerCommandRepository.updateTitle(it.id, it.title) }
-            ?.let { StickerTitleResult(it.id, it.title) }
-            ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+    ): StickerTitleResult {
+        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        sticker.rename(title)
+
+        if (!stickerCommandRepository.updateTitle(sticker.id, sticker.title)) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
+        return StickerTitleResult(sticker.id, sticker.title)
+    }
 
     @Transactional
     fun markViewed(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        stickerAccessService
-            .getOwned(userId, stickerId)
-            .takeIf { it.viewedAt == null }
-            ?.apply { markViewed(Instant.now()) }
-            ?.let {
-                it
-                    .takeIf { sticker -> stickerCommandRepository.markViewed(sticker.id, checkNotNull(sticker.viewedAt)) }
-                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-            }
+        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        if (sticker.viewedAt != null) {
+            return
+        }
+
+        sticker.markViewed(Instant.now())
+        if (!stickerCommandRepository.markViewed(sticker.id, checkNotNull(sticker.viewedAt))) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
     }
 
     @Transactional
     fun delete(
         userId: UserId,
         stickerId: StickerId,
-    ): Unit =
-        stickerAccessService.getOwned(userId, stickerId).let { sticker ->
-            drawingCommandPort().let { drawingCommandPort ->
-                sticker
-                    .apply { delete(Instant.now()) }
-                    .takeIf { stickerCommandRepository.softDelete(it.id, checkNotNull(it.deletedAt)) }
-                    ?.also {
-                        drawingCommandPort.deleteByStickerIds(it.boardId, listOf(it.id))
-                    }.let {
-                        it ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-                    }.let {
-                        stickerRecapRepository.deleteByStickerIds(listOf(it.id))
-                    }
-            }
+    ) {
+        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val drawingCommandPort = drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME)
+        sticker.delete(Instant.now())
+
+        if (!stickerCommandRepository.softDelete(sticker.id, checkNotNull(sticker.deletedAt))) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
         }
+        drawingCommandPort.deleteByStickerIds(sticker.boardId, listOf(sticker.id))
+        stickerRecapRepository.deleteByStickerIds(listOf(sticker.id))
+    }
 
     fun regenerate(
         userId: UserId,
         stickerId: StickerId,
-    ): Sticker {
+    ) {
         val sticker = stickerAccessService.getOwned(userId, stickerId)
-        val photoIds = validateRegeneratable(sticker, stickerId)
+        val photoIds = validateRegeneratable(sticker)
         val previousSourcePhotoId = checkNotNull(sticker.sourcePhotoId) { "이미지형 스티커의 소스 사진이 비어 있습니다." }
         val previousImageKey = sticker.imageKey
 
@@ -97,33 +99,15 @@ class StickerCommandService(
         }
 
         try {
-            val regenerationPort =
-                stickerRegenerationPorts.singleOrNull()
-                    ?: error("스티커 재생성 application port 구현이 정확히 하나 필요합니다.")
             val result =
-                regenerationPort.regenerate(
+                stickerRegenerationPorts.singlePort("스티커 재생성").regenerate(
                     analysisId = sticker.analysisId,
                     boardId = sticker.boardId,
                     stickerId = sticker.id,
                     photoIds = photoIds,
                     previousSourcePhotoId = previousSourcePhotoId,
-                )
-
-            runCatching {
-                transactionTemplate.execute {
-                    sticker.regenerateSticker(result.sourcePhotoId, result.imageKey, result.mainColor)
-
-                    if (!stickerCommandRepository.updateStickerImage(sticker)) {
-                        throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-                    }
-                }
-            }.onFailure {
-                publishStickerImageDeletion(
-                    stickerId = stickerId,
-                    imageKeys = listOf(result.imageKey),
-                    reason = StickerImageDeletionReason.REGENERATED_IMAGE_DB_UPDATE_FAILED,
-                )
-            }.getOrThrow()
+                ) ?: throw InvalidInputException(StickerErrorCode.REGENERATION_PHOTOS_NOT_FOUND)
+            swapStickerImage(sticker, result)
 
             if (previousImageKey != null && previousImageKey != result.imageKey) {
                 publishStickerImageDeletion(
@@ -132,23 +116,43 @@ class StickerCommandService(
                     reason = StickerImageDeletionReason.REGENERATED_IMAGE_REPLACED,
                 )
             }
-
-            return sticker
         } finally {
             stickerCommandRepository.releaseRegenerationLock(stickerId)
         }
     }
 
-    private fun validateRegeneratable(
+    private fun swapStickerImage(
         sticker: Sticker,
-        stickerId: StickerId,
-    ): List<PhotoId> {
+        result: StickerRegenerationResult,
+    ) {
+        var swapped = false
+        try {
+            transactionTemplate.executeWithoutResult {
+                sticker.regenerateSticker(result.sourcePhotoId, result.imageKey, result.mainColor)
+
+                if (!stickerCommandRepository.updateStickerImage(sticker)) {
+                    throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+                }
+            }
+            swapped = true
+        } finally {
+            if (!swapped) {
+                publishStickerImageDeletion(
+                    stickerId = sticker.id,
+                    imageKeys = listOf(result.imageKey),
+                    reason = StickerImageDeletionReason.REGENERATED_IMAGE_DB_UPDATE_FAILED,
+                )
+            }
+        }
+    }
+
+    private fun validateRegeneratable(sticker: Sticker): List<PhotoId> {
         if (sticker.type != StickerType.IMAGE) {
-            throw InvalidInputException(message = "이미지형 스티커만 재생성할 수 있습니다.")
+            throw InvalidInputException(StickerErrorCode.NOT_REGENERATABLE_STICKER_TYPE)
         }
         return stickerRecapRepository
-            .findPhotoIds(stickerId)
-            .ifEmpty { throw InvalidInputException(message = "재생성할 사진 구성이 없습니다.") }
+            .findPhotoIds(sticker.id)
+            .ifEmpty { throw InvalidInputException(StickerErrorCode.REGENERATION_PHOTOS_NOT_FOUND) }
     }
 
     fun validateOwnedByBoard(
@@ -160,48 +164,43 @@ class StickerCommandService(
     fun updateLayouts(
         boardId: BoardId,
         layouts: List<StickerLayoutCommand>,
-    ): Unit =
-        (
-            layouts
-                .map { it.id }
-                .takeIf { it.distinct().size == it.size }
-                ?: throw uneditableSticker()
-        ).let { stickerRepository.findAllByBoardId(boardId).associateBy { sticker -> sticker.id } }
-            .let { stickersById ->
-                layouts.forEach { command ->
-                    (stickersById[command.id] ?: throw uneditableSticker())
-                        .apply { updateLayout(command.toDomain()) }
-                        .takeIf(stickerCommandRepository::updateLayout)
-                        ?: throw uneditableSticker()
-                }
+    ) {
+        val ids = layouts.map { it.id }
+        val stickersById = stickerRepository.findAllByBoardId(boardId).associateBy { it.id }
+        val editable = ids.distinct().size == ids.size && stickersById.keys.containsAll(ids)
+        if (!editable) {
+            throw InvalidInputException(StickerErrorCode.UNEDITABLE_STICKER)
+        }
+
+        for (command in layouts) {
+            val sticker = stickersById.getValue(command.id)
+            sticker.updateLayout(command.layout)
+            if (!stickerCommandRepository.updateLayout(sticker)) {
+                throw InvalidInputException(StickerErrorCode.UNEDITABLE_STICKER)
             }
+        }
+    }
 
     @Transactional
-    fun deleteAllByBoardId(boardId: BoardId): Unit =
-        stickerRepository
-            .findAllByBoardId(boardId)
-            .takeIf { it.isNotEmpty() }
-            ?.let { stickers ->
-                drawingCommandPort().let { drawingCommandPort ->
-                    Instant.now().let { deletedAt ->
-                        stickers
-                            .onEach {
-                                it
-                                    .apply { delete(deletedAt) }
-                                    .takeIf { sticker -> stickerCommandRepository.softDelete(sticker.id, deletedAt) }
-                                    ?: throw InvalidInputException(message = "삭제할 수 없는 스티커가 포함되어 있습니다.")
-                            }.map { it.id }
-                            .also { drawingCommandPort.deleteByStickerIds(boardId, it) }
-                            .let(stickerRecapRepository::deleteByStickerIds)
-                    }
-                }
-            } ?: Unit
+    fun deleteAllByBoardId(boardId: BoardId) {
+        val stickers = stickerRepository.findAllByBoardId(boardId)
+        if (stickers.isEmpty()) {
+            return
+        }
 
-    private fun uneditableSticker() = InvalidInputException(message = "편집할 수 없는 스티커가 포함되어 있습니다.")
+        val drawingCommandPort = drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME)
+        val deletedAt = Instant.now()
+        stickers.forEach { sticker ->
+            sticker.delete(deletedAt)
+            if (!stickerCommandRepository.softDelete(sticker.id, deletedAt)) {
+                throw InvalidInputException(StickerErrorCode.UNDELETABLE_STICKER)
+            }
+        }
 
-    private fun drawingCommandPort(): StickerDrawingCommandPort =
-        drawingCommandPorts.singleOrNull()
-            ?: error("스티커 드로잉 삭제 application port 구현이 정확히 하나 필요합니다.")
+        val stickerIds = stickers.map { it.id }
+        drawingCommandPort.deleteByStickerIds(boardId, stickerIds)
+        stickerRecapRepository.deleteByStickerIds(stickerIds)
+    }
 
     private fun publishStickerImageDeletion(
         stickerId: StickerId,
@@ -218,6 +217,7 @@ class StickerCommandService(
     }
 
     companion object {
+        private const val DRAWING_COMMAND_PORT_NAME = "스티커 드로잉 삭제"
         private val REGENERATION_LOCK_TTL: Duration = Duration.ofMinutes(5)
     }
 }

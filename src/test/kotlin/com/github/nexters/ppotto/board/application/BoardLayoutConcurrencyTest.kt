@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.uuidV7
@@ -47,8 +48,9 @@ class BoardLayoutConcurrencyTest(
                     stickers = emptyList(),
                     createdDrawings =
                         listOf(
-                            DrawingCreateCommand.Stroke(
+                            NewDrawing.Stroke(
                                 id = drawingId,
+                                boardId = board.id,
                                 scope = DrawingScope.BOARD,
                                 zIndex = 0,
                                 stickerId = null,
@@ -121,12 +123,13 @@ class CoordinatedBoardStickerPort :
 
     override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = emptyList()
 
-    override fun validateOwnedByBoard(
+    override fun ownsAll(
         boardId: BoardId,
         stickerIds: Set<StickerId>,
-    ) {
+    ): Boolean {
         layoutValidation.countDown()
         check(layoutRelease.await(10, TimeUnit.SECONDS))
+        return true
     }
 
     override fun updateLayouts(
@@ -140,7 +143,7 @@ class CoordinatedBoardStickerPort :
 
     fun awaitLayoutValidation(): Boolean = layoutValidation.await(10, TimeUnit.SECONDS)
 
-    fun awaitDeleteInvocation(): Boolean = deleteInvocation.await(500, TimeUnit.MILLISECONDS)
+    fun awaitDeleteInvocation(): Boolean = deleteInvocation.await(1, TimeUnit.SECONDS)
 
     fun releaseLayout() {
         layoutRelease.countDown()

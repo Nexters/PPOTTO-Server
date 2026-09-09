@@ -6,7 +6,6 @@ import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
-import com.github.nexters.ppotto.global.openapi.ConflictApiResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
@@ -69,7 +68,6 @@ interface BoardApi {
             ),
         ],
     )
-    @ConflictApiResponse
     fun create(
         userId: UserId,
         request: CreateBoardRequest,
@@ -113,7 +111,7 @@ interface BoardApi {
 
     @DeleteMapping("/{boardId}")
     @Operation(
-        operationId = "delete_1",
+        operationId = "deleteBoard",
         summary = "보드 삭제",
         description = "보드와 그 위의 스티커, 리캡, 그림을 함께 삭제함. 마지막 보드나 분석 중인 보드는 삭제할 수 없음",
         parameters = [

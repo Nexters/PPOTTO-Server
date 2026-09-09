@@ -1,116 +1,119 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.global.identifier.StickerId
+import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldEndWith
 import io.kotest.matchers.string.shouldStartWith
-import org.junit.jupiter.api.Test
 import java.util.UUID
 
-class StickerObjectKeysTest {
-    @Test
-    fun `key is deterministic based on analysisId, themeIndex, and sourcePhotoId`() {
-        val analysisId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        val themeIndex = 0
-        val sourcePhotoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
+class StickerObjectKeysTest :
+    BehaviorSpec({
+        val analysisId = AnalysisId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+        val otherAnalysisId = AnalysisId(UUID.fromString("550e8400-e29b-41d4-a716-446655440099"))
+        val sourcePhotoId = PhotoId(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+        val otherSourcePhotoId = PhotoId(UUID.fromString("550e8400-e29b-41d4-a716-446655440099"))
 
-        val key1 = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhotoId)
-        val key2 = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhotoId)
+        Given("같은 분석과 테마 인덱스, 같은 원본 사진으로") {
+            When("초기 분석 스티커 키를 두 번 만들면") {
+                val first = StickerObjectKeys.keyFor(analysisId, 0, sourcePhotoId)
+                val second = StickerObjectKeys.keyFor(analysisId, 0, sourcePhotoId)
 
-        key1 shouldBe key2
-    }
+                Then("같은 키를 반환해 같은 오브젝트를 가리킨다") {
+                    first shouldBe second
+                }
+            }
+        }
 
-    @Test
-    fun `key changes when analysisId changes`() {
-        val analysisId1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        val analysisId2 = UUID.fromString("550e8400-e29b-41d4-a716-446655440099")
-        val themeIndex = 0
-        val sourcePhotoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
+        Given("테마 인덱스와 원본 사진은 같고 분석만 다를 때") {
+            When("초기 분석 스티커 키를 각각 만들면") {
+                val first = StickerObjectKeys.keyFor(analysisId, 0, sourcePhotoId)
+                val second = StickerObjectKeys.keyFor(otherAnalysisId, 0, sourcePhotoId)
 
-        val key1 = StickerObjectKeys.keyFor(analysisId1, themeIndex, sourcePhotoId)
-        val key2 = StickerObjectKeys.keyFor(analysisId2, themeIndex, sourcePhotoId)
+                Then("분석별로 키가 갈라져 서로 덮어쓰지 않는다") {
+                    first shouldNotBe second
+                }
+            }
+        }
 
-        key1 shouldNotBe key2
-    }
+        Given("분석과 원본 사진은 같고 테마 인덱스만 다를 때") {
+            When("초기 분석 스티커 키를 각각 만들면") {
+                val first = StickerObjectKeys.keyFor(analysisId, 0, sourcePhotoId)
+                val second = StickerObjectKeys.keyFor(analysisId, 1, sourcePhotoId)
 
-    @Test
-    fun `key changes when themeIndex changes`() {
-        val analysisId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        val sourcePhotoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
+                Then("테마별로 키가 갈라져 서로 덮어쓰지 않는다") {
+                    first shouldNotBe second
+                }
+            }
+        }
 
-        val key1 = StickerObjectKeys.keyFor(analysisId, 0, sourcePhotoId)
-        val key2 = StickerObjectKeys.keyFor(analysisId, 1, sourcePhotoId)
+        Given("분석과 테마 인덱스는 같고 원본 사진만 다를 때") {
+            When("초기 분석 스티커 키를 각각 만들면") {
+                val first = StickerObjectKeys.keyFor(analysisId, 0, sourcePhotoId)
+                val second = StickerObjectKeys.keyFor(analysisId, 0, otherSourcePhotoId)
 
-        key1 shouldNotBe key2
-    }
+                Then("원본 사진별로 키가 갈라져 서로 덮어쓰지 않는다") {
+                    first shouldNotBe second
+                }
+            }
+        }
 
-    @Test
-    fun `key changes when sourcePhotoId changes`() {
-        val analysisId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        val themeIndex = 0
-        val sourcePhotoId1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
-        val sourcePhotoId2 = UUID.fromString("550e8400-e29b-41d4-a716-446655440099")
+        Given("분석 스티커 오브젝트 키 형식을 확인할 때") {
+            When("테마 인덱스 2로 키를 만들면") {
+                val key = StickerObjectKeys.keyFor(analysisId, 2, sourcePhotoId)
 
-        val key1 = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhotoId1)
-        val key2 = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhotoId2)
+                Then("stickers/{analysisId}/{themeIndex}-{sourcePhotoId}.png 형식을 따른다") {
+                    key shouldBe "stickers/$analysisId/2-$sourcePhotoId.png"
+                    key shouldStartWith "stickers/"
+                    key shouldContain "$analysisId"
+                    key shouldEndWith ".png"
+                }
+            }
+        }
 
-        key1 shouldNotBe key2
-    }
+        Given("같은 스티커와 원본 사진, 같은 재생성 식별자로") {
+            val stickerId = StickerId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+            val regenerationId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
 
-    @Test
-    fun `key format is stickers_analysisId_themeIndex-sourcePhotoId`() {
-        val analysisId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        val themeIndex = 2
-        val sourcePhotoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
+            When("재생성 키를 두 번 만들면") {
+                val first = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, regenerationId)
+                val second = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, regenerationId)
 
-        val key = StickerObjectKeys.keyFor(analysisId, themeIndex, sourcePhotoId)
+                Then("같은 키를 반환해 같은 오브젝트를 가리킨다") {
+                    first shouldBe second
+                }
+            }
+        }
 
-        key shouldStartWith "stickers/"
-        key shouldContain "550e8400-e29b-41d4-a716-446655440000"
-        key shouldContain "2-550e8400"
-        key shouldEndWith ".png"
-    }
+        Given("스티커와 원본 사진은 같고 재생성 식별자만 다를 때") {
+            val stickerId = StickerId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+            val firstRegenerationId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
+            val secondRegenerationId = UUID.fromString("550e8400-e29b-41d4-a716-446655440003")
 
-    @Test
-    fun `재생성 key는 regenerationId가 같으면 동일하다`() {
-        val stickerId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        val sourcePhotoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
-        val regenerationId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
+            When("재생성 키를 각각 만들면") {
+                val first = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, firstRegenerationId)
+                val second = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, secondRegenerationId)
 
-        val key1 = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, regenerationId)
-        val key2 = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, regenerationId)
+                Then("재생성마다 키가 갈라져 이전 업로드를 덮어쓰지 않는다") {
+                    first shouldNotBe second
+                }
+            }
+        }
 
-        key1 shouldBe key2
-    }
+        Given("재생성 스티커 오브젝트 키 형식을 확인할 때") {
+            val stickerId = StickerId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+            val regenerationId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
 
-    @Test
-    fun `재생성 key는 regenerationId가 다르면 달라진다`() {
-        val stickerId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        val sourcePhotoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
-        val regenerationId1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
-        val regenerationId2 = UUID.fromString("550e8400-e29b-41d4-a716-446655440003")
+            When("재생성 키를 만들면") {
+                val key = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, regenerationId)
 
-        val key1 = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, regenerationId1)
-        val key2 = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, regenerationId2)
-
-        key1 shouldNotBe key2
-    }
-
-    @Test
-    fun `재생성 key 형식은 stickers_stickerId_sourcePhotoId-regenerationId 이다`() {
-        val stickerId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-        val sourcePhotoId = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
-        val regenerationId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
-
-        val key = StickerObjectKeys.keyForRegeneration(stickerId, sourcePhotoId, regenerationId)
-
-        key shouldBe "stickers/$stickerId/$sourcePhotoId-$regenerationId.png"
-    }
-
-    private infix fun String.shouldContain(substring: String) {
-        this.contains(substring) shouldBe true
-    }
-
-    private infix fun String.shouldEndWith(suffix: String) {
-        this.endsWith(suffix) shouldBe true
-    }
-}
+                Then("stickers/{stickerId}/{sourcePhotoId}-{regenerationId}.png 형식을 따른다") {
+                    key shouldBe "stickers/$stickerId/$sourcePhotoId-$regenerationId.png"
+                }
+            }
+        }
+    })

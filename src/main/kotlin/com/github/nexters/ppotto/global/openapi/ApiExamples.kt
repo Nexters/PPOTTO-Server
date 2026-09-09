@@ -5,7 +5,7 @@ import com.github.nexters.ppotto.global.response.ApiResponse
 import java.time.Instant
 
 object ApiExamples {
-    val TIMESTAMP: Instant = Instant.parse("2026-07-27T05:02:11Z")
+    private val TIMESTAMP: Instant = Instant.parse("2026-07-27T05:02:11Z")
 
     val UNAUTHORIZED: ApiErrorResponse = error("COMMON-004", "인증이 필요합니다.")
 
@@ -43,7 +43,7 @@ object ApiExamples {
     val CONFLICT_RESPONSE: List<ApiExample> =
         listOf(errorExample("COMMON-006", "동시 요청으로 현재 상태와 충돌한 경우", "이미 처리된 요청이거나 충돌이 발생했습니다."))
 
-    fun error(
+    private fun error(
         code: String,
         message: String,
     ): ApiErrorResponse =

@@ -13,7 +13,6 @@ internal class RecordingLlmSpanHandle : LlmSpanHandle {
     var recordedInputMessages: List<LlmMessage>? = null
     var recordedOutputMessages: List<LlmMessage>? = null
     var recordedSystemInstructions: String? = null
-    val attributes: MutableMap<String, Any> = mutableMapOf()
 
     override fun setUsage(
         inputTokens: Int?,
@@ -52,19 +51,5 @@ internal class RecordingLlmSpanHandle : LlmSpanHandle {
 
     override fun setSystemInstructions(instructions: String) {
         recordedSystemInstructions = instructions
-    }
-
-    override fun setAttribute(
-        key: String,
-        value: String,
-    ) {
-        attributes[key] = value
-    }
-
-    override fun setAttribute(
-        key: String,
-        value: Long,
-    ) {
-        attributes[key] = value
     }
 }

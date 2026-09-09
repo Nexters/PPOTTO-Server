@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.infrastructure
 
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.global.error.BusinessException
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.google.genai.types.Schema
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
@@ -14,9 +15,9 @@ import java.util.UUID
 
 class VertexAiGeminiClassifierSchemaTest :
     BehaviorSpec({
-        val photo1 = UUID.fromString("550e8400-e29b-41d4-a716-446655440001")
-        val photo2 = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
-        val photo3 = UUID.fromString("550e8400-e29b-41d4-a716-446655440003")
+        val photo1 = PhotoId(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+        val photo2 = PhotoId(UUID.fromString("550e8400-e29b-41d4-a716-446655440002"))
+        val photo3 = PhotoId(UUID.fromString("550e8400-e29b-41d4-a716-446655440003"))
         val photos =
             listOf(
                 PhotoRef(photo1, "gs://bucket/1.jpg", "image/jpeg"),
@@ -27,7 +28,7 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 분류 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.classificationResponseSchema().containsEnum() shouldBe false
+                    VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
             }
         }
@@ -35,12 +36,11 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 스티커 재생성 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.stickerResponseSchema().containsEnum() shouldBe false
+                    VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
 
                 Then("sourcePhotoId를 targetSubject보다 먼저 생성하도록 순서를 강제한다") {
-                    VertexAiGeminiSchemas
-                        .stickerResponseSchema()
+                    VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA
                         .propertyOrdering()
                         .get() shouldContainExactly listOf("sourcePhotoId", "targetSubject", "mainColor")
                 }
@@ -50,7 +50,7 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 스티커 대상 재확인 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.verificationResponseSchema().containsEnum() shouldBe false
+                    VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
             }
         }

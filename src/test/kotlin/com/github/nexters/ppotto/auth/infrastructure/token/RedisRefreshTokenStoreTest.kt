@@ -3,7 +3,12 @@ package com.github.nexters.ppotto.auth.infrastructure.token
 import com.github.nexters.ppotto.auth.config.JwtAuthProperties
 import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.inspectors.forAll
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldNotContain
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.testcontainers.containers.GenericContainer
@@ -42,20 +47,25 @@ class RedisRefreshTokenStoreTest :
 
             When("새 refresh token으로 rotation하면") {
                 val newToken = "new-refresh-token"
+                val rotated = store.rotate(userId, currentToken, newToken)
+                val replayed = store.rotate(userId, currentToken, "replayed-token")
 
-                Then("기존 토큰은 한 번만 교체되고 새 토큰만 유효하다") {
-                    store.rotate(userId, currentToken, newToken) shouldBe true
-                    store.rotate(userId, currentToken, "replayed-token") shouldBe false
-                    store.findUserId(currentToken) shouldBe null
+                Then("기존 토큰은 한 번만 교체된다") {
+                    rotated.shouldBeTrue()
+                    replayed.shouldBeFalse()
+                }
+
+                Then("새 토큰만 유효하다") {
+                    store.findUserId(currentToken).shouldBeNull()
                     store.findUserId(newToken) shouldBe userId
                 }
             }
 
             When("사용자의 refresh token을 삭제하면") {
-                Then("token index와 사용자 index가 모두 삭제된다") {
-                    store.delete(userId)
+                store.delete(userId)
 
-                    store.findUserId(currentToken) shouldBe null
+                Then("token index와 사용자 index가 모두 삭제된다") {
+                    store.findUserId(currentToken).shouldBeNull()
                 }
             }
         }
@@ -65,10 +75,11 @@ class RedisRefreshTokenStoreTest :
             val rawToken = "raw-refresh-token"
 
             When("Redis key를 조회하면") {
-                Then("원문이 key에 노출되지 않는다") {
-                    store.save(userId, rawToken)
+                store.save(userId, rawToken)
+                val keys = template.keys("*")
 
-                    template.keys("*").none { it.contains(rawToken) } shouldBe true
+                Then("원문이 key에 노출되지 않는다") {
+                    keys.forAll { it shouldNotContain rawToken }
                 }
             }
         }

@@ -6,9 +6,8 @@ import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
-import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
-import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -16,7 +15,6 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
@@ -31,7 +29,6 @@ import java.time.Instant
 import java.util.UUID
 
 @AutoConfigureMockMvc
-@Import(AnalysisTestConfig::class)
 @Suppress("LargeClass")
 class AnalysisControllerTest(
     @Autowired val mockMvc: MockMvc,
@@ -68,39 +65,6 @@ class AnalysisControllerTest(
             return (standaloneGroups + """{"items": [$burstItems]}""").joinToString(",", prefix = "[", postfix = "]")
         }
 
-        fun authenticatedPost(
-            url: String,
-            userId: UUID,
-        ): MockHttpServletRequestBuilder =
-            post(url)
-                .with(
-                    authentication(
-                        UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList()),
-                    ),
-                )
-
-        fun authenticatedGet(
-            url: String,
-            userId: UUID,
-        ): MockHttpServletRequestBuilder =
-            get(url)
-                .with(
-                    authentication(
-                        UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList()),
-                    ),
-                )
-
-        fun authenticatedDelete(
-            url: String,
-            userId: UUID,
-        ): MockHttpServletRequestBuilder =
-            delete(url)
-                .with(
-                    authentication(
-                        UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList()),
-                    ),
-                )
-
         Given("Board가 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
 
@@ -108,7 +72,8 @@ class AnalysisControllerTest(
                 Then("성공 응답에 analysisId와 사진별 signed URL이 담긴다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -131,7 +96,8 @@ class AnalysisControllerTest(
                 Then("400 응답을 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("""{"boardId": "${board.id}", "photos": []}"""),
                         ).andExpect(status().isBadRequest)
@@ -143,7 +109,8 @@ class AnalysisControllerTest(
                 Then("400 응답과 ANALYSIS-001을 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -163,7 +130,8 @@ class AnalysisControllerTest(
                 Then("400 응답과 ANALYSIS-001을 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -183,7 +151,8 @@ class AnalysisControllerTest(
                 Then("400 응답과 ANALYSIS-009를 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -203,7 +172,8 @@ class AnalysisControllerTest(
                 Then("400 응답과 ANALYSIS-009를 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -224,7 +194,8 @@ class AnalysisControllerTest(
                     val representativeValues = listOf(true) + List(10) { false }
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -243,12 +214,13 @@ class AnalysisControllerTest(
             When("이미 활성 분석이 있는 상태에서 새 분석을 요청하면") {
                 val existingPhotos =
                     (0 until 90).map { PhotoUploadGroupRequest(listOf(PhotoUploadItemRequest(Instant.now(), PhotoContentType.JPEG))) }
-                analysisService.createAnalysis(board.userId.value, board.id.value, existingPhotos)
+                analysisService.createAnalysis(board.userId, board.id, existingPhotos)
 
                 Then("409 응답과 ANALYSIS-002을 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -272,11 +244,11 @@ class AnalysisControllerTest(
                             listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
                         )
                     }
-                val created = analysisService.createAnalysis(uploadBoard.userId.value, uploadBoard.id.value, photos)
+                val created = analysisService.createAnalysis(uploadBoard.userId, uploadBoard.id, photos)
 
                 Then("성공 응답에 업로드/실패 카운트가 담긴다") {
                     mockMvc
-                        .perform(authenticatedPost("/analysis/${created.analysisId}/start", uploadBoard.userId.value))
+                        .perform(post("/analysis/${created.analysisId}/start").authenticatedAs(uploadBoard.userId))
                         .andExpect(status().isAccepted)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.uploadedCount").exists())
@@ -288,13 +260,14 @@ class AnalysisControllerTest(
 
         Given("존재하지 않는 boardId로") {
             val requester = userRepository.saveTestUser()
-            val userId = requester.id.value
+            val userId = requester.id
 
             When("분석 생성을 요청하면") {
                 Then("404 응답과 BOARD-002를 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", userId)
+                            post("/analysis")
+                                .authenticatedAs(userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -313,12 +286,12 @@ class AnalysisControllerTest(
 
         Given("존재하지 않는 analysisId로") {
             val requester = userRepository.saveTestUser()
-            val userId = requester.id.value
+            val userId = requester.id
 
             When("업로드 완료를 통보하면") {
                 Then("404 응답을 반환한다") {
                     mockMvc
-                        .perform(authenticatedPost("/analysis/${UUID.randomUUID()}/start", userId))
+                        .perform(post("/analysis/${UUID.randomUUID()}/start").authenticatedAs(userId))
                         .andExpect(status().isNotFound)
                 }
             }
@@ -326,12 +299,12 @@ class AnalysisControllerTest(
 
         Given("활성 분석이 없는 사용자로") {
             val requester = userRepository.saveTestUser()
-            val userId = requester.id.value
+            val userId = requester.id
 
             When("진행 중 분석을 조회하면") {
                 Then("200 응답과 null data를 반환한다") {
                     mockMvc
-                        .perform(authenticatedGet("/analysis/active", userId))
+                        .perform(get("/analysis/active").authenticatedAs(userId))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data").doesNotExist())
@@ -341,12 +314,12 @@ class AnalysisControllerTest(
 
         Given("UPLOADING 상태의 분석이 있으면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
 
             When("진행 중 분석을 조회하면") {
                 Then("분석 상태를 반환한다") {
                     mockMvc
-                        .perform(authenticatedGet("/analysis/active", board.userId.value))
+                        .perform(get("/analysis/active").authenticatedAs(board.userId))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.id").value(analysis.id.toString()))
@@ -362,19 +335,19 @@ class AnalysisControllerTest(
 
         Given("ANALYZING 상태의 분석이 있으면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
                 .set(ANALYSIS.PROGRESS, 10)
                 .set(ANALYSIS.STARTED_AT, Instant.parse("2026-07-27T05:02:11Z"))
-                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
+                .where(ANALYSIS.ID.eq(analysis.id))
                 .execute()
 
             When("분석 상태를 조회하면") {
                 Then("로딩 화면 폴링용 상태를 반환한다") {
                     mockMvc
-                        .perform(authenticatedGet("/analysis/${analysis.id}", board.userId.value))
+                        .perform(get("/analysis/${analysis.id}").authenticatedAs(board.userId))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.id").value(analysis.id.toString()))
@@ -389,19 +362,19 @@ class AnalysisControllerTest(
 
         Given("COMPLETED 상태의 분석이 있으면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
                 .set(ANALYSIS.PROGRESS, 100)
                 .set(ANALYSIS.COMPLETED_AT, Instant.parse("2026-07-27T05:03:38Z"))
-                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
+                .where(ANALYSIS.ID.eq(analysis.id))
                 .execute()
 
             When("진행 중 분석을 조회하면") {
                 Then("active에는 포함하지 않는다") {
                     mockMvc
-                        .perform(authenticatedGet("/analysis/active", board.userId.value))
+                        .perform(get("/analysis/active").authenticatedAs(board.userId))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data").doesNotExist())
@@ -411,7 +384,7 @@ class AnalysisControllerTest(
             When("분석 상태를 조회하면") {
                 Then("완료 상태를 반환한다") {
                     mockMvc
-                        .perform(authenticatedGet("/analysis/${analysis.id}", board.userId.value))
+                        .perform(get("/analysis/${analysis.id}").authenticatedAs(board.userId))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.status").value("COMPLETED"))
                         .andExpect(jsonPath("$.data.progress").value(100))
@@ -422,14 +395,14 @@ class AnalysisControllerTest(
 
         Given("다른 사용자의 analysisId로") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(ownerBoard.userId.value, ownerBoard.id.value)
+            val analysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
             val otherUser = userRepository.saveTestUser()
-            val otherUserId = otherUser.id.value
+            val otherUserId = otherUser.id
 
             When("분석 상태를 조회하면") {
                 Then("404 응답과 ANALYSIS-005를 반환한다") {
                     mockMvc
-                        .perform(authenticatedGet("/analysis/${analysis.id}", otherUserId))
+                        .perform(get("/analysis/${analysis.id}").authenticatedAs(otherUserId))
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.success").value(false))
                         .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
@@ -476,13 +449,14 @@ class AnalysisControllerTest(
         Given("다른 사용자의 Board가 등록된 상태에서") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
             val otherUser = userRepository.saveTestUser()
-            val otherUserId = otherUser.id.value
+            val otherUserId = otherUser.id
 
             When("분석 생성을 요청하면") {
                 Then("404 응답과 BOARD-002를 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", otherUserId)
+                            post("/analysis")
+                                .authenticatedAs(otherUserId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -507,14 +481,14 @@ class AnalysisControllerTest(
                         listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
                     )
                 }
-            val created = analysisService.createAnalysis(ownerBoard.userId.value, ownerBoard.id.value, photos)
+            val created = analysisService.createAnalysis(ownerBoard.userId, ownerBoard.id, photos)
             val otherUser = userRepository.saveTestUser()
-            val otherUserId = otherUser.id.value
+            val otherUserId = otherUser.id
 
             When("업로드 완료를 통보하면") {
                 Then("404 응답을 반환한다") {
                     mockMvc
-                        .perform(authenticatedPost("/analysis/${created.analysisId}/start", otherUserId))
+                        .perform(post("/analysis/${created.analysisId}/start").authenticatedAs(otherUserId))
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.success").value(false))
                 }
@@ -529,12 +503,12 @@ class AnalysisControllerTest(
                         listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
                     )
                 }
-            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos)
+            val created = analysisService.createAnalysis(board.userId, board.id, photos)
 
             When("취소를 요청하면") {
                 Then("200 응답과 null data를 반환한다") {
                     mockMvc
-                        .perform(authenticatedDelete("/analysis/${created.analysisId}", board.userId.value))
+                        .perform(delete("/analysis/${created.analysisId}").authenticatedAs(board.userId))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data").doesNotExist())
@@ -544,17 +518,17 @@ class AnalysisControllerTest(
 
         Given("ANALYZING 상태로 전이된 분석이 있으면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
-                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
+                .where(ANALYSIS.ID.eq(analysis.id))
                 .execute()
 
             When("취소를 요청하면") {
                 Then("409 응답과 ANALYSIS-004를 반환한다") {
                     mockMvc
-                        .perform(authenticatedDelete("/analysis/${analysis.id}", board.userId.value))
+                        .perform(delete("/analysis/${analysis.id}").authenticatedAs(board.userId))
                         .andExpect(status().isConflict)
                         .andExpect(jsonPath("$.success").value(false))
                         .andExpect(jsonPath("$.error.code").value("ANALYSIS-004"))
@@ -564,13 +538,13 @@ class AnalysisControllerTest(
 
         Given("다른 사용자의 analysisId로") {
             val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(ownerBoard.userId.value, ownerBoard.id.value)
+            val analysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
             val otherUser = userRepository.saveTestUser()
 
             When("취소를 요청하면") {
                 Then("404 응답과 ANALYSIS-005를 반환한다") {
                     mockMvc
-                        .perform(authenticatedDelete("/analysis/${analysis.id}", otherUser.id.value))
+                        .perform(delete("/analysis/${analysis.id}").authenticatedAs(otherUser.id))
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.success").value(false))
                         .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
@@ -580,7 +554,7 @@ class AnalysisControllerTest(
 
         Given("인증되지 않은 요청으로") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
 
             When("취소를 요청하면") {
                 Then("401 응답과 COMMON-004를 반환한다") {
@@ -601,12 +575,12 @@ class AnalysisControllerTest(
                         listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
                     )
                 }
-            val created = analysisService.createAnalysis(board.userId.value, board.id.value, photos)
+            val created = analysisService.createAnalysis(board.userId, board.id, photos)
 
             When("업로드 URL 재발급을 요청하면") {
                 Then("200 응답과 재발급된 URL 목록을 반환한다") {
                     mockMvc
-                        .perform(authenticatedPost("/analysis/${created.analysisId}/reissue", board.userId.value))
+                        .perform(post("/analysis/${created.analysisId}/reissue").authenticatedAs(board.userId))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.uploads.length()").value(90))
@@ -618,12 +592,12 @@ class AnalysisControllerTest(
 
         Given("존재하지 않는 analysisId로") {
             val requester = userRepository.saveTestUser()
-            val userId = requester.id.value
+            val userId = requester.id
 
             When("업로드 URL 재발급을 요청하면") {
                 Then("404 응답과 ANALYSIS-005를 반환한다") {
                     mockMvc
-                        .perform(authenticatedPost("/analysis/${UUID.randomUUID()}/reissue", userId))
+                        .perform(post("/analysis/${UUID.randomUUID()}/reissue").authenticatedAs(userId))
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.success").value(false))
                         .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
@@ -639,14 +613,14 @@ class AnalysisControllerTest(
                         listOf(PhotoUploadItemRequest(Instant.now().plusSeconds(i.toLong()), PhotoContentType.JPEG)),
                     )
                 }
-            val created = analysisService.createAnalysis(ownerBoard.userId.value, ownerBoard.id.value, photos)
+            val created = analysisService.createAnalysis(ownerBoard.userId, ownerBoard.id, photos)
             val otherUser = userRepository.saveTestUser()
-            val otherUserId = otherUser.id.value
+            val otherUserId = otherUser.id
 
             When("업로드 URL 재발급을 요청하면") {
                 Then("404 응답과 ANALYSIS-005를 반환한다") {
                     mockMvc
-                        .perform(authenticatedPost("/analysis/${created.analysisId}/reissue", otherUserId))
+                        .perform(post("/analysis/${created.analysisId}/reissue").authenticatedAs(otherUserId))
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.success").value(false))
                         .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
@@ -656,17 +630,17 @@ class AnalysisControllerTest(
 
         Given("ANALYZING 상태로 전이된 분석이 있으면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             dslContext
                 .update(ANALYSIS)
                 .set(ANALYSIS.STATUS, AnalysisStatus.ANALYZING.name)
-                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
+                .where(ANALYSIS.ID.eq(analysis.id))
                 .execute()
 
             When("업로드 URL 재발급을 요청하면") {
                 Then("409 응답과 ANALYSIS-003을 반환한다") {
                     mockMvc
-                        .perform(authenticatedPost("/analysis/${analysis.id}/reissue", board.userId.value))
+                        .perform(post("/analysis/${analysis.id}/reissue").authenticatedAs(board.userId))
                         .andExpect(status().isConflict)
                         .andExpect(jsonPath("$.success").value(false))
                         .andExpect(jsonPath("$.error.code").value("ANALYSIS-003"))
@@ -676,7 +650,7 @@ class AnalysisControllerTest(
 
         Given("인증되지 않은 요청으로") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
 
             When("업로드 URL 재발급을 요청하면") {
                 Then("401 응답과 COMMON-004를 반환한다") {
@@ -700,7 +674,8 @@ class AnalysisControllerTest(
                         }
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -719,7 +694,8 @@ class AnalysisControllerTest(
                 Then("400 응답을 반환한다") {
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -746,7 +722,8 @@ class AnalysisControllerTest(
                         }
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -770,7 +747,8 @@ class AnalysisControllerTest(
                         }
                     mockMvc
                         .perform(
-                            authenticatedPost("/analysis", board.userId.value)
+                            post("/analysis")
+                                .authenticatedAs(board.userId)
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                     """
@@ -786,3 +764,6 @@ class AnalysisControllerTest(
             }
         }
     })
+
+private fun MockHttpServletRequestBuilder.authenticatedAs(userId: UserId): MockHttpServletRequestBuilder =
+    with(authentication(UsernamePasswordAuthenticationToken.authenticated(userId.value, null, emptyList())))

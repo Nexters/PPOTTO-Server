@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.user.domain
 
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
@@ -33,8 +34,11 @@ class UserTest :
                     withdrawn.name shouldBe "탈퇴한 사용자"
                     withdrawn.providerRefreshToken shouldBe null
                     withdrawn.deletedAt shouldBe withdrawnAt
-                    withdrawn.updatedAt shouldBe withdrawnAt
                     withdrawn.isActive shouldBe false
+                }
+
+                Then("updatedAt은 DB 트리거가 정하므로 도메인에서 바꾸지 않는다") {
+                    withdrawn.updatedAt shouldBe user.updatedAt
                 }
             }
         }
@@ -55,10 +59,10 @@ class UserTest :
                 )
 
             When("다시 탈퇴시키면") {
-                Then("상태 변경을 거부한다") {
-                    shouldThrow<IllegalArgumentException> {
-                        user.withdraw(at)
-                    }
+                val exception = shouldThrow<IllegalArgumentException> { user.withdraw(at) }
+
+                Then("이미 탈퇴한 사용자라며 상태 변경을 거부한다") {
+                    exception.message shouldBe "이미 탈퇴한 사용자입니다."
                 }
             }
         }

@@ -25,142 +25,139 @@ class PhotoRepository(
     private val dslContext: DSLContext,
 ) {
     fun saveAll(
-        analysisId: UUID,
-        boardId: UUID,
+        analysisId: AnalysisId,
+        boardId: BoardId,
         items: List<PhotoCreate>,
     ): List<Photo> {
         if (items.isEmpty()) return emptyList()
 
-        var insert =
-            dslContext
-                .insertInto(
-                    PHOTOS,
-                    PHOTOS.ANALYSIS_ID,
-                    PHOTOS.BOARD_ID,
-                    PHOTOS.CONTENT_TYPE,
-                    PHOTOS.TAKEN_AT,
-                    PHOTOS.BURST_GROUP_ID,
-                    PHOTOS.IS_REPRESENTATIVE,
-                )
-        items.forEach { item ->
-            insert =
-                insert.values(
-                    AnalysisId(analysisId),
-                    BoardId(boardId),
+        val insert =
+            dslContext.insertInto(
+                PHOTOS,
+                PHOTOS.ANALYSIS_ID,
+                PHOTOS.BOARD_ID,
+                PHOTOS.CONTENT_TYPE,
+                PHOTOS.TAKEN_AT,
+                PHOTOS.BURST_GROUP_ID,
+                PHOTOS.IS_REPRESENTATIVE,
+            )
+        return items
+            .fold(insert) { statement, item ->
+                statement.values(
+                    analysisId,
+                    boardId,
                     item.contentType.mimeType,
                     item.takenAt,
                     item.burstGroupId,
                     item.isRepresentative,
                 )
-        }
-        return insert
-            .returning()
+            }.returning()
             .fetch()
             .map { it.toDomain() }
     }
 
-    fun findPendingByAnalysisId(analysisId: UUID): List<Photo> =
+    fun findPendingByAnalysisId(analysisId: AnalysisId): List<Photo> =
         dslContext
             .selectFrom(PHOTOS)
-            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
+            .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
             .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
             .fetch()
             .map { it.toDomain() }
 
-    fun findAllByAnalysisId(analysisId: UUID): List<Photo> =
+    fun findAllByAnalysisId(analysisId: AnalysisId): List<Photo> =
         dslContext
             .selectFrom(PHOTOS)
-            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
+            .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
             .fetch()
             .map { it.toDomain() }
 
-    fun markCompletedBatch(updates: Map<UUID, Instant>): List<Photo> {
-        if (updates.isEmpty()) return emptyList()
+    fun markCompletedBatch(updates: Map<PhotoId, Instant>): Int {
+        if (updates.isEmpty()) return 0
 
-        return updates.mapNotNull { (id, uploadedAt) ->
-            dslContext
-                .update(PHOTOS)
-                .set(PHOTOS.UPLOAD_STATUS, UploadStatus.COMPLETED.name)
-                .set(PHOTOS.UPLOADED_AT, uploadedAt)
-                .where(PHOTOS.ID.eq(PhotoId(id)))
-                .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
-                .returning()
-                .fetchOne()
-                ?.toDomain()
-        }
+        val statements =
+            updates.map { (id, uploadedAt) ->
+                dslContext
+                    .update(PHOTOS)
+                    .set(PHOTOS.UPLOAD_STATUS, UploadStatus.COMPLETED.name)
+                    .set(PHOTOS.UPLOADED_AT, uploadedAt)
+                    .where(PHOTOS.ID.eq(id))
+                    .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
+            }
+        return dslContext
+            .batch(statements)
+            .execute()
+            .sum()
     }
 
-    fun markFailedBatch(ids: List<UUID>) {
-        if (ids.isEmpty()) return
+    fun markFailedBatch(ids: List<PhotoId>): Int {
+        if (ids.isEmpty()) return 0
 
-        ids.forEach { id ->
-            dslContext
-                .update(PHOTOS)
-                .set(PHOTOS.UPLOAD_STATUS, UploadStatus.FAILED.name)
-                .where(PHOTOS.ID.eq(PhotoId(id)))
-                .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
-                .execute()
-        }
+        return dslContext
+            .update(PHOTOS)
+            .set(PHOTOS.UPLOAD_STATUS, UploadStatus.FAILED.name)
+            .where(PHOTOS.ID.`in`(ids.toSet()))
+            .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.PENDING.name))
+            .execute()
     }
 
-    fun markAllFailedByAnalysisId(analysisId: UUID): Int =
+    fun markAllFailedByAnalysisId(analysisId: AnalysisId): Int =
         dslContext
             .update(PHOTOS)
             .set(PHOTOS.UPLOAD_STATUS, UploadStatus.FAILED.name)
-            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
+            .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
             .execute()
 
     fun findCompletedByIds(
-        analysisId: UUID,
-        boardId: UUID,
-        ids: Collection<UUID>,
+        analysisId: AnalysisId,
+        boardId: BoardId,
+        ids: Collection<PhotoId>,
     ): List<Photo> {
         val uniqueIds = ids.toSet()
         if (uniqueIds.isEmpty()) return emptyList()
 
         return dslContext
             .selectFrom(PHOTOS)
-            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
-            .and(PHOTOS.BOARD_ID.eq(BoardId(boardId)))
-            .and(PHOTOS.ID.`in`(uniqueIds.map(::PhotoId)))
+            .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
+            .and(PHOTOS.BOARD_ID.eq(boardId))
+            .and(PHOTOS.ID.`in`(uniqueIds))
             .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
             .fetch()
             .map { it.toDomain() }
     }
 
     fun countOwnedByAnalysis(
-        analysisId: UUID,
-        boardId: UUID,
-        ids: Collection<UUID>,
+        analysisId: AnalysisId,
+        boardId: BoardId,
+        ids: Collection<PhotoId>,
     ): Int {
         val uniqueIds = ids.toSet()
         if (uniqueIds.isEmpty()) return 0
 
-        return dslContext
-            .selectCount()
-            .from(PHOTOS)
-            .where(PHOTOS.ANALYSIS_ID.eq(AnalysisId(analysisId)))
-            .and(PHOTOS.BOARD_ID.eq(BoardId(boardId)))
-            .and(PHOTOS.ID.`in`(uniqueIds.map(::PhotoId)))
-            .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
-            .fetchSingle(0, Int::class.java) ?: 0
+        return dslContext.fetchCount(
+            PHOTOS,
+            PHOTOS.ANALYSIS_ID
+                .eq(analysisId)
+                .and(PHOTOS.BOARD_ID.eq(boardId))
+                .and(PHOTOS.ID.`in`(uniqueIds))
+                .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name)),
+        )
     }
 
-    fun hardDeleteAllByAnalysisIds(analysisIds: Collection<UUID>): Int {
+    fun hardDeleteAllByAnalysisIds(analysisIds: Collection<AnalysisId>): Int {
         val uniqueIds = analysisIds.toSet()
         if (uniqueIds.isEmpty()) return 0
 
         return dslContext
             .deleteFrom(PHOTOS)
-            .where(PHOTOS.ANALYSIS_ID.`in`(uniqueIds.map(::AnalysisId)))
+            .where(PHOTOS.ANALYSIS_ID.`in`(uniqueIds))
             .execute()
     }
 
     private fun PhotosRecord.toDomain() =
         Photo(
-            id = id!!.value,
-            analysisId = analysisId.value,
-            boardId = boardId.value,
+            id = id!!,
+            analysisId = analysisId,
+            boardId = boardId,
             contentType =
                 PhotoContentType.entries.find { it.mimeType == contentType }
                     ?: error("unknown photos.content_type: $contentType"),

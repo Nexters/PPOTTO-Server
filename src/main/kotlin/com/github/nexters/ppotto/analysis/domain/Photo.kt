@@ -1,12 +1,15 @@
 package com.github.nexters.ppotto.analysis.domain
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import java.time.Instant
 import java.util.UUID
 
-class Photo(
-    val id: UUID,
-    val analysisId: UUID,
-    val boardId: UUID,
+data class Photo(
+    val id: PhotoId,
+    val analysisId: AnalysisId,
+    val boardId: BoardId,
     val contentType: PhotoContentType,
     val uploadStatus: UploadStatus,
     val uploadedAt: Instant?,

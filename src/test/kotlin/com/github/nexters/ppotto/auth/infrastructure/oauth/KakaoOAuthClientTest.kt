@@ -16,35 +16,37 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory
 import java.net.InetSocketAddress
 import java.net.URI
 
+private const val DEFAULT_TOKEN_INFO = """{"id":12345,"app_id":9876}"""
+private const val DEFAULT_USER_INFO =
+    """{"id":12345,"kakao_account":{"email":"user@kakao.com","profile":{"nickname":"뽀또"}}}"""
+private const val DEFAULT_TOKEN_EXCHANGE =
+    """{"token_type":"bearer","access_token":"web-access-token","expires_in":21599}"""
+
 class KakaoOAuthClientTest :
     BehaviorSpec({
-        val server = HttpServer.create(InetSocketAddress(0), 0)
-        var tokenInfoResponse = """{"id":12345,"app_id":9876}"""
-        var userInfoResponse = """{"id":12345,"kakao_account":{"email":"user@kakao.com","profile":{"nickname":"뽀또"}}}"""
-        server.createContext("/token") { exchange ->
-            val body = tokenInfoResponse.toByteArray()
-            exchange.responseHeaders.add("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, body.size.toLong())
-            exchange.responseBody.use { it.write(body) }
-        }
-        server.createContext("/user") { exchange ->
-            val body = userInfoResponse.toByteArray()
-            exchange.responseHeaders.add("Content-Type", "application/json")
-            exchange.sendResponseHeaders(200, body.size.toLong())
-            exchange.responseBody.use { it.write(body) }
-        }
+        var tokenInfoResponse = DEFAULT_TOKEN_INFO
+        var userInfoResponse = DEFAULT_USER_INFO
         var tokenExchangeStatus = 200
-        var tokenExchangeResponse = """{"token_type":"bearer","access_token":"web-access-token","expires_in":21599}"""
+        var tokenExchangeResponse = DEFAULT_TOKEN_EXCHANGE
         var lastTokenExchangeBody = ""
+
+        fun resetStubs() {
+            tokenInfoResponse = DEFAULT_TOKEN_INFO
+            userInfoResponse = DEFAULT_USER_INFO
+            tokenExchangeStatus = 200
+            tokenExchangeResponse = DEFAULT_TOKEN_EXCHANGE
+            lastTokenExchangeBody = ""
+        }
+
+        val server = HttpServer.create(InetSocketAddress(0), 0)
+        server.createContext("/token") { exchange -> exchange.respond(200, tokenInfoResponse) }
+        server.createContext("/user") { exchange -> exchange.respond(200, userInfoResponse) }
         server.createContext("/oauth/token") { exchange ->
             lastTokenExchangeBody =
                 exchange.requestBody
                     .readAllBytes()
                     .decodeToString()
-            val body = tokenExchangeResponse.toByteArray()
-            exchange.responseHeaders.add("Content-Type", "application/json")
-            exchange.sendResponseHeaders(tokenExchangeStatus, body.size.toLong())
-            exchange.responseBody.use { it.write(body) }
+            exchange.respond(tokenExchangeStatus, tokenExchangeResponse)
         }
         server.start()
 
@@ -70,10 +72,12 @@ class KakaoOAuthClientTest :
         }
 
         Given("우리 앱에서 발급된 카카오 access token이 주어졌을 때") {
-            When("카카오 사용자 정보를 검증하면") {
-                Then("회원번호와 이메일과 닉네임을 반환한다") {
-                    val profile = client.authenticate(LoginCommand.Kakao("valid-token"))
+            resetStubs()
 
+            When("카카오 사용자 정보를 검증하면") {
+                val profile = client.authenticate(LoginCommand.Kakao("valid-token"))
+
+                Then("회원번호와 이메일과 닉네임을 반환한다") {
                     profile.providerUserId shouldBe "12345"
                     profile.email shouldBe "user@kakao.com"
                     profile.name shouldBe "뽀또"
@@ -82,38 +86,55 @@ class KakaoOAuthClientTest :
         }
 
         Given("다른 앱에서 발급된 카카오 access token이 주어졌을 때") {
+            resetStubs()
             tokenInfoResponse = """{"id":12345,"app_id":1111}"""
 
             When("카카오 사용자 정보를 검증하면") {
+                val exception =
+                    shouldThrow<UnauthorizedException> {
+                        client.authenticate(LoginCommand.Kakao("substituted-token"))
+                    }
+
                 Then("AUTH-001 예외가 발생한다") {
-                    val exception =
-                        shouldThrow<UnauthorizedException> {
-                            client.authenticate(LoginCommand.Kakao("substituted-token"))
-                        }
                     exception.errorCode shouldBe AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED
                 }
             }
         }
 
         Given("이메일 제공에 동의하지 않은 카카오 계정이 주어졌을 때") {
-            tokenInfoResponse = """{"id":12345,"app_id":9876}"""
+            resetStubs()
             userInfoResponse = """{"id":12345,"kakao_account":{}}"""
 
             When("카카오 사용자 정보를 검증하면") {
+                val exception =
+                    shouldThrow<ForbiddenException> {
+                        client.authenticate(LoginCommand.Kakao("without-email"))
+                    }
+
                 Then("AUTH-004 예외가 발생한다") {
-                    val exception =
-                        shouldThrow<ForbiddenException> {
-                            client.authenticate(LoginCommand.Kakao("without-email"))
-                        }
                     exception.errorCode shouldBe AuthErrorCode.KAKAO_EMAIL_CONSENT_REQUIRED
                 }
             }
         }
 
+        Given("닉네임 제공에 동의하지 않은 카카오 계정이 주어졌을 때") {
+            resetStubs()
+            userInfoResponse = """{"id":12345,"kakao_account":{"email":"user@kakao.com"}}"""
+
+            When("카카오 사용자 정보를 검증하면") {
+                val exception =
+                    shouldThrow<ForbiddenException> {
+                        client.authenticate(LoginCommand.Kakao("without-nickname"))
+                    }
+
+                Then("AUTH-005 예외가 발생한다") {
+                    exception.errorCode shouldBe AuthErrorCode.KAKAO_NICKNAME_CONSENT_REQUIRED
+                }
+            }
+        }
+
         Given("웹 인가 페이지에서 받은 카카오 authorization code가 주어졌을 때") {
-            tokenInfoResponse = """{"id":12345,"app_id":9876}"""
-            userInfoResponse = """{"id":12345,"kakao_account":{"email":"user@kakao.com","profile":{"nickname":"뽀또"}}}"""
-            tokenExchangeStatus = 200
+            resetStubs()
 
             When("서버가 code를 토큰으로 교환해 검증하면") {
                 val profile = client.authenticate(LoginCommand.KakaoWeb("web-code", "http://localhost:3000/oauth/kakao"))
@@ -135,30 +156,18 @@ class KakaoOAuthClientTest :
         }
 
         Given("만료되었거나 redirect URI가 다른 카카오 authorization code가 주어졌을 때") {
+            resetStubs()
             tokenExchangeStatus = 400
             tokenExchangeResponse = """{"error":"invalid_grant","error_description":"authorization code not found"}"""
 
             When("서버가 code를 토큰으로 교환하면") {
+                val exception =
+                    shouldThrow<UnauthorizedException> {
+                        client.authenticate(LoginCommand.KakaoWeb("expired-code", "http://localhost:3000/oauth/kakao"))
+                    }
+
                 Then("AUTH-008 예외가 발생한다") {
-                    val exception =
-                        shouldThrow<UnauthorizedException> {
-                            client.authenticate(LoginCommand.KakaoWeb("expired-code", "http://localhost:3000/oauth/kakao"))
-                        }
                     exception.errorCode shouldBe AuthErrorCode.KAKAO_CODE_EXCHANGE_FAILED
-                }
-            }
-        }
-
-        Given("닉네임 제공에 동의하지 않은 카카오 계정이 주어졌을 때") {
-            userInfoResponse = """{"id":12345,"kakao_account":{"email":"user@kakao.com"}}"""
-
-            When("카카오 사용자 정보를 검증하면") {
-                Then("AUTH-005 예외가 발생한다") {
-                    val exception =
-                        shouldThrow<ForbiddenException> {
-                            client.authenticate(LoginCommand.Kakao("without-nickname"))
-                        }
-                    exception.errorCode shouldBe AuthErrorCode.KAKAO_NICKNAME_CONSENT_REQUIRED
                 }
             }
         }

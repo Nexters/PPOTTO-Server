@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.auth.application.port.AuthUserPort
 import com.github.nexters.ppotto.auth.application.port.OAuthClient
 import com.github.nexters.ppotto.auth.application.port.RefreshTokenStore
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
+import com.github.nexters.ppotto.auth.application.port.byProvider
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
 import com.github.nexters.ppotto.auth.domain.AuthSignup
 import com.github.nexters.ppotto.auth.domain.LoginCommand
@@ -15,6 +16,7 @@ import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.global.identifier.UserId
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionOperations
@@ -30,48 +32,54 @@ class AuthService(
     private val authTermsPort: AuthTermsPort,
     private val authActiveUserPort: AuthActiveUserPort,
 ) {
-    private val oauthClients =
-        oauthClients.associateBy(OAuthClient::provider).also {
-            check(it.size == oauthClients.size) { "OAuth provider별 client는 하나만 등록할 수 있습니다." }
+    private val log = LoggerFactory.getLogger(javaClass)
+    private val oauthClients = oauthClients.byProvider()
+
+    fun login(command: LoginCommand): LoginResult {
+        val client = checkNotNull(oauthClients[command.provider]) { "OAuth provider client가 연결되지 않았습니다." }
+        val signup = signUp(client.authenticate(command))
+        val tokenPair = tokenProvider.issue(signup.user.userId)
+        refreshTokenStore.save(signup.user.userId, tokenPair.refreshToken)
+        return LoginResult(tokenPair, signup.user.isNewUser, signup.pendingTerms)
+    }
+
+    fun refresh(refreshToken: String): TokenPair {
+        val userId = refreshTokenStore.findUserId(refreshToken) ?: failRefresh(UNKNOWN_REFRESH_TOKEN)
+        if (!authActiveUserPort.isActive(userId)) {
+            failRefresh(INACTIVE_USER)
         }
-
-    fun login(command: LoginCommand): LoginResult =
-        (oauthClients[command.provider] ?: throw InvalidInputException())
-            .authenticate(command)
-            .let(::signUp)
-            .let { signup ->
-                tokenProvider
-                    .issue(signup.user.userId)
-                    .also { refreshTokenStore.save(signup.user.userId, it.refreshToken) }
-                    .let { LoginResult(it, signup.user.isNewUser, signup.pendingTerms) }
-            }
-
-    fun refresh(refreshToken: String): TokenPair =
-        refreshTokenStore
-            .findUserId(refreshToken)
-            ?.takeIf(authActiveUserPort::isActive)
-            ?.let { userId ->
-                tokenProvider
-                    .issue(userId)
-                    .takeIf { refreshTokenStore.rotate(userId, refreshToken, it.refreshToken) }
-            } ?: throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
+        val tokenPair = tokenProvider.issue(userId)
+        if (!refreshTokenStore.rotate(userId, refreshToken, tokenPair.refreshToken)) {
+            failRefresh(ROTATION_REJECTED)
+        }
+        return tokenPair
+    }
 
     fun logout(userId: UserId) = refreshTokenStore.delete(userId)
 
     private fun signUp(profile: SocialProfile): AuthSignup =
         signupTransaction.execute {
-            (authUserPort.findOrCreate(profile) ?: throw signupRequirementFailure(profile))
-                .takeUnless { profile.authorizationCodeExchangeFailed && it.isNewUser }
-                ?.let { AuthSignup(it, authTermsPort.findPendingTerms(it.userId)) }
-                ?: throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
+            val user = authUserPort.findOrCreate(profile) ?: throw signupRequirementFailure(profile)
+            if (profile.authorizationCodeExchangeFailed && user.isNewUser) {
+                throw UnauthorizedException(AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED)
+            }
+            AuthSignup(user, authTermsPort.findPendingTerms(user.userId))
         }
 
     private fun signupRequirementFailure(profile: SocialProfile): InvalidInputException =
-        profile.email
-            ?.let { InvalidInputException(AuthErrorCode.SIGNUP_NAME_REQUIRED) }
-            ?: InvalidInputException(AuthErrorCode.SIGNUP_EMAIL_REQUIRED)
+        InvalidInputException(
+            if (profile.email == null) AuthErrorCode.SIGNUP_EMAIL_REQUIRED else AuthErrorCode.SIGNUP_NAME_REQUIRED,
+        )
+
+    private fun failRefresh(reason: String): Nothing {
+        log.info("refresh token 재발급에 실패했습니다. reason={}", reason)
+        throw UnauthorizedException(AuthErrorCode.INVALID_REFRESH_TOKEN)
+    }
 
     companion object {
         const val SIGNUP_TRANSACTION = "signupTransaction"
+        private const val UNKNOWN_REFRESH_TOKEN = "unknown_refresh_token"
+        private const val INACTIVE_USER = "inactive_user"
+        private const val ROTATION_REJECTED = "rotation_rejected"
     }
 }

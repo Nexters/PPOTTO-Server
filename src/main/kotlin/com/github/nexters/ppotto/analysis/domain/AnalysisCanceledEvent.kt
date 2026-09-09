@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.analysis.domain
 
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.AnalysisId
 
 data class AnalysisCanceledEvent(
-    val analysisId: UUID,
+    val analysisId: AnalysisId,
 )

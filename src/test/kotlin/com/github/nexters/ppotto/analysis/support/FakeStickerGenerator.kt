@@ -1,11 +1,28 @@
 package com.github.nexters.ppotto.analysis.support
 
 import com.github.nexters.ppotto.analysis.domain.StickerGenerator
+import com.github.nexters.ppotto.support.ResettableFake
+import java.util.concurrent.CopyOnWriteArrayList
 
-class FakeStickerGenerator : StickerGenerator {
+class FakeStickerGenerator :
+    StickerGenerator,
+    ResettableFake {
+    var onGenerate: (() -> Unit)? = null
+
+    val requestedTargetSubjects: MutableList<String> = CopyOnWriteArrayList()
+
     override fun generate(
-        sourceGcsUri: String,
+        sourceUri: String,
         sourceMimeType: String,
         targetSubject: String,
-    ): ByteArray = byteArrayOf(1, 2, 3)
+    ): ByteArray {
+        requestedTargetSubjects += targetSubject
+        onGenerate?.invoke()
+        return byteArrayOf(1, 2, 3)
+    }
+
+    override fun reset() {
+        onGenerate = null
+        requestedTargetSubjects.clear()
+    }
 }

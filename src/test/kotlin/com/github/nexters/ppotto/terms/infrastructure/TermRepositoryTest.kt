@@ -1,11 +1,9 @@
 package com.github.nexters.ppotto.terms.infrastructure
 
-import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.jooq.enums.OauthProvider
-import com.github.nexters.ppotto.jooq.tables.references.TERMS
-import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
-import io.kotest.matchers.collections.shouldContainExactly
+import com.github.nexters.ppotto.support.saveTestUser
+import com.github.nexters.ppotto.terms.support.saveTerm
+import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext
@@ -16,51 +14,17 @@ import java.util.UUID
 class TermRepositoryTest(
     termRepository: TermRepository,
     termAgreementRepository: TermAgreementRepository,
+    userRepository: UserRepository,
     dslContext: DSLContext,
 ) : IntegrationTest({
-        fun saveUser(): UserId {
-            val suffix = UUID.randomUUID()
-            return dslContext
-                .insertInto(
-                    USERS,
-                    USERS.PROVIDER,
-                    USERS.PROVIDER_USER_ID,
-                    USERS.EMAIL,
-                    USERS.NAME,
-                ).values(
-                    OauthProvider.KAKAO,
-                    "term-repository-$suffix",
-                    "term-repository-$suffix@example.com",
-                    "약관저장소사용자",
-                ).returning(USERS.ID)
-                .fetchOne(USERS.ID)!!
-        }
-
-        fun saveTerm(
-            code: String,
-            version: String,
-            effectiveAt: Instant,
-            isRequired: Boolean = false,
-        ) = dslContext
-            .insertInto(
-                TERMS,
-                TERMS.CODE,
-                TERMS.VERSION,
-                TERMS.IS_REQUIRED,
-                TERMS.CONTENT_URL,
-                TERMS.EFFECTIVE_AT,
-            ).values(code, version, isRequired, "https://example.com/$code/$version", effectiveAt)
-            .returning()
-            .fetchOne()!!
-
         Given("같은 코드에 과거, 현재, 미래 약관 버전이 등록된 상태에서") {
             val now = Instant.now().truncatedTo(ChronoUnit.MICROS)
             val tosCode = "TOS-${UUID.randomUUID()}"
             val privacyCode = "PRIVACY-${UUID.randomUUID()}"
-            saveTerm(tosCode, "1.0", now.minusSeconds(3_600))
-            val currentTos = saveTerm(tosCode, "2.0", now.minusSeconds(60))
-            saveTerm(tosCode, "3.0", now.plusSeconds(3_600))
-            val currentPrivacy = saveTerm(privacyCode, "1.0", now.minusSeconds(120))
+            dslContext.saveTerm(tosCode, "1.0", now.minusSeconds(3_600))
+            val currentTos = dslContext.saveTerm(tosCode, "2.0", now.minusSeconds(60))
+            dslContext.saveTerm(tosCode, "3.0", now.plusSeconds(3_600))
+            val currentPrivacy = dslContext.saveTerm(privacyCode, "1.0", now.minusSeconds(120))
 
             When("현재 유효 약관을 조회하면") {
                 val found =
@@ -69,29 +33,26 @@ class TermRepositoryTest(
                         .filter { it.code == tosCode || it.code == privacyCode }
 
                 Then("코드별 시행일이 가장 최근인 버전을 한 건씩 반환한다") {
-                    found.map { it.id } shouldContainExactlyInAnyOrder
-                        listOf(currentTos.id!!, currentPrivacy.id!!)
+                    found.map { it.id } shouldContainExactlyInAnyOrder listOf(currentTos.id, currentPrivacy.id)
                 }
             }
         }
 
         Given("사용자와 약관이 등록된 상태에서") {
-            val userId = saveUser()
-            val term =
-                saveTerm(
-                    code = "AGREEMENT-${UUID.randomUUID()}",
-                    version = "1.0",
-                    effectiveAt = Instant.now().minusSeconds(60),
-                )
+            val userId = userRepository.saveTestUser().id
+            val term = dslContext.saveTerm("AGREEMENT-${UUID.randomUUID()}")
 
             When("같은 약관 동의를 중복해서 저장하면") {
-                val firstSaved = termAgreementRepository.saveAll(userId, listOf(term.id!!, term.id!!))
-                val secondSaved = termAgreementRepository.saveAll(userId, listOf(term.id!!))
+                val firstSaved = termAgreementRepository.saveAll(userId, listOf(term.id, term.id))
+                val secondSaved = termAgreementRepository.saveAll(userId, listOf(term.id))
 
-                Then("동의 이력은 한 건만 생성되고 재요청은 무시된다") {
-                    firstSaved.map { it.termId } shouldContainExactly listOf(term.id!!)
-                    secondSaved shouldBe emptyList()
-                    termAgreementRepository.findAgreedTermIds(userId, listOf(term.id!!)) shouldBe setOf(term.id!!)
+                Then("첫 요청만 한 건을 저장하고 재요청은 무시된다") {
+                    firstSaved shouldBe 1
+                    secondSaved shouldBe 0
+                }
+
+                Then("동의한 약관으로 조회된다") {
+                    termAgreementRepository.findAgreedTermIds(userId, listOf(term.id)) shouldBe setOf(term.id)
                 }
             }
         }

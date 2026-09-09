@@ -9,6 +9,10 @@ import io.kotest.matchers.string.shouldNotContain
 import io.sentry.Sentry
 import io.sentry.SentryOptions
 import io.sentry.protocol.SentryTransaction
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
+import jakarta.servlet.http.HttpServlet
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
@@ -52,21 +56,14 @@ class SentryHttpPayloadFilterTest :
             val response = MockHttpServletResponse()
             val responseBody = """{"data":{"accessToken":"real-jwt","refreshToken":"real-refresh","userId":"u-1"}}"""
             val chain =
-                MockFilterChain(
-                    object : jakarta.servlet.http.HttpServlet() {
-                        override fun service(
-                            req: jakarta.servlet.ServletRequest,
-                            res: jakarta.servlet.ServletResponse,
-                        ) {
-                            req.inputStream.readAllBytes()
-                            (res as HttpServletResponse).contentType = "application/json"
-                            res.characterEncoding = "UTF-8"
-                            res.addHeader("Set-Cookie", "refresh=real-refresh")
-                            res.writer.write(responseBody)
-                            res.status = 200
-                        }
-                    },
-                )
+                servletChain { req, res ->
+                    req.inputStream.readAllBytes()
+                    res.contentType = "application/json"
+                    res.characterEncoding = "UTF-8"
+                    res.addHeader("Set-Cookie", "refresh=real-refresh")
+                    res.writer.write(responseBody)
+                    res.status = 200
+                }
 
             When("트랜잭션이 열린 상태에서 필터를 태우면") {
                 val transaction = Sentry.startTransaction("POST /auth/login", "http.server")
@@ -133,17 +130,7 @@ class SentryHttpPayloadFilterTest :
                     setContent("""{"name":"거부된 보드","password":"p@ss"}""".toByteArray())
                 }
             val response = MockHttpServletResponse()
-            val chain =
-                MockFilterChain(
-                    object : jakarta.servlet.http.HttpServlet() {
-                        override fun service(
-                            req: jakarta.servlet.ServletRequest,
-                            res: jakarta.servlet.ServletResponse,
-                        ) {
-                            (res as HttpServletResponse).status = 401
-                        }
-                    },
-                )
+            val chain = servletChain { _, res -> res.status = 401 }
 
             When("트랜잭션이 열린 상태에서 필터를 태우면") {
                 val transaction = Sentry.startTransaction("POST /boards", "http.server")
@@ -193,17 +180,7 @@ class SentryHttpPayloadFilterTest :
                     servletPath = "/boards"
                 }
             val response = MockHttpServletResponse()
-            val chain =
-                MockFilterChain(
-                    object : jakarta.servlet.http.HttpServlet() {
-                        override fun service(
-                            req: jakarta.servlet.ServletRequest,
-                            res: jakarta.servlet.ServletResponse,
-                        ) {
-                            res.writer.write("""{"ok":true}""")
-                        }
-                    },
-                )
+            val chain = servletChain { _, res -> res.writer.write("""{"ok":true}""") }
 
             When("필터를 태우면") {
                 filter.doFilter(request, response, chain)
@@ -215,9 +192,21 @@ class SentryHttpPayloadFilterTest :
         }
     })
 
+private fun servletChain(handle: (HttpServletRequest, HttpServletResponse) -> Unit): MockFilterChain =
+    MockFilterChain(
+        object : HttpServlet() {
+            override fun service(
+                req: ServletRequest,
+                res: ServletResponse,
+            ) {
+                handle(req as HttpServletRequest, res as HttpServletResponse)
+            }
+        },
+    )
+
 private fun SentryHttpPayloadFilter.shouldNotFilterFor(request: MockHttpServletRequest): Boolean =
     SentryHttpPayloadFilter::class.java
-        .getDeclaredMethod("shouldNotFilter", jakarta.servlet.http.HttpServletRequest::class.java)
+        .getDeclaredMethod("shouldNotFilter", HttpServletRequest::class.java)
         .apply { isAccessible = true }
         .invoke(this, request) as Boolean
 

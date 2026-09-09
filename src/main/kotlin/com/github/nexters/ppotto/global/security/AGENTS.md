@@ -8,7 +8,7 @@ Shared MVC boundary that injects the authenticated HTTP user as a controller arg
 |------|-------------|
 | `AuthenticatedUser.kt` | Controller argument annotation that requires an authenticated user |
 | `CurrentUser.kt` | Argument annotation that optionally accepts an authenticated user on public APIs |
-| `CurrentUserArgumentResolver.kt` | Resolves the SecurityContext UUID principal with fluent branching and converts a missing required authentication into `COMMON-004` |
+| `CurrentUserArgumentResolver.kt` | Resolves the SecurityContext UUID principal in a single `when` over the read-once principal and converts a missing required authentication into `COMMON-004` |
 
 ## Rules
 

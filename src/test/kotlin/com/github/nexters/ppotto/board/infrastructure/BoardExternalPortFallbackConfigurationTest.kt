@@ -33,7 +33,7 @@ class BoardExternalPortFallbackConfigurationTest :
                 Then("연동 누락 오류를 던진다") {
                     val exception =
                         shouldThrow<IllegalStateException> {
-                            commandPort.validateOwnedByBoard(boardId, emptySet())
+                            commandPort.ownsAll(boardId, emptySet())
                         }
                     exception.message shouldBe "StickerCommandService 연동이 필요합니다."
                 }

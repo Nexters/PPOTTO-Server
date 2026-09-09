@@ -5,8 +5,6 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
-import com.github.nexters.ppotto.global.identifier.AnalysisId
-import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
@@ -20,8 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
@@ -31,7 +30,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 import java.util.UUID
 
-@AutoConfigureMockMvc(addFilters = false)
+@AutoConfigureMockMvc
 class StickerControllerTest(
     @Autowired val mockMvc: MockMvc,
     stickerRepository: StickerRepository,
@@ -41,37 +40,35 @@ class StickerControllerTest(
     boardRepository: BoardRepository,
     userRepository: UserRepository,
 ) : IntegrationTest({
-        fun authenticate(userId: UUID) {
-            SecurityContextHolder.getContext().authentication =
-                UsernamePasswordAuthenticationToken(userId, null)
-        }
+        fun MockHttpServletRequestBuilder.authenticatedAs(userId: UUID): MockHttpServletRequestBuilder =
+            with(authentication(UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList())))
 
         Given("사용자 보드에 이미지 스티커와 리캡이 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             val photo =
                 photoRepository
                     .saveAll(
                         analysis.id,
-                        board.id.value,
+                        board.id,
                         listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
                     ).single()
             photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
             val sticker =
                 stickerRepository.save(
-                    AnalysisId(analysis.id),
+                    analysis.id,
                     board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "원래 제목",
                         summary = "웃기고 귀여우면 일단 주워요",
-                        sourcePhotoId = PhotoId(photo.id),
+                        sourcePhotoId = photo.id,
                         imageKey = "stickers/controller.png",
                         textContent = null,
                         mainColor = "#FF6B6B",
                     ),
                 )
-            stickerRecapRepository.savePhotos(sticker.id, listOf(PhotoId(photo.id)))
+            stickerRecapRepository.savePhotos(sticker.id, listOf(photo.id))
             val comments =
                 stickerRecapRepository.saveComments(
                     sticker.id,
@@ -84,27 +81,38 @@ class StickerControllerTest(
             val chipComment = comments.first { it.content == "키워드" }
 
             When("리캡 상세를 요청하면") {
-                authenticate(board.userId.value)
+                val result = mockMvc.perform(get("/stickers/${sticker.id}").authenticatedAs(board.userId.value))
 
-                Then("스티커와 한 줄 요약과 코멘트와 사진을 응답한다") {
-                    mockMvc
-                        .perform(get("/stickers/${sticker.id}"))
+                Then("스티커와 한 줄 요약을 응답한다") {
+                    result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
                         .andExpect(jsonPath("$.data.sticker.mainColor").value("#FF6B6B"))
                         .andExpect(jsonPath("$.data.summary").value("웃기고 귀여우면 일단 주워요"))
+                }
+
+                Then("말풍선은 좌표를 갖고 키워드 칩은 좌표가 없다") {
+                    result
                         .andExpect(jsonPath("$.data.comments[0].content").value("말풍선"))
                         .andExpect(jsonPath("$.data.comments[0].posX").value(3.0))
                         .andExpect(jsonPath("$.data.comments[0].posY").value(4.0))
                         .andExpect(jsonPath("$.data.comments[1].content").value("키워드"))
                         .andExpect(jsonPath("$.data.comments[1].posX").doesNotExist())
                         .andExpect(jsonPath("$.data.comments[1].posY").doesNotExist())
+                }
+
+                Then("배치를 정하지 않은 스티커는 좌표와 겹침 순서를 내려주지 않는다") {
+                    result
                         .andExpect(jsonPath("$.data.sticker.posX").doesNotExist())
                         .andExpect(jsonPath("$.data.sticker.posY").doesNotExist())
                         .andExpect(jsonPath("$.data.sticker.zIndex").doesNotExist())
                         .andExpect(jsonPath("$.data.sticker.scale").value(1.0))
                         .andExpect(jsonPath("$.data.sticker.rotation").value(0.0))
+                }
+
+                Then("리캡 사진은 읽기용 signed URL로 내려준다") {
+                    result
                         .andExpect(jsonPath("$.data.photos[0].id").value(photo.id.toString()))
                         .andExpect(
                             jsonPath("$.data.photos[0].imageUrl")
@@ -114,50 +122,53 @@ class StickerControllerTest(
             }
 
             When("제목을 수정하면") {
-                authenticate(board.userId.value)
+                val result =
+                    mockMvc.perform(
+                        patch("/stickers/${sticker.id}")
+                            .authenticatedAs(board.userId.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"title":"새 제목"}"""),
+                    )
 
                 Then("변경한 제목을 응답한다") {
-                    mockMvc
-                        .perform(
-                            patch("/stickers/${sticker.id}")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""{"title":"새 제목"}"""),
-                        ).andExpect(status().isOk)
+                    result
+                        .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.id").value(sticker.id.toString()))
                         .andExpect(jsonPath("$.data.title").value("새 제목"))
                 }
             }
 
             When("빈 제목으로 수정하면") {
-                authenticate(board.userId.value)
+                val result =
+                    mockMvc.perform(
+                        patch("/stickers/${sticker.id}")
+                            .authenticatedAs(board.userId.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"title":" "}"""),
+                    )
 
-                Then("400 응답을 반환한다") {
-                    mockMvc
-                        .perform(
-                            patch("/stickers/${sticker.id}")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""{"title":" "}"""),
-                        ).andExpect(status().isBadRequest)
+                Then("COMMON-001 오류를 응답한다") {
+                    result
+                        .andExpect(status().isBadRequest)
                         .andExpect(jsonPath("$.error.code").value("COMMON-001"))
                 }
             }
 
-            When("리캡을 열람 처리하면") {
-                authenticate(board.userId.value)
+            When("리캡을 두 번 열람 처리하면") {
+                mockMvc.perform(post("/stickers/${sticker.id}/view").authenticatedAs(board.userId.value))
+                val result = mockMvc.perform(post("/stickers/${sticker.id}/view").authenticatedAs(board.userId.value))
 
-                Then("여러 번 호출해도 성공한다") {
-                    mockMvc.perform(post("/stickers/${sticker.id}/view")).andExpect(status().isOk)
-                    mockMvc.perform(post("/stickers/${sticker.id}/view")).andExpect(status().isOk)
+                Then("두 번째 호출도 성공한다") {
+                    result.andExpect(status().isOk)
                 }
             }
 
             When("다른 사용자가 리캡을 조회하면") {
                 val otherUser = userRepository.saveTestUser()
-                authenticate(otherUser.id.value)
+                val result = mockMvc.perform(get("/stickers/${sticker.id}").authenticatedAs(otherUser.id.value))
 
                 Then("리캡 내용을 응답하고 isNew는 false다") {
-                    mockMvc
-                        .perform(get("/stickers/${sticker.id}"))
+                    result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
                         .andExpect(jsonPath("$.data.sticker.isNew").value(false))
@@ -166,84 +177,92 @@ class StickerControllerTest(
             }
 
             When("말풍선 코멘트 위치를 수정하면") {
-                authenticate(board.userId.value)
+                val result =
+                    mockMvc.perform(
+                        patch("/stickers/${sticker.id}/comments")
+                            .authenticatedAs(board.userId.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"comments":[{"id":"${bubbleComment.id}","posX":10.5,"posY":-20.5}]}"""),
+                    )
 
-                Then("바뀐 위치를 저장한다") {
-                    mockMvc
-                        .perform(
-                            patch("/stickers/${sticker.id}/comments")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""{"comments":[{"id":"${bubbleComment.id}","posX":10.5,"posY":-20.5}]}"""),
-                        ).andExpect(status().isOk)
+                Then("성공을 응답한다") {
+                    result
+                        .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
+                }
 
+                Then("바뀐 위치가 리캡 상세에 반영된다") {
                     mockMvc
-                        .perform(get("/stickers/${sticker.id}"))
+                        .perform(get("/stickers/${sticker.id}").authenticatedAs(board.userId.value))
                         .andExpect(jsonPath("$.data.comments[0].posX").value(10.5))
                         .andExpect(jsonPath("$.data.comments[0].posY").value(-20.5))
                 }
             }
 
             When("키워드 칩 코멘트의 위치를 수정하려 하면") {
-                authenticate(board.userId.value)
+                val result =
+                    mockMvc.perform(
+                        patch("/stickers/${sticker.id}/comments")
+                            .authenticatedAs(board.userId.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"comments":[{"id":"${chipComment.id}","posX":1.0,"posY":2.0}]}"""),
+                    )
 
-                Then("400 응답을 반환한다") {
-                    mockMvc
-                        .perform(
-                            patch("/stickers/${sticker.id}/comments")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""{"comments":[{"id":"${chipComment.id}","posX":1.0,"posY":2.0}]}"""),
-                        ).andExpect(status().isBadRequest)
-                        .andExpect(jsonPath("$.error.code").value("COMMON-001"))
+                Then("STICKER-004 오류를 응답한다") {
+                    result
+                        .andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("STICKER-004"))
                 }
             }
 
             When("존재하지 않는 코멘트 id로 위치를 수정하려 하면") {
-                authenticate(board.userId.value)
+                val result =
+                    mockMvc.perform(
+                        patch("/stickers/${sticker.id}/comments")
+                            .authenticatedAs(board.userId.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"comments":[{"id":"${UUID.randomUUID()}","posX":1.0,"posY":2.0}]}"""),
+                    )
 
-                Then("400 응답을 반환한다") {
-                    mockMvc
-                        .perform(
-                            patch("/stickers/${sticker.id}/comments")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""{"comments":[{"id":"${UUID.randomUUID()}","posX":1.0,"posY":2.0}]}"""),
-                        ).andExpect(status().isBadRequest)
-                        .andExpect(jsonPath("$.error.code").value("COMMON-001"))
+                Then("STICKER-004 오류를 응답한다") {
+                    result
+                        .andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("STICKER-004"))
                 }
             }
 
             When("다른 사용자가 코멘트 위치를 수정하려 하면") {
                 val otherUser = userRepository.saveTestUser()
-                authenticate(otherUser.id.value)
+                val result =
+                    mockMvc.perform(
+                        patch("/stickers/${sticker.id}/comments")
+                            .authenticatedAs(otherUser.id.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"comments":[{"id":"${bubbleComment.id}","posX":1.0,"posY":2.0}]}"""),
+                    )
 
-                Then("404 응답을 반환한다") {
-                    mockMvc
-                        .perform(
-                            patch("/stickers/${sticker.id}/comments")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content("""{"comments":[{"id":"${bubbleComment.id}","posX":1.0,"posY":2.0}]}"""),
-                        ).andExpect(status().isNotFound)
+                Then("STICKER-001 오류로 소유권을 숨긴다") {
+                    result
+                        .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("STICKER-001"))
                 }
             }
 
             When("스티커를 삭제하면") {
-                authenticate(board.userId.value)
+                val result = mockMvc.perform(delete("/stickers/${sticker.id}").authenticatedAs(board.userId.value))
 
-                Then("성공 응답을 반환한다") {
-                    mockMvc
-                        .perform(delete("/stickers/${sticker.id}"))
+                Then("성공을 응답한다") {
+                    result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                 }
             }
 
             When("인증 없이 리캡을 조회하면") {
-                SecurityContextHolder.clearContext()
+                val result = mockMvc.perform(get("/stickers/${sticker.id}"))
 
                 Then("리캡 내용을 응답하고 isNew는 false다") {
-                    mockMvc
-                        .perform(get("/stickers/${sticker.id}"))
+                    result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
                         .andExpect(jsonPath("$.data.sticker.isNew").value(false))
@@ -252,11 +271,10 @@ class StickerControllerTest(
             }
 
             When("인증 없이 리캡을 열람 처리하면") {
-                SecurityContextHolder.clearContext()
+                val result = mockMvc.perform(post("/stickers/${sticker.id}/view"))
 
-                Then("401 응답을 반환한다") {
-                    mockMvc
-                        .perform(post("/stickers/${sticker.id}/view"))
+                Then("COMMON-004 오류를 응답한다") {
+                    result
                         .andExpect(status().isUnauthorized)
                         .andExpect(jsonPath("$.error.code").value("COMMON-004"))
                 }

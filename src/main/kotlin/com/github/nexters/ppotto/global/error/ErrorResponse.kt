@@ -22,8 +22,10 @@ data class ErrorResponse(
     data class FieldErrorDetail(
         @field:Schema(description = "검증에 실패한 필드", example = "name")
         val field: String,
+
         @field:Schema(description = "요청에 담겨 온 값", example = "열자가넘는아주긴보드이름")
         val value: String?,
+
         @field:Schema(description = "실패 사유", example = "크기가 1에서 10 사이여야 합니다")
         val reason: String?,
     )

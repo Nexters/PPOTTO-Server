@@ -5,7 +5,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
-import com.github.nexters.ppotto.global.error.CommonErrorCode
+import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 class BoardCommandService(
     private val boardRepository: BoardRepository,
     private val boardAccessService: BoardAccessService,
-    private val drawingCommandService: BoardDrawingCommandService,
+    private val drawingRepository: DrawingRepository,
     private val analysisActivityPort: BoardAnalysisActivityPort,
     private val stickerCommandPort: BoardStickerCommandPort,
 ) {
@@ -29,58 +29,46 @@ class BoardCommandService(
     fun create(
         userId: UserId,
         name: String?,
-    ): Board =
-        (
-            boardRepository
-                .lockCommandsByUserId(userId)
-                .let { boardRepository.countByUserId(userId) }
-                .takeIf { it < Board.MAX_COUNT }
-                ?.let { name ?: Board.defaultName(it + 1) }
-                ?: throw InvalidInputException(BoardErrorCode.COUNT_LIMIT_EXCEEDED)
-        ).also(::validateName)
-            .let { boardRepository.save(userId, it) }
+    ): Board {
+        boardRepository.lockCommandsByUserId(userId)
+        val count = boardRepository.countByUserId(userId)
+        if (count >= Board.MAX_COUNT) {
+            throw InvalidInputException(BoardErrorCode.COUNT_LIMIT_EXCEEDED)
+        }
+        return boardRepository.save(userId, name ?: Board.defaultName(count + 1))
+    }
 
-    @Transactional
     fun rename(
         boardId: BoardId,
         userId: UserId,
         name: String,
     ): Board =
-        name
-            .also(::validateName)
-            .let { boardRepository.updateName(boardId, userId, it) }
+        boardRepository.updateName(boardId, userId, name)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
     @Transactional
     fun delete(
         boardId: BoardId,
         userId: UserId,
-    ): Unit =
-        boardRepository
-            .lockCommandsByUserId(userId)
-            .let { boardAccessService.getOwnedByIdForUpdate(boardId, userId) }
-            .let { boardId }
-            .also { validateDeletable(it, userId) }
-            .also(drawingCommandService::deleteAllByBoardId)
-            .also(stickerCommandPort::deleteAllByBoardId)
-            .let { check(boardRepository.softDelete(it, userId)) }
+    ) {
+        boardRepository.lockCommandsByUserId(userId)
+        boardAccessService.getOwnedByIdForUpdate(boardId, userId)
+        validateDeletable(boardId, userId)
+
+        drawingRepository.softDeleteAllByBoardId(boardId)
+        stickerCommandPort.deleteAllByBoardId(boardId)
+        check(boardRepository.softDelete(boardId, userId)) { "행 잠금을 잡은 보드의 소프트 삭제가 반영되지 않았습니다." }
+    }
 
     private fun validateDeletable(
         boardId: BoardId,
         userId: UserId,
     ) {
-        boardRepository
-            .countByUserId(userId)
-            .takeIf { it > 1 }
-            ?: throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
-        boardId
-            .takeUnless { analysisActivityPort.hasActiveAnalysis(it, userId) }
-            ?: throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
-    }
-
-    private fun validateName(name: String) {
-        name
-            .takeUnless { it.isBlank() || it.length > Board.MAX_NAME_LENGTH }
-            ?: throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
+        if (boardRepository.countByUserId(userId) <= 1) {
+            throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
+        }
+        if (analysisActivityPort.hasActiveAnalysis(boardId, userId)) {
+            throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
+        }
     }
 }

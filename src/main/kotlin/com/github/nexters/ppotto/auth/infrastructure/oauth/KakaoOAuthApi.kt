@@ -40,12 +40,14 @@ internal data class KakaoTokenResponse(
 
 internal data class KakaoTokenInfo(
     val id: Long,
+
     @JsonProperty("app_id")
     val appId: Long,
 )
 
 internal data class KakaoUserInfo(
     val id: Long,
+
     @JsonProperty("kakao_account")
     val account: KakaoAccount?,
 )

@@ -5,14 +5,14 @@ import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 
-interface StickerRegenerationPort {
+fun interface StickerRegenerationPort {
     fun regenerate(
         analysisId: AnalysisId,
         boardId: BoardId,
         stickerId: StickerId,
         photoIds: Collection<PhotoId>,
         previousSourcePhotoId: PhotoId,
-    ): StickerRegenerationResult
+    ): StickerRegenerationResult?
 }
 
 data class StickerRegenerationResult(

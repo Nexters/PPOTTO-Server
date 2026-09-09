@@ -5,8 +5,6 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
-import com.github.nexters.ppotto.global.identifier.AnalysisId
-import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.RecapCommentPosition
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
@@ -32,11 +30,11 @@ class StickerRepositoryTest(
 ) : IntegrationTest({
         Given("분석과 사진이 등록된 상태에서 스티커 리캡을 저장하면") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(
                     analysis.id,
-                    board.id.value,
+                    board.id,
                     listOf(
                         PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
                         PhotoCreate(PhotoContentType.PNG, Instant.parse("2026-07-02T00:00:00Z")),
@@ -44,19 +42,19 @@ class StickerRepositoryTest(
                 )
             val saved =
                 stickerRepository.save(
-                    AnalysisId(analysis.id),
+                    analysis.id,
                     board.id,
                     StickerCreation(
                         type = StickerType.IMAGE,
                         title = "여름 사진",
                         summary = "여름 내내 바다만 찍었어요",
-                        sourcePhotoId = PhotoId(photos.first().id),
+                        sourcePhotoId = photos.first().id,
                         imageKey = "stickers/summer.png",
                         textContent = null,
                         mainColor = "#FF6B6B",
                     ),
                 )
-            stickerRecapRepository.savePhotos(saved.id, photos.map { PhotoId(it.id) })
+            stickerRecapRepository.savePhotos(saved.id, photos.map { it.id })
             stickerRecapRepository.saveComments(
                 saved.id,
                 listOf(
@@ -73,7 +71,7 @@ class StickerRepositoryTest(
                 Then("저장한 aggregate 데이터를 반환한다") {
                     sticker?.title shouldBe "여름 사진"
                     sticker?.summary shouldBe "여름 내내 바다만 찍었어요"
-                    photoIds shouldContainExactly photos.map { PhotoId(it.id) }
+                    photoIds shouldContainExactly photos.map { it.id }
                     comments.map { it.content } shouldContainExactly listOf("키워드 칩", "말풍선")
                 }
             }
@@ -86,9 +84,12 @@ class StickerRepositoryTest(
                 val renamed = stickerCommandRepository.updateTitle(staleSticker.id, staleSticker.title)
                 stickerRecapRepository.deleteByStickerIds(listOf(saved.id))
 
-                Then("오래된 aggregate가 삭제를 되돌리지 않고 리캡 자식도 조회되지 않는다") {
+                Then("오래된 aggregate의 수정은 반영되지 않고 삭제가 유지된다") {
                     renamed shouldBe false
                     stickerRepository.findById(saved.id).shouldBeNull()
+                }
+
+                Then("리캡 자식 데이터도 함께 사라진다") {
                     stickerRecapRepository.findPhotoIds(saved.id) shouldBe emptyList()
                     stickerRecapRepository.findComments(saved.id) shouldBe emptyList()
                 }
@@ -97,8 +98,8 @@ class StickerRepositoryTest(
 
         Given("스티커에 말풍선과 키워드 칩 코멘트가 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
-            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textCreation("코멘트 위치 테스트"))
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textCreation("코멘트 위치 테스트"))
             val comments =
                 stickerRecapRepository.saveComments(
                     sticker.id,
@@ -137,17 +138,17 @@ class StickerRepositoryTest(
             val secondUser = userRepository.saveTestUser()
             val firstBoard = boardRepository.save(firstUser.id)
             val secondBoard = boardRepository.save(secondUser.id)
-            val firstAnalysis = analysisRepository.save(firstUser.id.value, firstBoard.id.value)
-            val secondAnalysis = analysisRepository.save(secondUser.id.value, secondBoard.id.value)
+            val firstAnalysis = analysisRepository.save(firstUser.id, firstBoard.id)
+            val secondAnalysis = analysisRepository.save(secondUser.id, secondBoard.id)
             val firstSticker =
                 stickerRepository.save(
-                    AnalysisId(firstAnalysis.id),
+                    firstAnalysis.id,
                     firstBoard.id,
                     textCreation("첫 스티커"),
                 )
             val secondSticker =
                 stickerRepository.save(
-                    AnalysisId(secondAnalysis.id),
+                    secondAnalysis.id,
                     secondBoard.id,
                     textCreation("둘째 스티커"),
                 )
@@ -162,17 +163,17 @@ class StickerRepositoryTest(
 
         Given("한 분석에 스티커가 6개 저장된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId.value, board.id.value)
+            val analysis = analysisRepository.save(board.userId, board.id)
             repeat(6) {
-                stickerRepository.save(AnalysisId(analysis.id), board.id, textCreation("스티커 $it"))
+                stickerRepository.save(analysis.id, board.id, textCreation("스티커 $it"))
             }
 
             When("일곱 번째 스티커를 직접 저장하면") {
                 Then("DB 제약이 저장을 거부한다") {
                     shouldThrow<DataIntegrityViolationException> {
-                        stickerRepository.save(AnalysisId(analysis.id), board.id, textCreation("일곱 번째"))
+                        stickerRepository.save(analysis.id, board.id, textCreation("일곱 번째"))
                     }
-                    stickerRepository.findAllByAnalysisId(AnalysisId(analysis.id)).size shouldBe 6
+                    stickerRepository.findAllByAnalysisId(analysis.id).size shouldBe 6
                 }
             }
         }

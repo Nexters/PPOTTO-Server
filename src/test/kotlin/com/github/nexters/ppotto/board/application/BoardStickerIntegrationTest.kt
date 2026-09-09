@@ -10,11 +10,10 @@ import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
+import com.github.nexters.ppotto.board.support.changeAnalysisStatus
 import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.global.error.ConflictException
-import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.StickerId
-import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
@@ -50,8 +49,8 @@ class BoardStickerIntegrationTest(
         Given("실제 보드와 스티커 연동 빈이 기동된 상태에서") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id, "연동 보드")
-            val analysis = analysisRepository.save(user.id.value, board.id.value)
-            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
+            val analysis = analysisRepository.save(user.id, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             val drawing = newDrawing(boardId = board.id, stickerId = sticker.id)
             drawingRepository.upsertAll(listOf(drawing))
 
@@ -89,8 +88,8 @@ class BoardStickerIntegrationTest(
         Given("실제 스티커가 있는 보드에서") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
-            val analysis = analysisRepository.save(user.id.value, board.id.value)
-            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
+            val analysis = analysisRepository.save(user.id, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             val drawing = newDrawing(boardId = board.id, stickerId = sticker.id)
 
             When("스티커 배치와 드로잉을 함께 저장하면") {
@@ -99,18 +98,7 @@ class BoardStickerIntegrationTest(
                     user.id,
                     BoardLayoutUpdateCommand(
                         stickers = listOf(updatedLayout(sticker.id)),
-                        createdDrawings =
-                            listOf(
-                                DrawingCreateCommand.Stroke(
-                                    id = drawing.id,
-                                    scope = drawing.scope,
-                                    stickerId = drawing.stickerId,
-                                    color = drawing.color,
-                                    zIndex = drawing.zIndex,
-                                    stroke = drawing.stroke,
-                                    strokeWidth = drawing.strokeWidth,
-                                ),
-                            ),
+                        createdDrawings = listOf(drawing),
                         deletedDrawingIds = emptyList(),
                     ),
                 )
@@ -135,8 +123,8 @@ class BoardStickerIntegrationTest(
         Given("스티커와 보드 범위 드로잉이 함께 있는 상태에서") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
-            val analysis = analysisRepository.save(user.id.value, board.id.value)
-            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
+            val analysis = analysisRepository.save(user.id, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             val stickerDrawing = newDrawing(boardId = board.id, stickerId = sticker.id)
             val boardDrawing = newDrawing(boardId = board.id)
             drawingRepository.upsertAll(listOf(stickerDrawing, boardDrawing))
@@ -160,13 +148,9 @@ class BoardStickerIntegrationTest(
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
-            val analysis = analysisRepository.save(user.id.value, board.id.value)
-            dslContext
-                .update(ANALYSIS)
-                .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
-                .where(ANALYSIS.ID.eq(AnalysisId(analysis.id)))
-                .execute()
-            val sticker = stickerRepository.save(AnalysisId(analysis.id), board.id, textStickerCreation())
+            val analysis = analysisRepository.save(user.id, board.id)
+            dslContext.changeAnalysisStatus(analysis.id, AnalysisStatus.COMPLETED)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
             drawingRepository.upsertAll(
                 listOf(newDrawing(boardId = board.id, stickerId = sticker.id), newDrawing(boardId = board.id)),
             )
@@ -191,7 +175,7 @@ class BoardStickerIntegrationTest(
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             boardRepository.save(user.id)
-            analysisRepository.save(user.id.value, board.id.value)
+            analysisRepository.save(user.id, board.id)
 
             When("보드를 삭제하면") {
                 Then("실제 분석 연동 port가 BOARD-005로 거부한다") {

@@ -11,7 +11,6 @@ import com.github.nexters.ppotto.jooq.tables.records.DrawingsRecord
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
 import org.jooq.DSLContext
 import org.jooq.InsertOnDuplicateSetMoreStep
-import org.jooq.InsertOnDuplicateSetStep
 import org.jooq.JSONB
 import org.jooq.impl.DSL.excluded
 import org.springframework.stereotype.Repository
@@ -24,65 +23,41 @@ class DrawingRepository(
     private val dslContext: DSLContext,
     private val objectMapper: ObjectMapper,
 ) {
-    fun upsertAll(drawings: List<NewDrawing>): List<Drawing> =
-        drawings
-            .takeIf { it.isNotEmpty() }
-            ?.let { targets ->
-                insertAll(targets)
-                    .overwriteWithExcluded()
-                    .where(DRAWINGS.BOARD_ID.eq(excluded(DRAWINGS.BOARD_ID)))
-                    .returning()
-                    .fetch()
-                    .map { it.toDomain() }
-                    .associateBy { it.id }
-                    .let { upserted -> targets.map { drawing -> upserted.getValue(drawing.id) } }
-            } ?: emptyList()
+    fun upsertAll(drawings: List<NewDrawing>): List<Drawing> {
+        if (drawings.isEmpty()) return emptyList()
 
-    private fun insertAll(drawings: List<NewDrawing>): InsertOnDuplicateSetStep<DrawingsRecord> {
-        var insert = dslContext.insertIntoDrawings()
-        drawings.forEach { drawing ->
-            insert =
-                when (drawing) {
-                    is NewDrawing.Stroke ->
-                        insert.values(
-                            drawing.id,
-                            drawing.boardId,
-                            drawing.stickerId,
-                            drawing.scope.name,
-                            drawing.type.name,
-                            drawing.zIndex,
-                            drawing.color,
-                            JSONB.jsonb(objectMapper.writeValueAsString(drawing.stroke)),
-                            drawing.strokeWidth,
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
-                            NO_ROTATION,
-                        )
+        val upserted =
+            upsertQuery(drawings)
+                .where(DRAWINGS.BOARD_ID.eq(excluded(DRAWINGS.BOARD_ID)))
+                .returning()
+                .fetch()
+                .map { it.toDomain() }
+                .associateBy { it.id }
+        return drawings.map { upserted.getValue(it.id) }
+    }
 
-                    is NewDrawing.Text ->
-                        insert.values(
-                            drawing.id,
-                            drawing.boardId,
-                            drawing.stickerId,
-                            drawing.scope.name,
-                            drawing.type.name,
-                            drawing.zIndex,
-                            drawing.color,
-                            null,
-                            null,
-                            drawing.content,
-                            drawing.fontSize,
-                            drawing.posX,
-                            drawing.posY,
-                            drawing.maxWidth,
-                            drawing.rotation,
-                        )
-                }
-        }
-        return insert.onConflict(DRAWINGS.ID).doUpdate()
+    private fun upsertQuery(drawings: List<NewDrawing>): InsertOnDuplicateSetMoreStep<DrawingsRecord> {
+        val records = drawings.map { it.toRecord() }
+        return records
+            .drop(1)
+            .fold(dslContext.insertInto(DRAWINGS).set(records.first())) { insert, record ->
+                insert.newRecord().set(record)
+            }.onConflict(DRAWINGS.ID)
+            .doUpdate()
+            .set(DRAWINGS.STICKER_ID, excluded(DRAWINGS.STICKER_ID))
+            .set(DRAWINGS.SCOPE, excluded(DRAWINGS.SCOPE))
+            .set(DRAWINGS.TYPE, excluded(DRAWINGS.TYPE))
+            .set(DRAWINGS.Z_INDEX, excluded(DRAWINGS.Z_INDEX))
+            .set(DRAWINGS.COLOR, excluded(DRAWINGS.COLOR))
+            .set(DRAWINGS.STROKE, excluded(DRAWINGS.STROKE))
+            .set(DRAWINGS.STROKE_WIDTH, excluded(DRAWINGS.STROKE_WIDTH))
+            .set(DRAWINGS.CONTENT, excluded(DRAWINGS.CONTENT))
+            .set(DRAWINGS.FONT_SIZE, excluded(DRAWINGS.FONT_SIZE))
+            .set(DRAWINGS.POS_X, excluded(DRAWINGS.POS_X))
+            .set(DRAWINGS.POS_Y, excluded(DRAWINGS.POS_Y))
+            .set(DRAWINGS.MAX_WIDTH, excluded(DRAWINGS.MAX_WIDTH))
+            .set(DRAWINGS.ROTATION, excluded(DRAWINGS.ROTATION))
+            .setNull(DRAWINGS.DELETED_AT)
     }
 
     fun findByBoardId(boardId: BoardId): List<Drawing> =
@@ -94,66 +69,62 @@ class DrawingRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun findBoardIdsByIds(ids: Collection<DrawingId>): Map<DrawingId, BoardId> =
-        ids
-            .takeIf { it.isNotEmpty() }
-            ?.let { drawingIds ->
-                dslContext
-                    .select(DRAWINGS.ID, DRAWINGS.BOARD_ID)
-                    .from(DRAWINGS)
-                    .where(DRAWINGS.ID.`in`(drawingIds))
-                    .fetch()
-                    .associate { record -> record.value1()!! to record.value2()!! }
-            } ?: emptyMap()
+    fun findBoardIdsByIds(ids: Collection<DrawingId>): Map<DrawingId, BoardId> {
+        if (ids.isEmpty()) return emptyMap()
+
+        return dslContext
+            .select(DRAWINGS.ID, DRAWINGS.BOARD_ID)
+            .from(DRAWINGS)
+            .where(DRAWINGS.ID.`in`(ids))
+            .fetch()
+            .associate { record -> record.value1()!! to record.value2()!! }
+    }
 
     fun findActiveIds(
         boardId: BoardId,
         ids: Collection<DrawingId>,
-    ): Set<DrawingId> =
-        ids
-            .takeIf { it.isNotEmpty() }
-            ?.let { drawingIds ->
-                dslContext
-                    .select(DRAWINGS.ID)
-                    .from(DRAWINGS)
-                    .where(DRAWINGS.BOARD_ID.eq(boardId))
-                    .and(DRAWINGS.ID.`in`(drawingIds))
-                    .and(DRAWINGS.DELETED_AT.isNull)
-                    .mapNotNull { record -> record.value1() }
-                    .toSet()
-            } ?: emptySet()
+    ): Set<DrawingId> {
+        if (ids.isEmpty()) return emptySet()
+
+        return dslContext
+            .select(DRAWINGS.ID)
+            .from(DRAWINGS)
+            .where(DRAWINGS.BOARD_ID.eq(boardId))
+            .and(DRAWINGS.ID.`in`(ids))
+            .and(DRAWINGS.DELETED_AT.isNull)
+            .mapNotNull { record -> record.value1() }
+            .toSet()
+    }
 
     fun softDeleteByIds(
         boardId: BoardId,
         ids: Collection<DrawingId>,
-    ): Int =
-        ids
-            .takeIf { it.isNotEmpty() }
-            ?.let { drawingIds ->
-                dslContext
-                    .update(DRAWINGS)
-                    .set(DRAWINGS.DELETED_AT, Instant.now())
-                    .where(DRAWINGS.BOARD_ID.eq(boardId))
-                    .and(DRAWINGS.ID.`in`(drawingIds))
-                    .and(DRAWINGS.DELETED_AT.isNull)
-                    .execute()
-            } ?: 0
+    ): Int {
+        if (ids.isEmpty()) return 0
+
+        return dslContext
+            .update(DRAWINGS)
+            .set(DRAWINGS.DELETED_AT, Instant.now())
+            .where(DRAWINGS.BOARD_ID.eq(boardId))
+            .and(DRAWINGS.ID.`in`(ids))
+            .and(DRAWINGS.DELETED_AT.isNull)
+            .execute()
+    }
 
     fun softDeleteByStickerIds(
         boardId: BoardId,
         stickerIds: Collection<StickerId>,
-    ): Int =
-        stickerIds
-            .takeIf { it.isNotEmpty() }
-            ?.let { ids ->
-                dslContext
-                    .update(DRAWINGS)
-                    .set(DRAWINGS.DELETED_AT, Instant.now())
-                    .where(DRAWINGS.BOARD_ID.eq(boardId))
-                    .and(DRAWINGS.STICKER_ID.`in`(ids))
-                    .and(DRAWINGS.DELETED_AT.isNull)
-                    .execute()
-            } ?: 0
+    ): Int {
+        if (stickerIds.isEmpty()) return 0
+
+        return dslContext
+            .update(DRAWINGS)
+            .set(DRAWINGS.DELETED_AT, Instant.now())
+            .where(DRAWINGS.BOARD_ID.eq(boardId))
+            .and(DRAWINGS.STICKER_ID.`in`(stickerIds))
+            .and(DRAWINGS.DELETED_AT.isNull)
+            .execute()
+    }
 
     fun softDeleteAllByBoardId(boardId: BoardId): Int =
         dslContext
@@ -163,16 +134,49 @@ class DrawingRepository(
             .and(DRAWINGS.DELETED_AT.isNull)
             .execute()
 
-    fun hardDeleteAllByBoardIds(boardIds: Collection<BoardId>): Int =
-        boardIds
-            .toSet()
-            .takeIf { it.isNotEmpty() }
-            ?.let { ids ->
-                dslContext
-                    .deleteFrom(DRAWINGS)
-                    .where(DRAWINGS.BOARD_ID.`in`(ids))
-                    .execute()
-            } ?: 0
+    fun hardDeleteAllByBoardIds(boardIds: Collection<BoardId>): Int {
+        val ids = boardIds.toSet()
+        if (ids.isEmpty()) return 0
+
+        return dslContext
+            .deleteFrom(DRAWINGS)
+            .where(DRAWINGS.BOARD_ID.`in`(ids))
+            .execute()
+    }
+
+    private fun NewDrawing.toRecord(): DrawingsRecord =
+        dslContext.newRecord(DRAWINGS).also { record ->
+            record.id = id
+            record.boardId = boardId
+            record.stickerId = stickerId
+            record.scope = scope.name
+            record.type = type.name
+            record.zIndex = zIndex
+            record.color = color
+            when (this) {
+                is NewDrawing.Stroke -> {
+                    record.stroke = JSONB.jsonb(objectMapper.writeValueAsString(stroke))
+                    record.strokeWidth = strokeWidth
+                    record.content = null
+                    record.fontSize = null
+                    record.posX = null
+                    record.posY = null
+                    record.maxWidth = null
+                    record.rotation = NO_ROTATION
+                }
+
+                is NewDrawing.Text -> {
+                    record.stroke = null
+                    record.strokeWidth = null
+                    record.content = content
+                    record.fontSize = fontSize
+                    record.posX = posX
+                    record.posY = posY
+                    record.maxWidth = maxWidth
+                    record.rotation = rotation
+                }
+            }
+        }
 
     private fun DrawingsRecord.toDomain(): Drawing =
         when (DrawingType.valueOf(type!!)) {
@@ -213,39 +217,3 @@ class DrawingRepository(
         const val NO_ROTATION = 0.0
     }
 }
-
-private fun DSLContext.insertIntoDrawings() =
-    insertInto(
-        DRAWINGS,
-        DRAWINGS.ID,
-        DRAWINGS.BOARD_ID,
-        DRAWINGS.STICKER_ID,
-        DRAWINGS.SCOPE,
-        DRAWINGS.TYPE,
-        DRAWINGS.Z_INDEX,
-        DRAWINGS.COLOR,
-        DRAWINGS.STROKE,
-        DRAWINGS.STROKE_WIDTH,
-        DRAWINGS.CONTENT,
-        DRAWINGS.FONT_SIZE,
-        DRAWINGS.POS_X,
-        DRAWINGS.POS_Y,
-        DRAWINGS.MAX_WIDTH,
-        DRAWINGS.ROTATION,
-    )
-
-private fun InsertOnDuplicateSetStep<DrawingsRecord>.overwriteWithExcluded(): InsertOnDuplicateSetMoreStep<DrawingsRecord> =
-    set(DRAWINGS.STICKER_ID, excluded(DRAWINGS.STICKER_ID))
-        .set(DRAWINGS.SCOPE, excluded(DRAWINGS.SCOPE))
-        .set(DRAWINGS.TYPE, excluded(DRAWINGS.TYPE))
-        .set(DRAWINGS.Z_INDEX, excluded(DRAWINGS.Z_INDEX))
-        .set(DRAWINGS.COLOR, excluded(DRAWINGS.COLOR))
-        .set(DRAWINGS.STROKE, excluded(DRAWINGS.STROKE))
-        .set(DRAWINGS.STROKE_WIDTH, excluded(DRAWINGS.STROKE_WIDTH))
-        .set(DRAWINGS.CONTENT, excluded(DRAWINGS.CONTENT))
-        .set(DRAWINGS.FONT_SIZE, excluded(DRAWINGS.FONT_SIZE))
-        .set(DRAWINGS.POS_X, excluded(DRAWINGS.POS_X))
-        .set(DRAWINGS.POS_Y, excluded(DRAWINGS.POS_Y))
-        .set(DRAWINGS.MAX_WIDTH, excluded(DRAWINGS.MAX_WIDTH))
-        .set(DRAWINGS.ROTATION, excluded(DRAWINGS.ROTATION))
-        .setNull(DRAWINGS.DELETED_AT)

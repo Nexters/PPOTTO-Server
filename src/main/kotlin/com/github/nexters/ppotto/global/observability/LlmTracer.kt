@@ -20,10 +20,11 @@ object LlmTracer {
         attributes.forEach { (key, value) -> span.setData(key, value) }
 
         val result = runCatching { span.makeCurrent().use { block(SentryLlmSpanHandle(span)) } }
-        result.exceptionOrNull()?.let { cause ->
-            span.throwable = cause
-            span.finish(SpanStatus.INTERNAL_ERROR)
-        } ?: span.finish(SpanStatus.OK)
+        result
+            .onFailure { cause ->
+                span.throwable = cause
+                span.finish(SpanStatus.INTERNAL_ERROR)
+            }.onSuccess { span.finish(SpanStatus.OK) }
         return result.getOrThrow()
     }
 
@@ -61,32 +62,15 @@ object LlmTracer {
         }
 
         override fun setInputMessages(messages: List<LlmMessage>) {
-            if (messages.isEmpty()) return
             span.setData(INPUT_MESSAGES_KEY, writeJson(messages.map(::toSpecMessage)))
         }
 
         override fun setOutputMessages(messages: List<LlmMessage>) {
-            if (messages.isEmpty()) return
             span.setData(OUTPUT_MESSAGES_KEY, writeJson(messages.map(::toSpecMessage)))
         }
 
         override fun setSystemInstructions(instructions: String) {
-            if (instructions.isBlank()) return
             span.setData(SYSTEM_INSTRUCTIONS_KEY, truncated(instructions))
-        }
-
-        override fun setAttribute(
-            key: String,
-            value: String,
-        ) {
-            span.setData(key, value)
-        }
-
-        override fun setAttribute(
-            key: String,
-            value: Long,
-        ) {
-            span.setData(key, value)
         }
     }
 }

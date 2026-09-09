@@ -4,5 +4,5 @@ interface StickerStorage {
     fun upload(
         objectKey: String,
         bytes: ByteArray,
-    ): String
+    )
 }

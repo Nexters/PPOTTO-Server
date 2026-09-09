@@ -7,7 +7,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionOperations
 import org.springframework.transaction.support.TransactionTemplate
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class AuthTransactionConfig {
     @Bean(SIGNUP_TRANSACTION)
     fun signupTransaction(transactionManager: PlatformTransactionManager): TransactionOperations =

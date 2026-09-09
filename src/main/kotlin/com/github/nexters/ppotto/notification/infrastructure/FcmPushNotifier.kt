@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.notification.infrastructure
 
-import com.github.nexters.ppotto.notification.domain.PushNotifier
-import com.github.nexters.ppotto.notification.domain.PushSendResult
+import com.github.nexters.ppotto.notification.application.port.PushNotifier
+import com.github.nexters.ppotto.notification.application.port.PushSendResult
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
@@ -44,6 +44,7 @@ class FcmPushNotifier(
     }
 
     companion object {
-        private val INVALID_TOKEN_ERROR_CODES = setOf(MessagingErrorCode.UNREGISTERED, MessagingErrorCode.INVALID_ARGUMENT)
+        private val INVALID_TOKEN_ERROR_CODES =
+            setOf(MessagingErrorCode.UNREGISTERED, MessagingErrorCode.SENDER_ID_MISMATCH)
     }
 }

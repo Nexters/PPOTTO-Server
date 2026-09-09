@@ -22,17 +22,15 @@ class GcsReadUrlIssuer(
             .ofMinutes(gcsProperties.readSignedUrlExpirationMinutes)
             .let { it.minus(minOf(it.dividedBy(10), CACHE_EXPIRATION_MARGIN)) }
 
-    fun issue(objectKeys: Collection<String>): Map<String, String> =
-        objectKeys
-            .toSet()
-            .takeIf(Set<String>::isNotEmpty)
-            ?.let { keys ->
-                try {
-                    issueCached(keys)
-                } catch (_: DataAccessException) {
-                    keys.associateWith(::sign)
-                }
-            }.orEmpty()
+    fun issue(objectKeys: Collection<String>): Map<String, String> {
+        val keys = objectKeys.toSet()
+        if (keys.isEmpty()) return emptyMap()
+        return try {
+            issueCached(keys)
+        } catch (_: DataAccessException) {
+            keys.associateWith(::sign)
+        }
+    }
 
     private fun issueCached(objectKeys: Set<String>): Map<String, String> {
         val cacheKeys = objectKeys.associateWith(::cacheKey)
@@ -53,19 +51,20 @@ class GcsReadUrlIssuer(
 
     private fun cacheKey(objectKey: String): String = "$CACHE_KEY_PREFIX${gcsProperties.bucket}:$objectKey"
 
-    private fun sign(objectKey: String): String =
-        BlobInfo
-            .newBuilder(BlobId.of(gcsProperties.bucket, objectKey))
-            .build()
-            .let {
-                storage.signUrl(
-                    it,
-                    gcsProperties.readSignedUrlExpirationMinutes,
-                    TimeUnit.MINUTES,
-                    Storage.SignUrlOption.httpMethod(HttpMethod.GET),
-                    Storage.SignUrlOption.withV4Signature(),
-                )
-            }.toString()
+    private fun sign(objectKey: String): String {
+        val blobInfo =
+            BlobInfo
+                .newBuilder(BlobId.of(gcsProperties.bucket, objectKey))
+                .build()
+        return storage
+            .signUrl(
+                blobInfo,
+                gcsProperties.readSignedUrlExpirationMinutes,
+                TimeUnit.MINUTES,
+                Storage.SignUrlOption.httpMethod(HttpMethod.GET),
+                Storage.SignUrlOption.withV4Signature(),
+            ).toString()
+    }
 
     private companion object {
         const val CACHE_KEY_PREFIX = "gcs:read-url:"

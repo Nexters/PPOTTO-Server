@@ -3,7 +3,6 @@ package com.github.nexters.ppotto.notification.presentation.dto
 import com.github.nexters.ppotto.notification.domain.DevicePlatform
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.NotBlank
-import jakarta.validation.constraints.NotNull
 
 @Schema(description = "디바이스 토큰 등록/갱신 요청")
 data class RegisterDeviceTokenRequest(
@@ -14,7 +13,6 @@ data class RegisterDeviceTokenRequest(
     )
     val deviceId: String,
 
-    @field:NotNull
     @field:Schema(description = "기기 플랫폼")
     val platform: DevicePlatform,
 

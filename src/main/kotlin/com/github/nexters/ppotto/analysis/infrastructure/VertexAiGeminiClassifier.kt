@@ -1,16 +1,17 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
+import com.github.nexters.ppotto.analysis.config.VertexAiProperties
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
-import com.github.nexters.ppotto.analysis.domain.GeminiClassifier
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.StickerRegenerationTarget
 import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
+import com.github.nexters.ppotto.analysis.domain.ThemeClassifier
 import com.github.nexters.ppotto.analysis.domain.ThemeComment
-import com.github.nexters.ppotto.global.config.VertexAiProperties
 import com.github.nexters.ppotto.global.error.BusinessException
+import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.observability.LlmPipeline
 import com.github.nexters.ppotto.global.observability.LlmTracer
 import com.github.nexters.ppotto.global.observability.recordRequest
@@ -21,122 +22,93 @@ import com.google.genai.types.GenerateContentConfig
 import com.google.genai.types.HttpOptions
 import com.google.genai.types.HttpRetryOptions
 import com.google.genai.types.Part
+import com.google.genai.types.Schema
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
-import java.util.UUID
 
 @Component
 class VertexAiGeminiClassifier(
     private val genAiClient: Client,
     private val objectMapper: ObjectMapper,
     private val vertexAiProperties: VertexAiProperties,
-) : GeminiClassifier {
+) : ThemeClassifier {
     override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> {
         val photoAliases = GeminiPhotoAliases.from(photos)
-        val parts =
-            photos.map { Part.fromUri(it.gcsUri, it.mimeType) } +
-                Part.fromText(GeminiPrompts.themeClassification(photoAliases.aliases))
-        val content = Content.fromParts(*parts.toTypedArray())
+        val rawThemes =
+            generate<Array<GeminiThemeResponse>>(
+                pipeline = LlmPipeline.PHOTO_CLASSIFICATION,
+                parts = photos.toParts() + Part.fromText(GeminiPrompts.themeClassification(photoAliases.aliases)),
+                responseSchema = VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA,
+                timeoutMs = vertexAiProperties.classifyTimeoutMs,
+                photoCount = photos.size,
+            ).toList()
 
-        val httpOptions = buildHttpOptions(vertexAiProperties.classifyTimeoutMs)
-
-        val config =
-            GenerateContentConfig
-                .builder()
-                .responseMimeType("application/json")
-                .responseSchema(VertexAiGeminiSchemas.classificationResponseSchema())
-                .httpOptions(httpOptions)
-                .build()
-
-        val response =
-            LlmTracer.trace(
-                LlmPipeline.PHOTO_CLASSIFICATION,
-                MODEL,
-                attributes = mapOf(ATTR_PHOTO_COUNT to photos.size.toString()),
-            ) { span ->
-                span.recordRequest(content, config)
-                genAiClient.models
-                    .generateContent(MODEL, content, config)
-                    .also { span.recordResponse(it) }
-            }
-        val rawThemes = objectMapper.readValue(response.text(), Array<GeminiThemeResponse>::class.java).toList()
-
-        val inputPhotoIds = photos.map { it.photoId }.toSet()
         val classifications = toClassifications(rawThemes, photoAliases)
-        if (classifications.isNotEmpty()) {
-            ThemeClassificationValidator.validate(classifications, inputPhotoIds)
-        }
+        ThemeClassificationValidator.validate(classifications, photos.map { it.photoId }.toSet())
         return classifications
     }
 
     override fun regenerateSticker(
         photos: List<PhotoRef>,
-        previousSourcePhotoId: UUID,
+        previousSourcePhotoId: PhotoId,
     ): StickerRegenerationTarget {
         val photoAliases = GeminiPhotoAliases.from(photos)
-        val parts =
-            photos.map { Part.fromUri(it.gcsUri, it.mimeType) } +
-                Part.fromText(GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId)))
-        val content = Content.fromParts(*parts.toTypedArray())
+        val prompt = GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId))
+        val rawSticker =
+            generate<GeminiStickerResponse>(
+                pipeline = LlmPipeline.STICKER_REGENERATION,
+                parts = photos.toParts() + Part.fromText(prompt),
+                responseSchema = VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA,
+                timeoutMs = vertexAiProperties.classifyTimeoutMs,
+                photoCount = photos.size,
+            )
 
-        val httpOptions = buildHttpOptions(vertexAiProperties.classifyTimeoutMs)
-
-        val config =
-            GenerateContentConfig
-                .builder()
-                .responseMimeType("application/json")
-                .responseSchema(VertexAiGeminiSchemas.stickerResponseSchema())
-                .httpOptions(httpOptions)
-                .build()
-
-        val response =
-            LlmTracer.trace(
-                LlmPipeline.STICKER_REGENERATION,
-                MODEL,
-                attributes = mapOf(ATTR_PHOTO_COUNT to photos.size.toString()),
-            ) { span ->
-                span.recordRequest(content, config)
-                genAiClient.models
-                    .generateContent(MODEL, content, config)
-                    .also { span.recordResponse(it) }
-            }
-        val rawSticker = objectMapper.readValue(response.text(), GeminiStickerResponse::class.java)
-
-        val inputPhotoIds = photos.map { it.photoId }.toSet()
-        return toRegenerationTarget(rawSticker, photoAliases, inputPhotoIds)
+        return toRegenerationTarget(rawSticker, photoAliases, photos.map { it.photoId }.toSet())
     }
 
     override fun verifyStickerSubject(
         photo: PhotoRef,
         targetSubject: String,
     ): StickerSubjectVerification? {
-        val content =
-            Content.fromParts(
-                Part.fromUri(photo.gcsUri, photo.mimeType),
-                Part.fromText(GeminiPrompts.verifyStickerSubject(targetSubject)),
+        val raw =
+            generate<GeminiSubjectVerificationResponse>(
+                pipeline = LlmPipeline.STICKER_SUBJECT_VERIFICATION,
+                parts = listOf(photo).toParts() + Part.fromText(GeminiPrompts.verifyStickerSubject(targetSubject)),
+                responseSchema = VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA,
+                timeoutMs = vertexAiProperties.verifyTimeoutMs,
+                photoCount = 1,
             )
 
-        val httpOptions = buildHttpOptions(vertexAiProperties.verifyTimeoutMs)
+        return toVerification(raw)
+    }
 
+    private inline fun <reified T> generate(
+        pipeline: LlmPipeline,
+        parts: List<Part>,
+        responseSchema: Schema,
+        timeoutMs: Long,
+        photoCount: Int,
+    ): T {
+        val content = Content.fromParts(*parts.toTypedArray())
         val config =
             GenerateContentConfig
                 .builder()
                 .responseMimeType("application/json")
-                .responseSchema(VertexAiGeminiSchemas.verificationResponseSchema())
-                .httpOptions(httpOptions)
+                .responseSchema(responseSchema)
+                .httpOptions(buildHttpOptions(timeoutMs))
                 .build()
-
         val response =
-            LlmTracer.trace(LlmPipeline.STICKER_SUBJECT_VERIFICATION, MODEL) { span ->
+            LlmTracer.trace(pipeline, MODEL, attributes = mapOf(ATTR_PHOTO_COUNT to photoCount.toString())) { span ->
                 span.recordRequest(content, config)
                 genAiClient.models
                     .generateContent(MODEL, content, config)
                     .also { span.recordResponse(it) }
             }
-        val raw = objectMapper.readValue(response.text(), GeminiSubjectVerificationResponse::class.java)
-        return toVerification(raw)
+        return objectMapper.readValue(response.text(), T::class.java)
     }
+
+    private fun List<PhotoRef>.toParts(): List<Part> = map { Part.fromUri(it.sourceUri, it.mimeType) }
 
     companion object {
         private const val MODEL = "gemini-2.5-flash"
@@ -161,11 +133,12 @@ class VertexAiGeminiClassifier(
         private fun sanitizedMainColor(
             raw: String?,
             context: String,
-        ): String =
-            raw?.takeIf { MAIN_COLOR_PATTERN.matches(it) } ?: run {
-                log.warn("Gemini가 유효하지 않은 mainColor를 반환해 기본값으로 대체합니다: context={}, mainColor={}", context, raw)
-                DEFAULT_MAIN_COLOR
-            }
+        ): String {
+            if (raw != null && MAIN_COLOR_PATTERN.matches(raw)) return raw
+
+            log.warn("Gemini가 유효하지 않은 mainColor를 반환해 기본값으로 대체합니다: context={}, mainColor={}", context, raw)
+            return DEFAULT_MAIN_COLOR
+        }
 
         private fun sanitizedComments(
             raw: GeminiCommentsResponse?,
@@ -201,7 +174,7 @@ class VertexAiGeminiClassifier(
         internal fun toRegenerationTarget(
             rawSticker: GeminiStickerResponse,
             photoAliases: GeminiPhotoAliases,
-            inputPhotoIds: Set<UUID>,
+            inputPhotoIds: Set<PhotoId>,
         ): StickerRegenerationTarget {
             val sourcePhotoId =
                 photoAliases.photoId(rawSticker.sourcePhotoId)
@@ -228,8 +201,8 @@ class VertexAiGeminiClassifier(
 
         private fun validateRegeneration(
             sticker: GeminiStickerResponse,
-            sourcePhotoId: UUID,
-            inputPhotoIds: Set<UUID>,
+            sourcePhotoId: PhotoId,
+            inputPhotoIds: Set<PhotoId>,
         ) {
             if (sticker.targetSubject.isBlank()) {
                 throw BusinessException(
@@ -248,25 +221,25 @@ class VertexAiGeminiClassifier(
         private fun GeminiThemeResponse.toDomainOrNull(
             index: Int,
             photoAliases: GeminiPhotoAliases,
-        ): ThemeClassification? =
-            validCategorizedPhotoIds(index, photoAliases)?.let { categorizedPhotoIds ->
-                validStickerSourcePhotoId(index, categorizedPhotoIds, photoAliases)?.let { stickerSourcePhotoId ->
-                    ThemeClassification(
-                        theme = theme,
-                        categorizedPhotoIds = categorizedPhotoIds,
-                        recap = RecapContent(badge = recap.badge, text = recap.text),
-                        stickerTargetSubject = sticker.targetSubject,
-                        stickerSourcePhotoId = stickerSourcePhotoId,
-                        stickerMainColor = sanitizedMainColor(sticker.mainColor, theme),
-                        comments = sanitizedComments(comments, theme),
-                    )
-                }
-            }
+        ): ThemeClassification? {
+            val categorizedPhotoIds = validCategorizedPhotoIds(index, photoAliases) ?: return null
+            val stickerSourcePhotoId = validStickerSourcePhotoId(index, categorizedPhotoIds, photoAliases) ?: return null
+
+            return ThemeClassification(
+                theme = theme,
+                categorizedPhotoIds = categorizedPhotoIds,
+                recap = RecapContent(badge = recap.badge, text = recap.text),
+                stickerTargetSubject = sticker.targetSubject,
+                stickerSourcePhotoId = stickerSourcePhotoId,
+                stickerMainColor = sanitizedMainColor(sticker.mainColor, theme),
+                comments = sanitizedComments(comments, theme),
+            )
+        }
 
         private fun GeminiThemeResponse.validCategorizedPhotoIds(
             index: Int,
             photoAliases: GeminiPhotoAliases,
-        ): List<UUID>? {
+        ): List<PhotoId>? {
             val categorizedPhotoIds =
                 categorizedPhotoIds.mapNotNull { alias ->
                     photoAliases.photoId(alias).also { photoId ->
@@ -284,56 +257,38 @@ class VertexAiGeminiClassifier(
 
         private fun GeminiThemeResponse.validStickerSourcePhotoId(
             index: Int,
-            categorizedPhotoIds: List<UUID>,
+            categorizedPhotoIds: List<PhotoId>,
             photoAliases: GeminiPhotoAliases,
-        ): UUID? =
-            photoAliases
-                .photoId(sticker.sourcePhotoId)
-                .also { stickerSourcePhotoId ->
-                    if (stickerSourcePhotoId == null) {
-                        log.warn(
-                            "Gemini 테마의 sticker.sourcePhotoId alias를 찾을 수 없어 테마를 건너뜁니다: themeIndex={}, theme={}, alias={}",
-                            index,
-                            theme,
-                            sticker.sourcePhotoId,
-                        )
-                    }
-                }?.takeIf { stickerSourcePhotoId ->
-                    val valid = stickerSourcePhotoId in categorizedPhotoIds
-                    if (!valid) {
-                        log.warn(
-                            "Gemini 테마의 sticker.sourcePhotoId가 categorizedPhotoIds에 없어 테마를 건너뜁니다: themeIndex={}, theme={}, alias={}",
-                            index,
-                            theme,
-                            sticker.sourcePhotoId,
-                        )
-                    }
-                    valid
-                }
+        ): PhotoId? {
+            val stickerSourcePhotoId = photoAliases.photoId(sticker.sourcePhotoId)
+            if (stickerSourcePhotoId != null && stickerSourcePhotoId in categorizedPhotoIds) return stickerSourcePhotoId
+
+            log.warn(
+                "Gemini 테마의 sticker.sourcePhotoId를 쓸 수 없어 테마를 건너뜁니다: themeIndex={}, theme={}, alias={}, aliasFound={}",
+                index,
+                theme,
+                sticker.sourcePhotoId,
+                stickerSourcePhotoId != null,
+            )
+            return null
+        }
     }
 }
 
 internal class GeminiPhotoAliases private constructor(
-    private val photoIdByAlias: Map<String, UUID>,
-    private val aliasByPhotoId: Map<UUID, String>,
+    private val photoIdByAlias: Map<String, PhotoId>,
 ) {
+    private val aliasByPhotoId: Map<PhotoId, String> = photoIdByAlias.entries.associate { (alias, photoId) -> photoId to alias }
+
     val aliases: List<String> = photoIdByAlias.keys.toList()
 
-    fun photoId(alias: String): UUID? = photoIdByAlias[alias.trim()]
+    fun photoId(alias: String): PhotoId? = photoIdByAlias[alias.trim()]
 
-    fun aliasFor(photoId: UUID): String? = aliasByPhotoId[photoId]
+    fun aliasFor(photoId: PhotoId): String? = aliasByPhotoId[photoId]
 
     companion object {
-        fun from(photos: List<PhotoRef>): GeminiPhotoAliases {
-            val photoIdByAlias = linkedMapOf<String, UUID>()
-            val aliasByPhotoId = linkedMapOf<UUID, String>()
-            photos.forEachIndexed { index, photo ->
-                val alias = "P%03d".format(index + 1)
-                photoIdByAlias[alias] = photo.photoId
-                aliasByPhotoId[photo.photoId] = alias
-            }
-            return GeminiPhotoAliases(photoIdByAlias, aliasByPhotoId)
-        }
+        fun from(photos: List<PhotoRef>): GeminiPhotoAliases =
+            GeminiPhotoAliases(photos.mapIndexed { index, photo -> "P%03d".format(index + 1) to photo.photoId }.toMap())
     }
 }
 

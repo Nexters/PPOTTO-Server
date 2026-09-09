@@ -2,7 +2,6 @@ package com.github.nexters.ppotto.board.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.board.application.BoardDetail
-import com.github.nexters.ppotto.board.application.BoardSummary
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardStickerType
@@ -24,8 +23,6 @@ data class BoardResponse(
 ) {
     companion object {
         fun from(board: Board): BoardResponse = BoardResponse(board.id, board.name)
-
-        fun from(board: BoardSummary): BoardResponse = BoardResponse(board.id, board.name)
     }
 }
 
@@ -39,7 +36,7 @@ data class BoardDetailResponse(
     val name: String,
 
     @field:Schema(description = "보드에 배치된 스티커 목록")
-    val stickers: List<StickerResponse>,
+    val stickers: List<BoardStickerResponse>,
 
     @field:Schema(description = "보드와 스티커 위의 그림 목록. v1은 선만 내려간다")
     val drawings: List<DrawingResponse>,
@@ -49,7 +46,7 @@ data class BoardDetailResponse(
             BoardDetailResponse(
                 id = board.id,
                 name = board.name,
-                stickers = board.stickers.map(StickerResponse::from),
+                stickers = board.stickers.map(BoardStickerResponse::from),
                 drawings =
                     board.drawings
                         .filterIsInstance<Drawing.Stroke>()
@@ -58,8 +55,8 @@ data class BoardDetailResponse(
     }
 }
 
-@Schema(name = "BoardStickerResponse", description = "보드에 배치된 스티커")
-data class StickerResponse(
+@Schema(description = "보드에 배치된 스티커")
+data class BoardStickerResponse(
     @get:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
     @get:JsonProperty("id")
     val id: StickerId,
@@ -109,8 +106,8 @@ data class StickerResponse(
     val badgeRotation: Double,
 ) {
     companion object {
-        fun from(sticker: BoardStickerItem): StickerResponse =
-            StickerResponse(
+        fun from(sticker: BoardStickerItem): BoardStickerResponse =
+            BoardStickerResponse(
                 id = sticker.id,
                 title = sticker.title,
                 isNew = sticker.isNew,

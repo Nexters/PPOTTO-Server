@@ -15,13 +15,12 @@ class GcsStickerStorage(
     override fun upload(
         objectKey: String,
         bytes: ByteArray,
-    ): String {
+    ) {
         val blobInfo =
             BlobInfo
                 .newBuilder(BlobId.of(gcsProperties.bucket, objectKey))
                 .setContentType("image/png")
                 .build()
         storage.create(blobInfo, bytes)
-        return objectKey
     }
 }

@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.global.config
 
+import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.openapi.ApiExampleFactory
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
@@ -21,7 +22,7 @@ import org.springdoc.core.models.GroupedOpenApi
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class OpenApiConfig {
     @Bean
     fun openApi(): OpenAPI =
@@ -29,33 +30,8 @@ class OpenApiConfig {
             .info(
                 Info()
                     .title("뽀또 API")
-                    .version("v1")
-                    .description(
-                        """
-                        뽀또 백엔드 API 문서입니다.
-
-                        ### 응답 형식
-
-                        모든 응답은 공통 envelope로 내려갑니다.
-
-                        - 성공: `{"success": true, "data": { ... }, "error": null}`
-                        - 실패: `{"success": false, "data": null, "error": {"code": "COMMON-001", "message": "잘못된 입력입니다.", "fieldErrors": [], "timestamp": "2026-07-27T05:02:11Z"}}`
-
-                        ### 공통 에러 코드
-
-                        | 코드 | 상태 | 설명 |
-                        |---|---|---|
-                        | COMMON-000 | 500 | 서버 오류 |
-                        | COMMON-001 | 400 | 잘못된 입력 |
-                        | COMMON-002 | 404 | 리소스 없음 |
-                        | COMMON-003 | 405 | 허용되지 않은 메서드 |
-                        | COMMON-004 | 401 | 인증 필요 |
-                        | COMMON-005 | 403 | 권한 없음 |
-                        | COMMON-006 | 409 | 충돌 |
-                        | COMMON-007 | 415 | 지원하지 않는 Content-Type |
-                        | COMMON-008 | 406 | 지원하지 않는 Accept 형식 |
-                        """.trimIndent(),
-                    ).contact(
+                    .description(description())
+                    .contact(
                         Contact()
                             .name("Github Repository")
                             .url("https://github.com/nexters/ppotto-server"),
@@ -72,43 +48,61 @@ class OpenApiConfig {
             )
 
     @Bean
-    fun apiVersionHeaderCustomizer(): OpenApiCustomizer = versionHeaderCustomizer(SUPPORTED_API_VERSIONS)
+    fun apiVersionHeaderCustomizer(): OpenApiCustomizer = versionHeaderCustomizer(ApiVersions.SUPPORTED_API_VERSIONS)
 
     @Bean
-    fun v1ApiGroup(): GroupedOpenApi = versionedGroup("v1")
+    fun v1ApiGroup(): GroupedOpenApi = versionedGroup("1")
 
     @Bean
-    fun v2ApiGroup(): GroupedOpenApi = versionedGroup("v2")
+    fun v2ApiGroup(): GroupedOpenApi = versionedGroup("2")
 
     @Bean
     fun operationCustomizer(exampleFactory: ApiExampleFactory): OperationCustomizer =
         OperationCustomizer { operation, handlerMethod ->
-            operation.also { customizedOperation ->
-                handlerMethod.methodParameters.let { parameters ->
-                    when {
-                        parameters.any { it.hasParameterAnnotation(AuthenticatedUser::class.java) } -> {
-                            customizedOperation.addSecurityItem(SecurityRequirement().addList(BEARER_AUTH_SCHEME))
-                            customizedOperation.responses.addApiResponse(
-                                "401",
-                                unauthorizedApiResponse(exampleFactory, "access token이 없거나 유효하지 않음 (COMMON-004)"),
-                            )
-                        }
+            val parameters = handlerMethod.methodParameters
+            when {
+                parameters.any { it.hasParameterAnnotation(AuthenticatedUser::class.java) } -> {
+                    operation.addSecurityItem(SecurityRequirement().addList(BEARER_AUTH_SCHEME))
+                    operation.responses.addApiResponse(
+                        "401",
+                        unauthorizedApiResponse(exampleFactory, "access token이 없거나 유효하지 않음 (COMMON-004)"),
+                    )
+                }
 
-                        parameters.any { it.hasParameterAnnotation(CurrentUser::class.java) } -> {
-                            customizedOperation.security =
-                                listOf(
-                                    SecurityRequirement(),
-                                    SecurityRequirement().addList(BEARER_AUTH_SCHEME),
-                                )
-                            customizedOperation.responses.addApiResponse(
-                                "401",
-                                unauthorizedApiResponse(exampleFactory, "전달한 access token이 유효하지 않음 (COMMON-004)"),
-                            )
-                        }
-                    }
+                parameters.any { it.hasParameterAnnotation(CurrentUser::class.java) } -> {
+                    operation.security =
+                        listOf(
+                            SecurityRequirement(),
+                            SecurityRequirement().addList(BEARER_AUTH_SCHEME),
+                        )
+                    operation.responses.addApiResponse(
+                        "401",
+                        unauthorizedApiResponse(exampleFactory, "전달한 access token이 유효하지 않음 (COMMON-004)"),
+                    )
                 }
             }
+            operation
         }
+
+    private fun description(): String =
+        """
+        뽀또 백엔드 API 문서입니다.
+
+        ### 응답 형식
+
+        모든 응답은 공통 envelope로 내려갑니다.
+
+        - 성공: `{"success": true, "data": { ... }, "error": null}`
+        - 실패: `{"success": false, "data": null, "error": {"code": "COMMON-001", "message": "잘못된 입력입니다.", "fieldErrors": [], "timestamp": "2026-07-27T05:02:11Z"}}`
+
+        ### 공통 에러 코드
+
+        | 코드 | 상태 | 설명 |
+        |---|---|---|
+        """.trimIndent() + "\n" + commonErrorRows()
+
+    private fun commonErrorRows(): String =
+        CommonErrorCode.entries.joinToString("\n") { "| ${it.code} | ${it.status.value()} | ${it.message} |" }
 
     private fun unauthorizedApiResponse(
         exampleFactory: ApiExampleFactory,
@@ -125,28 +119,24 @@ class OpenApiConfig {
                 ),
             )
 
-    private fun versionedGroup(group: String): GroupedOpenApi =
-        group
-            .removePrefix("v")
-            .let { version ->
-                GroupedOpenApi
-                    .builder()
-                    .group(group)
-                    .addOpenApiMethodFilter { version in acceptedVersionsOf(it.declaringClass) }
-                    .addOpenApiCustomizer(versionHeaderCustomizer(listOf(version)))
-                    .build()
-            }
+    private fun versionedGroup(version: String): GroupedOpenApi =
+        GroupedOpenApi
+            .builder()
+            .group("v$version")
+            .addOpenApiMethodFilter { version in ApiVersions.acceptedVersionsOf(it.declaringClass) }
+            .addOpenApiCustomizer(versionHeaderCustomizer(listOf(version)))
+            .build()
 
     private fun versionHeaderCustomizer(versions: List<String>): OpenApiCustomizer =
         OpenApiCustomizer { openApi ->
             openApi.paths
-                ?.values
-                ?.flatMap { it.readOperations() }
-                ?.mapNotNull { it.parameters }
-                ?.flatten()
-                ?.filter { it.name == API_VERSION_HEADER }
-                ?.forEach {
-                    it
+                .orEmpty()
+                .values
+                .flatMap { it.readOperations() }
+                .flatMap { it.parameters.orEmpty() }
+                .filter { it.name == ApiVersions.API_VERSION_HEADER }
+                .forEach { parameter ->
+                    parameter
                         .description(API_VERSION_DESCRIPTION)
                         .required(false)
                         .example(versions.first())
@@ -160,8 +150,7 @@ class OpenApiConfig {
 
     private companion object {
         const val BEARER_AUTH_SCHEME = "bearerAuth"
-        const val API_VERSION_HEADER = "X-API-Version"
-        const val API_VERSION_DESCRIPTION = "API 버전. 생략하면 서버 기본값 1로 처리합니다"
+        const val API_VERSION_DESCRIPTION = "API 버전. 생략하면 서버 기본값 ${ApiVersions.DEFAULT_API_VERSION}로 처리합니다"
         const val APPLICATION_JSON = "application/json"
         const val API_ERROR_RESPONSE_REF = "#/components/schemas/ApiErrorResponse"
     }

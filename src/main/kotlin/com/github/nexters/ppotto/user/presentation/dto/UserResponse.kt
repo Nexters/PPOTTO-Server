@@ -2,7 +2,7 @@ package com.github.nexters.ppotto.user.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.user.domain.OAuthProvider
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.user.domain.User
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant

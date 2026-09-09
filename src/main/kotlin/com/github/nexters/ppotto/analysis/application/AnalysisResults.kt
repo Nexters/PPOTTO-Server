@@ -3,24 +3,25 @@ package com.github.nexters.ppotto.analysis.application
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import java.time.Instant
 import java.util.UUID
 
 data class AnalysisCreationResult(
-    val analysisId: UUID,
+    val analysisId: AnalysisId,
     val uploads: List<PhotoUploadUrlItem>,
 )
 
 data class PhotoUploadUrlItem(
-    val photoId: UUID,
+    val photoId: PhotoId,
     val uploadUrl: String,
 )
 
 data class PhotoUploadItemRequest(
     val takenAt: Instant,
     val contentType: PhotoContentType,
-    val burstGroupId: UUID? = null,
     val isRepresentative: Boolean = true,
 )
 
@@ -31,12 +32,12 @@ data class PhotoUploadGroupRequest(
 data class UploadVerificationResult(
     val uploadedCount: Int,
     val failedCount: Int,
-    val failedPhotoIds: List<UUID>,
+    val failedPhotoIds: List<PhotoId>,
 )
 
 data class AnalysisStatusResult(
-    val id: UUID,
-    val boardId: UUID,
+    val id: AnalysisId,
+    val boardId: BoardId,
     val status: AnalysisStatus,
     val progress: Int,
     val failedReason: String?,

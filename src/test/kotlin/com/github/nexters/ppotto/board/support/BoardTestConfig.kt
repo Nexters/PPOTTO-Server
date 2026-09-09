@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.support.ResettableFake
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
@@ -25,7 +26,9 @@ class BoardTestConfig {
     fun boardStickerPort(): FakeBoardStickerPort = FakeBoardStickerPort()
 }
 
-class FakeBoardAnalysisActivityPort : BoardAnalysisActivityPort {
+class FakeBoardAnalysisActivityPort :
+    BoardAnalysisActivityPort,
+    ResettableFake {
     val activeBoardIds = mutableSetOf<BoardId>()
 
     override fun hasActiveAnalysis(
@@ -33,14 +36,15 @@ class FakeBoardAnalysisActivityPort : BoardAnalysisActivityPort {
         userId: UserId,
     ): Boolean = boardId in activeBoardIds
 
-    fun reset() {
+    override fun reset() {
         activeBoardIds.clear()
     }
 }
 
 class FakeBoardStickerPort :
     BoardStickerQueryPort,
-    BoardStickerCommandPort {
+    BoardStickerCommandPort,
+    ResettableFake {
     val stickersByBoardId = mutableMapOf<BoardId, List<BoardStickerItem>>()
     val validatedStickerIds = mutableListOf<Set<StickerId>>()
     val updatedLayouts = mutableListOf<List<BoardStickerLayoutCommand>>()
@@ -48,26 +52,29 @@ class FakeBoardStickerPort :
 
     override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = stickersByBoardId[boardId].orEmpty()
 
-    override fun validateOwnedByBoard(
+    override fun ownsAll(
         boardId: BoardId,
         stickerIds: Set<StickerId>,
-    ) {
+    ): Boolean {
         val ownedIds =
             stickersByBoardId[boardId]
                 .orEmpty()
                 .map { it.id }
                 .toSet()
         if (!ownedIds.containsAll(stickerIds)) {
-            throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
+            return false
         }
         validatedStickerIds += stickerIds
+        return true
     }
 
     override fun updateLayouts(
         boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
     ) {
-        validateOwnedByBoard(boardId, layouts.map { it.id }.toSet())
+        if (!ownsAll(boardId, layouts.map { it.id }.toSet())) {
+            throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
+        }
         updatedLayouts += layouts
     }
 
@@ -76,7 +83,7 @@ class FakeBoardStickerPort :
         deletedBoardIds += boardId
     }
 
-    fun reset() {
+    override fun reset() {
         stickersByBoardId.clear()
         validatedStickerIds.clear()
         updatedLayouts.clear()

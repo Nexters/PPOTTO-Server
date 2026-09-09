@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -43,8 +44,9 @@ class BoardLayoutServiceTest(
                     stickers = emptyList(),
                     createdDrawings =
                         listOf(
-                            DrawingCreateCommand.Stroke(
+                            NewDrawing.Stroke(
                                 id = drawingId,
+                                boardId = board.id,
                                 scope = DrawingScope.BOARD,
                                 zIndex = 0,
                                 stickerId = null,
@@ -64,7 +66,7 @@ class BoardLayoutServiceTest(
                     command.copy(
                         createdDrawings =
                             command.createdDrawings
-                                .filterIsInstance<DrawingCreateCommand.Stroke>()
+                                .filterIsInstance<NewDrawing.Stroke>()
                                 .map { it.copy(color = "#FFD400") },
                     ),
                 )
@@ -93,8 +95,9 @@ class BoardLayoutServiceTest(
                         stickers = listOf(stickerLayout(sticker.id)),
                         createdDrawings =
                             listOf(
-                                DrawingCreateCommand.Stroke(
+                                NewDrawing.Stroke(
                                     id = DrawingId(uuidV7()),
+                                    boardId = board.id,
                                     scope = DrawingScope.STICKER,
                                     zIndex = 0,
                                     stickerId = sticker.id,
@@ -172,8 +175,9 @@ class BoardLayoutServiceTest(
                                     stickers = emptyList(),
                                     createdDrawings =
                                         listOf(
-                                            DrawingCreateCommand.Stroke(
+                                            NewDrawing.Stroke(
                                                 id = DrawingId(uuidV7()),
+                                                boardId = board.id,
                                                 scope = DrawingScope.STICKER,
                                                 zIndex = 0,
                                                 stickerId = StickerId(uuidV7()),
@@ -198,7 +202,7 @@ class BoardLayoutServiceTest(
             val board = boardRepository.save(user.id)
 
             When("32자 이하 문구로 저장을 요청하면") {
-                boardLayoutService.update(board.id, user.id, textLayoutCommand("여름 휴가"))
+                boardLayoutService.update(board.id, user.id, textLayoutCommand(board.id, "여름 휴가"))
 
                 Then("텍스트가 보드에 저장된다") {
                     val text = drawingRepository.findByBoardId(board.id).single()
@@ -209,7 +213,7 @@ class BoardLayoutServiceTest(
             When("32자를 넘는 문구로 저장을 요청하면") {
                 val exception =
                     shouldThrow<InvalidInputException> {
-                        boardLayoutService.update(board.id, user.id, textLayoutCommand("가".repeat(33)))
+                        boardLayoutService.update(board.id, user.id, textLayoutCommand(board.id, "가".repeat(33)))
                     }
 
                 Then("COMMON-001로 거부한다") {
@@ -223,27 +227,30 @@ class BoardLayoutServiceTest(
         }
     })
 
-private fun textLayoutCommand(content: String) =
-    BoardLayoutUpdateCommand(
-        stickers = emptyList(),
-        createdDrawings =
-            listOf(
-                DrawingCreateCommand.Text(
-                    id = DrawingId(uuidV7()),
-                    scope = DrawingScope.BOARD,
-                    stickerId = null,
-                    color = "#FFFFFF",
-                    zIndex = 7,
-                    content = content,
-                    fontSize = 26.0,
-                    posX = 80.0,
-                    posY = 290.5,
-                    maxWidth = 280.0,
-                    rotation = 0.0,
-                ),
+private fun textLayoutCommand(
+    boardId: BoardId,
+    content: String,
+) = BoardLayoutUpdateCommand(
+    stickers = emptyList(),
+    createdDrawings =
+        listOf(
+            NewDrawing.Text(
+                id = DrawingId(uuidV7()),
+                boardId = boardId,
+                scope = DrawingScope.BOARD,
+                stickerId = null,
+                color = "#FFFFFF",
+                zIndex = 7,
+                content = content,
+                fontSize = 26.0,
+                posX = 80.0,
+                posY = 290.5,
+                maxWidth = 280.0,
+                rotation = 0.0,
             ),
-        deletedDrawingIds = emptyList(),
-    )
+        ),
+    deletedDrawingIds = emptyList(),
+)
 
 private fun stickerLayout(id: StickerId) =
     BoardStickerLayoutCommand(

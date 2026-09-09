@@ -5,6 +5,8 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipPort
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipScope
+import com.github.nexters.ppotto.sticker.application.port.singlePort
+import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
@@ -21,8 +23,10 @@ class AnalysisResultSaveService(
 ) {
     @Transactional
     fun save(command: SaveAnalysisResultCommand): SavedAnalysisResult {
-        validateStickerCount(command.stickers.size)
-        validateOwnership(command, ownershipPort())
+        if (command.stickers.size > Sticker.MAX_ANALYSIS_STICKER_COUNT) {
+            throw InvalidInputException(StickerErrorCode.ANALYSIS_STICKER_COUNT_EXCEEDED)
+        }
+        validateOwnership(command)
         stickerRepository.lockAnalysisResult(command.analysisId)
 
         val existingStickerIds = stickerRepository.findAllByAnalysisId(command.analysisId).map { it.id }
@@ -50,41 +54,25 @@ class AnalysisResultSaveService(
         return SavedAnalysisResult(stickerIds)
     }
 
-    private fun validateStickerCount(stickerCount: Int) {
-        stickerCount
-            .takeIf { it <= MAX_STICKER_COUNT }
-            ?: throw InvalidInputException(message = "분석 결과 스티커는 최대 6개까지 저장할 수 있습니다.")
-    }
+    private fun validateOwnership(command: SaveAnalysisResultCommand) {
+        val ownershipPort = ownershipPorts.singlePort("분석과 사진 소유권 검증")
+        if (boardAccessService.getById(command.boardId).userId != command.userId) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
 
-    private fun ownershipPort(): AnalysisPhotoOwnershipPort =
-        ownershipPorts.singleOrNull()
-            ?: error("분석과 사진 소유권 검증 application port 구현이 정확히 하나 필요합니다.")
-
-    private fun validateOwnership(
-        command: SaveAnalysisResultCommand,
-        ownershipPort: AnalysisPhotoOwnershipPort,
-    ) {
-        command
-            .also {
-                boardAccessService
-                    .getById(it.boardId)
-                    .takeIf { board -> board.userId == it.userId }
-                    ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-            }.stickers
-            .flatMap { sticker -> sticker.photoIds + listOfNotNull(sticker.sourcePhotoId) }
-            .toSet()
-            .let {
-                AnalysisPhotoOwnershipScope(
-                    userId = command.userId,
-                    boardId = command.boardId,
-                    analysisId = command.analysisId,
-                    photoIds = it,
-                )
-            }.takeIf(ownershipPort::matches)
-            ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
-    }
-
-    companion object {
-        const val MAX_STICKER_COUNT = 6
+        val photoIds =
+            command.stickers
+                .flatMap { it.photoIds + listOfNotNull(it.sourcePhotoId) }
+                .toSet()
+        val scope =
+            AnalysisPhotoOwnershipScope(
+                userId = command.userId,
+                boardId = command.boardId,
+                analysisId = command.analysisId,
+                photoIds = photoIds,
+            )
+        if (!ownershipPort.matches(scope)) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
     }
 }

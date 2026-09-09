@@ -1,20 +1,20 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.ThemeComment
-import java.util.UUID
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.PhotoId
 
 data class AnalysisPipelineResult(
-    val analysisId: UUID,
+    val analysisId: AnalysisId,
     val themes: List<ThemeAnalysisResult>,
 )
 
 data class ThemeAnalysisResult(
     val theme: String,
-    val categorizedPhotoIds: List<UUID>,
+    val categorizedPhotoIds: List<PhotoId>,
     val badge: String,
     val text: String,
-    val stickerTargetSubject: String,
-    val stickerSourcePhotoId: UUID,
+    val stickerSourcePhotoId: PhotoId,
     val stickerImageKey: String?,
     val stickerMainColor: String,
     val comments: List<ThemeComment>,

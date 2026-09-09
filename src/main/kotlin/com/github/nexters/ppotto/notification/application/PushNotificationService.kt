@@ -1,8 +1,8 @@
 package com.github.nexters.ppotto.notification.application
 
+import com.github.nexters.ppotto.notification.application.port.PushNotifier
+import com.github.nexters.ppotto.notification.application.port.PushSendResult
 import com.github.nexters.ppotto.notification.domain.PushNotificationRequestedEvent
-import com.github.nexters.ppotto.notification.domain.PushNotifier
-import com.github.nexters.ppotto.notification.domain.PushSendResult
 import com.github.nexters.ppotto.notification.infrastructure.DeviceTokenRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -15,7 +15,7 @@ class PushNotificationService(
     fun send(event: PushNotificationRequestedEvent) {
         val tokens = deviceTokenRepository.findFcmTokensByUserId(event.userId)
         if (tokens.isEmpty()) {
-            log.info("push notification skipped, no device tokens: userId={}", event.userId)
+            log.info("등록된 디바이스 토큰이 없어 푸시 알림을 건너뜁니다. userId={}", event.userId)
             return
         }
 
@@ -29,30 +29,23 @@ class PushNotificationService(
         tokens: List<String>,
     ): List<PushSendResult> {
         var delayMillis = INITIAL_RETRY_DELAY_MILLIS
-        repeat(MAX_RETRY_ATTEMPTS) { attemptIndex ->
-            val attempt = attemptIndex + 1
-            val result = runCatching { pushNotifier.sendToTokens(tokens, event.title, event.body, event.data) }
-            result.onSuccess { return it }
-            result.onFailure { throwable ->
-                if (attempt == MAX_RETRY_ATTEMPTS) {
-                    log.error(
-                        "push notification failed after {} attempts: userId={}",
-                        attempt,
-                        event.userId,
-                        throwable,
-                    )
-                } else {
-                    log.warn(
-                        "push notification attempt {} failed, retrying in {}ms: userId={}",
-                        attempt,
-                        delayMillis,
-                        event.userId,
-                        throwable,
-                    )
-                    Thread.sleep(delayMillis)
-                    delayMillis *= RETRY_BACKOFF_MULTIPLIER
-                }
+        for (attempt in 1..MAX_RETRY_ATTEMPTS) {
+            val sent = runCatching { pushNotifier.sendToTokens(tokens, event.title, event.body, event.data) }
+            val failure = sent.exceptionOrNull() ?: return sent.getOrThrow()
+
+            if (attempt == MAX_RETRY_ATTEMPTS) {
+                log.error("푸시 알림을 {}회 시도했지만 모두 실패했습니다. userId={}", attempt, event.userId, failure)
+                break
             }
+            log.warn(
+                "푸시 알림 {}회차 시도가 실패해 {}ms 뒤에 재시도합니다. userId={}",
+                attempt,
+                delayMillis,
+                event.userId,
+                failure,
+            )
+            Thread.sleep(delayMillis)
+            delayMillis *= RETRY_BACKOFF_MULTIPLIER
         }
         return emptyList()
     }

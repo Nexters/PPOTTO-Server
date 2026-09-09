@@ -9,10 +9,10 @@ fun interface BoardStickerQueryPort {
 }
 
 interface BoardStickerCommandPort {
-    fun validateOwnedByBoard(
+    fun ownsAll(
         boardId: BoardId,
         stickerIds: Set<StickerId>,
-    )
+    ): Boolean
 
     fun updateLayouts(
         boardId: BoardId,
@@ -50,4 +50,8 @@ data class BoardStickerLayoutCommand(
     val badgeOffsetX: Double,
     val badgeOffsetY: Double,
     val badgeRotation: Double,
-)
+) {
+    companion object {
+        const val MAX_TITLE_LENGTH = 15
+    }
+}

@@ -1,12 +1,14 @@
 package com.github.nexters.ppotto.analysis.domain
 
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import java.time.Instant
-import java.util.UUID
 
-class Analysis(
-    val id: UUID,
-    val userId: UUID,
-    val boardId: UUID,
+data class Analysis(
+    val id: AnalysisId,
+    val userId: UserId,
+    val boardId: BoardId,
     val status: AnalysisStatus,
     val progress: Int,
     val failedReason: String?,

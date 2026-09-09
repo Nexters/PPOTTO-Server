@@ -4,16 +4,19 @@ import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import org.springframework.transaction.support.TransactionTemplate
 import java.util.UUID
 
 class BoardRepositoryTest(
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    transactionTemplate: TransactionTemplate,
 ) : IntegrationTest({
-        Given("User가 등록된 상태에서 Board를 저장하면") {
+        Given("저장된 보드가 있을 때") {
             val user = userRepository.saveTestUser()
             val saved = boardRepository.save(user.id)
 
@@ -41,6 +44,26 @@ class BoardRepositoryTest(
 
                 Then("null을 반환한다") {
                     found.shouldBeNull()
+                }
+            }
+        }
+
+        Given("사용자 단위 명령 잠금을 잡으려는 호출부에서") {
+            val user = userRepository.saveTestUser()
+
+            When("트랜잭션 없이 잠금을 요청하면") {
+                Then("autocommit으로 곧바로 풀리지 않도록 거부한다") {
+                    shouldThrow<IllegalStateException> {
+                        boardRepository.lockCommandsByUserId(user.id)
+                    }
+                }
+            }
+
+            When("트랜잭션 안에서 잠금을 요청하면") {
+                Then("잠금을 잡고 정상 종료한다") {
+                    transactionTemplate.executeWithoutResult {
+                        boardRepository.lockCommandsByUserId(user.id)
+                    }
                 }
             }
         }

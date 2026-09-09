@@ -1,15 +1,22 @@
 package com.github.nexters.ppotto.analysis.support
 
 import com.github.nexters.ppotto.analysis.domain.StickerStorage
+import com.github.nexters.ppotto.support.ResettableFake
+import java.util.concurrent.ConcurrentHashMap
 
-class FakeStickerStorage : StickerStorage {
-    val uploaded = mutableMapOf<String, ByteArray>()
+class FakeStickerStorage :
+    StickerStorage,
+    ResettableFake {
+    val uploaded: MutableMap<String, ByteArray> = ConcurrentHashMap()
 
     override fun upload(
         objectKey: String,
         bytes: ByteArray,
-    ): String {
+    ) {
         uploaded[objectKey] = bytes
-        return objectKey
+    }
+
+    override fun reset() {
+        uploaded.clear()
     }
 }

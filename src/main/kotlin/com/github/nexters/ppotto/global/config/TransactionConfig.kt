@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class TransactionConfig {
     @Bean
     fun transactionTemplate(transactionManager: PlatformTransactionManager): TransactionTemplate = TransactionTemplate(transactionManager)

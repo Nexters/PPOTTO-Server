@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.global.storage.ObjectStorageCleaner
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
+import java.util.concurrent.CopyOnWriteArrayList
 
 @TestConfiguration(proxyBeanMethods = false)
 class ObjectStorageTestConfiguration {
@@ -12,22 +13,26 @@ class ObjectStorageTestConfiguration {
     fun objectStorageCleaner(): RecordingObjectStorageCleaner = RecordingObjectStorageCleaner()
 }
 
-class RecordingObjectStorageCleaner : ObjectStorageCleaner {
-    val deletedPrefixes = mutableListOf<String>()
-    val deletedObjectKeys = mutableListOf<String>()
+class RecordingObjectStorageCleaner :
+    ObjectStorageCleaner,
+    ResettableFake {
+    val deletedPrefixes = CopyOnWriteArrayList<String>()
+    val deletedObjectKeys = CopyOnWriteArrayList<String>()
 
-    override fun deleteByPrefix(prefix: String): Int =
-        prefix
-            .also(deletedPrefixes::add)
-            .let { 0 }
+    override fun deleteByPrefix(prefix: String): Int {
+        deletedPrefixes += prefix
+        return 0
+    }
 
-    override fun deleteAll(objectKeys: Collection<String>): Int =
-        objectKeys
-            .also(deletedObjectKeys::addAll)
-            .size
+    override fun deleteAll(objectKeys: Collection<String>): Int {
+        deletedObjectKeys += objectKeys
+        return objectKeys.size
+    }
 
-    fun clear() {
+    override fun reset() {
         deletedPrefixes.clear()
         deletedObjectKeys.clear()
     }
+
+    fun clear() = reset()
 }

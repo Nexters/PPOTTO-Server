@@ -21,7 +21,7 @@ data class BoardDetailV2Response(
     val name: String,
 
     @field:Schema(description = "보드에 배치된 스티커 목록. v1과 동일")
-    val stickers: List<StickerResponse>,
+    val stickers: List<BoardStickerResponse>,
 
     @field:Schema(description = "보드와 스티커 위의 선과 텍스트 목록")
     val drawings: List<DrawingV2Response>,
@@ -31,7 +31,7 @@ data class BoardDetailV2Response(
             BoardDetailV2Response(
                 id = board.id,
                 name = board.name,
-                stickers = board.stickers.map(StickerResponse::from),
+                stickers = board.stickers.map(BoardStickerResponse::from),
                 drawings = board.drawings.map(DrawingV2Response::from),
             )
     }

@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
+import com.github.nexters.ppotto.analysis.domain.SourcePhotoImageReader
+import com.github.nexters.ppotto.analysis.domain.StickerBackgroundRemover
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
@@ -26,7 +28,7 @@ class SourcePhotoStickerGeneratorTest :
             When("스티커를 생성하면") {
                 val stickerBytes =
                     generator.generate(
-                        sourceGcsUri = "gs://ppotto-test/photos/analysis/photo.jpg",
+                        sourceUri = "gs://ppotto-test/photos/analysis/photo.jpg",
                         sourceMimeType = "image/jpeg",
                         targetSubject = "빨간 컵",
                     )
@@ -48,8 +50,8 @@ private class FakeSourcePhotoImageReader(
 ) : SourcePhotoImageReader {
     lateinit var requestedUri: String
 
-    override fun read(sourceGcsUri: String): ByteArray {
-        requestedUri = sourceGcsUri
+    override fun read(sourceUri: String): ByteArray {
+        requestedUri = sourceUri
         return sourceBytes
     }
 }

@@ -23,7 +23,7 @@ fun <T> runConcurrently(
                     },
                 )
             }
-        check(ready.await(10, TimeUnit.SECONDS))
+        check(ready.await(10, TimeUnit.SECONDS)) { "동시 실행 태스크 ${ready.count}개가 10초 안에 준비되지 않았습니다." }
         start.countDown()
         futures.map { it.get(30, TimeUnit.SECONDS) }
     } finally {

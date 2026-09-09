@@ -1,21 +1,31 @@
 package com.github.nexters.ppotto.user.support
 
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
+import com.github.nexters.ppotto.support.ResettableFake
 import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
-import com.github.nexters.ppotto.user.domain.OAuthProvider
+import java.util.concurrent.CopyOnWriteArrayList
 
-class FakeSocialAccountRevoker : SocialAccountRevoker {
-    val revocations = mutableListOf<Revocation>()
+class FakeSocialAccountRevoker :
+    SocialAccountRevoker,
+    ResettableFake {
+    val revocations = CopyOnWriteArrayList<Revocation>()
+
+    var failure: Throwable? = null
 
     override fun revoke(
         provider: OAuthProvider,
         providerRefreshToken: String,
     ) {
+        failure?.let { throw it }
         revocations += Revocation(provider, providerRefreshToken)
     }
 
-    fun clear() {
+    override fun reset() {
         revocations.clear()
+        failure = null
     }
+
+    fun clear() = reset()
 }
 
 data class Revocation(

@@ -1,8 +1,8 @@
 package com.github.nexters.ppotto.terms.presentation
 
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
+import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.terms.presentation.dto.AgreeTermsRequest
 import com.github.nexters.ppotto.terms.presentation.dto.TermResponse
@@ -49,16 +49,7 @@ interface TermsApi {
             ),
     )
     @EmptySuccessApiResponse
-    @OpenApiResponse(
-        responseCode = "400",
-        description = "요청 값이 올바르지 않음 (COMMON-001, TERM-001)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
+    @InvalidInputApiResponse
     fun agree(
         userId: UserId,
         request: AgreeTermsRequest,

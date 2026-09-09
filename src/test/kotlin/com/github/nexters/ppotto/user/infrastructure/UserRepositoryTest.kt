@@ -1,10 +1,9 @@
 package com.github.nexters.ppotto.user.infrastructure
 
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.user.application.port.ProviderRefreshTokenCipher
-import com.github.nexters.ppotto.user.domain.OAuthProvider
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
@@ -16,7 +15,7 @@ import java.util.UUID
 
 class UserRepositoryTest(
     userRepository: UserRepository,
-    tokenCipher: ProviderRefreshTokenCipher,
+    tokenCipher: AesGcmProviderRefreshTokenCipher,
     dslContext: DSLContext,
 ) : IntegrationTest({
         Given("암호화된 제공자 토큰을 가진 소셜 계정을 저장하면") {

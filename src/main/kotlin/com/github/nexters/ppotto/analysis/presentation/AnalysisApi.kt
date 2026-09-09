@@ -5,13 +5,12 @@ import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.ReissueUploadUrlsResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
-import com.github.nexters.ppotto.global.openapi.ApiErrorResponse
+import com.github.nexters.ppotto.global.identifier.AnalysisId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -19,9 +18,10 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
-import java.util.UUID
-import io.swagger.v3.oas.annotations.parameters.RequestBody as OpenApiRequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
+
+private const val ANALYSIS_ID_DESCRIPTION = "분석 ID (uuidv7)"
+private const val ANALYSIS_ID_EXAMPLE = "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f"
 
 @RequestMapping("/analysis", version = "1+")
 @Tag(name = "분석", description = "사진 업로드와 분석 실행")
@@ -30,54 +30,17 @@ interface AnalysisApi {
     @Operation(
         summary = "분석 생성",
         description = "보드를 지정하고 사진 그룹을 펼친 총 90~100장의 업로드 URL(만료 15분)을 한 번에 발급함",
-        requestBody =
-            OpenApiRequestBody(
-                required = true,
-                content = [
-                    Content(
-                        mediaType = "application/json",
-                        schema = Schema(implementation = CreateAnalysisRequest::class),
-                    ),
-                ],
-            ),
     )
     @OpenApiResponse(
         responseCode = "200",
         useReturnTypeSchema = true,
         description = "발급 완료 (status=UPLOADING)",
     )
-    @OpenApiResponse(
-        responseCode = "400",
-        description = "요청 값이 올바르지 않음 (COMMON-001, ANALYSIS-001, ANALYSIS-009)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
-    @OpenApiResponse(
-        responseCode = "404",
-        description = "보드를 찾을 수 없음 (BOARD-002)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
-    @OpenApiResponse(
-        responseCode = "409",
-        description = "진행 중인 분석이 이미 있음 (ANALYSIS-002)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
+    @CreateAnalysisInvalidInputApiResponse
+    @AnalysisBoardNotFoundApiResponse
+    @ActiveAnalysisExistsApiResponse
     fun create(
-        userId: UUID,
+        userId: UserId,
         request: CreateAnalysisRequest,
     ): ApiResponse<CreateAnalysisResponse>
 
@@ -91,7 +54,7 @@ interface AnalysisApi {
         useReturnTypeSchema = true,
         description = "진행 중 분석 또는 null",
     )
-    fun getActive(userId: UUID): ApiResponse<AnalysisStatusResponse?>
+    fun getActive(userId: UserId): ApiResponse<AnalysisStatusResponse?>
 
     @PostMapping("/{analysisId}/reissue")
     @Operation(
@@ -99,13 +62,7 @@ interface AnalysisApi {
         description =
             "분석 생성 응답을 유실했거나 업로드 URL(15분)이 만료됐을 때 호출함. " +
                 "PENDING 사진의 URL만 재발급하며 UPLOADING 상태에서만 사용 가능",
-        parameters = [
-            Parameter(
-                name = "analysisId",
-                description = "재발급할 분석 ID (uuidv7)",
-                example = "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
-            ),
-        ],
+        parameters = [Parameter(name = "analysisId", description = ANALYSIS_ID_DESCRIPTION, example = ANALYSIS_ID_EXAMPLE)],
     )
     @OpenApiResponse(
         responseCode = "200",
@@ -113,19 +70,10 @@ interface AnalysisApi {
         description = "재발급된 URL 목록",
     )
     @AnalysisNotFoundApiResponse
-    @OpenApiResponse(
-        responseCode = "409",
-        description = "이미 시작되었거나 종료된 분석임 (ANALYSIS-003)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
+    @AnalysisAlreadyStartedApiResponse
     fun reissue(
-        userId: UUID,
-        analysisId: UUID,
+        userId: UserId,
+        analysisId: AnalysisId,
     ): ApiResponse<ReissueUploadUrlsResponse>
 
     @PostMapping("/{analysisId}/start")
@@ -133,13 +81,7 @@ interface AnalysisApi {
     @Operation(
         summary = "분석 시작",
         description = "GCS 오브젝트 존재를 확인해 없는 사진은 제외하고 분석 파이프라인을 시작함",
-        parameters = [
-            Parameter(
-                name = "analysisId",
-                description = "시작할 분석 ID (uuidv7)",
-                example = "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
-            ),
-        ],
+        parameters = [Parameter(name = "analysisId", description = ANALYSIS_ID_DESCRIPTION, example = ANALYSIS_ID_EXAMPLE)],
     )
     @OpenApiResponse(
         responseCode = "202",
@@ -147,32 +89,17 @@ interface AnalysisApi {
         description = "분석 시작됨",
     )
     @AnalysisNotFoundApiResponse
-    @OpenApiResponse(
-        responseCode = "409",
-        description = "현재 상태와 요청이 충돌함 (ANALYSIS-003, ANALYSIS-008)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
+    @AnalysisStartConflictApiResponse
     fun start(
-        userId: UUID,
-        analysisId: UUID,
+        userId: UserId,
+        analysisId: AnalysisId,
     ): ApiResponse<StartUploadResponse>
 
     @GetMapping("/{analysisId}")
     @Operation(
         summary = "분석 상태 조회",
         description = "로딩 화면에서 2~3초 간격으로 폴링함. COMPLETED가 되면 보드를 다시 조회함",
-        parameters = [
-            Parameter(
-                name = "analysisId",
-                description = "조회할 분석 ID (uuidv7)",
-                example = "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
-            ),
-        ],
+        parameters = [Parameter(name = "analysisId", description = ANALYSIS_ID_DESCRIPTION, example = ANALYSIS_ID_EXAMPLE)],
     )
     @OpenApiResponse(
         responseCode = "200",
@@ -181,36 +108,21 @@ interface AnalysisApi {
     )
     @AnalysisNotFoundApiResponse
     fun get(
-        userId: UUID,
-        analysisId: UUID,
+        userId: UserId,
+        analysisId: AnalysisId,
     ): ApiResponse<AnalysisStatusResponse>
 
     @DeleteMapping("/{analysisId}")
     @Operation(
         summary = "분석 취소",
         description = "업로드 중(UPLOADING)인 분석을 취소함. 분석과 사진 상태를 FAILED로 닫고, 업로드된 원본 이미지는 커밋 후 비동기로 정리함",
-        parameters = [
-            Parameter(
-                name = "analysisId",
-                description = "취소할 분석 ID (uuidv7)",
-                example = "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
-            ),
-        ],
+        parameters = [Parameter(name = "analysisId", description = ANALYSIS_ID_DESCRIPTION, example = ANALYSIS_ID_EXAMPLE)],
     )
     @EmptySuccessApiResponse
     @AnalysisNotFoundApiResponse
-    @OpenApiResponse(
-        responseCode = "409",
-        description = "취소할 수 없는 상태의 분석임 (ANALYSIS-004)",
-        content = [
-            Content(
-                mediaType = "application/json",
-                schema = Schema(implementation = ApiErrorResponse::class),
-            ),
-        ],
-    )
+    @AnalysisCancelNotAllowedApiResponse
     fun cancel(
-        userId: UUID,
-        analysisId: UUID,
+        userId: UserId,
+        analysisId: AnalysisId,
     ): ApiResponse<Unit>
 }

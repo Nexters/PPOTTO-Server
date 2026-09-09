@@ -1,7 +1,5 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
-import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
-import com.github.nexters.ppotto.global.error.BusinessException
 import org.springframework.stereotype.Component
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -26,12 +24,7 @@ class StickerImageCropper {
         return writePng(cropped)
     }
 
-    private fun readImage(pngBytes: ByteArray): BufferedImage =
-        try {
-            ImageIO.read(ByteArrayInputStream(pngBytes)) ?: throw cropFailed()
-        } catch (e: IOException) {
-            throw cropFailed(e)
-        }
+    private fun readImage(pngBytes: ByteArray): BufferedImage = ImageIO.read(ByteArrayInputStream(pngBytes)) ?: throw cropFailed()
 
     private fun subjectBounds(image: BufferedImage): Bounds? {
         val coreBounds =
@@ -76,18 +69,14 @@ class StickerImageCropper {
     }
 
     private fun writePng(image: BufferedImage): ByteArray =
-        try {
-            ByteArrayOutputStream().use { output ->
-                if (!ImageIO.write(image, PNG_FORMAT, output)) {
-                    throw cropFailed()
-                }
-                output.toByteArray()
+        ByteArrayOutputStream().use { output ->
+            if (!ImageIO.write(image, PNG_FORMAT, output)) {
+                throw cropFailed()
             }
-        } catch (e: IOException) {
-            throw cropFailed(e)
+            output.toByteArray()
         }
 
-    private fun cropFailed(cause: Throwable? = null) = BusinessException(AnalysisErrorCode.STICKER_BACKGROUND_REMOVAL_FAILED, cause = cause)
+    private fun cropFailed() = IOException("스티커 이미지를 자를 수 없습니다. 투명하지 않은 픽셀이 없거나 PNG 디코딩에 실패했습니다.")
 
     private data class Bounds(
         val left: Int,

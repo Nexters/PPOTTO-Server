@@ -8,11 +8,11 @@ import com.github.nexters.ppotto.auth.application.port.AuthUserPort
 import com.github.nexters.ppotto.auth.application.port.RefreshTokenStore
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
-import com.github.nexters.ppotto.auth.domain.OAuthProvider
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.auth.domain.TokenPair
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.user.application.UserService
 import io.kotest.assertions.throwables.shouldThrow
@@ -33,6 +33,7 @@ class AuthSessionIntegrationTest(
     userService: UserService,
     refreshTokenStore: SessionRefreshTokenStore,
     tokenProvider: SessionTokenProvider,
+    userSessionRevoker: RefreshTokenUserSessionRevoker,
 ) : IntegrationTest({
         Given("refresh token을 가진 활성 사용자가 있을 때") {
             refreshTokenStore.clear()
@@ -49,10 +50,16 @@ class AuthSessionIntegrationTest(
             val refreshToken = "refresh-${UUID.randomUUID()}"
             refreshTokenStore.save(user.userId, refreshToken)
 
+            When("탈퇴가 세션 폐기 port를 호출하면") {
+                userSessionRevoker.revoke(user.userId)
+
+                Then("저장된 refresh token 세션을 지운다") {
+                    refreshTokenStore.findUserId(refreshToken).shouldBeNull()
+                }
+            }
+
             When("탈퇴한 뒤 남아 있는 token으로 재발급을 시도하면") {
                 userService.withdraw(user.userId)
-                refreshTokenStore.findUserId(refreshToken).shouldBeNull()
-
                 val staleRefreshToken = "stale-${UUID.randomUUID()}"
                 refreshTokenStore.save(user.userId, staleRefreshToken)
                 val exception =
@@ -60,7 +67,7 @@ class AuthSessionIntegrationTest(
                         authService.refresh(staleRefreshToken)
                     }
 
-                Then("세션을 폐기하고 비활성 사용자의 token 발급과 rotation을 거부한다") {
+                Then("비활성 사용자의 token 발급과 rotation을 거부한다") {
                     userService.isActive(user.userId) shouldBe false
                     exception.errorCode shouldBe AuthErrorCode.INVALID_REFRESH_TOKEN
                     tokenProvider.issueCount shouldBe 0
