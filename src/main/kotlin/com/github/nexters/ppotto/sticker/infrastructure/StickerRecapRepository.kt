@@ -32,22 +32,22 @@ class StickerRecapRepository(
     fun saveComments(
         stickerId: StickerId,
         creations: List<RecapCommentCreation>,
-    ): List<RecapComment> {
-        if (creations.isEmpty()) {
-            return emptyList()
-        }
-        return dslContext
-            .insertInto(
-                RECAP_COMMENTS,
-                RECAP_COMMENTS.STICKER_ID,
-                RECAP_COMMENTS.CONTENT,
-                RECAP_COMMENTS.POS_X,
-                RECAP_COMMENTS.POS_Y,
-            ).valuesOfRows(creations.map { row(stickerId, it.content, it.posX, it.posY) })
-            .returning()
-            .fetch()
-            .map { it.toDomain() }
-    }
+    ): List<RecapComment> =
+        creations
+            .takeIf { it.isNotEmpty() }
+            ?.let { rows ->
+                dslContext
+                    .insertInto(
+                        RECAP_COMMENTS,
+                        RECAP_COMMENTS.STICKER_ID,
+                        RECAP_COMMENTS.CONTENT,
+                        RECAP_COMMENTS.POS_X,
+                        RECAP_COMMENTS.POS_Y,
+                    ).valuesOfRows(rows.map { row(stickerId, it.content, it.posX, it.posY) })
+                    .returning()
+                    .fetch()
+                    .map { it.toDomain() }
+            } ?: emptyList()
 
     fun findPhotoIds(stickerId: StickerId): List<PhotoId> =
         dslContext

@@ -50,17 +50,16 @@ class TermsService(
         termAgreementRepository.deleteAllByUserId(userId)
     }
 
-    private fun List<Term>.withAgreementStatus(userId: UserId): List<TermResult> {
-        val agreedTermIds = termAgreementRepository.findAgreedTermIds(userId, map { it.id })
-        return map { term -> TermResult.from(term, term.id in agreedTermIds) }
-    }
+    private fun List<Term>.withAgreementStatus(userId: UserId): List<TermResult> =
+        termAgreementRepository
+            .findAgreedTermIds(userId, map { it.id })
+            .let { agreedTermIds -> map { term -> TermResult.from(term, term.id in agreedTermIds) } }
 
     private fun validateRequiredTerms(
         currentTerms: List<Term>,
         agreedTermIds: Set<TermId>,
     ) {
-        if (currentTerms.any { it.isRequired && it.id !in agreedTermIds }) {
-            throw InvalidInputException(TermErrorCode.REQUIRED_TERMS_MISSING)
-        }
+        currentTerms.takeIf { terms -> terms.none { it.isRequired && it.id !in agreedTermIds } }
+            ?: throw InvalidInputException(TermErrorCode.REQUIRED_TERMS_MISSING)
     }
 }

@@ -19,9 +19,8 @@ object ApiVersions {
 
     fun acceptedVersionsOf(handlerType: Class<*>): List<String> {
         val declared = declaredVersionOf(handlerType) ?: return SUPPORTED_API_VERSIONS
-        val baseline = declared.removeSuffix(BASELINE_MARKER)
-        if (!declared.endsWith(BASELINE_MARKER)) return listOf(baseline)
-        return SUPPORTED_API_VERSIONS.filter { it >= baseline }
+        if (!declared.endsWith(BASELINE_MARKER)) return listOf(declared)
+        return declared.removeSuffix(BASELINE_MARKER).let { baseline -> SUPPORTED_API_VERSIONS.filter { it >= baseline } }
     }
 
     private const val BASELINE_MARKER = "+"

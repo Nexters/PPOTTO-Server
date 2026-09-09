@@ -19,8 +19,9 @@ class WithdrawnUserCleanupScheduler(
     @Scheduled(cron = "\${user.withdrawn-cleanup.cron}", zone = TIME_ZONE)
     fun cleanup() {
         val deletedBefore = Instant.now().minus(properties.retentionDays, ChronoUnit.DAYS)
-        val result = cleanupService.cleanup(deletedBefore, properties.batchSize)
-        log.info("탈퇴 사용자 정리 완료 attempted={} deleted={}", result.attempted, result.deletedUserIds.size)
+        cleanupService
+            .cleanup(deletedBefore, properties.batchSize)
+            .also { log.info("탈퇴 사용자 정리 완료 attempted={} deleted={}", it.attempted, it.deletedUserIds.size) }
     }
 
     companion object {

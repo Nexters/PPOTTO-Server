@@ -60,9 +60,9 @@ class AnalysisPipelineService(
         photos: List<PhotoRef>,
         onProgress: (Int) -> Unit,
         onStepFailed: (String) -> Unit,
-    ): List<ThemeClassification> {
-        val classifications =
-            stepTimer.measuredStep(analysisId, "gemini-classification", onStepFailed) {
+    ): List<ThemeClassification> =
+        stepTimer
+            .measuredStep(analysisId, "gemini-classification", onStepFailed) {
                 progressTicker.run(
                     floor = CLASSIFICATION_STARTED_PROGRESS,
                     ceiling = CLASSIFICATION_COMPLETED_PROGRESS,
@@ -70,10 +70,7 @@ class AnalysisPipelineService(
                 ) {
                     themeClassifier.classifyAndRecap(photos)
                 }
-            }
-        log.info("analysis pipeline classification result: analysisId={}, themeCount={}", analysisId, classifications.size)
-        return classifications
-    }
+            }.also { log.info("analysis pipeline classification result: analysisId={}, themeCount={}", analysisId, it.size) }
 
     private fun expandWithBurstSiblings(
         classifications: List<ThemeClassification>,
@@ -89,14 +86,15 @@ class AnalysisPipelineService(
         }
     }
 
-    private fun burstSiblingIdsByPhotoId(photos: List<PhotoRef>): Map<PhotoId, List<PhotoId>> {
-        val burstPhotosByGroupId = photos.filter { it.burstGroupId != null }.groupBy { it.burstGroupId }
-        return burstPhotosByGroupId.values
+    private fun burstSiblingIdsByPhotoId(photos: List<PhotoRef>): Map<PhotoId, List<PhotoId>> =
+        photos
+            .filter { it.burstGroupId != null }
+            .groupBy { it.burstGroupId }
+            .values
             .flatMap { burstPhotos ->
                 val siblingIds = burstPhotos.map { it.photoId }
                 siblingIds.map { it to siblingIds }
             }.toMap()
-    }
 
     private fun processThemes(
         analysisId: AnalysisId,

@@ -10,12 +10,12 @@ import java.util.UUID
 @Component
 class SentryUserContextProvider : SentryUserProvider {
     override fun provideUser(): User? {
-        val authentication =
+        val principal =
             SecurityContextHolder
                 .getContext()
                 .authentication
                 ?.takeUnless { it is AnonymousAuthenticationToken }
-        val userId = authentication?.principal as? UUID ?: return null
-        return User().apply { id = userId.toString() }
+                ?.principal
+        return (principal as? UUID)?.let { userId -> User().apply { id = userId.toString() } }
     }
 }

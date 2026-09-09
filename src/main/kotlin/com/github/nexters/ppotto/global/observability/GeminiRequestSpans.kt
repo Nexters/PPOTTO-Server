@@ -10,19 +10,16 @@ fun LlmSpanHandle.recordRequest(
     content: Content,
     config: GenerateContentConfig?,
 ) {
-    val instruction =
-        config
-            ?.systemInstruction()
-            ?.getOrNull()
-            ?.let(::systemInstructionText)
-    if (!instruction.isNullOrBlank()) {
-        setSystemInstructions(instruction)
-    }
+    config
+        ?.systemInstruction()
+        ?.getOrNull()
+        ?.let(::systemInstructionText)
+        ?.takeIf(String::isNotBlank)
+        ?.let(::setSystemInstructions)
 
-    val message = content.toLlmMessage(LlmRole.USER)
-    if (message != null) {
-        setInputMessages(listOf(message))
-    }
+    content
+        .toLlmMessage(LlmRole.USER)
+        ?.let { message -> setInputMessages(listOf(message)) }
 }
 
 internal fun Content.toLlmMessage(defaultRole: LlmRole): LlmMessage? =

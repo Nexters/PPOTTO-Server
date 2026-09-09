@@ -32,8 +32,12 @@ class StickerQueryService(
             stickerRecapRepository
                 .findComments(stickerId)
                 .map { RecapCommentResult(it.id, it.content, it.posX, it.posY) }
-        val photoIds = stickerRecapRepository.findPhotoIds(stickerId)
-        val photos = if (photoIds.isEmpty()) emptyList() else toPhotoResults(sticker, photoIds)
+        val photos =
+            stickerRecapRepository
+                .findPhotoIds(stickerId)
+                .takeIf { it.isNotEmpty() }
+                ?.let { toPhotoResults(sticker, it) }
+                ?: emptyList()
 
         return StickerRecapResult(toResults(listOf(sticker), isOwner).single(), sticker.summary, comments, photos)
     }
@@ -79,13 +83,13 @@ class StickerQueryService(
         stickers: List<Sticker>,
         isOwner: Boolean = true,
     ): List<StickerItemResult> {
-        val imageKeys = stickers.mapNotNull { it.imageKey }.toSet()
         val imageUrls =
-            if (imageKeys.isEmpty()) {
-                emptyMap()
-            } else {
-                stickerImageStoragePorts.singlePort("스티커 이미지 저장소").issueReadUrls(imageKeys)
-            }
+            stickers
+                .mapNotNull { it.imageKey }
+                .toSet()
+                .takeIf { it.isNotEmpty() }
+                ?.let { stickerImageStoragePorts.singlePort("스티커 이미지 저장소").issueReadUrls(it) }
+                ?: emptyMap()
 
         return stickers.map { sticker ->
             StickerItemResult(

@@ -55,10 +55,8 @@ class GlobalExceptionHandler {
         respond(HttpStatus.NOT_ACCEPTABLE, ErrorResponse.of(CommonErrorCode.NOT_ACCEPTABLE), e)
 
     @ExceptionHandler(ErrorResponseException::class)
-    fun handleErrorResponseException(e: ErrorResponseException): ResponseEntity<ApiResponse<Unit>> {
-        val status = HttpStatus.valueOf(e.statusCode.value())
-        return respond(status, ErrorResponse.of(commonErrorCodeOf(status)), e)
-    }
+    fun handleErrorResponseException(e: ErrorResponseException): ResponseEntity<ApiResponse<Unit>> =
+        HttpStatus.valueOf(e.statusCode.value()).let { respond(it, ErrorResponse.of(commonErrorCodeOf(it)), e) }
 
     @ExceptionHandler(Exception::class)
     fun handleException(e: Exception): ResponseEntity<ApiResponse<Unit>> =

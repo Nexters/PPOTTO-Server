@@ -44,9 +44,8 @@ class VertexAiGeminiClassifier(
                 photoCount = photos.size,
             ).toList()
 
-        val classifications = toClassifications(rawThemes, photoAliases)
-        ThemeClassificationValidator.validate(classifications, photos.map { it.photoId }.toSet())
-        return classifications
+        return toClassifications(rawThemes, photoAliases)
+            .also { ThemeClassificationValidator.validate(it, photos.map { photo -> photo.photoId }.toSet()) }
     }
 
     override fun regenerateSticker(
@@ -55,33 +54,26 @@ class VertexAiGeminiClassifier(
     ): StickerRegenerationTarget {
         val photoAliases = GeminiPhotoAliases.from(photos)
         val prompt = GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId))
-        val rawSticker =
-            generate<GeminiStickerResponse>(
-                pipeline = LlmPipeline.STICKER_REGENERATION,
-                parts = photos.toParts() + Part.fromText(prompt),
-                responseSchema = VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA,
-                timeoutMs = vertexAiProperties.classifyTimeoutMs,
-                photoCount = photos.size,
-            )
-
-        return toRegenerationTarget(rawSticker, photoAliases, photos.map { it.photoId }.toSet())
+        return generate<GeminiStickerResponse>(
+            pipeline = LlmPipeline.STICKER_REGENERATION,
+            parts = photos.toParts() + Part.fromText(prompt),
+            responseSchema = VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA,
+            timeoutMs = vertexAiProperties.classifyTimeoutMs,
+            photoCount = photos.size,
+        ).let { toRegenerationTarget(it, photoAliases, photos.map { photo -> photo.photoId }.toSet()) }
     }
 
     override fun verifyStickerSubject(
         photo: PhotoRef,
         targetSubject: String,
-    ): StickerSubjectVerification? {
-        val raw =
-            generate<GeminiSubjectVerificationResponse>(
-                pipeline = LlmPipeline.STICKER_SUBJECT_VERIFICATION,
-                parts = listOf(photo).toParts() + Part.fromText(GeminiPrompts.verifyStickerSubject(targetSubject)),
-                responseSchema = VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA,
-                timeoutMs = vertexAiProperties.verifyTimeoutMs,
-                photoCount = 1,
-            )
-
-        return toVerification(raw)
-    }
+    ): StickerSubjectVerification? =
+        generate<GeminiSubjectVerificationResponse>(
+            pipeline = LlmPipeline.STICKER_SUBJECT_VERIFICATION,
+            parts = listOf(photo).toParts() + Part.fromText(GeminiPrompts.verifyStickerSubject(targetSubject)),
+            responseSchema = VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA,
+            timeoutMs = vertexAiProperties.verifyTimeoutMs,
+            photoCount = 1,
+        ).let { toVerification(it) }
 
     private inline fun <reified T> generate(
         pipeline: LlmPipeline,
@@ -190,14 +182,10 @@ class VertexAiGeminiClassifier(
             )
         }
 
-        internal fun toVerification(raw: GeminiSubjectVerificationResponse): StickerSubjectVerification? {
-            val targetSubject = raw.targetSubject
-            if (!raw.subjectPresent || targetSubject.isNullOrBlank()) return null
-            return StickerSubjectVerification(
-                targetSubject = targetSubject,
-                mainColor = sanitizedMainColor(raw.mainColor, "verify"),
-            )
-        }
+        internal fun toVerification(raw: GeminiSubjectVerificationResponse): StickerSubjectVerification? =
+            raw.targetSubject
+                ?.takeIf { raw.subjectPresent && it.isNotBlank() }
+                ?.let { StickerSubjectVerification(targetSubject = it, mainColor = sanitizedMainColor(raw.mainColor, "verify")) }
 
         private fun validateRegeneration(
             sticker: GeminiStickerResponse,

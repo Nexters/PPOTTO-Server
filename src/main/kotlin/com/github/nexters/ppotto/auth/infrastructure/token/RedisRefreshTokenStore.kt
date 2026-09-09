@@ -32,14 +32,11 @@ class RedisRefreshTokenStore(
         )
     }
 
-    override fun findUserId(refreshToken: String): UserId? {
-        val storedUserId =
-            redisTemplate
-                .opsForValue()
-                .get(tokenKey(refreshToken.sha256Hex()))
-                ?: return null
-        return UserId(UUID.fromString(storedUserId))
-    }
+    override fun findUserId(refreshToken: String): UserId? =
+        redisTemplate
+            .opsForValue()
+            .get(tokenKey(refreshToken.sha256Hex()))
+            ?.let { UserId(UUID.fromString(it)) }
 
     override fun rotate(
         userId: UserId,

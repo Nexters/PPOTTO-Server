@@ -59,31 +59,29 @@ class UserService(
         email: String,
         name: String,
         encryptedToken: EncryptedProviderRefreshToken?,
-    ): UserRegistrationResult? {
-        val created =
-            userRepository.saveIfAbsent(
+    ): UserRegistrationResult? =
+        userRepository
+            .saveIfAbsent(
                 provider = command.provider,
                 providerUserId = command.providerUserId,
                 email = email,
                 name = name,
                 providerRefreshToken = encryptedToken,
-            ) ?: return null
-        return UserRegistrationResult(created, true)
-    }
+            )?.let { UserRegistrationResult(it, true) }
 
     private fun refresh(
         command: SocialUserCommand,
         encryptedToken: EncryptedProviderRefreshToken?,
-    ): UserRegistrationResult? {
-        val existing = userRepository.findBySocialAccount(command.provider, command.providerUserId) ?: return null
-        val refreshed =
-            userRepository.updateSocialProfile(
-                id = existing.id,
-                email = command.email,
-                providerRefreshToken = encryptedToken,
-            ) ?: return null
-        return UserRegistrationResult(refreshed, false)
-    }
+    ): UserRegistrationResult? =
+        userRepository
+            .findBySocialAccount(command.provider, command.providerUserId)
+            ?.let { existing ->
+                userRepository.updateSocialProfile(
+                    id = existing.id,
+                    email = command.email,
+                    providerRefreshToken = encryptedToken,
+                )
+            }?.let { UserRegistrationResult(it, false) }
 
     private fun revokeSocialAccount(user: User) {
         val providerRefreshToken = user.providerRefreshToken

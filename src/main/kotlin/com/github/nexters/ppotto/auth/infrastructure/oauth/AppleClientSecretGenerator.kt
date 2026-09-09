@@ -53,8 +53,8 @@ class AppleClientSecretGenerator(
                 .replace(BEGIN_PRIVATE_KEY, "")
                 .replace(END_PRIVATE_KEY, "")
                 .replace("\\s".toRegex(), "")
-        val spec = PKCS8EncodedKeySpec(Base64.getDecoder().decode(pem))
-        return KeyFactory.getInstance(EC).generatePrivate(spec) as ECPrivateKey
+        return PKCS8EncodedKeySpec(Base64.getDecoder().decode(pem))
+            .let { KeyFactory.getInstance(EC).generatePrivate(it) as ECPrivateKey }
     }
 
     private companion object {

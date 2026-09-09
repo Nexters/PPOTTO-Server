@@ -36,8 +36,10 @@ class AuthService(
     private val oauthClients = oauthClients.byProvider()
 
     fun login(command: LoginCommand): LoginResult {
-        val client = checkNotNull(oauthClients[command.provider]) { "OAuth provider client가 연결되지 않았습니다." }
-        val signup = signUp(client.authenticate(command))
+        val signup =
+            checkNotNull(oauthClients[command.provider]) { "OAuth provider client가 연결되지 않았습니다." }
+                .authenticate(command)
+                .let(::signUp)
         val tokenPair = tokenProvider.issue(signup.user.userId)
         refreshTokenStore.save(signup.user.userId, tokenPair.refreshToken)
         return LoginResult(tokenPair, signup.user.isNewUser, signup.pendingTerms)

@@ -94,15 +94,13 @@ private fun isSensitiveKey(name: String): Boolean {
     return SENSITIVE_KEY_FRAGMENTS.any(lowered::contains)
 }
 
-private fun isJson(contentType: String?): Boolean {
-    val type =
-        contentType
-            ?.substringBefore(CONTENT_TYPE_PARAMETER_SEPARATOR)
-            ?.trim()
-            ?.lowercase()
-            ?: return false
-    return type == APPLICATION_JSON || type.endsWith(JSON_SUFFIX)
-}
+private fun isJson(contentType: String?): Boolean =
+    contentType
+        ?.substringBefore(CONTENT_TYPE_PARAMETER_SEPARATOR)
+        ?.trim()
+        ?.lowercase()
+        ?.let { type -> type == APPLICATION_JSON || type.endsWith(JSON_SUFFIX) }
+        ?: false
 
 private fun charsetOf(characterEncoding: String?): Charset =
     characterEncoding

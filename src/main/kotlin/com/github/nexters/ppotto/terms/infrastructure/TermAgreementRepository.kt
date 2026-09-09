@@ -14,35 +14,35 @@ class TermAgreementRepository(
     fun findAgreedTermIds(
         userId: UserId,
         termIds: Collection<TermId>,
-    ): Set<TermId> {
-        if (termIds.isEmpty()) {
-            return emptySet()
-        }
-        return dslContext
-            .select(TERM_AGREEMENTS.TERM_ID)
-            .from(TERM_AGREEMENTS)
-            .where(TERM_AGREEMENTS.USER_ID.eq(userId))
-            .and(TERM_AGREEMENTS.TERM_ID.`in`(termIds))
-            .fetch(TERM_AGREEMENTS.TERM_ID)
-            .filterNotNull()
-            .toSet()
-    }
+    ): Set<TermId> =
+        termIds
+            .takeIf { it.isNotEmpty() }
+            ?.let { ids ->
+                dslContext
+                    .select(TERM_AGREEMENTS.TERM_ID)
+                    .from(TERM_AGREEMENTS)
+                    .where(TERM_AGREEMENTS.USER_ID.eq(userId))
+                    .and(TERM_AGREEMENTS.TERM_ID.`in`(ids))
+                    .fetch(TERM_AGREEMENTS.TERM_ID)
+                    .filterNotNull()
+                    .toSet()
+            } ?: emptySet()
 
     fun saveAll(
         userId: UserId,
         termIds: Collection<TermId>,
-    ): Int {
-        val distinctTermIds = termIds.distinct()
-        if (distinctTermIds.isEmpty()) {
-            return 0
-        }
-        return dslContext
-            .insertInto(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
-            .valuesOfRows(distinctTermIds.map { termId -> row(userId, termId) })
-            .onConflict(TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
-            .doNothing()
-            .execute()
-    }
+    ): Int =
+        termIds
+            .distinct()
+            .takeIf { it.isNotEmpty() }
+            ?.let { distinctTermIds ->
+                dslContext
+                    .insertInto(TERM_AGREEMENTS, TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
+                    .valuesOfRows(distinctTermIds.map { termId -> row(userId, termId) })
+                    .onConflict(TERM_AGREEMENTS.USER_ID, TERM_AGREEMENTS.TERM_ID)
+                    .doNothing()
+                    .execute()
+            } ?: 0
 
     fun deleteAllByUserId(userId: UserId): Int =
         dslContext

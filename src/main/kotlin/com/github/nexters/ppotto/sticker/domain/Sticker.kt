@@ -68,10 +68,7 @@ class Sticker(
     }
 
     fun rename(title: String) {
-        if (!isValidTitle(title)) {
-            throw InvalidInputException()
-        }
-        this.title = title
+        this.title = title.takeIf { isValidTitle(it) } ?: throw InvalidInputException()
     }
 
     fun markViewed(viewedAt: Instant) {

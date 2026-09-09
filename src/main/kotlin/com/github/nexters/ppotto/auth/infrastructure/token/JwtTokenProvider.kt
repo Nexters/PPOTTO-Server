@@ -89,14 +89,15 @@ class JwtTokenProvider(
             unauthorized(SUBJECT_INVALID, e)
         }
 
-    private fun randomRefreshToken(): String {
-        val bytes = ByteArray(REFRESH_TOKEN_BYTES)
-        random.nextBytes(bytes)
-        return Base64
-            .getUrlEncoder()
-            .withoutPadding()
-            .encodeToString(bytes)
-    }
+    private fun randomRefreshToken(): String =
+        ByteArray(REFRESH_TOKEN_BYTES)
+            .also(random::nextBytes)
+            .let {
+                Base64
+                    .getUrlEncoder()
+                    .withoutPadding()
+                    .encodeToString(it)
+            }
 
     private fun unauthorized(
         reason: String,

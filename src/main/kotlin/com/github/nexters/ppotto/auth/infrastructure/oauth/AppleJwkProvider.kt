@@ -54,12 +54,10 @@ internal class AppleJwkProvider(
 
     private fun AppleJwk.toPublicKey(): RSAPublicKey {
         val decoder = Base64.getUrlDecoder()
-        val spec =
-            RSAPublicKeySpec(
-                BigInteger(1, decoder.decode(modulus)),
-                BigInteger(1, decoder.decode(exponent)),
-            )
-        return KeyFactory.getInstance(RSA).generatePublic(spec) as RSAPublicKey
+        return RSAPublicKeySpec(
+            BigInteger(1, decoder.decode(modulus)),
+            BigInteger(1, decoder.decode(exponent)),
+        ).let { KeyFactory.getInstance(RSA).generatePublic(it) as RSAPublicKey }
     }
 
     private data class JwksCache(

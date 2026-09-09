@@ -26,14 +26,13 @@ class DrawingRepository(
     fun upsertAll(drawings: List<NewDrawing>): List<Drawing> {
         if (drawings.isEmpty()) return emptyList()
 
-        val upserted =
-            upsertQuery(drawings)
-                .where(DRAWINGS.BOARD_ID.eq(excluded(DRAWINGS.BOARD_ID)))
-                .returning()
-                .fetch()
-                .map { it.toDomain() }
-                .associateBy { it.id }
-        return drawings.map { upserted.getValue(it.id) }
+        return upsertQuery(drawings)
+            .where(DRAWINGS.BOARD_ID.eq(excluded(DRAWINGS.BOARD_ID)))
+            .returning()
+            .fetch()
+            .map { it.toDomain() }
+            .associateBy { it.id }
+            .let { upserted -> drawings.map { upserted.getValue(it.id) } }
     }
 
     private fun upsertQuery(drawings: List<NewDrawing>): InsertOnDuplicateSetMoreStep<DrawingsRecord> {
@@ -69,62 +68,66 @@ class DrawingRepository(
             .fetch()
             .map { it.toDomain() }
 
-    fun findBoardIdsByIds(ids: Collection<DrawingId>): Map<DrawingId, BoardId> {
-        if (ids.isEmpty()) return emptyMap()
-
-        return dslContext
-            .select(DRAWINGS.ID, DRAWINGS.BOARD_ID)
-            .from(DRAWINGS)
-            .where(DRAWINGS.ID.`in`(ids))
-            .fetch()
-            .associate { record -> record.value1()!! to record.value2()!! }
-    }
+    fun findBoardIdsByIds(ids: Collection<DrawingId>): Map<DrawingId, BoardId> =
+        ids
+            .takeIf { it.isNotEmpty() }
+            ?.let { drawingIds ->
+                dslContext
+                    .select(DRAWINGS.ID, DRAWINGS.BOARD_ID)
+                    .from(DRAWINGS)
+                    .where(DRAWINGS.ID.`in`(drawingIds))
+                    .fetch()
+                    .associate { record -> record.value1()!! to record.value2()!! }
+            } ?: emptyMap()
 
     fun findActiveIds(
         boardId: BoardId,
         ids: Collection<DrawingId>,
-    ): Set<DrawingId> {
-        if (ids.isEmpty()) return emptySet()
-
-        return dslContext
-            .select(DRAWINGS.ID)
-            .from(DRAWINGS)
-            .where(DRAWINGS.BOARD_ID.eq(boardId))
-            .and(DRAWINGS.ID.`in`(ids))
-            .and(DRAWINGS.DELETED_AT.isNull)
-            .mapNotNull { record -> record.value1() }
-            .toSet()
-    }
+    ): Set<DrawingId> =
+        ids
+            .takeIf { it.isNotEmpty() }
+            ?.let { drawingIds ->
+                dslContext
+                    .select(DRAWINGS.ID)
+                    .from(DRAWINGS)
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.ID.`in`(drawingIds))
+                    .and(DRAWINGS.DELETED_AT.isNull)
+                    .mapNotNull { record -> record.value1() }
+                    .toSet()
+            } ?: emptySet()
 
     fun softDeleteByIds(
         boardId: BoardId,
         ids: Collection<DrawingId>,
-    ): Int {
-        if (ids.isEmpty()) return 0
-
-        return dslContext
-            .update(DRAWINGS)
-            .set(DRAWINGS.DELETED_AT, Instant.now())
-            .where(DRAWINGS.BOARD_ID.eq(boardId))
-            .and(DRAWINGS.ID.`in`(ids))
-            .and(DRAWINGS.DELETED_AT.isNull)
-            .execute()
-    }
+    ): Int =
+        ids
+            .takeIf { it.isNotEmpty() }
+            ?.let { drawingIds ->
+                dslContext
+                    .update(DRAWINGS)
+                    .set(DRAWINGS.DELETED_AT, Instant.now())
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.ID.`in`(drawingIds))
+                    .and(DRAWINGS.DELETED_AT.isNull)
+                    .execute()
+            } ?: 0
 
     fun softDeleteByStickerIds(
         boardId: BoardId,
         stickerIds: Collection<StickerId>,
-    ): Int {
-        if (stickerIds.isEmpty()) return 0
-
-        return dslContext
-            .update(DRAWINGS)
-            .set(DRAWINGS.DELETED_AT, Instant.now())
-            .where(DRAWINGS.BOARD_ID.eq(boardId))
-            .and(DRAWINGS.STICKER_ID.`in`(stickerIds))
-            .and(DRAWINGS.DELETED_AT.isNull)
-            .execute()
-    }
+    ): Int =
+        stickerIds
+            .takeIf { it.isNotEmpty() }
+            ?.let { ids ->
+                dslContext
+                    .update(DRAWINGS)
+                    .set(DRAWINGS.DELETED_AT, Instant.now())
+                    .where(DRAWINGS.BOARD_ID.eq(boardId))
+                    .and(DRAWINGS.STICKER_ID.`in`(ids))
+                    .and(DRAWINGS.DELETED_AT.isNull)
+                    .execute()
+            } ?: 0
 
     fun softDeleteAllByBoardId(boardId: BoardId): Int =
         dslContext
@@ -134,15 +137,16 @@ class DrawingRepository(
             .and(DRAWINGS.DELETED_AT.isNull)
             .execute()
 
-    fun hardDeleteAllByBoardIds(boardIds: Collection<BoardId>): Int {
-        val ids = boardIds.toSet()
-        if (ids.isEmpty()) return 0
-
-        return dslContext
-            .deleteFrom(DRAWINGS)
-            .where(DRAWINGS.BOARD_ID.`in`(ids))
-            .execute()
-    }
+    fun hardDeleteAllByBoardIds(boardIds: Collection<BoardId>): Int =
+        boardIds
+            .toSet()
+            .takeIf { it.isNotEmpty() }
+            ?.let { ids ->
+                dslContext
+                    .deleteFrom(DRAWINGS)
+                    .where(DRAWINGS.BOARD_ID.`in`(ids))
+                    .execute()
+            } ?: 0
 
     private fun NewDrawing.toRecord(): DrawingsRecord =
         dslContext.newRecord(DRAWINGS).also { record ->

@@ -9,18 +9,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @Configuration
 class CorsConfig {
     @Bean
-    fun corsConfigurationSource(corsProperties: CorsProperties): CorsConfigurationSource {
-        val configuration =
-            CorsConfiguration().apply {
+    fun corsConfigurationSource(corsProperties: CorsProperties): CorsConfigurationSource =
+        CorsConfiguration()
+            .apply {
                 allowedOriginPatterns = corsProperties.allowedOrigins
                 allowedMethods = listOf("*")
                 allowedHeaders = listOf("*")
                 maxAge = MAX_AGE_SECONDS
+            }.let { configuration ->
+                UrlBasedCorsConfigurationSource().apply { registerCorsConfiguration("/**", configuration) }
             }
-        return UrlBasedCorsConfigurationSource().apply {
-            registerCorsConfiguration("/**", configuration)
-        }
-    }
 
     private companion object {
         const val MAX_AGE_SECONDS = 3600L

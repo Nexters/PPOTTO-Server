@@ -68,10 +68,11 @@ class AnalysisService(
         val analysis = findOwnedAnalysis(analysisId, userId)
         validateUploading(analysis.status)
 
-        val pendingPhotos = photoRepository.findPendingByAnalysisId(analysisId)
-        if (pendingPhotos.isEmpty()) return emptyList()
-
-        return issueUploadUrlItems(pendingPhotos)
+        return photoRepository
+            .findPendingByAnalysisId(analysisId)
+            .takeIf { it.isNotEmpty() }
+            ?.let(::issueUploadUrlItems)
+            ?: emptyList()
     }
 
     @Transactional
