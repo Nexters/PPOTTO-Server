@@ -1,12 +1,11 @@
 package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.board.application.BoardAccessService
-import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.lock.AdvisoryLock
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipPort
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipScope
 import com.github.nexters.ppotto.sticker.application.port.singlePort
-import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
@@ -22,12 +21,9 @@ class AnalysisResultSaveService(
     private val ownershipPorts: List<AnalysisPhotoOwnershipPort>,
 ) {
     @Transactional
+    @AdvisoryLock(namespace = "analysis-result", key = "#command.analysisId")
     fun save(command: SaveAnalysisResultCommand): SavedAnalysisResult {
-        if (command.stickers.size > Sticker.MAX_ANALYSIS_STICKER_COUNT) {
-            throw InvalidInputException(StickerErrorCode.ANALYSIS_STICKER_COUNT_EXCEEDED)
-        }
         validateOwnership(command)
-        stickerRepository.lockAnalysisResult(command.analysisId)
 
         val existingStickerIds = stickerRepository.findAllByAnalysisId(command.analysisId).map { it.id }
         if (existingStickerIds.isNotEmpty()) {

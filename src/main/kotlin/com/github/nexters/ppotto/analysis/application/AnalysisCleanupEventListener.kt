@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.analysis.application
 import com.github.nexters.ppotto.analysis.domain.AnalysisCanceledEvent
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.global.config.AsyncConfig
+import com.github.nexters.ppotto.global.logging.bestEffort
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
@@ -16,10 +17,8 @@ class AnalysisCleanupEventListener(
     @Async(AsyncConfig.ANALYSIS_CLEANUP_TASK_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handle(event: AnalysisCanceledEvent) {
-        runCatching {
+        bestEffort(log, "취소된 분석 사진 정리(analysisId=${event.analysisId})") {
             photoStorage.deleteAll(event.analysisId)
-        }.onFailure {
-            log.error("failed to clean up canceled analysis photos for analysisId={}", event.analysisId, it)
         }
     }
 

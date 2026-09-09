@@ -181,17 +181,4 @@ class StickerRepositoryTest(
                 }
             }
         }
-
-        Given("트랜잭션 없이 분석 결과 잠금을 시도할 때") {
-            val board = boardRepository.save(userRepository.saveTestUser().id)
-            val analysis = analysisRepository.save(board.userId, board.id)
-
-            When("advisory lock 을 요청하면") {
-                val exception = shouldThrow<IllegalStateException> { stickerRepository.lockAnalysisResult(analysis.id) }
-
-                Then("잠금이 조용히 무시되지 않고 즉시 실패한다") {
-                    exception.message shouldBe "분석 결과 잠금은 트랜잭션 안에서만 획득할 수 있습니다."
-                }
-            }
-        }
     })

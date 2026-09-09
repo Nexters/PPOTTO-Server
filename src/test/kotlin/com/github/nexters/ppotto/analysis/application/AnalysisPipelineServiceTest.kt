@@ -73,7 +73,7 @@ class AnalysisPipelineServiceTest :
             val progress = CopyOnWriteArrayList<Int>()
 
             When("파이프라인을 실행하면") {
-                val result = service.run(analysisId, photos) { progress += it }
+                val result = service.run(PipelineRun(analysisId), photos) { progress += it }
 
                 Then("테마 3개가 모두 서로가 스티커 생성 중인 것을 보고 병렬로 처리된다") {
                     themesThatSawEveryThemeInFlight.get() shouldBe photos.size
@@ -130,7 +130,7 @@ class AnalysisPipelineServiceTest :
                 )
 
             When("파이프라인을 실행하면") {
-                val result = service.run(analysisId, photos)
+                val result = service.run(PipelineRun(analysisId), photos)
 
                 Then("보정된 테마는 보정된 피사체로 스티커를 만들고 보정된 mainColor를 쓴다") {
                     val correctedTheme = result.themes.first { it.stickerSourcePhotoId == correctedPhoto.photoId }
@@ -177,7 +177,7 @@ class AnalysisPipelineServiceTest :
                 )
 
             When("파이프라인을 실행하면") {
-                val result = service.run(analysisId, listOf(photo))
+                val result = service.run(PipelineRun(analysisId), listOf(photo))
 
                 Then("분류 단계의 피사체와 색상으로 되돌아가 스티커 생성을 계속한다") {
                     val theme = result.themes.single()
@@ -207,7 +207,7 @@ class AnalysisPipelineServiceTest :
                 )
 
             When("파이프라인을 실행하면") {
-                val result = service.run(analysisId, photos)
+                val result = service.run(PipelineRun(analysisId), photos)
 
                 Then("Gemini 분류 요청에는 대표 사진만 전달한다") {
                     themeClassifier.classifiedPhotoIds shouldContainExactly listOf(representativePhoto.photoId)
@@ -241,7 +241,7 @@ class AnalysisPipelineServiceTest :
                 )
 
             When("파이프라인을 실행하면") {
-                val result = service.run(analysisId, photos)
+                val result = service.run(PipelineRun(analysisId), photos)
 
                 Then("실패한 테마만 스티커 이미지 키가 null로 남는다") {
                     result.themes.map { it.stickerImageKey } shouldContainExactly
@@ -282,7 +282,7 @@ class AnalysisPipelineServiceTest :
                 )
 
             When("파이프라인을 실행하면") {
-                val result = service.run(analysisId, listOf(photo))
+                val result = service.run(PipelineRun(analysisId), listOf(photo))
 
                 Then("분석을 실패시키지 않고 스티커 이미지 키만 null로 남긴다") {
                     result.themes
@@ -332,7 +332,7 @@ class AnalysisPipelineServiceTest :
                 )
 
             When("파이프라인을 실행하면") {
-                val result = service.run(analysisId, listOf(validPhoto))
+                val result = service.run(PipelineRun(analysisId), listOf(validPhoto))
 
                 Then("실패한 테마는 스티커 없이 남기고 성공한 테마 결과는 유지한다") {
                     result.themes.map { it.theme } shouldContainExactly listOf("정상 테마", "실패 테마")

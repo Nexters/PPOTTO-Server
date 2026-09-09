@@ -1,10 +1,12 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.logging.bestEffort
 import com.github.nexters.ppotto.notification.domain.PushNotificationRequestedEvent
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
 import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
@@ -31,8 +33,6 @@ class AnalysisPipelineEventListener(
     private val transactionTemplate: TransactionTemplate,
     transactionManager: PlatformTransactionManager,
 ) {
-    private val stepTimer = PipelineStepTimer()
-
     private val progressTransactionTemplate =
         TransactionTemplate(transactionManager).apply {
             propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
@@ -40,73 +40,52 @@ class AnalysisPipelineEventListener(
 
     @Async(AsyncConfig.ANALYSIS_PIPELINE_TASK_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Suppress("TooGenericExceptionCaught")
     fun handle(event: AnalysisStartRequestedEvent) {
-        val startedAt = System.nanoTime()
         val analysisId = event.analysisId
-        var failedStep: String? = null
-        val recordFailedStep: (String) -> Unit = { step -> failedStep = failedStep ?: step }
-
-        log.info("analysis pipeline listener started: analysisId={}, photoCount={}", analysisId, event.photos.size)
-        runCatching {
+        val pipelineRun = PipelineRun(analysisId)
+        try {
             val pipelineResult =
-                stepTimer.measuredStep(analysisId, "pipeline-run", recordFailedStep) {
-                    analysisPipelineService.run(
-                        analysisId = analysisId,
-                        photos = event.photos,
-                        onProgress = { progress -> updateProgressBestEffort(analysisId, progress) },
-                        onStepFailed = recordFailedStep,
-                    )
+                pipelineRun.measured(PIPELINE_RUN_STEP) {
+                    analysisPipelineService.run(pipelineRun, event.photos) { progress ->
+                        updateProgressBestEffort(analysisId, progress)
+                    }
                 }
-            log.info("analysis pipeline result for analysisId={}: {}", analysisId, pipelineResult)
-
             val analysis =
-                stepTimer.measuredStep(analysisId, "analysis-load", recordFailedStep) {
+                pipelineRun.measured(ANALYSIS_LOAD_STEP) {
                     analysisRepository.findById(analysisId) ?: error("분석을 찾을 수 없습니다: $analysisId")
                 }
-            val stickers = pipelineResult.toStickerResults(analysisId)
-            if (stickers.isEmpty()) {
-                log.warn("analysis pipeline produced no savable stickers: analysisId={}", analysisId)
-            }
-
-            stepTimer.measuredStep(analysisId, "analysis-result-save", recordFailedStep) {
-                transactionTemplate.executeWithoutResult {
-                    if (stickers.isNotEmpty()) {
-                        analysisResultSaveService.save(
-                            SaveAnalysisResultCommand(
-                                userId = analysis.userId,
-                                analysisId = analysisId,
-                                boardId = analysis.boardId,
-                                stickers = stickers,
-                            ),
-                        )
-                    }
-                    analysisRepository.markCompleted(analysisId, Instant.now())
-                }
-            }
+            val stickers = pipelineResult.themes.mapNotNull { it.toStickerResult() }
+            pipelineRun.measured(ANALYSIS_RESULT_SAVE_STEP) { saveResult(analysis, stickers) }
             notifyBestEffort(analysis.userId, analysisId, NOTIFICATION_COMPLETED)
-        }.onSuccess {
-            log.info("analysis pipeline listener completed: analysisId={}, elapsedMs={}", analysisId, elapsedMs(startedAt))
-        }.onFailure { failure ->
-            val step = failedStep ?: UNKNOWN_STEP
-            log.error(
-                "analysis pipeline listener failed: analysisId={}, step={}, elapsedMs={}",
-                analysisId,
-                step,
-                elapsedMs(startedAt),
-                failure,
-            )
-            analysisRepository.markFailed(analysisId, "[$step] ${failure.message ?: failure::class.simpleName ?: UNKNOWN_REASON}")
+        } catch (failure: Throwable) {
+            analysisRepository.markFailed(analysisId, pipelineRun.failureReason(failure))
             notifyFailureBestEffort(analysisId)
         }
     }
 
-    private fun notifyFailureBestEffort(analysisId: AnalysisId) {
-        val userId = analysisRepository.findById(analysisId)?.userId
-        if (userId == null) {
-            log.warn("push notification publish skipped: analysisId={}, error={}", analysisId, "분석을 찾을 수 없습니다.")
-            return
+    private fun saveResult(
+        analysis: Analysis,
+        stickers: List<AnalysisStickerResult>,
+    ) = transactionTemplate.executeWithoutResult {
+        if (stickers.isNotEmpty()) {
+            analysisResultSaveService.save(
+                SaveAnalysisResultCommand(
+                    userId = analysis.userId,
+                    analysisId = analysis.id,
+                    boardId = analysis.boardId,
+                    stickers = stickers,
+                ),
+            )
         }
-        notifyBestEffort(userId, analysisId, NOTIFICATION_FAILED)
+        analysisRepository.markCompleted(analysis.id, Instant.now())
+    }
+
+    private fun notifyFailureBestEffort(analysisId: AnalysisId) {
+        bestEffort(log, "분석 실패 푸시 알림 발행(analysisId=$analysisId)") {
+            val analysis = checkNotNull(analysisRepository.findById(analysisId)) { "분석을 찾을 수 없습니다: $analysisId" }
+            publishNotification(analysis.userId, analysisId, NOTIFICATION_FAILED)
+        }
     }
 
     private fun notifyBestEffort(
@@ -114,58 +93,47 @@ class AnalysisPipelineEventListener(
         analysisId: AnalysisId,
         notification: PipelineNotification,
     ) {
-        runCatching {
-            eventPublisher.publishEvent(
-                PushNotificationRequestedEvent(
-                    userId = userId,
-                    title = notification.title,
-                    body = notification.body,
-                    data = mapOf("analysisId" to analysisId.toString(), "type" to notification.type),
-                ),
-            )
-        }.onFailure {
-            log.warn("push notification publish skipped: analysisId={}, error={}", analysisId, it.message ?: it::class.simpleName)
+        bestEffort(log, "분석 푸시 알림 발행(analysisId=$analysisId, type=${notification.type})") {
+            publishNotification(userId, analysisId, notification)
         }
     }
+
+    private fun publishNotification(
+        userId: UserId,
+        analysisId: AnalysisId,
+        notification: PipelineNotification,
+    ) = eventPublisher.publishEvent(
+        PushNotificationRequestedEvent(
+            userId = userId,
+            title = notification.title,
+            body = notification.body,
+            data = mapOf("analysisId" to analysisId.toString(), "type" to notification.type),
+        ),
+    )
 
     private fun updateProgressBestEffort(
         analysisId: AnalysisId,
         progress: Int,
     ) {
-        runCatching {
+        bestEffort(log, "분석 진행률 갱신(analysisId=$analysisId, progress=$progress)") {
             progressTransactionTemplate.executeWithoutResult { analysisRepository.updateProgress(analysisId, progress) }
-        }.onFailure {
-            log.warn(
-                "analysis progress update skipped: analysisId={}, progress={}, error={}",
-                analysisId,
-                progress,
-                it.message ?: it::class.simpleName,
+        }
+    }
+
+    private fun ThemeAnalysisResult.toStickerResult(): AnalysisStickerResult? =
+        stickerImageKey?.let { imageKey ->
+            AnalysisStickerResult(
+                type = StickerType.IMAGE,
+                title = badge,
+                summary = text,
+                sourcePhotoId = stickerSourcePhotoId,
+                imageKey = imageKey,
+                textContent = null,
+                mainColor = stickerMainColor,
+                photoIds = categorizedPhotoIds,
+                comments = comments.map { RecapCommentCreation(content = it.content, posX = it.posX, posY = it.posY) },
             )
         }
-    }
-
-    private fun AnalysisPipelineResult.toStickerResults(analysisId: AnalysisId): List<AnalysisStickerResult> =
-        themes.mapNotNull { theme -> theme.toStickerResult(analysisId) }
-
-    private fun ThemeAnalysisResult.toStickerResult(analysisId: AnalysisId): AnalysisStickerResult? {
-        val imageKey = stickerImageKey
-        if (imageKey == null) {
-            log.warn("스티커 생성 실패: analysisId={}, theme={}", analysisId, theme)
-            return null
-        }
-
-        return AnalysisStickerResult(
-            type = StickerType.IMAGE,
-            title = badge,
-            summary = text,
-            sourcePhotoId = stickerSourcePhotoId,
-            imageKey = imageKey,
-            textContent = null,
-            mainColor = stickerMainColor,
-            photoIds = categorizedPhotoIds,
-            comments = comments.map { RecapCommentCreation(content = it.content, posX = it.posX, posY = it.posY) },
-        )
-    }
 
     private data class PipelineNotification(
         val title: String,
@@ -174,8 +142,9 @@ class AnalysisPipelineEventListener(
     )
 
     companion object {
-        private const val UNKNOWN_STEP = "unknown"
-        private const val UNKNOWN_REASON = "알 수 없는 오류"
+        private const val PIPELINE_RUN_STEP = "pipeline-run"
+        private const val ANALYSIS_LOAD_STEP = "analysis-load"
+        private const val ANALYSIS_RESULT_SAVE_STEP = "analysis-result-save"
 
         private val NOTIFICATION_COMPLETED =
             PipelineNotification("스티커 생성 완료", "요청하신 스티커가 모두 준비됐어요", "ANALYSIS_COMPLETED")

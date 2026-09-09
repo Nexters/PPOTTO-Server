@@ -3,6 +3,8 @@ package com.github.nexters.ppotto.analysis.infrastructure
 import com.github.nexters.ppotto.analysis.config.PixianProperties
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.domain.StickerBackgroundRemover
+import com.github.nexters.ppotto.global.retry.RetryPolicy
+import com.github.nexters.ppotto.global.retry.retrying
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.core.io.Resource
@@ -22,24 +24,18 @@ class PixianBackgroundRemover(
         mimeType: String,
     ): ByteArray {
         val resource = namedResource(imageBytes, mimeType)
-        val response = retryOnceOn5xx { callRemoveBackground(resource) }
+        val response =
+            retrying(
+                policy = RetryPolicy(maxAttempts = 2),
+                log = log,
+                description = "pixian 배경 제거",
+                retryOn = ::isRetryable,
+            ) { callRemoveBackground(resource) }.getOrThrow()
         val creditsCharged = response.headers.getFirst(CREDITS_CHARGED_HEADER)
         log.info("pixian background removal succeeded: creditsCharged={}, test={}", creditsCharged, pixianProperties.testMode)
 
         return response.body ?: throw RestClientException("pixian 배경 제거 응답 본문이 비어 있습니다.")
     }
-
-    private fun <T> retryOnceOn5xx(block: () -> T): T =
-        try {
-            block()
-        } catch (e: RestClientResponseException) {
-            if (!e.statusCode.is5xxServerError) throw e
-            log.warn("pixian background removal failed, retrying once: status={}, body={}", e.statusCode, e.getResponseBodyAsString())
-            block()
-        } catch (e: RestClientException) {
-            log.warn("pixian background removal request failed, retrying once", e)
-            block()
-        }
 
     private fun callRemoveBackground(resource: Resource): ResponseEntity<ByteArray> =
         pixianApi.removeBackground(
@@ -76,6 +72,14 @@ class PixianBackgroundRemover(
 
     companion object {
         private val log = LoggerFactory.getLogger(PixianBackgroundRemover::class.java)
+
+        private fun isRetryable(failure: Throwable): Boolean =
+            when (failure) {
+                is RestClientResponseException -> failure.statusCode.is5xxServerError
+                is RestClientException -> true
+                else -> false
+            }
+
         private const val OUTPUT_FORMAT_PNG = "png"
         private const val DEFAULT_EXTENSION = "png"
         private const val CREDITS_CHARGED_HEADER = "X-Credits-Charged"

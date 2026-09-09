@@ -9,9 +9,7 @@ import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.jooq.DSLContext
-import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
-import org.springframework.transaction.support.TransactionSynchronizationManager
 
 data class StickerDeletionTarget(
     val id: StickerId,
@@ -77,15 +75,6 @@ class StickerRepository(
             .orderBy(STICKERS.ID.asc())
             .fetch()
             .map { it.toDomain() }
-
-    fun lockAnalysisResult(analysisId: AnalysisId) {
-        check(TransactionSynchronizationManager.isActualTransactionActive()) {
-            "분석 결과 잠금은 트랜잭션 안에서만 획득할 수 있습니다."
-        }
-        dslContext
-            .select(DSL.field("pg_advisory_xact_lock(hashtextextended({0}::text, 0))", DSL.value(analysisId.value)))
-            .fetch()
-    }
 
     fun validateOwnedByBoard(
         boardId: BoardId,

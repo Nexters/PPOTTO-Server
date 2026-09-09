@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.domain
 
+import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
@@ -16,4 +17,8 @@ data class Analysis(
     val completedAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
-)
+) {
+    fun requireUploading() {
+        if (status != AnalysisStatus.UPLOADING) throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
+    }
+}

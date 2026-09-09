@@ -7,6 +7,7 @@ Request logging.
 | File | Description |
 |------|-------------|
 | `RequestLoggingFilter.kt` | `OncePerRequestFilter` at `@Order(Ordered.HIGHEST_PRECEDENCE)` so it runs before the security filter chain and 401/403 rejections are still logged with a request id. Puts the request id in MDC, logs `METHOD uri status elapsed headers` in a `finally`, and skips `/actuator/**` via `PublicPaths.isActuator` |
+| `BestEffort.kt` | `bestEffort(log, description) { }` — runs a side effect that must never fail the caller (event publish, progress write, storage cleanup), logs the failure at WARN with the description, returns `null` on failure |
 
 ## Rules
 

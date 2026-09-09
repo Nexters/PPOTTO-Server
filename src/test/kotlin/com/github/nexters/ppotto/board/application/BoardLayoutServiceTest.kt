@@ -270,13 +270,12 @@ class BoardLayoutServiceTest(
             val sticker = boardStickerItem()
             stickerPort.stickersByBoardId[board.id] = listOf(sticker)
 
-            fun rejectedUpdate(command: BoardLayoutUpdateCommand): InvalidInputException =
-                shouldThrow { boardLayoutService.update(board.id, user.id, command) }
+            fun rejectedCommand(build: () -> Any?): InvalidInputException = shouldThrow(build)
 
             When("같은 드로잉 아이디를 생성 목록에 두 번 넣으면") {
                 val drawingId = DrawingId(uuidV7())
                 val exception =
-                    rejectedUpdate(
+                    rejectedCommand {
                         BoardLayoutUpdateCommand(
                             stickers = emptyList(),
                             createdDrawings =
@@ -285,8 +284,8 @@ class BoardLayoutServiceTest(
                                     newDrawing(boardId = board.id, id = drawingId, color = "#FFD400"),
                                 ),
                             deletedDrawingIds = emptyList(),
-                        ),
-                    )
+                        )
+                    }
 
                 Then("COMMON-001로 거부하고 드로잉을 저장하지 않는다") {
                     exception.errorCode shouldBe CommonErrorCode.INVALID_INPUT
@@ -297,13 +296,13 @@ class BoardLayoutServiceTest(
 
             When("같은 스티커 아이디를 배치 목록에 두 번 넣으면") {
                 val exception =
-                    rejectedUpdate(
+                    rejectedCommand {
                         BoardLayoutUpdateCommand(
                             stickers = listOf(stickerLayout(sticker.id), stickerLayout(sticker.id)),
                             createdDrawings = emptyList(),
                             deletedDrawingIds = emptyList(),
-                        ),
-                    )
+                        )
+                    }
 
                 Then("COMMON-001로 거부하고 스티커 배치를 위임하지 않는다") {
                     exception.errorCode shouldBe CommonErrorCode.INVALID_INPUT
@@ -312,14 +311,7 @@ class BoardLayoutServiceTest(
             }
 
             When("스티커 좌표가 유한하지 않으면") {
-                val exception =
-                    rejectedUpdate(
-                        BoardLayoutUpdateCommand(
-                            stickers = listOf(stickerLayout(sticker.id).copy(posX = Double.NaN)),
-                            createdDrawings = emptyList(),
-                            deletedDrawingIds = emptyList(),
-                        ),
-                    )
+                val exception = rejectedCommand { stickerLayout(sticker.id).copy(posX = Double.NaN) }
 
                 Then("COMMON-001로 거부하고 스티커 배치를 위임하지 않는다") {
                     exception.errorCode shouldBe CommonErrorCode.INVALID_INPUT
@@ -328,14 +320,7 @@ class BoardLayoutServiceTest(
             }
 
             When("스티커 확대 비율이 0 이하이면") {
-                val exception =
-                    rejectedUpdate(
-                        BoardLayoutUpdateCommand(
-                            stickers = listOf(stickerLayout(sticker.id).copy(scale = 0.0)),
-                            createdDrawings = emptyList(),
-                            deletedDrawingIds = emptyList(),
-                        ),
-                    )
+                val exception = rejectedCommand { stickerLayout(sticker.id).copy(scale = 0.0) }
 
                 Then("COMMON-001로 거부하고 스티커 배치를 위임하지 않는다") {
                     exception.errorCode shouldBe CommonErrorCode.INVALID_INPUT

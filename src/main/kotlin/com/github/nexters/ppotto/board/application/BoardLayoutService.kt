@@ -1,35 +1,30 @@
 package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
-import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
-import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
-import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.lock.AdvisoryLock
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 class BoardLayoutService(
     private val boardAccessService: BoardAccessService,
-    private val boardRepository: BoardRepository,
     private val drawingRepository: DrawingRepository,
     private val stickerCommandPort: BoardStickerCommandPort,
 ) {
     @Transactional
+    @AdvisoryLock(namespace = BOARD_USER_LOCK_NAMESPACE, key = "#userId")
     fun update(
         boardId: BoardId,
         userId: UserId,
         command: BoardLayoutUpdateCommand,
     ) {
-        boardRepository.lockCommandsByUserId(userId)
         boardAccessService.getOwnedById(boardId, userId)
-        validateDrawingIds(command)
-        validateStickerLayouts(command.stickers)
         validateDrawingOwnership(boardId, command)
 
         if (!stickerCommandPort.ownsAll(boardId, referencedStickerIds(command))) {
@@ -47,35 +42,6 @@ class BoardLayoutService(
         command.stickers
             .map { it.id }
             .toSet() + command.createdDrawings.mapNotNull { it.stickerId }
-
-    private fun validateDrawingIds(command: BoardLayoutUpdateCommand) {
-        val createdIds =
-            command.createdDrawings
-                .map { it.id }
-                .toSet()
-        val deletedIds = command.deletedDrawingIds.toSet()
-        val invalid =
-            createdIds.size != command.createdDrawings.size ||
-                deletedIds.size != command.deletedDrawingIds.size ||
-                createdIds.any(deletedIds::contains)
-        if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
-    }
-
-    private fun validateStickerLayouts(stickers: List<BoardStickerLayoutCommand>) {
-        val uniqueIds = stickers.map { it.id }.toSet()
-        val invalid = uniqueIds.size != stickers.size || stickers.any { it.isInvalid() }
-        if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
-    }
-
-    private fun BoardStickerLayoutCommand.isInvalid(): Boolean =
-        !posX.isFinite() ||
-            !posY.isFinite() ||
-            !scale.isFinite() ||
-            scale <= 0 ||
-            !rotation.isFinite() ||
-            !badgeOffsetX.isFinite() ||
-            !badgeOffsetY.isFinite() ||
-            !badgeRotation.isFinite()
 
     private fun validateDrawingOwnership(
         boardId: BoardId,

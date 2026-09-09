@@ -20,6 +20,7 @@ extra["jooq.version"] =
 kotlin {
     jvmToolchain(25)
     compilerOptions {
+        javaParameters = true
         freeCompilerArgs.addAll("-Xjsr305=strict", "-Xannotation-default-target=param-property")
     }
     sourceSets.getByName("main") {
@@ -43,6 +44,7 @@ dependencies {
     implementation(libs.sentry.spring.boot4.starter)
     implementation(libs.spring.boot.restclient)
     implementation(libs.spring.boot.starter.actuator)
+    implementation(libs.spring.boot.starter.aspectj)
     implementation(libs.spring.boot.starter.data.redis)
     implementation(libs.spring.boot.starter.flyway)
     implementation(libs.spring.boot.starter.jooq)

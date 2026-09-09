@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.global.config.AsyncConfig
+import com.github.nexters.ppotto.global.logging.bestEffort
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.application.port.singlePort
 import com.github.nexters.ppotto.sticker.domain.StickerImageDeletionRequestedEvent
@@ -20,16 +21,11 @@ class StickerImageCleanupEventListener(
             return
         }
 
-        runCatching {
+        bestEffort(
+            log,
+            "스티커 이미지 삭제 stickerId=${event.stickerId} reason=${event.reason} imageKeys=${event.imageKeys}",
+        ) {
             stickerImageStoragePorts.singlePort("스티커 이미지 저장소").deleteAll(event.imageKeys)
-        }.onFailure {
-            log.warn(
-                "스티커 이미지 삭제 실패: stickerId={}, reason={}, imageKeys={}",
-                event.stickerId,
-                event.reason,
-                event.imageKeys,
-                it,
-            )
         }
     }
 

@@ -26,7 +26,7 @@ class AnalysisController(
         @Valid @RequestBody request: CreateAnalysisRequest,
     ): ApiResponse<CreateAnalysisResponse> =
         analysisService
-            .createAnalysis(userId, request.boardId, request.toServiceRequests())
+            .createAnalysis(userId, request.boardId, request.toCommand())
             .let(CreateAnalysisResponse::from)
             .let { ApiResponse.success(it) }
 
