@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
@@ -23,6 +24,7 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import org.jooq.DSLContext
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.PlatformTransactionManager
@@ -112,10 +114,19 @@ class AnalysisPipelineEventListenerTest(
             When("모든 테마의 스티커 생성이 실패해 저장할 스티커가 하나도 없으면") {
                 stickerGenerator.onGenerate = { throw IllegalStateException("배경 제거 실패") }
                 analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+                val analysis = analysisRepository.findById(analysisId)!!
 
-                Then("스티커 저장 없이 분석만 COMPLETED로 마감한다") {
+                Then("빈 보드를 성공이라 부르지 않고 FAILED로 마감한다") {
                     stickerRepository.findAllByAnalysisId(analysisId).shouldBeEmpty()
-                    analysisRepository.findById(analysisId)!!.status shouldBe AnalysisStatus.COMPLETED
+                    analysis.status shouldBe AnalysisStatus.FAILED
+                }
+
+                Then("실패 사유에 ANALYSIS-012 메시지가 남는다") {
+                    analysis.failedReason shouldContain AnalysisErrorCode.NO_STICKER_GENERATED.message
+                }
+
+                Then("실패 알림이 발송된다") {
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_FAILED") shouldHaveSize 1
                 }
             }
         }

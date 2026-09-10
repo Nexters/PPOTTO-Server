@@ -34,7 +34,7 @@ class PipelineRun(
     ): T {
         val startedAt = System.nanoTime()
         return runCatching(block).getOrElse {
-            log.warn(
+            log.error(
                 "analysis pipeline step degraded: analysisId={}, step={}, themeIndex={}, theme={}, elapsedMs={}",
                 analysisId,
                 step,
