@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
 import com.github.nexters.ppotto.analysis.domain.ThemeClassifier
 import com.github.nexters.ppotto.analysis.domain.ThemeComment
+import com.github.nexters.ppotto.analysis.domain.repairCrossThemeDuplicates
 import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.observability.LlmPipeline
@@ -44,7 +45,12 @@ class VertexAiGeminiClassifier(
                 photoCount = photos.size,
             ).toList()
 
-        return toClassifications(rawThemes, photoAliases)
+        val repair = toClassifications(rawThemes, photoAliases).repairCrossThemeDuplicates()
+        if (repair.removedPhotoCount > 0) {
+            log.warn("여러 테마에 중복 분류된 사진 {}장을 한 테마에만 남겼습니다.", repair.removedPhotoCount)
+        }
+
+        return repair.classifications
             .also { ThemeClassificationValidator.validate(it, photos.map { photo -> photo.photoId }.toSet()) }
     }
 

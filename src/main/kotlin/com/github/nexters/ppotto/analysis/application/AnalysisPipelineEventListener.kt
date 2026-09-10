@@ -1,9 +1,11 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.Analysis
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.global.config.AsyncConfig
+import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.logging.bestEffort
@@ -67,8 +69,12 @@ class AnalysisPipelineEventListener(
     private fun saveResult(
         analysis: Analysis,
         stickers: List<AnalysisStickerResult>,
-    ) = transactionTemplate.executeWithoutResult {
-        if (stickers.isNotEmpty()) {
+    ) {
+        if (stickers.isEmpty()) {
+            throw BusinessException(AnalysisErrorCode.NO_STICKER_GENERATED)
+        }
+
+        transactionTemplate.executeWithoutResult {
             analysisResultSaveService.save(
                 SaveAnalysisResultCommand(
                     userId = analysis.userId,
@@ -77,8 +83,8 @@ class AnalysisPipelineEventListener(
                     stickers = stickers,
                 ),
             )
+            analysisRepository.markCompleted(analysis.id, Instant.now())
         }
-        analysisRepository.markCompleted(analysis.id, Instant.now())
     }
 
     private fun notifyFailureBestEffort(analysisId: AnalysisId) {

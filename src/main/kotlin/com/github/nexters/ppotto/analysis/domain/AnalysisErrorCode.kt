@@ -18,4 +18,5 @@ enum class AnalysisErrorCode(
     INVALID_BURST_GROUP(HttpStatus.BAD_REQUEST, "ANALYSIS-009", "연사 그룹은 대표 사진을 정확히 1장 포함해야 합니다."),
     BURST_GROUP_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "ANALYSIS-010", "그룹당 사진은 최대 10장까지 가능합니다."),
     STICKER_BACKGROUND_REMOVAL_FAILED(HttpStatus.BAD_GATEWAY, "ANALYSIS-011", "스티커 배경 제거에 실패했습니다."),
+    NO_STICKER_GENERATED(HttpStatus.BAD_GATEWAY, "ANALYSIS-012", "스티커를 하나도 만들지 못했습니다."),
 }
