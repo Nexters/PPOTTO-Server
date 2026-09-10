@@ -17,6 +17,7 @@ Configuration and database migrations.
 | `config/springdoc.yml` | Swagger UI options plus `default-produces-media-type: application/json`, which keeps inferred response media types off `*/*` so generated clients see a single JSON content type |
 | `config/cors.yml` | `cors.allowed-origins` from `${CORS_ALLOWED_ORIGINS}`, applied as CORS origin patterns. 서버 스택(`compose.production.yaml`)은 `*`로 고정해 모든 origin을 허용한다 |
 | `config/security.yml` | Basic auth user for swagger from `${SWAGGER_USER}` / `${SWAGGER_PASSWORD}` |
+| `config/analysis.yml` | `analysis.stale-cleanup` 만료 배치의 enable 플래그, 타임아웃(분), 배치 크기, 크론을 `${ANALYSIS_STALE_CLEANUP_*}` 에서 바인딩 |
 | `config/user.yml` | User-account provider refresh-token encryption key from `${USER_PROVIDER_REFRESH_TOKEN_ENCRYPTION_KEY_BASE64}` plus the `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron from `${USER_WITHDRAWN_CLEANUP_*}` |
 | `config/gcs.yml` | `gcs.bucket` / `gcs.credentials-path` / `gcs.upload-signed-url-expiration-minutes` / `gcs.read-signed-url-expiration-minutes` / `gcs.timeout-millis` from `${GCS_*}` |
 | `config/vertexai.yml` | `vertexai.project` / `location` plus classify and verify timeout budgets from `${VERTEX_AI_*}` |

@@ -139,6 +139,7 @@ class AnalysisRepository(
 
     companion object {
         const val FAILED_REASON_CANCELED = "CANCELED"
+        const val FAILED_REASON_EXPIRED = "EXPIRED"
 
         private const val ANALYZING_STARTED_PROGRESS = 10
         private const val COMPLETED_PROGRESS = 100
