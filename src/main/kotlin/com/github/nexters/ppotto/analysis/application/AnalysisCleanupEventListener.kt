@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
-import com.github.nexters.ppotto.analysis.domain.AnalysisCanceledEvent
+import com.github.nexters.ppotto.analysis.domain.AnalysisDiscardedEvent
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.global.logging.bestEffort
@@ -16,8 +16,8 @@ class AnalysisCleanupEventListener(
 ) {
     @Async(AsyncConfig.ANALYSIS_CLEANUP_TASK_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    fun handle(event: AnalysisCanceledEvent) {
-        bestEffort(log, "취소된 분석 사진 정리(analysisId=${event.analysisId})") {
+    fun handle(event: AnalysisDiscardedEvent) {
+        bestEffort(log, "버려진 분석 사진 정리(analysisId=${event.analysisId})") {
             photoStorage.deleteAll(event.analysisId)
         }
     }

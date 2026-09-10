@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.Analysis
-import com.github.nexters.ppotto.analysis.domain.AnalysisCanceledEvent
+import com.github.nexters.ppotto.analysis.domain.AnalysisDiscardedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
@@ -81,7 +81,7 @@ class AnalysisService(
 
         analysisRepository.markFailed(analysisId, AnalysisRepository.FAILED_REASON_CANCELED)
         photoRepository.markAllFailedByAnalysisId(analysisId)
-        eventPublisher.publishEvent(AnalysisCanceledEvent(analysisId))
+        eventPublisher.publishEvent(AnalysisDiscardedEvent(analysisId))
     }
 
     private fun savePendingPhotos(
