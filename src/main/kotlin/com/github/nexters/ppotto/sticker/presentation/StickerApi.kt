@@ -6,6 +6,8 @@ import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapDetailResponse
+import com.github.nexters.ppotto.sticker.presentation.dto.ShareRecapRequest
+import com.github.nexters.ppotto.sticker.presentation.dto.ShareRecapResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateRecapCommentPositionsRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleResponse
@@ -30,8 +32,8 @@ interface StickerApi {
         operationId = "getRecap",
         summary = "리캡 상세 조회",
         description =
-            "스티커 정보와 분석 코멘트, 관련 사진을 반환함. 인증 없이 누구나 조회할 수 있고 isNew는 본인 스티커일 때만 true가 됨. " +
-                "빨간 점 제거는 /view를 따로 호출함",
+            "내 스티커 정보와 분석 코멘트, 관련 사진을 반환함. 본인 스티커만 조회할 수 있고 빨간 점 제거는 /view를 따로 호출함. " +
+                "현재 공유 중이면 share 객체가 함께 내려옴",
         parameters = [
             Parameter(
                 name = "stickerId",
@@ -47,9 +49,88 @@ interface StickerApi {
     )
     @StickerNotFoundApiResponse
     fun getRecap(
-        userId: UserId?,
+        userId: UserId,
         stickerId: StickerId,
     ): ApiResponse<RecapDetailResponse>
+
+    @GetMapping("/shared/{shareToken}")
+    @Operation(
+        operationId = "getSharedRecap",
+        summary = "공유된 리캡 조회",
+        description =
+            "공유 토큰으로 리캡을 조회함. 인증이 필요 없는 유일한 리캡 경로이며, 공유가 해제되었거나 없는 토큰은 STICKER-001로 응답함. " +
+                "공유할 때 사진을 포함하지 않았다면 photos는 항상 빈 배열이고 isNew는 항상 false임",
+        parameters = [
+            Parameter(
+                name = "shareToken",
+                description = "공유 링크 토큰",
+                example = "01983f30-0000-7000-8000-000000000000",
+            ),
+        ],
+    )
+    @OpenApiResponse(
+        responseCode = "200",
+        useReturnTypeSchema = true,
+        description = "공유된 리캡 상세",
+    )
+    @StickerNotFoundApiResponse
+    fun getSharedRecap(shareToken: String): ApiResponse<RecapDetailResponse>
+
+    @PostMapping("/{stickerId}/share")
+    @Operation(
+        operationId = "share",
+        summary = "리캡 공유 시작",
+        description =
+            "내 리캡의 공유 링크 토큰을 발급함. 이미 공유 중이면 같은 토큰을 유지한 채 사진 포함 여부만 갱신하므로 이미 보낸 링크가 끊기지 않음",
+        parameters = [
+            Parameter(
+                name = "stickerId",
+                description = "공유할 스티커 ID (uuidv7)",
+                example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+            ),
+        ],
+        requestBody =
+            OpenApiRequestBody(
+                required = true,
+                content = [
+                    Content(
+                        mediaType = "application/json",
+                        schema = Schema(implementation = ShareRecapRequest::class),
+                    ),
+                ],
+            ),
+    )
+    @OpenApiResponse(
+        responseCode = "200",
+        useReturnTypeSchema = true,
+        description = "발급된 공유 정보",
+    )
+    @StickerNotFoundApiResponse
+    fun share(
+        userId: UserId,
+        stickerId: StickerId,
+        request: ShareRecapRequest,
+    ): ApiResponse<ShareRecapResponse>
+
+    @DeleteMapping("/{stickerId}/share")
+    @Operation(
+        operationId = "unshare",
+        summary = "리캡 공유 해제",
+        description = "공유 토큰을 즉시 무효화함. 이미 공유 중이 아니어도 같은 결과를 보장함",
+        parameters = [
+            Parameter(
+                name = "stickerId",
+                description = "공유를 해제할 스티커 ID (uuidv7)",
+                example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+            ),
+        ],
+    )
+    @EmptySuccessApiResponse
+    @StickerNotFoundApiResponse
+    fun unshare(
+        userId: UserId,
+        stickerId: StickerId,
+    ): ApiResponse<Unit>
 
     @PatchMapping("/{stickerId}")
     @Operation(

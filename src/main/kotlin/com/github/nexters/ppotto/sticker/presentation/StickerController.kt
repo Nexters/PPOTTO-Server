@@ -4,11 +4,13 @@ import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
-import com.github.nexters.ppotto.global.security.CurrentUser
 import com.github.nexters.ppotto.sticker.application.RecapCommentCommandService
+import com.github.nexters.ppotto.sticker.application.RecapShareService
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapDetailResponse
+import com.github.nexters.ppotto.sticker.presentation.dto.ShareRecapRequest
+import com.github.nexters.ppotto.sticker.presentation.dto.ShareRecapResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateRecapCommentPositionsRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleResponse
@@ -22,15 +24,41 @@ class StickerController(
     private val stickerQueryService: StickerQueryService,
     private val stickerCommandService: StickerCommandService,
     private val recapCommentCommandService: RecapCommentCommandService,
+    private val recapShareService: RecapShareService,
 ) : StickerApi {
     override fun getRecap(
-        @CurrentUser userId: UserId?,
+        @AuthenticatedUser userId: UserId,
         @PathVariable stickerId: StickerId,
     ): ApiResponse<RecapDetailResponse> =
         stickerQueryService
             .getRecap(userId, stickerId)
             .let(RecapDetailResponse::from)
             .let { ApiResponse.success(it) }
+
+    override fun getSharedRecap(
+        @PathVariable shareToken: String,
+    ): ApiResponse<RecapDetailResponse> =
+        stickerQueryService
+            .getSharedRecap(shareToken)
+            .let(RecapDetailResponse::from)
+            .let { ApiResponse.success(it) }
+
+    override fun share(
+        @AuthenticatedUser userId: UserId,
+        @PathVariable stickerId: StickerId,
+        @Valid @RequestBody request: ShareRecapRequest,
+    ): ApiResponse<ShareRecapResponse> =
+        recapShareService
+            .share(userId, stickerId, request.includePhotos)
+            .let { ApiResponse.success(ShareRecapResponse(it, request.includePhotos)) }
+
+    override fun unshare(
+        @AuthenticatedUser userId: UserId,
+        @PathVariable stickerId: StickerId,
+    ): ApiResponse<Unit> =
+        recapShareService
+            .unshare(userId, stickerId)
+            .let { ApiResponse.success() }
 
     override fun updateTitle(
         @AuthenticatedUser userId: UserId,

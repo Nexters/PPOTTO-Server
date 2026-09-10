@@ -27,8 +27,13 @@ data class StickerItemResult(
 data class StickerRecapResult(
     val sticker: StickerItemResult,
     val summary: String,
+    val share: RecapShareResult?,
     val comments: List<RecapCommentResult>,
     val photos: List<RecapPhotoResult>,
+)
+
+data class RecapShareResult(
+    val photos: Boolean,
 )
 
 data class RecapCommentResult(

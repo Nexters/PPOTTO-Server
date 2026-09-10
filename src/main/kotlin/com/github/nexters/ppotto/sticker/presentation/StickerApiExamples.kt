@@ -13,6 +13,8 @@ import com.github.nexters.ppotto.sticker.presentation.dto.RecapCommentResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapDetailResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapGroupPhotoResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapPhotoResponse
+import com.github.nexters.ppotto.sticker.presentation.dto.ShareRecapRequest
+import com.github.nexters.ppotto.sticker.presentation.dto.ShareRecapResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.StickerResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateRecapCommentPositionsRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.UpdateStickerTitleRequest
@@ -81,6 +83,7 @@ private val RECAP_DETAIL_RESPONSE =
                             badgeRotation = 0.0,
                         ),
                     summary = "웃기고 귀여우면 일단 주워요",
+                    share = null,
                     comments = FLOATING_COMMENTS + KEYWORD_COMMENTS,
                     photos =
                         listOf(
@@ -110,6 +113,21 @@ private val RECAP_DETAIL_RESPONSE =
                         ),
                 ),
             ),
+    )
+
+private const val SHARE_LINK_ID = "01983f30-0000-7000-8000-000000000000"
+
+private val SHARE_RECAP_REQUEST =
+    ApiExample(
+        name = "사진까지 공유",
+        summary = "테마 속 사진을 공유 링크에 포함",
+        value = ShareRecapRequest(includePhotos = true),
+    )
+
+private val SHARE_RECAP_RESPONSE =
+    ApiExample(
+        name = "공유 시작됨",
+        value = ApiResponse.success(ShareRecapResponse(shareToken = SHARE_LINK_ID, includePhotos = true)),
     )
 
 private val UPDATE_STICKER_TITLE_REQUEST =
@@ -189,6 +207,31 @@ class StickerApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(RECAP_DETAIL_RESPONSE),
+                            "404" to STICKER_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            StickerApi::getSharedRecap to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to listOf(RECAP_DETAIL_RESPONSE),
+                            "404" to STICKER_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            StickerApi::share to
+                OperationExamples(
+                    request = listOf(SHARE_RECAP_REQUEST),
+                    responses =
+                        mapOf(
+                            "200" to listOf(SHARE_RECAP_RESPONSE),
+                            "404" to STICKER_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            StickerApi::unshare to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to ApiExamples.EMPTY_SUCCESS,
                             "404" to STICKER_NOT_FOUND_RESPONSE,
                         ),
                 ),
