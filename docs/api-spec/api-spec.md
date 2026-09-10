@@ -2955,7 +2955,8 @@ Request example:
 ```
 
 #### Notes
-- UPLOADING 상태에서만 취소할 수 있습니다. FAILED(failedReason=CANCELED)로 기록되어 점유가 풀립니다. start 이후에는 파이프라인이 끝까지 돕니다. 취소하지 못하고 죽은 분석은 서버 배치가 정리합니다 (failedReason=EXPIRED).
+- UPLOADING 상태에서만 취소할 수 있습니다. FAILED(failedReason=CANCELED)로 기록되어 점유가 풀립니다. start 이후에는 파이프라인이 끝까지 돕니다.
+- 취소하지 못하고 죽은 분석은 서버 배치가 정리합니다 (failedReason=EXPIRED). `updated_at` 이 `ANALYSIS_STALE_CLEANUP_TIMEOUT_MINUTES`(기본 60분)보다 오래된 UPLOADING/ANALYZING 분석을 크론이 FAILED로 마감하고, 그 사용자의 점유(ANALYSIS-002)가 풀립니다. 만료 시 푸시는 보내지 않습니다.
 
 ## 10. 공통 모델
 

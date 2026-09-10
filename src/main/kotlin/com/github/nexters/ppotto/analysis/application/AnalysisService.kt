@@ -1,7 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.Analysis
-import com.github.nexters.ppotto.analysis.domain.AnalysisCanceledEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
@@ -32,6 +31,7 @@ class AnalysisService(
     private val photoStorage: PhotoStorage,
     private val transactionTemplate: TransactionTemplate,
     private val eventPublisher: ApplicationEventPublisher,
+    private val analysisDiscardService: AnalysisDiscardService,
 ) {
     fun createAnalysis(
         userId: UserId,
@@ -79,9 +79,7 @@ class AnalysisService(
             throw ConflictException(AnalysisErrorCode.CANCEL_NOT_ALLOWED)
         }
 
-        analysisRepository.markFailed(analysisId, AnalysisRepository.FAILED_REASON_CANCELED)
-        photoRepository.markAllFailedByAnalysisId(analysisId)
-        eventPublisher.publishEvent(AnalysisCanceledEvent(analysisId))
+        analysisDiscardService.discard(analysisId, AnalysisRepository.FAILED_REASON_CANCELED)
     }
 
     private fun savePendingPhotos(
