@@ -36,8 +36,6 @@ class StaleAnalysisCleanupServiceTest(
                 .analysisId
         }
 
-        // analysis_set_updated_at 트리거가 모든 UPDATE 에서 updated_at 을 now() 로 덮어써
-        // 오래된 행을 만들려면 그 statement 동안만 트리거를 꺼야 한다
         fun ageTo(
             analysisId: AnalysisId,
             updatedAt: Instant,
