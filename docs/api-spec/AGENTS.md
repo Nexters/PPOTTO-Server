@@ -6,7 +6,7 @@ API contract source documents.
 
 | File | Description |
 |------|---------|
-| `api-spec.md` | Source API contract for spec-driven development, including terms, boards, stickers/recaps, analysis, auth, user, and report APIs. Board detail and board layout are documented per `X-API-Version` because only those two endpoints differ between v1 and v2. Analysis photo upload accepts JPEG/PNG/WEBP for new requests; HEIC is intentionally excluded from the public upload contract |
+| `api-spec.md` | Source API contract for spec-driven development, including terms, boards, stickers/recaps, analysis, auth, user, and report APIs. Board detail and board layout are documented per `X-API-Version` because only those two endpoints differ between v1 and v2. Analysis photo upload accepts JPEG/PNG/WEBP for new requests; HEIC is intentionally excluded from the public upload contract. 분석 상태의 선택적 `failedCode`, 부분 성공·전체 실패·취소 구분, 장기 미갱신 UPLOADING/ANALYZING 만료와 기존 실패 이력의 호환 정책을 포함함 |
 
 ## Rules
 

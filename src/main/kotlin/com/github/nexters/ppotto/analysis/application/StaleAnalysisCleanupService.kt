@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisCleanupRepository
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.global.identifier.AnalysisId
@@ -25,7 +26,13 @@ class StaleAnalysisCleanupService(
 
         return buildList {
             for (analysisId in analysisCleanupRepository.findStaleActiveIds(updatedBefore, batchSize)) {
-                if (analysisDiscardService.discard(analysisId, AnalysisRepository.FAILED_REASON_EXPIRED)) {
+                if (
+                    analysisDiscardService.discard(
+                        analysisId,
+                        AnalysisRepository.FAILED_REASON_EXPIRED,
+                        AnalysisErrorCode.INTERNAL_ERROR,
+                    )
+                ) {
                     add(analysisId)
                 }
             }

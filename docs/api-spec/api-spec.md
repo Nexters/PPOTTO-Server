@@ -2532,7 +2532,7 @@ Request example:
 #### Success Spec
 | Status | Description | Data |
 | --- | --- | --- |
-| 200 | 진행 중 분석 또는 null | `id`, `boardId`, `status`, `progress`, `failedReason`, `startedAt`, `completedAt` |
+| 200 | 진행 중 분석 또는 null | `id`, `boardId`, `status`, `progress`, `failedCode`, `failedReason`, `startedAt`, `completedAt` |
 
 200 example (분석 진행 중):
 ```json
@@ -2543,20 +2543,15 @@ Request example:
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "ANALYZING",
     "progress": 45,
-    "failedReason": null,
-    "startedAt": "2026-07-27T14:02:11+09:00",
-    "completedAt": null
-  },
-  "error": null
+    "startedAt": "2026-07-27T05:02:11Z"
+  }
 }
 ```
 
 200 example (진행 중 분석 없음):
 ```json
 {
-  "success": true,
-  "data": null,
-  "error": null
+  "success": true
 }
 ```
 
@@ -2580,7 +2575,8 @@ Request example:
 ```
 
 #### Notes
-- 앱을 껐다 켰을 때 진행 중인 분석이 있는지 확인합니다. 없으면 data가 null입니다. UPLOADING 상태면 `/reissue`로 URL을 재발급받아 이어서 올리거나, 취소하고 새로 시작합니다.
+- 앱을 껐다 켰을 때 진행 중인 분석이 있는지 확인합니다. 없으면 내부 값은 null이며 응답의 `data` 필드는 생략됩니다. UPLOADING 상태면 `/reissue`로 URL을 재발급받아 이어서 올리거나, 취소하고 새로 시작합니다.
+- 이 API는 UPLOADING/ANALYZING만 반환합니다. 이미 알고 있는 분석의 완료·실패·취소 결과는 `GET /analysis/{analysisId}`로 확인합니다. 진행 중에는 `failedCode`가 생략됩니다.
 
 ### POST /analysis/{analysisId}/reissue
 
@@ -2768,7 +2764,8 @@ Request example:
 ```
 
 #### Notes
-- 업로드를 모두 마친 뒤 호출합니다. 서버는 GCS 오브젝트 존재를 확인해 없는 사진은 FAILED로 제외하고 분석 파이프라인을 시작합니다.  파이프라인: 주제 분류 → 스티커 생성 → 리캡 코멘트 생성 → 보드 배치  배치 단계에서 새 스티커는 중앙에 크게, 기존 스티커는 외곽에 작게 재배치됩니다. 이후 진행 상황은 GET 폴링으로 확인합니다.
+- 업로드를 모두 마친 뒤 호출합니다. 서버는 GCS 오브젝트가 없거나 비어 있는 사진을 FAILED로 제외하고, 업로드된 사진으로 분석 파이프라인을 시작합니다. 유효한 업로드가 0장이면 `ANALYSIS-008`을 반환하고 UPLOADING 상태를 유지하므로 업로드 후 다시 시작할 수 있습니다.
+- 202는 분석 시작을 수락했다는 뜻이며, 스티커 생성 성공을 보장하지 않습니다. 이후 `GET /analysis/{analysisId}`의 `status`와 `failedCode`로 완료 또는 실패를 확인합니다.
 
 ### GET /analysis/{analysisId}
 
@@ -2787,7 +2784,7 @@ Request example:
 #### Success Spec
 | Status | Description | Data |
 | --- | --- | --- |
-| 200 | 분석 상태 | `id`, `boardId`, `status`, `progress`, `failedReason`, `startedAt`, `completedAt` |
+| 200 | 분석 상태 | `id`, `boardId`, `status`, `progress`, `failedCode`, `failedReason`, `startedAt`, `completedAt` |
 
 200 example (분석 중):
 ```json
@@ -2798,11 +2795,8 @@ Request example:
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "ANALYZING",
     "progress": 45,
-    "failedReason": null,
-    "startedAt": "2026-07-27T14:02:11+09:00",
-    "completedAt": null
-  },
-  "error": null
+    "startedAt": "2026-07-27T05:02:11Z"
+  }
 }
 ```
 
@@ -2815,11 +2809,9 @@ Request example:
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "COMPLETED",
     "progress": 100,
-    "failedReason": null,
-    "startedAt": "2026-07-27T14:02:11+09:00",
-    "completedAt": "2026-07-27T14:03:38+09:00"
-  },
-  "error": null
+    "startedAt": "2026-07-27T05:02:11Z",
+    "completedAt": "2026-07-27T05:03:38Z"
+  }
 }
 ```
 
@@ -2831,14 +2823,49 @@ Request example:
     "id": "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "FAILED",
-    "progress": 60,
-    "failedReason": "AI 분석 호출이 반복 실패했습니다.",
-    "startedAt": "2026-07-27T14:02:11+09:00",
-    "completedAt": null
-  },
-  "error": null
+    "progress": 34,
+    "failedCode": "ANALYSIS-018",
+    "failedReason": "[gemini-classification] 사진 분석에 실패했습니다.",
+    "startedAt": "2026-07-27T05:02:11Z"
+  }
 }
 ```
+
+200 example (사용자 취소):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+    "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+    "status": "FAILED",
+    "progress": 0,
+    "failedCode": "ANALYSIS-017",
+    "failedReason": "CANCELED"
+  }
+}
+```
+
+#### 분석 결과 실패 코드
+
+상태 조회 자체가 성공하면 분석 결과가 FAILED여도 HTTP 200과 `success: true`를 반환합니다. 아래 코드는 `error.code`가 아니라 `data.failedCode`에 담깁니다.
+
+| failedCode | enum 이름 | 발생 조건 |
+| --- | --- | --- |
+| ANALYSIS-007 | INVALID_GEMINI_RESPONSE | 분류 응답 JSON 해석·필수 값·사진 참조·테마 수 검증 실패 |
+| ANALYSIS-012 | NO_STICKER_GENERATED | 최종 결과 검증 시 저장할 스티커가 없음. 빈 결과 저장을 막는 방어적 검사 |
+| ANALYSIS-013 | NO_STICKER_SUBJECT | 모든 테마에서 스티커 대상이 없다고 명시적으로 확인됨 |
+| ANALYSIS-014 | STICKER_GENERATION_FAILED | 생성 성공이 0개이며 하나 이상의 테마에서 원본 읽기·배경 제거·이미지 처리·저장 등의 오류 발생 |
+| ANALYSIS-015 | RESULT_SAVE_FAILED | 생성 결과의 DB 저장 또는 완료 상태 전환 트랜잭션 실패 |
+| ANALYSIS-016 | INTERNAL_ERROR | 위 범주에 속하지 않는 처리 오류 또는 장기 미갱신 분석의 만료 |
+| ANALYSIS-017 | ANALYSIS_CANCELED | UPLOADING 상태에서 사용자가 취소함 |
+| ANALYSIS-018 | CLASSIFICATION_FAILED | 분류 서비스 호출 또는 타임아웃 실패 |
+
+- `failedCode`의 타입은 `AnalysisErrorCode`이며 JSON/OpenAPI enum 값은 상수 이름이 아닌 `ANALYSIS-001` 형태의 코드 문자열입니다. enum은 기존 요청 오류를 포함한 전체 코드 집합을 사용하며, 현재 예약 번호인 `ANALYSIS-006`은 포함하지 않습니다.
+- `ANALYSIS-011`은 기존 스티커 재생성 API의 배경 제거·이미지 처리·업로드 실패 코드로 유지됩니다. 초기 분석에서 모든 스티커 생성이 실패한 경우는 `ANALYSIS-014`입니다.
+- 기존 `ANALYSIS-012`(`NO_STICKER_GENERATED`)는 최종 결과 검증의 방어적 검사로 유지합니다. 정상 파이프라인에서는 원인별 `ANALYSIS-013` 또는 `ANALYSIS-014`가 먼저 적용됩니다.
+- 진행 중·완료 상태 또는 실패 코드 도입 이전 이력은 `failedCode`가 null일 수 있습니다. null 필드는 JSON에서 생략됩니다. `FAILED`인데 `failedCode`가 없으면 클라이언트는 일반 실패 화면을 표시해야 하며, `failedReason` 문구를 파싱해 원인을 추정하지 않습니다.
+- `failedReason`은 진단용 상세 사유입니다. 화면 문구와 복구 동작은 `status`와 `failedCode`를 기준으로 정하고, `ANALYSIS-017`은 생성 오류와 구분합니다.
 
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
@@ -2875,9 +2902,12 @@ Request example:
 ```
 
 #### Notes
-- 로딩 화면에서 2~3초 간격으로 폴링합니다. 단계 문구는 클라이언트가 progress 구간으로 매핑합니다. COMPLETED가 되면 보드를 다시 조회합니다.
-- **`COMPLETED`는 스티커가 최소 1개 있다는 뜻입니다.** 모든 테마의 스티커 생성이 실패하면 예전에는 스티커 0개인 채로 `COMPLETED`가 됐지만, 이제 `FAILED`로 마감하고 `failedReason`에 `스티커를 하나도 만들지 못했습니다.`(ANALYSIS-012)를 남깁니다. 빈 보드를 성공이라고 알리지 않기 위한 변경입니다.
-- `failedReason`은 내부 오류 메시지가 그대로 담기므로 화면에 그대로 노출하지 마세요. 클라이언트는 실패 종류별 고정 문구를 씁니다.
+- 로딩 화면에서 2~3초 간격으로 폴링합니다. 단계 문구는 클라이언트가 progress 구간으로 매핑합니다. 스티커가 1개 이상 생성되면 성공한 결과만 저장하고 COMPLETED로 전환합니다. 일부 테마의 실패는 전체 실패로 처리하지 않으며, COMPLETED가 되면 보드를 다시 조회합니다.
+- 성공한 스티커가 0개이면 FAILED로 전환합니다. 모든 테마가 명시적 대상 없음이면 `ANALYSIS-013`, 생성 오류가 섞여 있으면 `ANALYSIS-014`입니다. 대상 검증 호출 실패·타임아웃은 최초 분류 결과를 사용해 생성을 계속하며, 명시적 대상 없음과 구분합니다.
+- 스티커·리캡 저장과 COMPLETED 전환은 한 트랜잭션입니다. 실패하면 결과 저장을 롤백하며, 이미 종료된 분석에 뒤늦게 도착한 결과는 저장하거나 완료 알림을 보내지 않습니다.
+- 서버 만료 배치는 `updated_at`이 설정된 타임아웃(기본 60분)보다 오래된 UPLOADING/ANALYZING 분석을 `FAILED`, `failedCode=ANALYSIS-016`, `failedReason=EXPIRED`로 전환합니다. 기본 실행 간격은 10분이며, 사진을 실패 처리하고 업로드 오브젝트를 비동기로 정리합니다. 만료 시 푸시는 보내지 않습니다.
+- 새 파이프라인 실패의 `failedReason`은 단계와 정의된 오류 설명만 기록합니다. 과거 이력에는 내부 메시지가 있을 수 있으므로 화면에 그대로 노출하지 말고 `failedCode`별 고정 문구를 사용합니다.
+- 상태 조회의 네트워크 오류나 HTTP 오류는 분석 처리 실패를 뜻하지 않습니다. 기존 분석 ID로 상태를 다시 확인하며, `ANALYSIS-002` 발생 시에는 `/analysis/active`, `ANALYSIS-003` 발생 시에는 해당 ID의 상태 조회로 복구합니다.
 
 ### DELETE /analysis/{analysisId}
 
@@ -2901,9 +2931,7 @@ Request example:
 200 example:
 ```json
 {
-  "success": true,
-  "data": null,
-  "error": null
+  "success": true
 }
 ```
 
@@ -2957,8 +2985,9 @@ Request example:
 ```
 
 #### Notes
-- UPLOADING 상태에서만 취소할 수 있습니다. FAILED(failedReason=CANCELED)로 기록되어 점유가 풀립니다. start 이후에는 파이프라인이 끝까지 돕니다.
-- 취소하지 못하고 죽은 분석은 서버 배치가 정리합니다 (failedReason=EXPIRED). `updated_at` 이 `ANALYSIS_STALE_CLEANUP_TIMEOUT_MINUTES`(기본 60분)보다 오래된 UPLOADING/ANALYZING 분석을 크론이 FAILED로 마감하고, 그 사용자의 점유(ANALYSIS-002)가 풀립니다. 만료 시 푸시는 보내지 않습니다.
+- UPLOADING 상태에서만 취소할 수 있습니다. `FAILED`, `failedCode=ANALYSIS-017`, `failedReason=CANCELED`로 기록되어 진행 중 분석 점유가 풀립니다. 취소 응답 자체는 HTTP 200이며 취소 결과 코드는 이후 상태 조회에서 확인할 수 있습니다.
+- start 이후에는 취소할 수 없고 `ANALYSIS-004`를 반환합니다.
+- 장기 미갱신 분석은 서버 배치가 정리합니다. `updated_at`이 `ANALYSIS_STALE_CLEANUP_TIMEOUT_MINUTES`(기본 60분)보다 오래된 UPLOADING/ANALYZING 분석을 `FAILED`, `failedCode=ANALYSIS-016`, `failedReason=EXPIRED`로 마감하여 점유를 해제합니다. 만료 시 푸시는 보내지 않습니다.
 
 ## 10. 공통 모델
 
@@ -3163,7 +3192,8 @@ v1에는 텍스트가 없다. 텍스트 드로잉은 v1 응답에서 제외된�
 | boardId | Y | `string` | - | 결과 스티커가 붙을 보드 |
 | status | Y | `string` | UPLOADING, ANALYZING, COMPLETED, FAILED | UPLOADING 업로드 중(생성 직후부터) / ANALYZING 분석·생성·배치 중 / COMPLETED 완료 / FAILED 실패·취소·만료 |
 | progress | Y | `integer` | - | 0~100 |
-| failedReason | N | `string \| null` | - | - |
+| failedCode | N | `string \| null` | ANALYSIS-001~018 (006 제외) | 실패 결과 구분 코드. null이면 생략하며, 코드 도입 이전 FAILED 이력에도 없을 수 있음 |
+| failedReason | N | `string \| null` | - | 진단용 상세 사유. 화면 분기에는 failedCode를 사용하며 null이면 생략 |
 | startedAt | N | `string \| null` | - | start 호출로 분석이 시작된 시각 |
 | completedAt | N | `string \| null` | - | - |
 

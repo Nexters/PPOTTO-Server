@@ -28,7 +28,7 @@ Enum analysis_status {
   UPLOADING  [note: '세션 생성 = URL 발급이라 이게 시작 상태']
   ANALYZING
   COMPLETED
-  FAILED     [note: '실패/취소/만료. failed_reason 에 CANCELED, EXPIRED 등 기록']
+  FAILED     [note: '처리 실패/사용자 취소/만료. failed_code로 구분']
 }
 
 Enum photo_upload_status {
@@ -176,6 +176,7 @@ Table analysis {
   board_id      uuid           [not null, note: '분석 결과 스티커가 붙을 보드']
   status        analysis_status [not null, default: 'UPLOADING']
   progress      int            [not null, default: 0, note: '0~100. 로딩 화면 진행률']
+  failed_code   varchar(20)    [null, note: 'AnalysisErrorCode의 코드 문자열. 도입 이전 실패 이력은 NULL 가능']
   failed_reason text           [null]
   started_at    timestamptz    [null]
   completed_at  timestamptz    [null]
@@ -197,13 +198,24 @@ Table analysis {
   동시 분석은 보드와 무관하게 유저당 1개다. uk_analysis_active 로 강제한다.
 
   로딩 화면 문구는 클라가 만들고 서버는 관여하지 않는다.
-  서버가 로딩 화면에 제공하는 것은 status 와 progress 뿐이다.
+  서버는 status, progress, failed_code, failed_reason 을 제공한다.
+  failed_code 는 enum 이름이 아닌 ANALYSIS-007 등의 코드 문자열이며
+  값이 없는 기존 실패 행은 NULL 을 유지한다.
 
-  취소와 만료 정리는 status=FAILED 로 두고 failed_reason 에
-  CANCELED / EXPIRED 를 기록한다.
-  만료 배치는 updated_at 이 설정된 타임아웃보다 오래된 UPLOADING/ANALYZING 행을 EXPIRED 로
-  마감한다. uk_analysis_active 때문에 멈춘 행 하나가 그 사용자의 새 분석을 영구히 막으므로,
-  이 배치가 없으면 파이프라인이 죽은 사용자는 서비스를 다시 쓸 수 없다.
+  성공한 스티커가 1개 이상이면 성공 결과만 저장하고 COMPLETED 로 전환한다.
+  스티커·리캡 저장과 COMPLETED 전환은 같은 트랜잭션으로 처리한다.
+  성공이 0개면 FAILED 이며, 전부 명시적 대상 없음은 ANALYSIS-013,
+  생성 오류가 하나라도 있으면 ANALYSIS-014 이다.
+  분류 호출 실패는 ANALYSIS-018, 응답 검증 실패는 ANALYSIS-007,
+  결과 저장 실패는 ANALYSIS-015, 나머지 처리 오류는 ANALYSIS-016 이다.
+
+  UPLOADING 취소는 FAILED / ANALYSIS-017 / CANCELED 로 기록한다.
+  만료 배치는 updated_at 이 설정된 타임아웃(기본 60분)보다 오래된
+  UPLOADING/ANALYZING 을 FAILED / ANALYSIS-016 / EXPIRED 로 전환한다.
+  기본 10분 간격으로 실행하며 취소와 같은 사진 실패 처리·오브젝트 정리를 사용한다.
+  만료 시 푸시는 보내지 않는다. 종료된 행은 uk_analysis_active 점유에서 제외되어
+  사용자가 새 분석을 생성할 수 있다.
+  이미 종료된 분석에는 뒤늦게 완료된 작업이 결과를 저장할 수 없다.
   '''
 
   indexes {

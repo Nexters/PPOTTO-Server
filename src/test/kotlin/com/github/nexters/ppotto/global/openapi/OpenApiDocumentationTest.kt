@@ -1,6 +1,8 @@
 package com.github.nexters.ppotto.global.openapi
 
 import com.github.nexters.ppotto.support.IntegrationTest
+import io.kotest.matchers.shouldBe
+import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.hasItems
 import org.hamcrest.Matchers.hasKey
@@ -11,10 +13,12 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import tools.jackson.databind.ObjectMapper
 
 @AutoConfigureMockMvc
 class OpenApiDocumentationTest(
     mockMvc: MockMvc,
+    objectMapper: ObjectMapper,
 ) : IntegrationTest({
         Given("애플리케이션이 OpenAPI 문서를 노출할 때") {
             When("버전 그룹 없는 문서를 조회하면") {
@@ -331,6 +335,50 @@ class OpenApiDocumentationTest(
                                     "['value']['photos'][1]['items'][1]['isRepresentative']",
                             ).value(false),
                         )
+                }
+
+                Then("분석 실패 코드를 선택 가능한 nullable 문자열 enum으로 제공한다") {
+                    val schemaPath = "$['components']['schemas']['AnalysisStatusResponse']"
+                    result
+                        .andExpect(
+                            jsonPath("$schemaPath['properties']['failedCode']['enum']")
+                                .value(
+                                    containsInAnyOrder(
+                                        "ANALYSIS-001",
+                                        "ANALYSIS-002",
+                                        "ANALYSIS-003",
+                                        "ANALYSIS-004",
+                                        "ANALYSIS-005",
+                                        "ANALYSIS-007",
+                                        "ANALYSIS-008",
+                                        "ANALYSIS-009",
+                                        "ANALYSIS-010",
+                                        "ANALYSIS-011",
+                                        "ANALYSIS-012",
+                                        "ANALYSIS-013",
+                                        "ANALYSIS-014",
+                                        "ANALYSIS-015",
+                                        "ANALYSIS-016",
+                                        "ANALYSIS-017",
+                                        "ANALYSIS-018",
+                                    ),
+                                ),
+                        ).andExpect(jsonPath("$schemaPath['required']").value(not(hasItem("failedCode"))))
+
+                    val schema =
+                        objectMapper
+                            .readTree(
+                                result
+                                    .andReturn()
+                                    .response.contentAsString,
+                            ).path("components")
+                            .path("schemas")
+                            .path("AnalysisStatusResponse")
+                            .path("properties")
+                            .path("failedCode")
+                    val type = schema.path("type")
+                    (if (type.isArray) type.any { it.asString() == "string" } else type.asString() == "string") shouldBe true
+                    (schema.path("nullable").asBoolean(false) || (type.isArray && type.any { it.asString() == "null" })) shouldBe true
                 }
 
                 Then("nullable 필드는 required에 넣지 않는다") {

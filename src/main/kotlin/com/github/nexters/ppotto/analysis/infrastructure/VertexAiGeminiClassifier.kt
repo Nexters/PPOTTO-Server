@@ -37,7 +37,7 @@ class VertexAiGeminiClassifier(
     override fun classifyAndRecap(photos: List<PhotoRef>): List<ThemeClassification> {
         val photoAliases = GeminiPhotoAliases.from(photos)
         val rawThemes =
-            generate<Array<GeminiThemeResponse>>(
+            generate<Array<GeminiThemeResponse?>>(
                 pipeline = LlmPipeline.PHOTO_CLASSIFICATION,
                 parts = photos.toParts() + Part.fromText(GeminiPrompts.themeClassification(photoAliases.aliases)),
                 responseSchema = VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA,
@@ -97,13 +97,22 @@ class VertexAiGeminiClassifier(
                 .httpOptions(buildHttpOptions(timeoutMs))
                 .build()
         val response =
-            LlmTracer.trace(pipeline, MODEL, attributes = mapOf(ATTR_PHOTO_COUNT to photoCount.toString())) { span ->
-                span.recordRequest(content, config)
-                genAiClient.models
-                    .generateContent(MODEL, content, config)
-                    .also { span.recordResponse(it) }
+            runCatching {
+                LlmTracer.trace(pipeline, MODEL, attributes = mapOf(ATTR_PHOTO_COUNT to photoCount.toString())) { span ->
+                    span.recordRequest(content, config)
+                    genAiClient.models
+                        .generateContent(MODEL, content, config)
+                        .also { span.recordResponse(it) }
+                }
+            }.getOrElse {
+                throw if (pipeline == LlmPipeline.PHOTO_CLASSIFICATION) {
+                    BusinessException(AnalysisErrorCode.CLASSIFICATION_FAILED, cause = it)
+                } else {
+                    it
+                }
             }
-        return objectMapper.readValue(response.text(), T::class.java)
+        return runCatching { checkNotNull(objectMapper.readValue(response.text(), T::class.java)) }
+            .getOrElse { throw BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE, cause = it) }
     }
 
     private fun List<PhotoRef>.toParts(): List<Part> = map { Part.fromUri(it.sourceUri, it.mimeType) }
@@ -162,11 +171,12 @@ class VertexAiGeminiClassifier(
         private fun stripHashtagPrefix(text: String): String = text.trimStart('#').trim()
 
         internal fun toClassifications(
-            rawThemes: List<GeminiThemeResponse>,
+            rawThemes: List<GeminiThemeResponse?>,
             photoAliases: GeminiPhotoAliases,
         ): List<ThemeClassification> =
             rawThemes.mapIndexedNotNull { index, theme ->
-                theme.toDomainOrNull(index, photoAliases)
+                val validTheme = theme ?: throw BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE)
+                validTheme.toDomainOrNull(index, photoAliases)
             }
 
         internal fun toRegenerationTarget(
@@ -188,10 +198,14 @@ class VertexAiGeminiClassifier(
             )
         }
 
-        internal fun toVerification(raw: GeminiSubjectVerificationResponse): StickerSubjectVerification? =
-            raw.targetSubject
-                ?.takeIf { raw.subjectPresent && it.isNotBlank() }
-                ?.let { StickerSubjectVerification(targetSubject = it, mainColor = sanitizedMainColor(raw.mainColor, "verify")) }
+        internal fun toVerification(raw: GeminiSubjectVerificationResponse): StickerSubjectVerification? {
+            if (raw.subjectPresent == false) return null
+            val targetSubject = raw.targetSubject
+            if (raw.subjectPresent != true || targetSubject.isNullOrBlank()) {
+                throw BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE)
+            }
+            return StickerSubjectVerification(targetSubject = targetSubject, mainColor = sanitizedMainColor(raw.mainColor, "verify"))
+        }
 
         private fun validateRegeneration(
             sticker: GeminiStickerResponse,
@@ -306,7 +320,7 @@ internal data class GeminiStickerResponse(
 )
 
 internal data class GeminiSubjectVerificationResponse(
-    val subjectPresent: Boolean,
+    val subjectPresent: Boolean?,
     val targetSubject: String?,
     val mainColor: String?,
 )

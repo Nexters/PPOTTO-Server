@@ -7,7 +7,7 @@ ERD and database design source documents.
 | File | Description |
 |------|---------|
 | `README.md` | ERD document usage and maintenance guide |
-| `schema.dbml` | Source DBML schema for the ppotto database design, including analysis status, active-analysis index notes, and the drawing type/shape check constraints that DBML cannot express |
+| `schema.dbml` | Source DBML schema for the ppotto database design, including analysis status, active-analysis index notes, and the drawing type/shape check constraints that DBML cannot express. 분석 실패 코드 `failed_code`의 nullable 저장, 결과 저장과 완료의 원자성, 취소 및 updated_at 기준 만료 상태 전이를 포함함 |
 
 ## Rules
 

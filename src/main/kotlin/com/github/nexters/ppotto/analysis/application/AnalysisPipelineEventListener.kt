@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.analysis.application
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
+import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.global.error.BusinessException
@@ -57,24 +58,32 @@ class AnalysisPipelineEventListener(
                 pipelineRun.measured(ANALYSIS_LOAD_STEP) {
                     analysisRepository.findById(analysisId) ?: error("분석을 찾을 수 없습니다: $analysisId")
                 }
-            val stickers = pipelineResult.themes.mapNotNull { it.toStickerResult() }
-            pipelineRun.measured(ANALYSIS_RESULT_SAVE_STEP) { saveResult(analysis, stickers) }
-            notifyBestEffort(analysis.userId, analysisId, NOTIFICATION_COMPLETED)
-        } catch (failure: Throwable) {
-            analysisRepository.markFailed(analysisId, pipelineRun.failureReason(failure))
-            notifyFailureBestEffort(analysisId)
+            val stickers =
+                pipelineRun.measured(ANALYSIS_RESULT_VALIDATE_STEP) {
+                    pipelineResult.themes.mapNotNull { it.toStickerResult() }.also {
+                        if (it.isEmpty()) throw BusinessException(AnalysisErrorCode.NO_STICKER_GENERATED)
+                    }
+                }
+            val completed =
+                pipelineRun.measured(ANALYSIS_RESULT_SAVE_STEP, AnalysisErrorCode.RESULT_SAVE_FAILED) {
+                    saveResult(analysis, stickers)
+                }
+            if (completed) notifyBestEffort(analysis.userId, analysisId, NOTIFICATION_COMPLETED)
+        } catch (_: Throwable) {
+            if (analysisRepository.markFailed(analysisId, pipelineRun.failureReason(), pipelineRun.failedCode) > 0) {
+                notifyFailureBestEffort(analysisId)
+            }
         }
     }
 
     private fun saveResult(
         analysis: Analysis,
         stickers: List<AnalysisStickerResult>,
-    ) {
-        if (stickers.isEmpty()) {
-            throw BusinessException(AnalysisErrorCode.NO_STICKER_GENERATED)
-        }
+    ): Boolean =
+        transactionTemplate.execute {
+            val currentAnalysis = checkNotNull(analysisRepository.findByIdForUpdate(analysis.id))
+            if (currentAnalysis.status != AnalysisStatus.ANALYZING) return@execute false
 
-        transactionTemplate.executeWithoutResult {
             analysisResultSaveService.save(
                 SaveAnalysisResultCommand(
                     userId = analysis.userId,
@@ -83,9 +92,9 @@ class AnalysisPipelineEventListener(
                     stickers = stickers,
                 ),
             )
-            analysisRepository.markCompleted(analysis.id, Instant.now())
-        }
-    }
+            check(analysisRepository.markCompleted(analysis.id, Instant.now()) == 1)
+            true
+        } == true
 
     private fun notifyFailureBestEffort(analysisId: AnalysisId) {
         bestEffort(log, "분석 실패 푸시 알림 발행(analysisId=$analysisId)") {
@@ -150,6 +159,7 @@ class AnalysisPipelineEventListener(
     companion object {
         private const val PIPELINE_RUN_STEP = "pipeline-run"
         private const val ANALYSIS_LOAD_STEP = "analysis-load"
+        private const val ANALYSIS_RESULT_VALIDATE_STEP = "analysis-result-validate"
         private const val ANALYSIS_RESULT_SAVE_STEP = "analysis-result-save"
 
         private val NOTIFICATION_COMPLETED =

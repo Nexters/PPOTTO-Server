@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
 import com.github.nexters.ppotto.analysis.domain.Analysis
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -114,11 +115,13 @@ class AnalysisRepository(
     fun markFailed(
         id: AnalysisId,
         failedReason: String,
+        failedCode: AnalysisErrorCode? = null,
     ): Int =
         dslContext
             .update(ANALYSIS)
             .set(ANALYSIS.STATUS, AnalysisStatus.FAILED.name)
             .set(ANALYSIS.FAILED_REASON, failedReason)
+            .set(ANALYSIS.FAILED_CODE, failedCode?.code)
             .where(ANALYSIS.ID.eq(id))
             .and(ANALYSIS.STATUS.`in`(AnalysisStatus.ACTIVE.map { it.name }))
             .execute()
@@ -130,6 +133,7 @@ class AnalysisRepository(
             boardId = boardId,
             status = AnalysisStatus.valueOf(status),
             progress = progress!!,
+            failedCode = failedCode?.let { code -> AnalysisErrorCode.entries.single { it.code == code } },
             failedReason = failedReason,
             startedAt = startedAt,
             completedAt = completedAt,

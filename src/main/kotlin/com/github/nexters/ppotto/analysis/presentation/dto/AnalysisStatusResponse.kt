@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.analysis.presentation.dto
 
 import com.github.nexters.ppotto.analysis.application.AnalysisStatusResult
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -24,6 +25,9 @@ data class AnalysisStatusResponse(
     @field:Schema(description = "진행률 0~100", example = "45")
     val progress: Int,
 
+    @field:Schema(description = "분석 실패 코드. 실패 전 또는 원인을 구분할 수 없는 기존 이력은 생략", example = "ANALYSIS-018")
+    val failedCode: AnalysisErrorCode?,
+
     @field:Schema(description = "실패 사유", example = "AI 분석 호출이 반복 실패했습니다.")
     val failedReason: String?,
 
@@ -40,6 +44,7 @@ data class AnalysisStatusResponse(
                 boardId = result.boardId,
                 status = result.status,
                 progress = result.progress,
+                failedCode = result.failedCode,
                 failedReason = result.failedReason,
                 startedAt = result.startedAt,
                 completedAt = result.completedAt,

@@ -25,6 +25,7 @@ Configuration and database migrations.
 | `config/sentry.yml` | Sentry DSN, environment, release, and traces sample rate from `${SENTRY_*}`, plus full-capture data settings (`send-default-pii: true`, `max-request-body-size: always`), Sentry Logs (`logs.enabled` + `logging.minimum-level: info`), continuous profiling (`profile-session-sample-rate` + a writable `profiling-traces-dir-path`), and logback bridge levels (`error` → event, `info` → breadcrumb). Capture is deliberately wide; secrets in span attributes are masked in code by `global/observability`, not by org scrubbing. An empty `SENTRY_DSN` leaves the SDK initialized but inactive, which is the local/test default |
 | `config/auth.yml` | OAuth HTTP Service client group timeouts (`spring.http.serviceclient.oauth.*` from `${OAUTH_*_TIMEOUT_MILLIS}`, bare integers bind as milliseconds), Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
 | `db/migration/` | Flyway timestamp migrations. The base schema creates core tables; later migrations add legacy-compatible social accounts, terms, drawings, stickers, recap data, active-analysis index updates, the six-stickers-per-analysis guard, the recap one-line summary column that replaced `recap_comments.is_float`, and the drawing `type` discriminator with the text columns and the `z_index` promotion that backfills from the existing `stroke` JSON |
+| `db/migration/V20260911120000__add_analysis_failed_code.sql` | `analysis.failed_code VARCHAR(20)` nullable 열을 추가한다. 기존 실패 기록은 사유로 코드를 추정하지 않고 null을 유지한다. |
 
 ## Rules
 

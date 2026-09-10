@@ -137,6 +137,11 @@ open class Analysis(
      */
     val UPDATED_AT: TableField<AnalysisRecord, Instant?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "", OffsetDateTimeInstantConverter())
 
+    /**
+     * The column <code>public.analysis.failed_code</code>.
+     */
+    val FAILED_CODE: TableField<AnalysisRecord, String?> = createField(DSL.name("failed_code"), SQLDataType.VARCHAR(20), this, "")
+
     private constructor(alias: Name, aliased: Table<AnalysisRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<AnalysisRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<AnalysisRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
