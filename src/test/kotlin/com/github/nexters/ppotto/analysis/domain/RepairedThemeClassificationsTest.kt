@@ -25,7 +25,7 @@ private fun theme(
     comments = emptyList(),
 )
 
-class ThemeClassificationRepairTest :
+class RepairedThemeClassificationsTest :
     BehaviorSpec({
         val photo1 = photoId()
         val photo2 = photoId()
@@ -39,7 +39,7 @@ class ThemeClassificationRepairTest :
                 )
 
             When("교정하면") {
-                val repaired = classifications.withoutCrossThemeDuplicates()
+                val repaired = classifications.repairCrossThemeDuplicates().classifications
 
                 Then("아무것도 바뀌지 않는다") {
                     repaired shouldBe classifications
@@ -55,7 +55,7 @@ class ThemeClassificationRepairTest :
                 )
 
             When("교정하면") {
-                val repaired = classifications.withoutCrossThemeDuplicates()
+                val repaired = classifications.repairCrossThemeDuplicates().classifications
 
                 Then("먼저 나온 테마가 그 사진을 갖는다") {
                     repaired[0].categorizedPhotoIds shouldContainExactly listOf(photo1, photo2)
@@ -81,7 +81,7 @@ class ThemeClassificationRepairTest :
                 )
 
             When("교정하면") {
-                val repaired = classifications.withoutCrossThemeDuplicates()
+                val repaired = classifications.repairCrossThemeDuplicates().classifications
 
                 Then("소스로 쓰는 뒤 테마가 그 사진을 갖는다") {
                     repaired[1].categorizedPhotoIds shouldContainExactly listOf(photo2, photo3)
@@ -99,6 +99,35 @@ class ThemeClassificationRepairTest :
             }
         }
 
+        Given("사진 1장이 세 테마에 중복 분류되었을 때") {
+            val classifications =
+                listOf(
+                    theme("가을", listOf(photo1, photo2)),
+                    theme("겨울", listOf(photo2, photo3), stickerSourcePhotoId = photo3),
+                    theme("봄", listOf(photo2), stickerSourcePhotoId = photo2),
+                )
+
+            When("교정하면") {
+                val repair = classifications.repairCrossThemeDuplicates()
+
+                Then("지운 사진 수를 함께 돌려준다") {
+                    repair.removedPhotoCount shouldBe 2
+                }
+            }
+        }
+
+        Given("중복이 없을 때") {
+            val classifications = listOf(theme("가을", listOf(photo1, photo2)))
+
+            When("교정하면") {
+                val repair = classifications.repairCrossThemeDuplicates()
+
+                Then("지운 사진이 없다고 보고한다") {
+                    repair.removedPhotoCount shouldBe 0
+                }
+            }
+        }
+
         Given("두 테마가 같은 사진을 스티커 소스로 지목했을 때") {
             val classifications =
                 listOf(
@@ -107,7 +136,7 @@ class ThemeClassificationRepairTest :
                 )
 
             When("교정 후 검증하면") {
-                val repaired = classifications.withoutCrossThemeDuplicates()
+                val repaired = classifications.repairCrossThemeDuplicates().classifications
                 val exception =
                     shouldThrow<BusinessException> {
                         ThemeClassificationValidator.validate(repaired, setOf(photo1, photo2, photo3))
@@ -127,7 +156,7 @@ class ThemeClassificationRepairTest :
                 )
 
             When("교정 후 검증하면") {
-                val repaired = classifications.withoutCrossThemeDuplicates()
+                val repaired = classifications.repairCrossThemeDuplicates().classifications
                 val exception =
                     shouldThrow<BusinessException> {
                         ThemeClassificationValidator.validate(repaired, setOf(photo1, photo2))
