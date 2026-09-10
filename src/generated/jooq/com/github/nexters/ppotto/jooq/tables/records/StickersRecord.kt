@@ -114,6 +114,14 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         set(value): Unit = set(22, value)
         get(): String? = get(22) as String?
 
+    open var shareToken: String?
+        set(value): Unit = set(23, value)
+        get(): String? = get(23) as String?
+
+    open var sharePhotos: Boolean?
+        set(value): Unit = set(24, value)
+        get(): Boolean? = get(24) as Boolean?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -123,7 +131,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
     /**
      * Create a detached, initialised StickersRecord
      */
-    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null, mainColor: String? = null): this() {
+    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null, mainColor: String? = null, shareToken: String? = null, sharePhotos: Boolean? = null): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId
@@ -147,6 +155,8 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         this.summary = summary
         this.regenerationLockedUntil = regenerationLockedUntil
         this.mainColor = mainColor
+        this.shareToken = shareToken
+        this.sharePhotos = sharePhotos
         resetTouchedOnNotNull()
     }
 
@@ -178,6 +188,8 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
             this.summary = value.summary
             this.regenerationLockedUntil = value.regenerationLockedUntil
             this.mainColor = value.mainColor
+            this.shareToken = value.shareToken
+            this.sharePhotos = value.sharePhotos
             resetTouchedOnNotNull()
         }
     }

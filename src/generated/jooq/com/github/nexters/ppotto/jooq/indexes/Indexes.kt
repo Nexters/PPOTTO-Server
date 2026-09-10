@@ -45,5 +45,6 @@ val IX_TERM_AGREEMENT_TERM: Index = Internal.createIndex(DSL.name("ix_term_agree
 val IX_TERMS_CODE_EFFECTIVE: Index = Internal.createIndex(DSL.name("ix_terms_code_effective"), Terms.TERMS, arrayOf(Terms.TERMS.CODE, Terms.TERMS.EFFECTIVE_AT), false)
 val UK_ANALYSIS_ACTIVE: Index = Internal.createIndex(DSL.name("uk_analysis_active"), Analysis.ANALYSIS, arrayOf(Analysis.ANALYSIS.USER_ID), true)
 val UK_PHOTOS_BURST_REPRESENTATIVE: Index = Internal.createIndex(DSL.name("uk_photos_burst_representative"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.BURST_GROUP_ID), true)
+val UK_STICKERS_SHARE_TOKEN: Index = Internal.createIndex(DSL.name("uk_stickers_share_token"), Stickers.STICKERS, arrayOf(Stickers.STICKERS.SHARE_TOKEN), true)
 val UK_USER_DEVICE_TOKENS_USER_DEVICE: Index = Internal.createIndex(DSL.name("uk_user_device_tokens_user_device"), UserDeviceTokens.USER_DEVICE_TOKENS, arrayOf(UserDeviceTokens.USER_DEVICE_TOKENS.USER_ID, UserDeviceTokens.USER_DEVICE_TOKENS.DEVICE_ID), true)
 val UK_USERS_PROVIDER_UID: Index = Internal.createIndex(DSL.name("uk_users_provider_uid"), Users.USERS, arrayOf(Users.USERS.PROVIDER, Users.USERS.PROVIDER_USER_ID), true)

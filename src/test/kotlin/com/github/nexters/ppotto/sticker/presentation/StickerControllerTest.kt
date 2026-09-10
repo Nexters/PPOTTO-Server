@@ -12,6 +12,7 @@ import com.github.nexters.ppotto.sticker.support.imageStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import com.jayway.jsonpath.JsonPath
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.hamcrest.Matchers.containsString
@@ -175,12 +176,10 @@ class StickerControllerTest(
                 val otherUser = userRepository.saveTestUser()
                 val result = mockMvc.perform(get("/stickers/${sticker.id}").authenticatedAs(otherUser.id.value))
 
-                Then("리캡 내용을 응답하고 isNew는 false다") {
+                Then("STICKER-001 404를 응답한다") {
                     result
-                        .andExpect(status().isOk)
-                        .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
-                        .andExpect(jsonPath("$.data.sticker.isNew").value(false))
-                        .andExpect(jsonPath("$.data.summary").value("웃기고 귀여우면 일단 주워요"))
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("STICKER-001"))
                 }
             }
 
@@ -280,12 +279,45 @@ class StickerControllerTest(
             When("인증 없이 리캡을 조회하면") {
                 val result = mockMvc.perform(get("/stickers/${sticker.id}"))
 
-                Then("리캡 내용을 응답하고 isNew는 false다") {
+                Then("COMMON-004 오류를 응답한다") {
                     result
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
+                }
+            }
+
+            When("사진 없이 공유한 뒤 인증 없이 공유 링크로 조회하면") {
+                val shareToken =
+                    mockMvc
+                        .perform(
+                            post("/stickers/${sticker.id}/share")
+                                .authenticatedAs(board.userId.value)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""{"includePhotos":false}"""),
+                        ).andExpect(status().isOk)
+                        .andReturn()
+                        .response
+                        .contentAsString
+                        .let { JsonPath.read<String>(it, "$.data.shareToken") }
+
+                Then("리캡 내용을 응답하되 사진은 비어 있다") {
+                    mockMvc
+                        .perform(get("/stickers/shared/$shareToken"))
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.sticker.id").value(sticker.id.toString()))
                         .andExpect(jsonPath("$.data.sticker.isNew").value(false))
                         .andExpect(jsonPath("$.data.comments[0].content").value("말풍선"))
+                        .andExpect(jsonPath("$.data.photos").isEmpty)
+                }
+
+                Then("공유를 해제하면 같은 토큰은 STICKER-001 404가 된다") {
+                    mockMvc
+                        .perform(delete("/stickers/${sticker.id}/share").authenticatedAs(board.userId.value))
+                        .andExpect(status().isOk)
+                    mockMvc
+                        .perform(get("/stickers/shared/$shareToken"))
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("STICKER-001"))
                 }
             }
 

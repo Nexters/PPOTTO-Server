@@ -5,8 +5,11 @@ import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
+import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
+import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.imageStickerCreation
@@ -26,7 +29,9 @@ import java.util.UUID
 
 class StickerQueryServiceTest(
     service: StickerQueryService,
+    recapShareService: RecapShareService,
     stickerRepository: StickerRepository,
+    stickerCommandRepository: StickerCommandRepository,
     stickerRecapRepository: StickerRecapRepository,
     stickerAccessService: StickerAccessService,
     photoRepository: PhotoRepository,
@@ -106,25 +111,28 @@ class StickerQueryServiceTest(
                 }
             }
 
-            When("다른 사용자가 리캡 상세를 조회하면") {
-                val otherUser = userRepository.saveTestUser()
-                val result = service.getRecap(otherUser.id, sticker.id)
+            When("공유한 적 없는 리캡을 소유자가 조회하면") {
+                val result = service.getRecap(board.userId, sticker.id)
 
-                Then("같은 리캡 내용을 반환하되 isNew는 false다") {
-                    result.sticker.id shouldBe sticker.id
-                    result.sticker.isNew shouldBe false
-                    result.summary shouldBe "웃기고 귀여우면 일단 주워요"
-                    result.comments.map { it.content } shouldContainExactly listOf("말풍선", "키워드")
+                Then("공유 상태는 내려오지 않는다") {
+                    result.share shouldBe null
                 }
             }
 
-            When("인증 없이 리캡 상세를 조회하면") {
-                val result = service.getRecap(null, sticker.id)
+            When("다른 사용자가 리캡 상세를 조회하면") {
+                val otherUser = userRepository.saveTestUser()
+                val exception = shouldThrow<NotFoundException> { service.getRecap(otherUser.id, sticker.id) }
 
-                Then("같은 리캡 내용을 반환하되 isNew는 false다") {
-                    result.sticker.id shouldBe sticker.id
-                    result.sticker.isNew shouldBe false
-                    result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
+                Then("STICKER-001 오류가 발생한다") {
+                    exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
+                }
+            }
+
+            When("없는 공유 토큰으로 조회하면") {
+                val exception = shouldThrow<NotFoundException> { service.getSharedRecap(UUID.randomUUID().toString()) }
+
+                Then("STICKER-001 오류가 발생한다") {
+                    exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
                 }
             }
 
@@ -150,6 +158,96 @@ class StickerQueryServiceTest(
                     result.photos.forEach {
                         it.imageUrl.shouldContain("photos/${analysis.id}/${it.id}.jpg")
                     }
+                }
+            }
+        }
+
+        Given("리캡이 사진 없이 공유된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photos =
+                photoRepository.saveAll(
+                    analysis.id,
+                    board.id,
+                    listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
+                )
+            photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
+            val sticker =
+                stickerRepository.save(
+                    analysis.id,
+                    board.id,
+                    imageStickerCreation(
+                        sourcePhotoId = photos.first().id,
+                        imageKey = "stickers/recap.png",
+                        title = "리캡",
+                        summary = "웃기고 귀여우면 일단 주워요",
+                    ),
+                )
+            stickerRecapRepository.savePhotos(sticker.id, photos.map { it.id })
+            stickerRecapRepository.saveComments(sticker.id, listOf(RecapCommentCreation("키워드", null, null)))
+            val shareToken = recapShareService.share(board.userId, sticker.id, includePhotos = false)
+
+            When("공유 토큰으로 조회하면") {
+                val result = service.getSharedRecap(shareToken)
+
+                Then("리캡 내용은 반환하되 사진은 한 장도 내려주지 않는다") {
+                    result.sticker.id shouldBe sticker.id
+                    result.comments.map { it.content } shouldContainExactly listOf("키워드")
+                    result.photos.shouldBeEmpty()
+                }
+
+                Then("남의 읽음 상태가 새겨나가지 않게 isNew는 항상 false다") {
+                    result.sticker.isNew shouldBe false
+                }
+            }
+
+            When("사진을 포함하도록 다시 공유하면") {
+                val reshareToken = recapShareService.share(board.userId, sticker.id, includePhotos = true)
+
+                Then("이미 보낸 링크가 끊기지 않게 같은 토큰을 유지한다") {
+                    reshareToken shouldBe shareToken
+                }
+
+                Then("같은 토큰으로 조회하면 사진이 채워진다") {
+                    service
+                        .getSharedRecap(shareToken)
+                        .photos
+                        .map { it.id } shouldContainExactly photos.map { it.id }
+                }
+            }
+
+            When("소유자가 리캡 상세를 조회하면") {
+                val result = service.getRecap(board.userId, sticker.id)
+
+                Then("공유 중이라는 사실과 사진 포함 여부가 함께 내려온다") {
+                    result.share shouldBe RecapShareResult(photos = false)
+                }
+            }
+
+            When("공유 토큰으로 조회하면 (남의 눈)") {
+                val result = service.getSharedRecap(shareToken)
+
+                Then("공유 상태는 소유자만 알 수 있으므로 내려오지 않는다") {
+                    result.share shouldBe null
+                }
+            }
+
+            When("공유를 해제하면") {
+                recapShareService.unshare(board.userId, sticker.id)
+                val exception = shouldThrow<NotFoundException> { service.getSharedRecap(shareToken) }
+
+                Then("STICKER-001 오류가 발생한다") {
+                    exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
+                }
+            }
+
+            When("공유된 스티커가 삭제되면") {
+                val deletedShareToken = recapShareService.share(board.userId, sticker.id, includePhotos = true)
+                stickerCommandRepository.softDelete(sticker.id, Instant.now())
+                val exception = shouldThrow<NotFoundException> { service.getSharedRecap(deletedShareToken) }
+
+                Then("STICKER-001 오류가 발생한다") {
+                    exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
                 }
             }
         }

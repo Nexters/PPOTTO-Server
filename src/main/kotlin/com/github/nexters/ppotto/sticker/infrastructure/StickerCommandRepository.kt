@@ -82,6 +82,28 @@ class StickerCommandRepository(
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
+    fun updateShare(
+        stickerId: StickerId,
+        shareToken: String,
+        sharePhotos: Boolean,
+    ): Boolean =
+        dslContext
+            .update(STICKERS)
+            .set(STICKERS.SHARE_TOKEN, shareToken)
+            .set(STICKERS.SHARE_PHOTOS, sharePhotos)
+            .where(STICKERS.ID.eq(stickerId))
+            .and(STICKERS.DELETED_AT.isNull)
+            .execute() == 1
+
+    fun clearShare(stickerId: StickerId): Boolean =
+        dslContext
+            .update(STICKERS)
+            .setNull(STICKERS.SHARE_TOKEN)
+            .set(STICKERS.SHARE_PHOTOS, false)
+            .where(STICKERS.ID.eq(stickerId))
+            .and(STICKERS.DELETED_AT.isNull)
+            .execute() == 1
+
     fun softDelete(
         stickerId: StickerId,
         deletedAt: Instant,

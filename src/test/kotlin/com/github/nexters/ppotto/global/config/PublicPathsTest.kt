@@ -23,6 +23,7 @@ private val PATHS =
         "/terms/agreements",
         "/stickers/0198c0f0-0000-7000-8000-000000000000",
         "/stickers/0198c0f0-0000-7000-8000-000000000000/view",
+        "/stickers/shared/01983f30-0000-7000-8000-000000000000",
         "/boards",
         "/users/me",
     )
@@ -70,16 +71,19 @@ class PublicPathsTest :
             When("체인 패턴과 필터 판정을 함께 보면") {
                 Then("체인은 익명 GET을 허용한다") {
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/terms") shouldBe true
-                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/stickers/0198c0f0-0000-7000-8000-000000000000") shouldBe true
+                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
+                        .matches("/stickers/shared/01983f30-0000-7000-8000-000000000000") shouldBe true
                 }
 
                 Then("토큰을 해석해야 하므로 Bearer 필터는 건너뛰지 않는다") {
                     PublicPaths.isPublicApi("/terms") shouldBe false
-                    PublicPaths.isPublicApi("/stickers/0198c0f0-0000-7000-8000-000000000000") shouldBe false
+                    PublicPaths.isPublicApi("/stickers/shared/01983f30-0000-7000-8000-000000000000") shouldBe false
                 }
 
-                Then("약관 동의와 스티커 조회 기록은 익명 허용 대상이 아니다") {
+                Then("리캡 상세와 약관 동의, 스티커 조회 기록은 익명 허용 대상이 아니다") {
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/terms/agreements") shouldBe false
+                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
+                        .matches("/stickers/0198c0f0-0000-7000-8000-000000000000") shouldBe false
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
                         .matches("/stickers/0198c0f0-0000-7000-8000-000000000000/view") shouldBe false
                 }

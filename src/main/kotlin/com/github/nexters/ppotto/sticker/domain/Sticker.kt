@@ -27,6 +27,8 @@ class Sticker(
     badgeOffsetX: Double,
     badgeOffsetY: Double,
     badgeRotation: Double,
+    shareToken: String?,
+    sharePhotos: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
     deletedAt: Instant?,
@@ -58,6 +60,10 @@ class Sticker(
     var imageKey: String? = imageKey
         private set
     var mainColor: String = mainColor
+        private set
+    var shareToken: String? = shareToken
+        private set
+    var sharePhotos: Boolean = sharePhotos
         private set
 
     init {

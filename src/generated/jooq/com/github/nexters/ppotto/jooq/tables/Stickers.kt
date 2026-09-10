@@ -17,6 +17,7 @@ import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_STICKER_ANALYSIS
 import com.github.nexters.ppotto.jooq.indexes.IX_STICKER_BOARD_Z
 import com.github.nexters.ppotto.jooq.indexes.IX_STICKER_SOURCE_PHOTO
+import com.github.nexters.ppotto.jooq.indexes.UK_STICKERS_SHARE_TOKEN
 import com.github.nexters.ppotto.jooq.keys.RECAP_COMMENTS__FK_RECAP_COMMENTS_STICKER
 import com.github.nexters.ppotto.jooq.keys.STICKERS_PKEY
 import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_ANALYSIS
@@ -212,6 +213,16 @@ open class Stickers(
      */
     val MAIN_COLOR: TableField<StickersRecord, String?> = createField(DSL.name("main_color"), SQLDataType.VARCHAR(7).nullable(false).defaultValue(DSL.field(DSL.raw("'#222222'::character varying"), SQLDataType.VARCHAR)), this, "")
 
+    /**
+     * The column <code>public.stickers.share_token</code>.
+     */
+    val SHARE_TOKEN: TableField<StickersRecord, String?> = createField(DSL.name("share_token"), SQLDataType.CLOB, this, "")
+
+    /**
+     * The column <code>public.stickers.share_photos</code>.
+     */
+    val SHARE_PHOTOS: TableField<StickersRecord, Boolean?> = createField(DSL.name("share_photos"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "")
+
     private constructor(alias: Name, aliased: Table<StickersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
@@ -244,7 +255,7 @@ open class Stickers(
         override fun `as`(alias: Table<*>): StickersPath = StickersPath(alias.qualifiedName, this)
     }
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IX_STICKER_ANALYSIS, IX_STICKER_BOARD_Z, IX_STICKER_SOURCE_PHOTO)
+    override fun getIndexes(): List<Index> = listOf(IX_STICKER_ANALYSIS, IX_STICKER_BOARD_Z, IX_STICKER_SOURCE_PHOTO, UK_STICKERS_SHARE_TOKEN)
     override fun getPrimaryKey(): UniqueKey<StickersRecord> = STICKERS_PKEY
     override fun getReferences(): List<ForeignKey<StickersRecord, *>> = listOf(STICKERS__FK_STICKERS_ANALYSIS, STICKERS__FK_STICKERS_BOARD, STICKERS__FK_STICKERS_SOURCE_PHOTO)
 
