@@ -59,6 +59,14 @@ class StickerRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun findByShareToken(shareToken: String): Sticker? =
+        dslContext
+            .selectFrom(STICKERS)
+            .where(STICKERS.SHARE_TOKEN.eq(shareToken))
+            .and(STICKERS.DELETED_AT.isNull)
+            .fetchOne()
+            ?.toDomain()
+
     fun findAllByBoardId(boardId: BoardId): List<Sticker> =
         dslContext
             .selectFrom(STICKERS)
@@ -122,6 +130,8 @@ class StickerRepository(
             badgeOffsetX = badgeOffsetX!!,
             badgeOffsetY = badgeOffsetY!!,
             badgeRotation = badgeRotation!!,
+            shareToken = shareToken,
+            sharePhotos = sharePhotos!!,
             createdAt = createdAt!!,
             updatedAt = updatedAt!!,
             deletedAt = deletedAt,

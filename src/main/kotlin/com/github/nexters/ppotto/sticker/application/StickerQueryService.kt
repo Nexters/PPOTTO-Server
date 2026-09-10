@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
@@ -9,6 +10,7 @@ import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort
 import com.github.nexters.ppotto.sticker.application.port.singlePort
 import com.github.nexters.ppotto.sticker.domain.Sticker
+import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import org.springframework.stereotype.Service
@@ -24,22 +26,45 @@ class StickerQueryService(
     fun getByBoardId(boardId: BoardId): List<StickerItemResult> = toResults(stickerRepository.findAllByBoardId(boardId))
 
     fun getRecap(
-        userId: UserId?,
+        userId: UserId,
         stickerId: StickerId,
+    ): StickerRecapResult = buildRecap(stickerAccessService.getOwned(userId, stickerId), isOwner = true, includePhotos = true)
+
+    fun getSharedRecap(shareToken: String): StickerRecapResult {
+        val sticker =
+            stickerRepository.findByShareToken(shareToken)
+                ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+
+        return buildRecap(sticker, isOwner = false, includePhotos = sticker.sharePhotos)
+    }
+
+    private fun buildRecap(
+        sticker: Sticker,
+        isOwner: Boolean,
+        includePhotos: Boolean,
     ): StickerRecapResult {
-        val (sticker, isOwner) = stickerAccessService.getWithOwnership(userId, stickerId)
         val comments =
             stickerRecapRepository
-                .findComments(stickerId)
+                .findComments(sticker.id)
                 .map { RecapCommentResult(it.id, it.content, it.posX, it.posY) }
         val photos =
-            stickerRecapRepository
-                .findPhotoIds(stickerId)
-                .takeIf { it.isNotEmpty() }
-                ?.let { toPhotoResults(sticker, it) }
-                ?: emptyList()
+            if (includePhotos) {
+                stickerRecapRepository
+                    .findPhotoIds(sticker.id)
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { toPhotoResults(sticker, it) }
+                    ?: emptyList()
+            } else {
+                emptyList()
+            }
 
-        return StickerRecapResult(toResults(listOf(sticker), isOwner).single(), sticker.summary, comments, photos)
+        return StickerRecapResult(
+            sticker = toResults(listOf(sticker), isOwner).single(),
+            summary = sticker.summary,
+            share = if (isOwner && sticker.shareToken != null) RecapShareResult(sticker.sharePhotos) else null,
+            comments = comments,
+            photos = photos,
+        )
     }
 
     private fun toPhotoResults(

@@ -223,6 +223,8 @@ private fun imageSticker(
     badgeOffsetX = 0.0,
     badgeOffsetY = 0.0,
     badgeRotation = 0.0,
+    shareToken = null,
+    sharePhotos = false,
     createdAt = Instant.parse("2026-07-30T00:00:00Z"),
     updatedAt = Instant.parse("2026-07-30T00:00:00Z"),
     deletedAt = null,

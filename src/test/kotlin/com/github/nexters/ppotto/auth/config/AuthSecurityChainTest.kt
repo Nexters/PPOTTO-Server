@@ -67,6 +67,16 @@ class AuthSecurityChainTest(
             When("익명으로 스티커 상세를 조회하면") {
                 val response = mockMvc.perform(get("/stickers/${UUID.randomUUID()}"))
 
+                Then("보호된 경로라 401과 COMMON-004를 반환한다") {
+                    response
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
+                }
+            }
+
+            When("익명으로 없는 공유 토큰의 리캡을 조회하면") {
+                val response = mockMvc.perform(get("/stickers/shared/${UUID.randomUUID()}"))
+
                 Then("선택 인증 경로라 401이 아니라 404를 반환한다") {
                     response
                         .andExpect(status().isNotFound)

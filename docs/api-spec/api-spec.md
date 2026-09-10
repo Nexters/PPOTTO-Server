@@ -69,7 +69,10 @@
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 (편집 모드 종료 시) | 200 | 400, 401, 404 | Y |
 | boards | GET | /boards/{boardId} | 보드 상세 조회 — v2 (선 + 텍스트) | 200 | 401, 404 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 — v2 (선 + 텍스트) | 200 | 400, 401, 404 | Y |
-| stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 | 200 | 401, 404 | Y |
+| stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 (본인만) | 200 | 401, 404 | Y |
+| stickers | GET | /stickers/shared/{shareToken} | 공유된 리캡 조회 | 200 | 404 | N |
+| stickers | POST | /stickers/{stickerId}/share | 리캡 공유 시작 | 200 | 400, 401, 404 | Y |
+| stickers | DELETE | /stickers/{stickerId}/share | 리캡 공유 해제 | 200 | 401, 404 | Y |
 | stickers | PATCH | /stickers/{stickerId} | 스티커 제목 수정 | 200 | 400, 401, 404 | Y |
 | stickers | PATCH | /stickers/{stickerId}/comments | 리캡 코멘트 위치 일괄 수정 | 200 | 400, 401, 404 | Y |
 | stickers | DELETE | /stickers/{stickerId} | 스티커 묶음 삭제 | 200 | 401, 404 | Y |
@@ -1528,7 +1531,7 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 #### Success Spec
 | Status | Description | Data |
 | --- | --- | --- |
-| 200 | 리캡 상세 | `sticker`, `summary`, `comments`, `photos` |
+| 200 | 리캡 상세 | `sticker`, `summary`, `share`, `comments`, `photos` |
 
 200 example:
 ```json
@@ -1678,6 +1681,14 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 
 #### Notes
 - 리캡 화면에 필요한 데이터를 모두 반환합니다. 스티커 1개 = 리캡 1개입니다. photos는 takenAt, id 오름차순이며 기간 표시는 클라이언트가 계산합니다. 빨간 점 제거는 별도로 /view를 호출합니다.
+- **본인 스티커만 조회할 수 있습니다.** 남의 스티커 id로 호출하면 존재 여부를 감추기 위해 404 `STICKER-001`을 반환합니다. 링크로 남에게 보여주는 경로는 `GET /stickers/shared/{shareToken}` 하나뿐입니다.
+- `share`는 **공유 중일 때만** 내려옵니다. 공유한 적이 없거나 해제했으면 키 자체가 없습니다(서버가 null 필드를 직렬화하지 않음). 따라서 클라이언트는 `share` 키의 존재 여부로 "공유 중"을 판정하고, `share.photos`로 그 링크가 사진을 포함하는지 알 수 있습니다. 공유 시트를 다시 열 때 `테마 속 사진 포함` 토글의 초기값으로 쓰면 됩니다.
+
+```json
+{
+  "share": { "photos": false }
+}
+```
 - 생성 직후라 아직 배치되지 않은 스티커라면 `sticker.posX`/`posY`/`zIndex` 키 자체가 없습니다(서버가 null 필드를 직렬화하지 않음). `sticker.scale`은 1, `sticker.rotation`은 0으로 채워져 있습니다. `GET /boards/{boardId}` Notes 참고.
 - `summary`는 `한 줄 요약` 라벨 아래의 강조 문장입니다. 스티커당 정확히 1개이고 항상 채워져 있습니다. 제목 뱃지인 `sticker.title`과는 다른 값이므로 둘을 섞어 쓰면 안 됩니다.
 - `comments`는 두 종류가 한 배열에 섞여 옵니다. **구분 기준은 `posX`(와 `posY`)의 존재 여부 하나뿐입니다.**
@@ -1689,6 +1700,112 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 
   `posX`와 `posY`는 항상 함께 있거나 함께 없습니다. 한쪽만 오는 응답은 없습니다. 서버 응답은 null 필드를 직렬화하지 않으므로 키워드 칩에는 `posX` / `posY` 키 자체가 나타나지 않습니다. 따라서 클라이언트는 `posX` 키가 없으면 키워드 칩으로 처리하면 됩니다. 이전 명세의 `isFloat` 필드는 제거되었습니다.
 - `테마 속 사진`의 개수는 클라이언트가 `photos` 배열 길이로 계산합니다. 페이지네이션이 없으므로 서버는 개수를 따로 내려주지 않고 언제나 전체 사진을 반환합니다.
+
+### GET /stickers/shared/{shareToken}
+
+- Operation ID: `getSharedRecap`
+- Summary: 공유된 리캡 조회
+
+#### Request Spec
+- 인증: 불필요. 인증이 필요 없는 유일한 리캡 경로입니다. 토큰을 보내면 검증은 하지만 응답은 달라지지 않습니다.
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | shareToken | Y | `string` | 01983f30-0000-7000-8000-000000000000 | `POST /stickers/{stickerId}/share`가 발급한 토큰 |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 공유된 리캡 상세 | `GET /stickers/{stickerId}`와 같은 스키마 |
+
+#### Failure Spec
+| Status | Code | Description |
+| --- | --- | --- |
+| 404 | STICKER-001 | 없는 토큰, 공유가 해제된 리캡, 삭제된 리캡을 모두 같은 응답으로 감춤 |
+
+#### Notes
+- 응답 스키마는 `GET /stickers/{stickerId}`와 완전히 같습니다.
+- **공유할 때 `includePhotos`를 false로 두었다면 `photos`는 항상 빈 배열입니다.** 서버가 사진 읽기 URL 자체를 발급하지 않으므로, 클라이언트가 무엇을 보내도 원본 사진은 링크로 새어 나가지 않습니다.
+- `sticker.isNew`는 항상 false입니다. `viewedAt`은 소유자의 읽음 상태이고 `/view`는 소유자 전용이기 때문입니다.
+- 사진 URL의 만료(1시간)는 그대로입니다. 공유 링크 자체에는 만료가 없고 소유자가 해제할 때까지 유효합니다.
+
+### POST /stickers/{stickerId}/share
+
+- Operation ID: `shareRecap`
+- Summary: 리캡 공유 시작
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | stickerId | Y | `string` | 01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f | - |
+| body | includePhotos | Y | `boolean` | true | 공유 링크에 `테마 속 사진`을 포함할지 여부 |
+
+요청 example:
+```json
+{
+  "includePhotos": true
+}
+```
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 발급된 공유 정보 | `shareToken`, `includePhotos` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "shareToken": "01983f30-0000-7000-8000-000000000000",
+    "includePhotos": true
+  }
+}
+```
+
+#### Failure Spec
+| Status | Code | Description |
+| --- | --- | --- |
+| 400 | COMMON-001 | 요청 값이 올바르지 않음 |
+| 401 | COMMON-004 | 인증 없음 |
+| 404 | STICKER-001 | 스티커 없음 또는 소유자 불일치 |
+
+#### Notes
+- **멱등입니다.** 이미 공유 중이면 같은 `shareToken`을 그대로 유지하고 `includePhotos`만 갱신합니다. 이미 카카오톡으로 보낸 링크가 끊기지 않으며, 사진 포함 여부를 바꾸면 그 링크에 즉시 반영됩니다.
+- 토큰을 새로 돌리려면 `DELETE /stickers/{stickerId}/share`로 해제한 뒤 다시 호출하면 됩니다.
+
+### DELETE /stickers/{stickerId}/share
+
+- Operation ID: `unshareRecap`
+- Summary: 리캡 공유 해제
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | stickerId | Y | `string` | 01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f | - |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 해제 완료 | `null` |
+
+#### Failure Spec
+| Status | Code | Description |
+| --- | --- | --- |
+| 401 | COMMON-004 | 인증 없음 |
+| 404 | STICKER-001 | 스티커 없음 또는 소유자 불일치 |
+
+#### Notes
+- 이미 공유 중이 아니어도 200입니다 (멱등).
+- 해제 즉시 기존 토큰은 무효가 되어 `GET /stickers/shared/{shareToken}`이 404 `STICKER-001`을 반환합니다.
 
 ### PATCH /stickers/{stickerId}
 

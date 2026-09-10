@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.application.RecapCommentResult
 import com.github.nexters.ppotto.sticker.application.RecapGroupPhotoResult
 import com.github.nexters.ppotto.sticker.application.RecapPhotoResult
+import com.github.nexters.ppotto.sticker.application.RecapShareResult
 import com.github.nexters.ppotto.sticker.application.StickerRecapResult
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
@@ -18,6 +19,9 @@ data class RecapDetailResponse(
     @field:Schema(description = "한 줄 요약. 스티커당 1개인 강조 문장", example = "웃기고 귀여우면 일단 주워요")
     val summary: String,
 
+    @field:Schema(description = "현재 공유 상태. 공유 중이 아니거나 본인 리캡이 아니면 아예 내려오지 않음")
+    val share: RecapShareStateResponse?,
+
     @field:Schema(description = "분석 코멘트. id(uuidv7) 오름차순")
     val comments: List<RecapCommentResponse>,
 
@@ -29,9 +33,20 @@ data class RecapDetailResponse(
             RecapDetailResponse(
                 sticker = StickerResponse.from(result.sticker),
                 summary = result.summary,
+                share = result.share?.let(RecapShareStateResponse::from),
                 comments = result.comments.map(RecapCommentResponse::from),
                 photos = result.photos.map(RecapPhotoResponse::from),
             )
+    }
+}
+
+@Schema(description = "리캡 공유 상태. 이 객체가 있으면 공유 중이다")
+data class RecapShareStateResponse(
+    @field:Schema(description = "이 공유 링크가 리캡 사진을 포함하는지 여부", example = "true")
+    val photos: Boolean,
+) {
+    companion object {
+        fun from(result: RecapShareResult) = RecapShareStateResponse(photos = result.photos)
     }
 }
 
