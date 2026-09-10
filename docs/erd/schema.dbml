@@ -201,6 +201,9 @@ Table analysis {
 
   취소와 만료 정리는 status=FAILED 로 두고 failed_reason 에
   CANCELED / EXPIRED 를 기록한다.
+  만료 배치는 updated_at 이 설정된 타임아웃보다 오래된 UPLOADING/ANALYZING 행을 EXPIRED 로
+  마감한다. uk_analysis_active 때문에 멈춘 행 하나가 그 사용자의 새 분석을 영구히 막으므로,
+  이 배치가 없으면 파이프라인이 죽은 사용자는 서비스를 다시 쓸 수 없다.
   '''
 
   indexes {

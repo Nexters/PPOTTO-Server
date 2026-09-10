@@ -1,0 +1,6 @@
+analysis:
+  stale-cleanup:
+    enabled: ${ANALYSIS_STALE_CLEANUP_ENABLED}
+    timeout-minutes: ${ANALYSIS_STALE_CLEANUP_TIMEOUT_MINUTES}
+    batch-size: ${ANALYSIS_STALE_CLEANUP_BATCH_SIZE}
+    cron: ${ANALYSIS_STALE_CLEANUP_CRON}
