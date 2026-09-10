@@ -292,6 +292,10 @@ Table stickers {
 
   regeneration_locked_until timestamptz [null, note: '이미지 재생성 진행 중 잠금 만료 시각. NULL이면 재생성 가능. 재생성 종료 시(성공/실패 무관) 즉시 NULL로 되돌린다 — 정상 흐름에서는 도달하지 않는 크래시 복구용 상한']
 
+  // 링크 공유
+  share_token  text    [null, unique, note: '공유 링크 토큰. NULL이면 비공개다. GET /stickers/shared/{shareToken} 이 이 컬럼으로만 스티커를 찾는다. 만료는 없고 소유자가 NULL로 되돌릴 때까지 유효하다']
+  share_photos boolean [not null, default: false, note: 'false면 공유 링크 응답의 photos 가 빈 배열이다. 서버가 사진 읽기 URL 자체를 발급하지 않으므로 클라이언트가 무엇을 보내도 원본은 새지 않는다']
+
   // 보드 상 배치
   pos_x    double  [null, note: '클라이언트가 배치를 정하기 전에는 NULL']
   pos_y    double  [null, note: '클라이언트가 배치를 정하기 전에는 NULL']
@@ -318,6 +322,9 @@ Table stickers {
   제목을 수정해도 viewed_at 에는 영향을 주지 않는다.
   삭제하면 연결된 드로잉과 리캡 데이터도 함께 soft delete 한다.
   배치값은 편집 모드를 끌 때마다 서버에 저장한다.
+  리캡 상세 조회는 본인만 가능하다. 남에게 보여주는 경로는 share_token 링크 하나뿐이며,
+  공유 해제(share_token = NULL)와 스티커 삭제(deleted_at) 모두 링크를 즉시 무효화한다.
+
   생성 직후에는 pos_x/pos_y/z_index가 NULL이다. 이 값은 다른 스티커와 겹치지 않게 정해야 해서
   보드 전체 상태를 아는 클라이언트가 계산해 레이아웃 수정 API로 채운다. scale/rotation은 생성 시
   서버가 항상 1/0으로 채운다.
@@ -327,6 +334,7 @@ Table stickers {
     (board_id, z_index) [name: 'ix_sticker_board_z']
     analysis_id [name: 'ix_sticker_analysis']
     source_photo_id [name: 'ix_sticker_source_photo', note: '사진 파기 배치의 역방향 조회용']
+    share_token [unique, name: 'uk_stickers_share_token']
   }
 }
 
