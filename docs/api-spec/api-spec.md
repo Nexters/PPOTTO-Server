@@ -2876,6 +2876,8 @@ Request example:
 
 #### Notes
 - 로딩 화면에서 2~3초 간격으로 폴링합니다. 단계 문구는 클라이언트가 progress 구간으로 매핑합니다. COMPLETED가 되면 보드를 다시 조회합니다.
+- **`COMPLETED`는 스티커가 최소 1개 있다는 뜻입니다.** 모든 테마의 스티커 생성이 실패하면 예전에는 스티커 0개인 채로 `COMPLETED`가 됐지만, 이제 `FAILED`로 마감하고 `failedReason`에 `스티커를 하나도 만들지 못했습니다.`(ANALYSIS-012)를 남깁니다. 빈 보드를 성공이라고 알리지 않기 위한 변경입니다.
+- `failedReason`은 내부 오류 메시지가 그대로 담기므로 화면에 그대로 노출하지 마세요. 클라이언트는 실패 종류별 고정 문구를 씁니다.
 
 ### DELETE /analysis/{analysisId}
 
