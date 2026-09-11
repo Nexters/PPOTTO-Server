@@ -5,8 +5,8 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.Photo
-import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.PhotoStorage
+import com.github.nexters.ppotto.analysis.domain.toRef
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
@@ -112,7 +112,7 @@ class AnalysisService(
         if (completedUpdates.isEmpty()) throw ConflictException(AnalysisErrorCode.NO_UPLOADED_PHOTOS)
 
         val failedIds = pendingPhotos.map { it.id } - completedUpdates.keys
-        val photoRefs = pendingPhotos.filter { it.id in completedUpdates }.map { it.toRef() }
+        val photoRefs = pendingPhotos.filter { it.id in completedUpdates }.map { it.toRef(photoStorage.sourceUri(it)) }
 
         transactionTemplate.executeWithoutResult {
             checkNotNull(analysisRepository.findByIdForUpdate(analysisId)) { "분석을 찾을 수 없습니다: $analysisId" }.requireUploading()
@@ -125,15 +125,6 @@ class AnalysisService(
 
         return UploadVerificationResult(completedUpdates.size, failedIds.size, failedIds)
     }
-
-    private fun Photo.toRef(): PhotoRef =
-        PhotoRef(
-            photoId = id,
-            sourceUri = photoStorage.sourceUri(this),
-            mimeType = contentType.mimeType,
-            burstGroupId = burstGroupId,
-            isRepresentative = isRepresentative,
-        )
 
     private fun findOwnedAnalysis(
         analysisId: AnalysisId,

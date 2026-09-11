@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.config.AnalysisPipelineProperties
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
@@ -25,6 +26,7 @@ import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
+import java.util.concurrent.Semaphore
 
 @Component
 class AnalysisPipelineEventListener(
@@ -34,39 +36,65 @@ class AnalysisPipelineEventListener(
     private val eventPublisher: ApplicationEventPublisher,
     private val transactionTemplate: TransactionTemplate,
     transactionManager: PlatformTransactionManager,
+    pipelineProperties: AnalysisPipelineProperties,
 ) {
+    private val pipelineSlots = Semaphore(pipelineProperties.maxConcurrentRuns)
+
     private val progressTransactionTemplate =
         TransactionTemplate(transactionManager).apply {
             propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         }
 
     @Async(AsyncConfig.ANALYSIS_PIPELINE_TASK_EXECUTOR)
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Suppress("TooGenericExceptionCaught")
     fun handle(event: AnalysisStartRequestedEvent) {
         val analysisId = event.analysisId
         val pipelineRun = PipelineRun(analysisId)
         try {
-            val pipelineResult =
-                pipelineRun.measured(PIPELINE_RUN_STEP) {
-                    analysisPipelineService.run(pipelineRun, event.photos) { progress ->
-                        updateProgressBestEffort(analysisId, progress)
-                    }
-                }
-            val analysis =
-                pipelineRun.measured(ANALYSIS_LOAD_STEP) {
-                    analysisRepository.findById(analysisId) ?: error("분석을 찾을 수 없습니다: $analysisId")
-                }
-            val stickers = pipelineResult.themes.mapNotNull { it.toStickerResult() }
-            val completed =
-                pipelineRun.measured(ANALYSIS_RESULT_SAVE_STEP, AnalysisErrorCode.RESULT_SAVE_FAILED) {
-                    saveResult(analysis, stickers)
-                }
-            if (completed) notifyBestEffort(analysis.userId, analysisId, NOTIFICATION_COMPLETED)
+            withPipelineSlot(analysisId) { runPipeline(pipelineRun, event) }
         } catch (_: Throwable) {
             if (analysisRepository.markFailed(analysisId, pipelineRun.failureReason(), pipelineRun.failedCode) > 0) {
                 notifyFailureBestEffort(analysisId)
             }
+        }
+    }
+
+    private fun runPipeline(
+        pipelineRun: PipelineRun,
+        event: AnalysisStartRequestedEvent,
+    ) {
+        val analysisId = event.analysisId
+        val pipelineResult =
+            pipelineRun.measured(PIPELINE_RUN_STEP) {
+                analysisPipelineService.run(pipelineRun, event.photos) { progress ->
+                    updateProgressBestEffort(analysisId, progress)
+                }
+            }
+        val analysis =
+            pipelineRun.measured(ANALYSIS_LOAD_STEP) {
+                analysisRepository.findById(analysisId) ?: error("분석을 찾을 수 없습니다: $analysisId")
+            }
+        val stickers = pipelineResult.themes.mapNotNull { it.toStickerResult() }
+        val completed =
+            pipelineRun.measured(ANALYSIS_RESULT_SAVE_STEP, AnalysisErrorCode.RESULT_SAVE_FAILED) {
+                saveResult(analysis, stickers)
+            }
+        if (completed) notifyBestEffort(analysis.userId, analysisId, NOTIFICATION_COMPLETED)
+    }
+
+    private fun <T> withPipelineSlot(
+        analysisId: AnalysisId,
+        block: () -> T,
+    ): T {
+        if (!pipelineSlots.tryAcquire()) {
+            log.info("분석 파이프라인 동시 실행 상한 대기: analysisId={}, waiting={}", analysisId, pipelineSlots.queueLength)
+            pipelineSlots.acquire()
+        }
+        return try {
+            block()
+        } finally {
+            pipelineSlots.release()
         }
     }
 

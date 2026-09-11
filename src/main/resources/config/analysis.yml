@@ -1,4 +1,7 @@
 analysis:
+  pipeline:
+    max-concurrent-runs: ${ANALYSIS_PIPELINE_MAX_CONCURRENT_RUNS}
+    resume-limit: ${ANALYSIS_PIPELINE_RESUME_LIMIT}
   stale-cleanup:
     enabled: ${ANALYSIS_STALE_CLEANUP_ENABLED}
     timeout-minutes: ${ANALYSIS_STALE_CLEANUP_TIMEOUT_MINUTES}

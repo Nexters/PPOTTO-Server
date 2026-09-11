@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.config.AnalysisPipelineProperties
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
@@ -24,6 +25,8 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -36,6 +39,9 @@ import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 private const val NO_COMPLETED_CONSTRAINT = "test_analysis_never_completed"
 
@@ -53,6 +59,7 @@ class AnalysisPipelineEventListenerTest(
     private val eventPublisher: ApplicationEventPublisher,
     private val transactionTemplate: TransactionTemplate,
     private val transactionManager: PlatformTransactionManager,
+    private val pipelineProperties: AnalysisPipelineProperties,
     private val dslContext: DSLContext,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
@@ -233,6 +240,56 @@ class AnalysisPipelineEventListenerTest(
             }
         }
 
+        Given("동시 실행을 한 건으로 제한한 리스너에서") {
+            val (firstAnalysisId, firstPhotoRefs) = analyzingAnalysis()
+            val (secondAnalysisId, secondPhotoRefs) = analyzingAnalysis()
+            val listener =
+                AnalysisPipelineEventListener(
+                    analysisPipelineService,
+                    analysisRepository,
+                    analysisResultSaveService,
+                    eventPublisher,
+                    transactionTemplate,
+                    transactionManager,
+                    AnalysisPipelineProperties(maxConcurrentRuns = 1, resumeLimit = 1),
+                )
+
+            When("한 건이 분류 중인 상태에서 다른 한 건이 들어오면") {
+                val firstClassifying = CountDownLatch(1)
+                val secondClassifying = CountDownLatch(1)
+                val releaseFirst = CountDownLatch(1)
+                themeClassifier.onClassify = { photos ->
+                    if (firstClassifying.count > 0) {
+                        firstClassifying.countDown()
+                        releaseFirst.await(5, TimeUnit.SECONDS)
+                    } else {
+                        secondClassifying.countDown()
+                    }
+                    listOf(FakeThemeClassifier.defaultTheme(photos))
+                }
+
+                val secondStartedWhileFirstHeldSlot =
+                    Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+                        val first = executor.submit { listener.handle(AnalysisStartRequestedEvent(firstAnalysisId, firstPhotoRefs)) }
+                        firstClassifying.await(5, TimeUnit.SECONDS).shouldBeTrue()
+                        val second = executor.submit { listener.handle(AnalysisStartRequestedEvent(secondAnalysisId, secondPhotoRefs)) }
+                        val startedEarly = secondClassifying.await(300, TimeUnit.MILLISECONDS)
+                        releaseFirst.countDown()
+                        listOf(first, second).forEach { it.get(10, TimeUnit.SECONDS) }
+                        startedEarly
+                    }
+
+                Then("두 번째 건은 빈 자리가 날 때까지 파이프라인에 들어가지 못한다") {
+                    secondStartedWhileFirstHeldSlot.shouldBeFalse()
+                }
+
+                Then("자리가 나면 두 건 모두 COMPLETED 로 마감된다") {
+                    analysisRepository.findById(firstAnalysisId)!!.status shouldBe AnalysisStatus.COMPLETED
+                    analysisRepository.findById(secondAnalysisId)!!.status shouldBe AnalysisStatus.COMPLETED
+                }
+            }
+        }
+
         Given("푸시 이벤트 발행이 항상 실패하는 리스너에서") {
             val (analysisId, photoRefs) = analyzingAnalysis()
             val listener =
@@ -243,6 +300,7 @@ class AnalysisPipelineEventListenerTest(
                     ApplicationEventPublisher { throw IllegalStateException("푸시 이벤트 발행 실패") },
                     transactionTemplate,
                     transactionManager,
+                    pipelineProperties,
                 )
 
             When("파이프라인이 성공적으로 완료되면") {
@@ -265,6 +323,7 @@ class AnalysisPipelineEventListenerTest(
                     eventPublisher,
                     transactionTemplate,
                     FailingTransactionManager,
+                    pipelineProperties,
                 )
 
             When("파이프라인이 성공적으로 완료되면") {
