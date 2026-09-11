@@ -25,7 +25,6 @@ Spec: [develop.sentry.dev AI Agents Module](https://develop.sentry.dev/sdk/telem
 | span name | `chat {model}` | Spec requires `{gen_ai.operation.name} {gen_ai.request.model}` |
 | `gen_ai.operation.name` | `chat` | MUST be one of `chat` / `embeddings` / `generate_content` / `text_completion`. Sentry's own `google_genai` integration uses `chat` for `generateContent` |
 | `gen_ai.provider.name` | `gcp.gemini` | MUST. Value taken from Sentry's `google_genai` integration |
-| `gen_ai.system` | `gcp.gemini` | Deprecated alias of `gen_ai.provider.name`, still what Sentry's own SDK emits. Sent alongside so older Sentry UIs also resolve the provider |
 | `gen_ai.request.model` / `gen_ai.response.model` | model id / `modelVersion` | Both MUST |
 | `gen_ai.pipeline.name` | `LlmPipeline.value` | Our task label (`photo-classification` etc.). The old OTel code put these in `gen_ai.operation.name`, which Sentry rejects |
 | `gen_ai.usage.*` | see below | `input_tokens` = `promptTokenCount + toolUsePromptTokenCount`, `output_tokens` = `candidatesTokenCount + thoughtsTokenCount`, `cache_read.input_tokens` = `cachedContentTokenCount`, `reasoning.output_tokens` = `thoughtsTokenCount`. Cached and reasoning tokens are subsets, matching Sentry's `google_genai` mapping |

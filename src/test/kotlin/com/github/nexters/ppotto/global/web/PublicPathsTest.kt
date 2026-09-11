@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.global.config
+package com.github.nexters.ppotto.global.web
 
 import com.github.nexters.ppotto.global.web.PublicPaths
 import io.kotest.core.spec.style.BehaviorSpec

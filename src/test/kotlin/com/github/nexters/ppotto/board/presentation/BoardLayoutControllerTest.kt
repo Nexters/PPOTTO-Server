@@ -1,12 +1,12 @@
 package com.github.nexters.ppotto.board.presentation
 
-import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.BoardTestConfig
 import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.board.support.uuidV7
+import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
-private const val TOO_LONG_TITLE_LENGTH = BoardStickerLayoutCommand.MAX_TITLE_LENGTH + 1
+private const val TOO_LONG_TITLE_LENGTH = Sticker.MAX_TITLE_LENGTH + 1
 
 @AutoConfigureMockMvc
 @Import(BoardTestConfig::class)

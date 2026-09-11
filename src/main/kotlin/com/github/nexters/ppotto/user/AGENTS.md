@@ -18,9 +18,9 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `presentation/dto/UserResponse.kt` | Swagger-described public account response without social-provider identifiers or tokens |
 | `presentation/UserApiExamples.kt` | `ApiExampleProvider` implementation. Defines Kakao-user and Apple private-relay-user lookup response examples as real DTO instances |
 | `infrastructure/UserRepository.kt` | The only DSLContext persistence of this domain: conflict-free active social-account creation, active account lookup, profile refresh, withdrawal, and hard deletion |
-| `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration following the shared constructor property spacing convention |
+| `infrastructure/config/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration following the shared constructor property spacing convention |
 | `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Versioned AES-256-GCM provider refresh-token encryption; injected as the concrete class, not behind a port |
-| `infrastructure/WithdrawnUserCleanupProperties.kt` | Validated `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron |
+| `infrastructure/config/WithdrawnUserCleanupProperties.kt` | Validated `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron |
 | `infrastructure/WithdrawnUserCleanupScheduler.kt` | Property-gated `@EnableScheduling` entry point that turns the retention policy into a `deletedBefore` cutoff |
 
 ## Rules

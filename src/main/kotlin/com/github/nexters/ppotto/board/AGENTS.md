@@ -17,11 +17,11 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `infrastructure/BoardWithdrawalRepository.kt` | Withdrawn-user board id lookup and hard deletion, kept out of `BoardRepository` so the active-board repository stays soft-delete only |
 | `infrastructure/integration/StickerDrawingCommandAdapter.kt` | Sticker-domain `StickerDrawingCommandPort` adapter; soft-deletes sticker-scoped drawings through `DrawingRepository` inside the caller's transaction |
 | `infrastructure/integration/WithdrawnUserBoardDeletionAdapter.kt` | User-domain `WithdrawnUserBoardDeletionPort` adapter through `BoardWithdrawalService` |
-| `infrastructure/BoardExternalPortFallbackConfiguration.kt` | Fail-closed standalone fallbacks that back off when integration adapters are registered |
+| `infrastructure/config/BoardExternalPortFallbackConfiguration.kt` | Fail-closed standalone fallbacks that back off when integration adapters are registered |
 | `application/BoardCommandService.kt` | Default/create/rename/delete use cases and board policies as plain statements. Only `create` and `delete` open a transaction; `rename` is a single `UPDATE ... RETURNING` |
 | `application/BoardAccessService.kt` | Port-free board existence, ownership, and `MANDATORY`-propagation row-locking ownership lookup boundary for cross-domain services |
-| `application/BoardLayoutUpdateCommand.kt` | Application-layer layout command model: changed sticker layouts, created `NewDrawing`s, and deleted drawing ids. Its `init` owns every duplicate-id rejection (`COMMON-001`), so an unbuildable layout never reaches the service |
-| `application/BoardDetail.kt` | Application-layer board detail read model |
+| `application/model/BoardLayoutUpdateCommand.kt` | Application-layer layout command model: changed sticker layouts, created `NewDrawing`s, and deleted drawing ids. Its `init` owns every duplicate-id rejection (`COMMON-001`), so an unbuildable layout never reaches the service |
+| `application/model/BoardDetail.kt` | Application-layer board detail read model |
 | `application/BoardWithdrawalService.kt` | Withdrawn-user board id lookup and atomic drawing/board hard deletion, including already soft-deleted rows |
 | `application/BoardQueryService.kt` | Board list/detail composition through the sticker query port. `list` returns domain `Board`s and presentation maps them. Cross-domain ownership lookups belong to `BoardAccessService`, not here. Neither read opens a transaction |
 | `application/BoardLayoutService.kt` | User-serialized sticker/drawing guard sequence and atomic changed-layout persistence, written as plain statements |
