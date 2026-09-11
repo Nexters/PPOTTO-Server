@@ -79,7 +79,7 @@ private const val OPERATION_NAME = "chat"
 private const val SPAN_OP = "gen_ai.$OPERATION_NAME"
 private const val PROVIDER = "gcp.gemini"
 private const val FINISH_REASON_SEPARATOR = ","
-private const val MAX_CONTENT_LENGTH = 8192
+private const val MAX_CONTENT_LENGTH = 16384
 private const val TRUNCATION_MARKER = "…[truncated]"
 
 private const val OPERATION_NAME_KEY = "gen_ai.operation.name"

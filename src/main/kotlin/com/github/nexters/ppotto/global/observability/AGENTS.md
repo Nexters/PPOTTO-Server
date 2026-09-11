@@ -32,7 +32,7 @@ Spec: [develop.sentry.dev AI Agents Module](https://develop.sentry.dev/sdk/telem
 | `gen_ai.response.finish_reasons` | comma-joined string | Spec types this as a string, not a list |
 | `gen_ai.input.messages` / `gen_ai.output.messages` | `[{"role","parts":[{"type","content"}]}]` JSON string | Current spec shape. Photo parts become `{"type":"uri","modality","mime_type","uri"}` |
 | `gen_ai.request.messages` / `gen_ai.response.text` / `gen_ai.system` | **not sent** | sentry-conventions marks all three Deprecated and names the current key to use instead. They were emitted alongside the current keys for a while out of uncertainty about which the UI reads; that duplication is gone |
-| `gen_ai.system_instructions` | plain string | Spec types this as a string. No call site sets `systemInstruction` today, so it is normally absent |
+| `gen_ai.system_instructions` | plain string | Spec types this as a string. Set on the classification call only — `VertexAiGeminiClassifier` passes `GeminiPrompts.COPY_VOICE` as `systemInstruction`, so it is present (about 2.2k chars) on every `photo-classification` span and absent on the sticker-regeneration and subject-verification spans, which attach no tone instruction by design |
 | `ppotto.llm.photo_count` | request photo count | Custom attribute, `ppotto.llm.` prefixed |
 
 ## HTTP payload capture on transactions
@@ -79,7 +79,7 @@ So when checking whether an attribute reached storage, **query all 40 `attribute
 ## Rules
 
 - Prompts, photo GCS URIs, and model output are captured on purpose. This is a deliberate reversal of the earlier no-body policy: the product wants full LLM payloads in Sentry, and the org enforces server-side scrubbing before storage. Do not re-add a blanket body exclusion without checking that decision first.
-- Each text part is truncated to 8192 characters before serialization, so the attribute stays parsable JSON. Truncating the serialized JSON instead would produce an unparsable value that the Agents UI drops. Photo parts are GCS URI references, not base64, so they cost almost nothing.
+- Each text part is truncated to 16384 characters before serialization, so the attribute stays parsable JSON. The cap matches the HTTP body cap below on purpose; it was 8192 until the classification prompt grew past it and the request echo started arriving as `…[truncated]`, which is the one thing this instrumentation exists to show. Truncating the serialized JSON instead would produce an unparsable value that the Agents UI drops. Photo parts are GCS URI references, not base64, so they cost almost nothing.
 - Call sites keep the `LlmTracer.trace(...) { span -> client 호출.also { span.record(it) } }` one-liner shape. No instrumentation logic in business code.
 - `LlmTracer` starts a child span when `Sentry.getSpan()` is non-null and a standalone transaction otherwise. The analysis pipeline runs on `@Async` virtual threads and forks again inside `AnalysisPipelineService`, so the standalone path is the normal one there — never assume a parent exists.
 - Attribute keys follow Sentry Conventions; custom keys use the `ppotto.llm.` prefix. Changing a `gen_ai.*` key silently empties the Agents dashboard, so `LlmTracerTest` asserts the literal strings rather than the constants.
