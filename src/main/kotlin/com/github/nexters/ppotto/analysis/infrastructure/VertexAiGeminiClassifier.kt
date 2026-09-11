@@ -327,6 +327,7 @@ internal class GeminiPhotoAliases private constructor(
 }
 
 internal data class GeminiThemeResponse(
+    val observedDetails: List<String>? = null,
     val theme: String,
     val categorizedPhotoIds: List<String>,
     val recap: GeminiRecapResponse,

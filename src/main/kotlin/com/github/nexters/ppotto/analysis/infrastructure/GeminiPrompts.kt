@@ -12,6 +12,7 @@ object GeminiPrompts {
             "Photo alias list (in the same order as the attached photos): ${photoAliases.joinToString(", ")}",
             """
             For each theme, generate:
+            - observedDetails: BEFORE naming anything, list 3-6 concrete things you can literally see across this theme's photos (in Korean) — objects, foods, places, weather, time of day, what people are doing. Plain nouns, no adjectives, no mood. Bad: "즐거운 분위기". Good: "테이블 위 마라탕 그릇", "형광 주황 파라솔", "창밖이 아직 어두움". Every text field below must be built out of these words.
             - theme: theme name (in Korean). Internal only — the user never sees it — so name what literally happened instead of a mood.
             - categorizedPhotoIds: the list of photo aliases classified under this theme (use only values from the alias list above)
             - recap.badge: the award or verdict this theme hands to the person who took these photos, not a label for what is in them. 6-11 Korean characters, always ending with exactly one emoji, and never longer than 15 characters counting an emoji as 2. Name a thing or an action that is actually in the photos, never a feeling.

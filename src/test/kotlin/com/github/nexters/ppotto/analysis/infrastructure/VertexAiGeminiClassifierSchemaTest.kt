@@ -40,6 +40,15 @@ class VertexAiGeminiClassifierSchemaTest :
                         .shouldBeEmpty()
                 }
 
+                Then("구체 명사를 theme보다 먼저 생성하도록 순서를 강제한다") {
+                    VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA
+                        .items()
+                        .get()
+                        .propertyOrdering()
+                        .get()
+                        .first() shouldBe "observedDetails"
+                }
+
                 Then("말풍선과 키워드칩 개수를 schema가 강제한다") {
                     val comments =
                         VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA

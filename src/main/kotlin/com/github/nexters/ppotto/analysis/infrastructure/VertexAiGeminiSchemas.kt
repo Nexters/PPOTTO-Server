@@ -152,6 +152,13 @@ internal object VertexAiGeminiSchemas {
             .description("One theme: the photos in it, the verdict handed to the person, and the sticker to cut out.")
             .properties(
                 mapOf(
+                    "observedDetails" to
+                        arraySchema(
+                            stringSchema(OBSERVED_DETAIL_DESCRIPTION),
+                            OBSERVED_DETAILS_DESCRIPTION,
+                            minItems = 3,
+                            maxItems = 6,
+                        ),
                     "theme" to stringSchema(THEME_DESCRIPTION),
                     "categorizedPhotoIds" to
                         arraySchema(
@@ -162,8 +169,8 @@ internal object VertexAiGeminiSchemas {
                     "sticker" to stickerSchema(THEME_SOURCE_PHOTO_ID_DESCRIPTION),
                     "comments" to commentsSchema(),
                 ),
-            ).propertyOrdering("theme", "categorizedPhotoIds", "recap", "sticker", "comments")
-            .required("theme", "categorizedPhotoIds", "recap", "sticker", "comments")
+            ).propertyOrdering("observedDetails", "theme", "categorizedPhotoIds", "recap", "sticker", "comments")
+            .required("observedDetails", "theme", "categorizedPhotoIds", "recap", "sticker", "comments")
             .build()
 }
 
@@ -182,6 +189,15 @@ private const val TARGET_SUBJECT_DESCRIPTION =
 private const val MAIN_COLOR_DESCRIPTION =
     "6-digit hex code of the subject's dominant surface color as it appears in the photo, for example #FF6B6B. " +
         "Not a shadow, highlight, or background color."
+
+private const val OBSERVED_DETAIL_DESCRIPTION =
+    "One concrete thing you can actually see, as a plain Korean noun phrase."
+
+private const val OBSERVED_DETAILS_DESCRIPTION =
+    "3 to 6 concrete things you can actually see across this theme's photos, in Korean: " +
+        "objects, foods, places, weather, time of day, what people are doing. " +
+        "Plain nouns only, no adjectives, no interpretation. " +
+        "This is your scratchpad: every field below must be built out of these, not out of generic mood words."
 
 private const val THEME_DESCRIPTION =
     "Theme name in Korean. Internal only, never shown to the user, " +
