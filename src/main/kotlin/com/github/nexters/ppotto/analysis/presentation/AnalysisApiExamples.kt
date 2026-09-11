@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.presentation
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
 import com.github.nexters.ppotto.analysis.presentation.dto.CreateAnalysisRequest
@@ -33,6 +34,7 @@ private val ANALYZING_STATUS =
         boardId = BOARD_ID,
         status = AnalysisStatus.ANALYZING,
         progress = 45,
+        failedCode = null,
         failedReason = null,
         startedAt = STARTED_AT,
         completedAt = null,
@@ -132,7 +134,8 @@ private val FAILED_STATUS_RESPONSE =
                 ANALYZING_STATUS.copy(
                     status = AnalysisStatus.FAILED,
                     progress = 60,
-                    failedReason = "AI 분석 호출이 반복 실패했습니다.",
+                    failedCode = AnalysisErrorCode.CLASSIFICATION_FAILED,
+                    failedReason = AnalysisErrorCode.CLASSIFICATION_FAILED.message,
                 ),
             ),
     )

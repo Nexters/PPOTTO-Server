@@ -61,6 +61,10 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
         set(value): Unit = set(9, value)
         get(): Instant? = get(9) as Instant?
 
+    open var failedCode: String?
+        set(value): Unit = set(10, value)
+        get(): String? = get(10) as String?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -70,7 +74,7 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
     /**
      * Create a detached, initialised AnalysisRecord
      */
-    constructor(id: AnalysisId? = null, userId: UserId, boardId: BoardId, status: String, progress: Int? = null, failedReason: String? = null, startedAt: Instant? = null, completedAt: Instant? = null, createdAt: Instant? = null, updatedAt: Instant? = null): this() {
+    constructor(id: AnalysisId? = null, userId: UserId, boardId: BoardId, status: String, progress: Int? = null, failedReason: String? = null, startedAt: Instant? = null, completedAt: Instant? = null, createdAt: Instant? = null, updatedAt: Instant? = null, failedCode: String? = null): this() {
         this.id = id
         this.userId = userId
         this.boardId = boardId
@@ -81,6 +85,7 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
         this.completedAt = completedAt
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.failedCode = failedCode
         resetTouchedOnNotNull()
     }
 
@@ -99,6 +104,7 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
             this.completedAt = value.completedAt
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.failedCode = value.failedCode
             resetTouchedOnNotNull()
         }
     }

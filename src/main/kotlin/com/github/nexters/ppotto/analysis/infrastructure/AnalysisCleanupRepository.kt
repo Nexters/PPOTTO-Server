@@ -22,5 +22,7 @@ class AnalysisCleanupRepository(
             .and(ANALYSIS.UPDATED_AT.lt(updatedBefore))
             .orderBy(ANALYSIS.ID.asc())
             .limit(limit)
+            .forUpdate()
+            .skipLocked()
             .map { it.value1()!! }
 }

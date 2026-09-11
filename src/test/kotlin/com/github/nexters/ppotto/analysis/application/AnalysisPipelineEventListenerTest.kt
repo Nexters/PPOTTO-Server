@@ -5,12 +5,15 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
+import com.github.nexters.ppotto.analysis.domain.RecapContent
+import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.analysis.support.FakeStickerGenerator
 import com.github.nexters.ppotto.analysis.support.FakeThemeClassifier
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.notification.domain.DevicePlatform
 import com.github.nexters.ppotto.notification.infrastructure.DeviceTokenRepository
@@ -25,6 +28,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import org.jooq.DSLContext
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.PlatformTransactionManager
@@ -53,7 +57,7 @@ class AnalysisPipelineEventListenerTest(
     boardRepository: BoardRepository,
     userRepository: UserRepository,
 ) : IntegrationTest({
-        fun analyzingAnalysis(): Pair<AnalysisId, List<PhotoRef>> {
+        fun analyzingAnalysis(photoCount: Int = 1): Pair<AnalysisId, List<PhotoRef>> {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id, board.id)
@@ -61,7 +65,7 @@ class AnalysisPipelineEventListenerTest(
                 photoRepository.saveAll(
                     analysis.id,
                     board.id,
-                    listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
+                    List(photoCount) { PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")) },
                 )
             photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
             analysisRepository.markAnalyzing(analysis.id, Instant.now())
@@ -93,11 +97,13 @@ class AnalysisPipelineEventListenerTest(
             }
 
             When("파이프라인이 실패하면") {
-                themeClassifier.failureToThrow = RuntimeException("강제 실패")
+                themeClassifier.failureToThrow = BusinessException(AnalysisErrorCode.CLASSIFICATION_FAILED, "provider-secret")
                 analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
 
                 Then("분석 상태가 FAILED로 바뀐다") {
                     analysisRepository.findById(analysisId)!!.status shouldBe AnalysisStatus.FAILED
+                    analysisRepository.findById(analysisId)!!.failedCode shouldBe AnalysisErrorCode.CLASSIFICATION_FAILED
+                    analysisRepository.findById(analysisId)!!.failedReason!! shouldNotContain "provider-secret"
                 }
 
                 Then("스티커는 하나도 저장되지 않는다") {
@@ -116,17 +122,91 @@ class AnalysisPipelineEventListenerTest(
                 analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
                 val analysis = analysisRepository.findById(analysisId)!!
 
-                Then("빈 보드를 성공이라 부르지 않고 FAILED로 마감한다") {
+                Then("스티커 저장 없이 전체 생성 실패로 마감한다") {
                     stickerRepository.findAllByAnalysisId(analysisId).shouldBeEmpty()
                     analysis.status shouldBe AnalysisStatus.FAILED
-                }
-
-                Then("실패 사유에 ANALYSIS-012 메시지가 남는다") {
-                    analysis.failedReason shouldContain AnalysisErrorCode.NO_STICKER_GENERATED.message
-                }
-
-                Then("실패 알림이 발송된다") {
+                    analysis.failedCode shouldBe AnalysisErrorCode.STICKER_GENERATION_FAILED
+                    analysis.failedReason shouldContain AnalysisErrorCode.STICKER_GENERATION_FAILED.message
                     fakePushNotifier.messagesFor(analysisId, "ANALYSIS_FAILED") shouldHaveSize 1
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_COMPLETED").shouldBeEmpty()
+                }
+            }
+
+            When("모든 테마에서 피사체가 없다고 판정하면") {
+                themeClassifier.onVerify = { _, _ -> null }
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("피사체 없음 코드로 실패 처리한다") {
+                    analysisRepository.findById(analysisId)!!.status shouldBe AnalysisStatus.FAILED
+                    analysisRepository.findById(analysisId)!!.failedCode shouldBe AnalysisErrorCode.NO_STICKER_SUBJECT
+                    stickerRepository.findAllByAnalysisId(analysisId).shouldBeEmpty()
+                }
+            }
+
+            When("분류 응답 검증에 실패하면") {
+                themeClassifier.failureToThrow = BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE)
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("기존 분류 응답 오류 코드를 보존한다") {
+                    analysisRepository.findById(analysisId)!!.failedCode shouldBe AnalysisErrorCode.INVALID_GEMINI_RESPONSE
+                }
+            }
+
+            When("예상하지 못한 내부 예외가 발생하면") {
+                themeClassifier.failureToThrow = IllegalStateException("internal-secret")
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("내부 오류 코드만 안전한 사유와 함께 기록한다") {
+                    analysisRepository.findById(analysisId)!!.failedCode shouldBe AnalysisErrorCode.INTERNAL_ERROR
+                    analysisRepository.findById(analysisId)!!.failedReason!! shouldNotContain "internal-secret"
+                }
+            }
+
+            When("파이프라인 도중 분석이 실패로 종료되면") {
+                stickerGenerator.onGenerate = {
+                    analysisRepository.markFailed(analysisId, "분석 처리 중단", AnalysisErrorCode.INTERNAL_ERROR)
+                }
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("늦게 완성된 스티커를 저장하거나 완료 알림을 보내지 않는다") {
+                    analysisRepository.findById(analysisId)!!.status shouldBe AnalysisStatus.FAILED
+                    analysisRepository.findById(analysisId)!!.failedCode shouldBe AnalysisErrorCode.INTERNAL_ERROR
+                    stickerRepository.findAllByAnalysisId(analysisId).shouldBeEmpty()
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_COMPLETED").shouldBeEmpty()
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_FAILED").shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("두 테마 중 한 테마의 스티커 생성만 실패하는 분석에서") {
+            val (analysisId, photoRefs) = analyzingAnalysis(photoCount = 2)
+            themeClassifier.classifications =
+                photoRefs.mapIndexed { index, photo ->
+                    ThemeClassification(
+                        theme = "테마$index",
+                        categorizedPhotoIds = listOf(photo.photoId),
+                        recap = RecapContent(badge = "뱃지$index", text = "리캡$index"),
+                        stickerTargetSubject = "피사체$index",
+                        stickerSourcePhotoId = photo.photoId,
+                        stickerMainColor = "#FF6B6B",
+                        comments = emptyList(),
+                    )
+                }
+            stickerGenerator.onGenerate = { if (it == "피사체1") throw IllegalStateException("배경 제거 실패") }
+
+            When("파이프라인을 실행하면") {
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("성공한 스티커만 저장하고 실패 코드 없이 완료 처리한다") {
+                    val analysis = analysisRepository.findById(analysisId)!!
+                    analysis.status shouldBe AnalysisStatus.COMPLETED
+                    analysis.failedCode shouldBe null
+                    stickerRepository
+                        .findAllByAnalysisId(analysisId)
+                        .single()
+                        .title shouldBe "뱃지0"
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_COMPLETED") shouldHaveSize 1
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_FAILED").shouldBeEmpty()
                 }
             }
         }
@@ -148,6 +228,7 @@ class AnalysisPipelineEventListenerTest(
 
                 Then("분석은 COMPLETED가 아니라 FAILED로 남는다") {
                     analysisRepository.findById(analysisId)!!.status shouldBe AnalysisStatus.FAILED
+                    analysisRepository.findById(analysisId)!!.failedCode shouldBe AnalysisErrorCode.RESULT_SAVE_FAILED
                 }
             }
         }

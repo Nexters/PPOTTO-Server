@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
@@ -8,8 +9,10 @@ import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import com.github.nexters.ppotto.analysis.support.FakeStickerGenerator
 import com.github.nexters.ppotto.analysis.support.FakeStickerStorage
 import com.github.nexters.ppotto.analysis.support.FakeThemeClassifier
+import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.PhotoId
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldContainExactly
@@ -142,6 +145,7 @@ class AnalysisPipelineServiceTest :
                 Then("피사체 없음으로 판정된 테마는 스티커 없이 테마 정보만 남는다") {
                     val missingTheme = result.themes.first { it.stickerSourcePhotoId == missingPhoto.photoId }
                     missingTheme.stickerImageKey.shouldBeNull()
+                    missingTheme.failedCode shouldBe AnalysisErrorCode.NO_STICKER_SUBJECT
                     missingTheme.theme shouldBe "테마1"
                     missingTheme.badge shouldBe "뱃지1"
                 }
@@ -257,6 +261,7 @@ class AnalysisPipelineServiceTest :
                     failedTheme.theme shouldBe "테마1"
                     failedTheme.badge shouldBe "뱃지1"
                     failedTheme.text shouldBe "리캡1"
+                    failedTheme.failedCode shouldBe AnalysisErrorCode.STICKER_GENERATION_FAILED
                 }
 
                 Then("실패한 테마의 오브젝트는 업로드하지 않는다") {
@@ -282,16 +287,62 @@ class AnalysisPipelineServiceTest :
                 )
 
             When("파이프라인을 실행하면") {
-                val result = service.run(PipelineRun(analysisId), listOf(photo))
+                Then("완성된 스티커가 없으므로 전체 생성 실패 코드를 반환한다") {
+                    shouldThrow<BusinessException> {
+                        service.run(PipelineRun(analysisId), listOf(photo))
+                    }.errorCode shouldBe AnalysisErrorCode.STICKER_GENERATION_FAILED
+                }
+            }
+        }
 
-                Then("분석을 실패시키지 않고 스티커 이미지 키만 null로 남긴다") {
-                    result.themes
-                        .single()
-                        .stickerImageKey
-                        .shouldBeNull()
-                    result.themes
-                        .single()
-                        .theme shouldBe "테마0"
+        Given("모든 테마에서 피사체를 찾지 못한 파이프라인이") {
+            val photos = listOf(photoRef("71"), photoRef("72"))
+            val classifier =
+                FakeThemeClassifier().apply {
+                    onClassify = { themePerPhoto(photos) }
+                    onVerify = { _, _ -> null }
+                }
+            val service = AnalysisPipelineService(classifier, FakeStickerGenerator(), FakeStickerStorage())
+
+            When("파이프라인을 실행하면") {
+                Then("생성 오류와 구분되는 피사체 없음 코드를 반환한다") {
+                    shouldThrow<BusinessException> {
+                        service.run(PipelineRun(AnalysisId(UUID.randomUUID())), photos)
+                    }.errorCode shouldBe AnalysisErrorCode.NO_STICKER_SUBJECT
+                }
+            }
+        }
+
+        Given("피사체 없음과 생성 오류가 섞여 완성된 스티커가 없는 파이프라인이") {
+            val photos = listOf(photoRef("81"), photoRef("82"))
+            val classifier =
+                FakeThemeClassifier().apply {
+                    onClassify = { themePerPhoto(photos) }
+                    onVerify = { photo, subject ->
+                        if (photo == photos.first()) null else StickerSubjectVerification(subject, "#123456")
+                    }
+                }
+            val generator = FakeStickerGenerator().apply { onGenerate = { error("배경 제거 실패") } }
+            val service = AnalysisPipelineService(classifier, generator, FakeStickerStorage())
+
+            When("파이프라인을 실행하면") {
+                Then("피사체 없음 대신 전체 생성 실패 코드를 반환한다") {
+                    shouldThrow<BusinessException> {
+                        service.run(PipelineRun(AnalysisId(UUID.randomUUID())), photos)
+                    }.errorCode shouldBe AnalysisErrorCode.STICKER_GENERATION_FAILED
+                }
+            }
+        }
+
+        Given("분류 결과가 비어 있는 파이프라인이") {
+            val classifier = FakeThemeClassifier().apply { classifications = emptyList() }
+            val service = AnalysisPipelineService(classifier, FakeStickerGenerator(), FakeStickerStorage())
+
+            When("파이프라인을 실행하면") {
+                Then("피사체 없음 대신 잘못된 분류 응답 코드를 반환한다") {
+                    shouldThrow<BusinessException> {
+                        service.run(PipelineRun(AnalysisId(UUID.randomUUID())), listOf(photoRef("91")))
+                    }.errorCode shouldBe AnalysisErrorCode.INVALID_GEMINI_RESPONSE
                 }
             }
         }

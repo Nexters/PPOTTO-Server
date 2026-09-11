@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisDiscardedEvent
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
 import com.github.nexters.ppotto.global.identifier.AnalysisId
@@ -19,8 +20,9 @@ class AnalysisDiscardService(
     fun discard(
         analysisId: AnalysisId,
         failedReason: String,
+        failedCode: AnalysisErrorCode,
     ): Boolean {
-        if (analysisRepository.markFailed(analysisId, failedReason) != 1) {
+        if (analysisRepository.markFailed(analysisId, failedReason, failedCode) != 1) {
             return false
         }
         photoRepository.markAllFailedByAnalysisId(analysisId)

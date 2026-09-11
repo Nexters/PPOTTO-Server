@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.StickerGenerator
 import com.github.nexters.ppotto.analysis.domain.StickerStorage
@@ -7,6 +8,7 @@ import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassifier
 import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
+import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import org.springframework.stereotype.Service
 import java.util.concurrent.Callable
@@ -32,6 +34,15 @@ class AnalysisPipelineService(
         onProgress(CLASSIFICATION_COMPLETED_PROGRESS)
 
         val themes = processThemes(pipelineRun, classifications, photoRefById, onProgress)
+        if (themes.none { it.stickerImageKey != null }) {
+            val failedCode =
+                if (themes.isNotEmpty() && themes.all { it.failedCode == AnalysisErrorCode.NO_STICKER_SUBJECT }) {
+                    AnalysisErrorCode.NO_STICKER_SUBJECT
+                } else {
+                    AnalysisErrorCode.STICKER_GENERATION_FAILED
+                }
+            throw BusinessException(failedCode)
+        }
         onProgress(STICKER_COMPLETED_PROGRESS)
         return AnalysisPipelineResult(pipelineRun.analysisId, themes)
     }
@@ -47,7 +58,9 @@ class AnalysisPipelineService(
                 ceiling = CLASSIFICATION_COMPLETED_PROGRESS,
                 onProgress = onProgress,
             ) {
-                themeClassifier.classifyAndRecap(photos)
+                themeClassifier
+                    .classifyAndRecap(photos)
+                    .also { if (it.isEmpty()) throw BusinessException(AnalysisErrorCode.INVALID_GEMINI_RESPONSE) }
             }
         }
 
@@ -108,7 +121,12 @@ class AnalysisPipelineService(
             theme = classification.theme,
             fallback = {
                 progressEmitter.publish(themeIndex, THEME_COMPLETED_PROGRESS)
-                classification.toThemeResult(classification.stickerSourcePhotoId, stickerImageKey = null, verifiedSubject = null)
+                classification.toThemeResult(
+                    classification.stickerSourcePhotoId,
+                    stickerImageKey = null,
+                    verifiedSubject = null,
+                    failedCode = AnalysisErrorCode.STICKER_GENERATION_FAILED,
+                )
             },
         ) {
             val sourcePhoto = photoRefById.getValue(classification.stickerSourcePhotoId)
@@ -127,7 +145,17 @@ class AnalysisPipelineService(
                     }
                 }
             onLocalProgress(THEME_COMPLETED_PROGRESS)
-            classification.toThemeResult(sourcePhoto.photoId, stickerImageKey, verifiedSubject)
+            classification.toThemeResult(
+                sourcePhoto.photoId,
+                stickerImageKey,
+                verifiedSubject,
+                failedCode =
+                    when {
+                        verifiedSubject == null -> AnalysisErrorCode.NO_STICKER_SUBJECT
+                        stickerImageKey == null -> AnalysisErrorCode.STICKER_GENERATION_FAILED
+                        else -> null
+                    },
+            )
         }
 
     private fun resolvedStickerSubject(
@@ -164,6 +192,7 @@ class AnalysisPipelineService(
         stickerSourcePhotoId: PhotoId,
         stickerImageKey: String?,
         verifiedSubject: StickerSubjectVerification?,
+        failedCode: AnalysisErrorCode?,
     ): ThemeAnalysisResult =
         ThemeAnalysisResult(
             theme = theme,
@@ -174,6 +203,7 @@ class AnalysisPipelineService(
             stickerImageKey = stickerImageKey,
             stickerMainColor = verifiedSubject?.mainColor ?: stickerMainColor,
             comments = comments,
+            failedCode = failedCode,
         )
 
     companion object {

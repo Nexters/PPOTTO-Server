@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.presentation
 
 import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.application.CreateAnalysisCommand
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
@@ -411,6 +412,7 @@ class AnalysisControllerTest(
                         .andExpect(jsonPath("$.data.boardId").value(board.id.toString()))
                         .andExpect(jsonPath("$.data.status").value("UPLOADING"))
                         .andExpect(jsonPath("$.data.progress").value(0))
+                        .andExpect(jsonPath("$.data.failedCode").doesNotExist())
                         .andExpect(jsonPath("$.data.failedReason").doesNotExist())
                         .andExpect(jsonPath("$.data.startedAt").doesNotExist())
                         .andExpect(jsonPath("$.data.completedAt").doesNotExist())
@@ -440,6 +442,7 @@ class AnalysisControllerTest(
                         .andExpect(jsonPath("$.data.boardId").value(board.id.toString()))
                         .andExpect(jsonPath("$.data.status").value("ANALYZING"))
                         .andExpect(jsonPath("$.data.progress").value(10))
+                        .andExpect(jsonPath("$.data.failedCode").doesNotExist())
                         .andExpect(jsonPath("$.data.startedAt").value("2026-07-27T05:02:11Z"))
                         .andExpect(jsonPath("$.data.completedAt").doesNotExist())
                 }
@@ -476,7 +479,69 @@ class AnalysisControllerTest(
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.status").value("COMPLETED"))
                         .andExpect(jsonPath("$.data.progress").value(100))
+                        .andExpect(jsonPath("$.data.failedCode").doesNotExist())
                         .andExpect(jsonPath("$.data.completedAt").value("2026-07-27T05:03:38Z"))
+                }
+            }
+        }
+
+        Given("실패 코드가 저장된 분석을 조회할 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+
+            listOf(
+                AnalysisErrorCode.INVALID_GEMINI_RESPONSE to "ANALYSIS-007",
+                AnalysisErrorCode.NO_STICKER_SUBJECT to "ANALYSIS-012",
+                AnalysisErrorCode.STICKER_GENERATION_FAILED to "ANALYSIS-013",
+                AnalysisErrorCode.RESULT_SAVE_FAILED to "ANALYSIS-014",
+                AnalysisErrorCode.INTERNAL_ERROR to "ANALYSIS-015",
+                AnalysisErrorCode.CLASSIFICATION_FAILED to "ANALYSIS-017",
+            ).forEach { (failedCode, code) ->
+                When("실패 코드가 $code 이면") {
+                    dslContext
+                        .update(ANALYSIS)
+                        .set(ANALYSIS.STATUS, AnalysisStatus.FAILED.name)
+                        .set(ANALYSIS.FAILED_CODE, code)
+                        .set(ANALYSIS.FAILED_REASON, "분석 처리 중 실패했습니다.")
+                        .where(ANALYSIS.ID.eq(analysis.id))
+                        .execute()
+                    val response = mockMvc.perform(get("/analysis/${analysis.id}").authenticatedAs(board.userId))
+
+                    Then("HTTP 오류가 아닌 성공 응답의 데이터에 코드 문자열을 담는다") {
+                        analysisRepository.findById(analysis.id)!!.failedCode shouldBe failedCode
+                        response
+                            .andExpect(status().isOk)
+                            .andExpect(jsonPath("$.success").value(true))
+                            .andExpect(jsonPath("$.data.status").value("FAILED"))
+                            .andExpect(jsonPath("$.data.failedCode").value(code))
+                            .andExpect(jsonPath("$.data.failedReason").value("분석 처리 중 실패했습니다."))
+                            .andExpect(jsonPath("$.error").doesNotExist())
+                    }
+                }
+            }
+        }
+
+        Given("실패 코드 없이 저장된 과거 분석을 조회할 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.FAILED.name)
+                .set(ANALYSIS.FAILED_REASON, "과거에 기록된 실패 사유")
+                .where(ANALYSIS.ID.eq(analysis.id))
+                .execute()
+
+            When("분석 상태를 조회하면") {
+                val response = mockMvc.perform(get("/analysis/${analysis.id}").authenticatedAs(board.userId))
+
+                Then("기존 실패 사유를 유지하고 null인 실패 코드 필드는 생략한다") {
+                    response
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.status").value("FAILED"))
+                        .andExpect(jsonPath("$.data.failedCode").doesNotExist())
+                        .andExpect(jsonPath("$.data.failedReason").value("과거에 기록된 실패 사유"))
+                        .andExpect(jsonPath("$.error").doesNotExist())
                 }
             }
         }
@@ -549,7 +614,20 @@ class AnalysisControllerTest(
                     val analysis = analysisRepository.findById(created.analysisId)
                     analysis.shouldNotBeNull()
                     analysis.status shouldBe AnalysisStatus.FAILED
+                    analysis.failedCode shouldBe AnalysisErrorCode.ANALYSIS_CANCELED
+                    analysis.failedCode?.code shouldBe "ANALYSIS-016"
                     analysis.failedReason shouldBe "CANCELED"
+                }
+
+                Then("분석 상태 조회에 취소 코드를 문자열로 반환한다") {
+                    mockMvc
+                        .perform(get("/analysis/${created.analysisId}").authenticatedAs(board.userId))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data.status").value("FAILED"))
+                        .andExpect(jsonPath("$.data.failedCode").value("ANALYSIS-016"))
+                        .andExpect(jsonPath("$.data.failedReason").value("CANCELED"))
+                        .andExpect(jsonPath("$.error").doesNotExist())
                 }
             }
         }
