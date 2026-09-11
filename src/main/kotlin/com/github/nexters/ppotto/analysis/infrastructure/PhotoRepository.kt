@@ -64,6 +64,14 @@ class PhotoRepository(
             .fetch()
             .map { it.toDomain() }
 
+    fun findCompletedByAnalysisId(analysisId: AnalysisId): List<Photo> =
+        dslContext
+            .selectFrom(PHOTOS)
+            .where(PHOTOS.ANALYSIS_ID.eq(analysisId))
+            .and(PHOTOS.UPLOAD_STATUS.eq(UploadStatus.COMPLETED.name))
+            .fetch()
+            .map { it.toDomain() }
+
     fun findAllByAnalysisId(analysisId: AnalysisId): List<Photo> =
         dslContext
             .selectFrom(PHOTOS)

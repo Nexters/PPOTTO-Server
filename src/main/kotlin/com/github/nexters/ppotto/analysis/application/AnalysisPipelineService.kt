@@ -10,9 +10,11 @@ import com.github.nexters.ppotto.analysis.domain.ThemeClassifier
 import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
 import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.PhotoId
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.util.concurrent.Callable
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
@@ -101,7 +103,8 @@ class AnalysisPipelineService(
             Executors.newVirtualThreadPerTaskExecutor().use { executor ->
                 val tasks =
                     classifications.mapIndexed { themeIndex, classification ->
-                        Callable { processTheme(pipelineRun, themeIndex, classification, photoRefById, progressEmitter) }
+                        val context = ThemeContext(pipelineRun, themeIndex, classification, photoRefById)
+                        Callable { processTheme(context, executor, progressEmitter) }
                     }
                 executor.invokeAll(tasks).map { it.getOrThrow() }
             }
@@ -109,43 +112,36 @@ class AnalysisPipelineService(
     }
 
     private fun processTheme(
-        pipelineRun: PipelineRun,
-        themeIndex: Int,
-        classification: ThemeClassification,
-        photoRefById: Map<PhotoId, PhotoRef>,
+        context: ThemeContext,
+        executor: ExecutorService,
         progressEmitter: ThemeProgressEmitter,
     ): ThemeAnalysisResult =
-        pipelineRun.degrade(
+        context.degrade(
             step = THEME_STEP,
-            themeIndex = themeIndex,
-            theme = classification.theme,
             fallback = {
-                progressEmitter.publish(themeIndex, THEME_COMPLETED_PROGRESS)
-                classification.toThemeResult(
-                    classification.stickerSourcePhotoId,
+                progressEmitter.publish(context.themeIndex, THEME_COMPLETED_PROGRESS)
+                context.classification.toThemeResult(
+                    context.classification.stickerSourcePhotoId,
                     stickerImageKey = null,
                     verifiedSubject = null,
                     failedCode = AnalysisErrorCode.STICKER_GENERATION_FAILED,
                 )
             },
         ) {
-            val sourcePhoto = photoRefById.getValue(classification.stickerSourcePhotoId)
-            val onLocalProgress: (Int) -> Unit = { localProgress -> progressEmitter.publish(themeIndex, localProgress) }
+            val sourcePhoto = context.sourcePhoto
+            val onLocalProgress: (Int) -> Unit = { localProgress -> progressEmitter.publish(context.themeIndex, localProgress) }
 
-            val verifiedSubject =
-                progressTicker.run(THEME_STARTED_PROGRESS, THEME_VERIFY_COMPLETED_PROGRESS, onLocalProgress) {
-                    resolvedStickerSubject(pipelineRun, themeIndex, classification, sourcePhoto)
-                }
-            onLocalProgress(THEME_VERIFY_COMPLETED_PROGRESS)
-
-            val stickerImageKey =
-                verifiedSubject?.let { subject ->
-                    progressTicker.run(THEME_VERIFY_COMPLETED_PROGRESS, THEME_COMPLETED_PROGRESS, onLocalProgress) {
-                        generateAndUploadSticker(pipelineRun, themeIndex, classification.theme, sourcePhoto, subject.targetSubject)
-                    }
+            val (verifiedSubject, stickerImage) =
+                progressTicker.run(THEME_STARTED_PROGRESS, THEME_COMPLETED_PROGRESS, onLocalProgress) {
+                    val verification: Future<StickerSubjectVerification?> =
+                        executor.submit(Callable { resolvedStickerSubject(context, sourcePhoto) })
+                    val image = generateStickerImage(context, sourcePhoto)
+                    verification.getOrThrow() to image
                 }
             onLocalProgress(THEME_COMPLETED_PROGRESS)
-            classification.toThemeResult(
+
+            val stickerImageKey = uploadedStickerKey(context, sourcePhoto, stickerImage, verifiedSubject)
+            context.classification.toThemeResult(
                 sourcePhoto.photoId,
                 stickerImageKey,
                 verifiedSubject,
@@ -159,34 +155,66 @@ class AnalysisPipelineService(
         }
 
     private fun resolvedStickerSubject(
-        pipelineRun: PipelineRun,
-        themeIndex: Int,
-        classification: ThemeClassification,
+        context: ThemeContext,
         sourcePhoto: PhotoRef,
     ): StickerSubjectVerification? =
-        pipelineRun.degrade(
+        context.degrade(
             step = VERIFY_STEP,
-            themeIndex = themeIndex,
-            theme = classification.theme,
-            fallback = { StickerSubjectVerification(classification.stickerTargetSubject, classification.stickerMainColor) },
+            fallback = { StickerSubjectVerification(context.classification.stickerTargetSubject, context.classification.stickerMainColor) },
         ) {
-            pipelineRun.measuredGeminiCall(VERIFY_STEP, themeIndex, classification.theme) {
-                themeClassifier.verifyStickerSubject(sourcePhoto, classification.stickerTargetSubject)
+            context.pipelineRun.measuredGeminiCall(VERIFY_STEP, context.themeIndex, context.theme) {
+                themeClassifier.verifyStickerSubject(sourcePhoto, context.classification.stickerTargetSubject)
             }
         }
 
-    private fun generateAndUploadSticker(
-        pipelineRun: PipelineRun,
-        themeIndex: Int,
-        theme: String,
+    private fun generateStickerImage(
+        context: ThemeContext,
         sourcePhoto: PhotoRef,
-        targetSubject: String,
-    ): String? =
-        pipelineRun.degrade(step = STICKER_STEP, themeIndex = themeIndex, theme = theme, fallback = { null }) {
-            val objectKey = StickerObjectKeys.keyFor(pipelineRun.analysisId, themeIndex, sourcePhoto.photoId)
-            stickerStorage.upload(objectKey, stickerGenerator.generate(sourcePhoto.sourceUri, sourcePhoto.mimeType, targetSubject))
+    ): ByteArray? =
+        context.degrade(step = STICKER_STEP, fallback = { null }) {
+            stickerGenerator.generate(sourcePhoto.sourceUri, sourcePhoto.mimeType, context.classification.stickerTargetSubject)
+        }
+
+    private fun uploadedStickerKey(
+        context: ThemeContext,
+        sourcePhoto: PhotoRef,
+        stickerImage: ByteArray?,
+        verifiedSubject: StickerSubjectVerification?,
+    ): String? {
+        if (stickerImage == null) return null
+        if (verifiedSubject == null) {
+            log.warn(
+                "재확인이 피사체 없음으로 판정해 이미 만든 스티커를 버립니다: analysisId={}, themeIndex={}, theme={}",
+                context.pipelineRun.analysisId,
+                context.themeIndex,
+                context.theme,
+            )
+            return null
+        }
+
+        return context.degrade(step = STICKER_UPLOAD_STEP, fallback = { null }) {
+            val objectKey = StickerObjectKeys.keyFor(context.pipelineRun.analysisId, context.themeIndex, sourcePhoto.photoId)
+            stickerStorage.upload(objectKey, stickerImage)
             objectKey
         }
+    }
+
+    private class ThemeContext(
+        val pipelineRun: PipelineRun,
+        val themeIndex: Int,
+        val classification: ThemeClassification,
+        private val photoRefById: Map<PhotoId, PhotoRef>,
+    ) {
+        val theme: String get() = classification.theme
+
+        val sourcePhoto: PhotoRef get() = photoRefById.getValue(classification.stickerSourcePhotoId)
+
+        fun <T> degrade(
+            step: String,
+            fallback: () -> T,
+            block: () -> T,
+        ): T = pipelineRun.degrade(step, themeIndex, theme, fallback, block)
+    }
 
     private fun ThemeClassification.toThemeResult(
         stickerSourcePhotoId: PhotoId,
@@ -212,7 +240,6 @@ class AnalysisPipelineService(
         const val STICKER_COMPLETED_PROGRESS = 90
 
         private const val THEME_STARTED_PROGRESS = 0
-        private const val THEME_VERIFY_COMPLETED_PROGRESS = 25
         private const val THEME_COMPLETED_PROGRESS = 100
 
         private const val CLASSIFICATION_STEP = "gemini-classification"
@@ -220,6 +247,9 @@ class AnalysisPipelineService(
         private const val THEME_STEP = "sticker-theme"
         private const val VERIFY_STEP = "sticker-verify"
         private const val STICKER_STEP = "sticker-generate"
+        private const val STICKER_UPLOAD_STEP = "sticker-upload"
+
+        private val log = LoggerFactory.getLogger(AnalysisPipelineService::class.java)
 
         private fun stickerProgress(
             completedThemeProgress: Int,

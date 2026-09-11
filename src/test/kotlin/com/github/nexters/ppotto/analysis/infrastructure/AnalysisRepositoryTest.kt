@@ -87,6 +87,16 @@ class AnalysisRepositoryTest(
                 }
             }
 
+            When("이미 올라간 진행률보다 낮은 값으로 갱신하면") {
+                analysisRepository.updateProgress(saved.id, 70)
+                val updatedCount = analysisRepository.updateProgress(saved.id, 50)
+
+                Then("진행률은 되돌아가지 않고 갱신된 행도 없다") {
+                    updatedCount shouldBe 0
+                    analysisRepository.findById(saved.id)?.progress shouldBe 70
+                }
+            }
+
             When("100 이상의 진행률로 갱신하면") {
                 analysisRepository.updateProgress(saved.id, 100)
 

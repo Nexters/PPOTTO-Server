@@ -90,12 +90,14 @@ class AnalysisRepository(
         id: AnalysisId,
         progress: Int,
     ): Int {
+        val bounded = progress.coerceIn(MIN_PROGRESS, MAX_IN_PROGRESS)
         dslContext.execute("SET LOCAL lock_timeout = '$PROGRESS_LOCK_TIMEOUT'")
         return dslContext
             .update(ANALYSIS)
-            .set(ANALYSIS.PROGRESS, progress.coerceIn(MIN_PROGRESS, MAX_IN_PROGRESS))
+            .set(ANALYSIS.PROGRESS, bounded)
             .where(ANALYSIS.ID.eq(id))
             .and(ANALYSIS.STATUS.eq(AnalysisStatus.ANALYZING.name))
+            .and(ANALYSIS.PROGRESS.lt(bounded))
             .execute()
     }
 
@@ -144,6 +146,7 @@ class AnalysisRepository(
     companion object {
         const val FAILED_REASON_CANCELED = "CANCELED"
         const val FAILED_REASON_EXPIRED = "EXPIRED"
+        const val FAILED_REASON_NOT_RESUMABLE = "NOT_RESUMABLE"
 
         private const val ANALYZING_STARTED_PROGRESS = 10
         private const val COMPLETED_PROGRESS = 100

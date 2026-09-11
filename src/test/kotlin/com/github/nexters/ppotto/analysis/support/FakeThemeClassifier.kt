@@ -67,22 +67,22 @@ class FakeThemeClassifier :
         classifiedPhotoIds.clear()
     }
 
-    private fun defaultTheme(photos: List<PhotoRef>): ThemeClassification =
-        ThemeClassification(
-            theme = "테스트테마",
-            categorizedPhotoIds = photos.map { it.photoId },
-            recap = RecapContent(badge = "테스트뱃지", text = "테스트 리캡 문구입니다."),
-            stickerTargetSubject = "테스트 피사체",
-            stickerSourcePhotoId = photos.first().photoId,
-            stickerMainColor = DEFAULT_MAIN_COLOR,
-            comments =
-                listOf(
-                    ThemeComment(content = "테스트 말풍선", posX = -96.0, posY = -150.0),
-                    ThemeComment(content = "테스트 키워드", posX = null, posY = null),
-                ),
-        )
-
     companion object {
         const val DEFAULT_MAIN_COLOR = "#FF6B6B"
+
+        fun defaultTheme(photos: List<PhotoRef>): ThemeClassification =
+            ThemeClassification(
+                theme = "테스트테마",
+                categorizedPhotoIds = photos.map { it.photoId },
+                recap = RecapContent(badge = "테스트뱃지", text = "테스트 리캡 문구입니다."),
+                stickerTargetSubject = "테스트 피사체",
+                stickerSourcePhotoId = photos.first().photoId,
+                stickerMainColor = DEFAULT_MAIN_COLOR,
+                comments =
+                    listOf(
+                        ThemeComment(content = "테스트 말풍선", posX = -96.0, posY = -150.0),
+                        ThemeComment(content = "테스트 키워드", posX = null, posY = null),
+                    ),
+            )
     }
 }
