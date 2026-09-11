@@ -33,6 +33,27 @@ class VertexAiGeminiClassifierSchemaTest :
                 Then("동적 enum 제약을 포함하지 않는다") {
                     VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
+
+                Then("모든 필드가 디코딩 직전에 읽히는 설명을 갖는다") {
+                    VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA
+                        .missingDescriptionPaths()
+                        .shouldBeEmpty()
+                }
+
+                Then("말풍선과 키워드칩 개수를 schema가 강제한다") {
+                    val comments =
+                        VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA
+                            .items()
+                            .get()
+                            .properties()
+                            .get()["comments"]!!
+                            .properties()
+                            .get()
+                    comments["speechBubbles"]!!.minItems().get() shouldBe 2L
+                    comments["speechBubbles"]!!.maxItems().get() shouldBe 4L
+                    comments["keywordChips"]!!.minItems().get() shouldBe 4L
+                    comments["keywordChips"]!!.maxItems().get() shouldBe 8L
+                }
             }
         }
 
@@ -40,6 +61,12 @@ class VertexAiGeminiClassifierSchemaTest :
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
                     VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA.containsEnum() shouldBe false
+                }
+
+                Then("모든 필드가 디코딩 직전에 읽히는 설명을 갖는다") {
+                    VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA
+                        .missingDescriptionPaths()
+                        .shouldBeEmpty()
                 }
 
                 Then("sourcePhotoId를 targetSubject보다 먼저 생성하도록 순서를 강제한다") {
@@ -54,6 +81,12 @@ class VertexAiGeminiClassifierSchemaTest :
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
                     VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
+                }
+
+                Then("모든 필드가 디코딩 직전에 읽히는 설명을 갖는다") {
+                    VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA
+                        .missingDescriptionPaths()
+                        .shouldBeEmpty()
                 }
             }
         }
@@ -486,6 +519,16 @@ class VertexAiGeminiClassifierSchemaTest :
             }
         }
     })
+
+private fun Schema.missingDescriptionPaths(path: String = "root"): List<String> {
+    val self = if (description().isPresent) emptyList() else listOf(path)
+    val fromItems = items().map { it.missingDescriptionPaths("$path[]") }.orElse(emptyList())
+    val fromProperties =
+        properties()
+            .map { properties -> properties.entries.flatMap { (name, schema) -> schema.missingDescriptionPaths("$path.$name") } }
+            .orElse(emptyList())
+    return self + fromItems + fromProperties
+}
 
 private fun Schema.containsEnum(): Boolean {
     if (enum_().isPresent) return true
