@@ -10,3 +10,12 @@ data class PhotoRef(
     val burstGroupId: UUID? = null,
     val isRepresentative: Boolean = true,
 )
+
+fun Photo.toRef(sourceUri: String): PhotoRef =
+    PhotoRef(
+        photoId = id,
+        sourceUri = sourceUri,
+        mimeType = contentType.mimeType,
+        burstGroupId = burstGroupId,
+        isRepresentative = isRepresentative,
+    )
