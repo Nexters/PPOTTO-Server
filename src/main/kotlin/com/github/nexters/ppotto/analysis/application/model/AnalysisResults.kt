@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.analysis.application.model
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
+import com.github.nexters.ppotto.analysis.domain.Photo
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
 import com.github.nexters.ppotto.global.error.InvalidInputException
@@ -32,7 +33,7 @@ data class PhotoUploadGroupRequest(
     val items: List<PhotoUploadItemRequest>,
 ) {
     init {
-        if (items.size > MAX_BURST_GROUP_SIZE) throw InvalidInputException(AnalysisErrorCode.BURST_GROUP_SIZE_EXCEEDED)
+        if (items.size > Photo.MAX_BURST_GROUP_SIZE) throw InvalidInputException(AnalysisErrorCode.BURST_GROUP_SIZE_EXCEEDED)
         if (items.size != 1 && items.count { it.isRepresentative } != 1) {
             throw InvalidInputException(AnalysisErrorCode.INVALID_BURST_GROUP)
         }
@@ -46,27 +47,18 @@ data class PhotoUploadGroupRequest(
         val burstGroupId = UUID.randomUUID()
         return items.map { PhotoCreate(it.contentType, it.takenAt, burstGroupId, it.isRepresentative) }
     }
-
-    companion object {
-        const val MAX_BURST_GROUP_SIZE = 10
-    }
 }
 
 data class CreateAnalysisCommand(
     val photoGroups: List<PhotoUploadGroupRequest>,
 ) {
     init {
-        if (photoGroups.size !in MIN_GROUP_COUNT..MAX_GROUP_COUNT) {
+        if (photoGroups.size !in Analysis.MIN_PHOTO_GROUP_COUNT..Analysis.MAX_PHOTO_GROUP_COUNT) {
             throw InvalidInputException(AnalysisErrorCode.GROUP_COUNT_OUT_OF_RANGE)
         }
     }
 
     fun toPhotoCreates(): List<PhotoCreate> = photoGroups.flatMap { it.toPhotoCreates() }
-
-    companion object {
-        const val MIN_GROUP_COUNT = 20
-        const val MAX_GROUP_COUNT = 100
-    }
 }
 
 data class UploadVerificationResult(

@@ -41,6 +41,8 @@ services:
       REDIS_HOST: valkey
       REDIS_PORT: 6379
       GCS_CREDENTIALS_PATH: /run/secrets/gcs-service-account.json
+      FCM_CREDENTIALS_PATH: /run/secrets/firebase-service-account.json
+      APPLE_PRIVATE_KEY_PATH: /run/secrets/apple-auth-key.p8
       CORS_ALLOWED_ORIGINS: "*"
       SENTRY_ENVIRONMENT: production
       SENTRY_RELEASE: ${SENTRY_RELEASE:-unknown}

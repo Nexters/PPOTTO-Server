@@ -22,4 +22,9 @@ data class Analysis(
     fun requireUploading() {
         if (status != AnalysisStatus.UPLOADING) throw ConflictException(AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED)
     }
+
+    companion object {
+        const val MIN_PHOTO_GROUP_COUNT = 20
+        const val MAX_PHOTO_GROUP_COUNT = 100
+    }
 }
