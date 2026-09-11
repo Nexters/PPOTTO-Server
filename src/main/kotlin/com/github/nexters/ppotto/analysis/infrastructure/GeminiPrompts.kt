@@ -12,21 +12,21 @@ object GeminiPrompts {
             "Photo alias list (in the same order as the attached photos): ${photoAliases.joinToString(", ")}",
             """
             For each theme, generate:
-            - theme: theme name (in Korean)
+            - theme: theme name (in Korean). Internal only — the user never sees it — so name what literally happened instead of a mood.
             - categorizedPhotoIds: the list of photo aliases classified under this theme (use only values from the alias list above)
-            - recap.badge: a short badge phrase, around 8 characters (in Korean), always ending with exactly one emoji that fits the theme's mood (e.g. "여행 필수템 🧳")
-            - recap.text: a single complete, natural-sounding sentence (in Korean), aiming for around 20 Korean characters or fewer so it reads well on a narrow mobile screen. Never truncate mid-sentence or force an unnatural cut just to hit the length target — write it so it is naturally short instead.
+            - recap.badge: the award or verdict this theme hands to the person who took these photos, not a label for what is in them. 6-11 Korean characters, always ending with exactly one emoji, and never longer than 15 characters counting an emoji as 2. Name a thing or an action that is actually in the photos, never a feeling.
+            - recap.text: one casual Korean sentence, 24 characters or fewer, in 반말 — the evidence behind that verdict, aimed at the person who took the photos. It must name a real detail visible in them. Never truncate mid-sentence or force an unnatural cut to hit the length: write it short by cutting explanation, never by cutting the specific detail.
             - sticker.sourcePhotoId: FIRST, before writing any subject description, pick the photo alias to use as the sticker source. It must be a value that actually appears in **this theme's own categorizedPhotoIds array**. Never use an alias that exists in the overall photo list but is NOT in this theme's categorizedPhotoIds (i.e., an alias belonging to a different theme) — always copy one of the aliases you just listed in categorizedPhotoIds above.
             - sticker.targetSubject: ONLY AFTER you have picked sourcePhotoId above, look again at that exact photo and write a specific description (in Korean) of a subject that is literally, visibly present in that exact photo. Do not describe something you recall from a different photo in this batch, and do not write an idealized or generic subject — describe only what is actually depicted in the sourcePhotoId photo you just chose. Before finalizing, re-check yourself: if you looked at that sourcePhotoId photo again right now, would everything in targetSubject be immediately visible in it? If not, either choose a different sourcePhotoId or rewrite targetSubject to match what that photo truly shows.
             - sticker.mainColor: the single most representative color of that subject as it actually appears in the source photo, as a 6-digit hex code (e.g. "#FF6B6B"). Pick the color a viewer would call "the color of this thing" — usually its dominant surface/body color, not a shadow, highlight, or background color.
             - comments.speechBubbles: 2-4 short reaction phrases (in Korean) that float around the sticker like speech bubbles, each with:
-              - content: a short, punchy reaction to this theme's photos (in Korean)
+              - content: something one of the people in these photos could plausibly have said out loud at that exact moment, or what a friend would text back on seeing the photo. 5-9 Korean characters, never over 20 — longer bubbles cover the sticker on screen and get dropped. At least one bubble must name a detail that is actually in the photos. No bare exclamations (대박, 행복해, 최고).
               - posX / posY: a relative offset in pixels from the sticker's center, roughly between -150 and 150, chosen so the bubbles scatter naturally around the sticker without overlapping each other
-            - comments.keywordChips: 4-8 short keywords or phrases (in Korean) that summarize this theme, shown as chips below the sticker — no position needed. Write each one as plain text only — never prefix it with "#" or any other hashtag-style symbol.
-            All of recap.text, comments.speechBubbles, and comments.keywordChips should read as one consistent voice about the same theme — keep their tone and context flowing naturally from one another instead of feeling like disconnected fragments.
-            None of theme, recap.badge, recap.text, comments.speechBubbles, or comments.keywordChips may contain profanity, sexual or suggestive content, violent or graphic content, hate speech, or anything else inappropriate for viewers under 19 (age-restricted/adult content). This applies regardless of what the source photos actually depict — always phrase every generated text field in clean, wholesome language appropriate for a general, all-ages audience.
+            - comments.keywordChips: 4-8 short evidence phrases (in Korean) shown as chips below the sticker — no position needed. Each is 2-6 characters, never over 20, and names a concrete thing from the photos (the actual dish, object, place, time) rather than a category. Write each one as plain text only — never prefix it with "#" or any other hashtag-style symbol.
+            All of recap.badge, recap.text, comments.speechBubbles, and comments.keywordChips are one verdict about the same person — keep them in one voice, each one adding evidence the others did not already give.
             """.trimIndent(),
             STICKER_CANDIDATE_GUIDE,
+            COPY_STYLE_EXAMPLES,
             OUTPUT_LANGUAGE_NOTE,
         ).joinToString("\n\n")
 
@@ -89,6 +89,30 @@ object GeminiPrompts {
         - Picking a sourcePhotoId photo that itself doesn't look like an actual camera photo — e.g. a screenshot, an app/UI screen, an icon, an illustration, a 3D render, or an image that otherwise looks already synthetic or previously AI-generated/edited. The downstream cutout tool refuses to process such images ("I can't edit an already-generated image"), so if another candidate photo exists in this theme, prefer that one instead
         - Picking a sourcePhotoId photo where more than one separate, individually sticker-worthy object is prominent in frame (e.g. two people who could each stand alone, several separately plated dishes, multiple pets each looking at the camera) — the downstream background-removal step keeps every foreground object it detects, not just the one named in targetSubject, so any other prominent object left in the photo will show up in the final sticker alongside it. Only pick such a photo if the named subject is the sole prominent object in frame, or every other visible object is naturally attached to it (e.g. a hand holding it); otherwise prefer a candidate photo where the subject is alone
         Write targetSubject specifically enough that the cutout target is unambiguous, like "a person in red clothes smiling" or "a yellow character doll on a desk". If the scene is a table with multiple foods/objects, or a scene with multiple people, pick just one small, independently-isolable thing within it and narrow the description accordingly, like "a single piece of sushi on a plate" or "a single red flower on the table" (the exception is landscape/scenery themes, where the whole scene itself is the intended subject).
+        """.trimIndent()
+
+    private val COPY_STYLE_EXAMPLES =
+        """
+        Banned in every Korean text field (theme, recap.badge, recap.text, comments.speechBubbles, comments.keywordChips). If a draft line contains one of these, rewrite the whole line instead of swapping the word out:
+        - Colorless adjectives: 멋진, 멋짐, 즐거운, 행복한, 아름다운, 소중한, 특별한, 완벽한, 다채로운, 알찬, 뜻깊은, 값진
+        - Filler nouns: 순간, 시간, 하루, 추억, 기록, 일상, 모음, 컬렉션, 라이프, 스토리, 힐링, 감성, 필수템, 인생샷
+        - Any "colorless adjective + filler noun" pairing at all. That shape is the exact failure we are eliminating.
+        - Slogan endings: ~의 정석, ~ 그 자체, ~ 맛집 (unless it is literally a restaurant)
+        - Category-label chips: 여행, 음식, 카페, 친구, 가족, 데이트, 야경. Narrow them instead ("음식" becomes "탕수육 부먹").
+
+        Examples. BAD first, then the same theme done right.
+
+        BAD   badge "멋진 밤 🌃" / text "즐거운 시간을 보냈어요." / bubbles "행복한 순간", "좋은 추억" / chips "야경", "추억", "일상"
+        WHY   Nothing here names anything in the photos. Paste it under any other theme and it still fits.
+        GOOD  badge "새벽 라면각 🍜" / text "결국 국물까지 다 마셨다." / bubbles "국물까지 완샷", "내일 얼굴 붓는다", "젓가락이 안 멈춤" / chips "새벽라면", "국물파", "후회는 내일"
+
+        BAD   badge "아름다운 바다 🌊" / text "특별한 하루였어요." / bubbles "행복한 시간", "최고의 순간" / chips "바다", "여행", "힐링"
+        GOOD  badge "발만 담글 결심 🌊" / text "결국 무릎까지 젖었다." / bubbles "파도가 이겼다", "신발 어디 갔어", "소금기 대참사" / chips "무릎까지", "파도승", "젖은양말"
+
+        BAD   badge "귀여운 반려견 🐶" / text "소중한 추억을 남겼어요." / bubbles "행복한 산책", "예쁜 우리 강아지" / chips "강아지", "산책", "일상"
+        GOOD  badge "산책 조르는 중 🐶" / text "현관 소리에 바로 튀어나왔다." / bubbles "목줄부터 물어옴", "눈빛 협박 시작", "다섯 걸음 만에 앉음" / chips "산책조름", "눈빛공격", "잔디 킁킁"
+
+        Every GOOD line above names something that had to be physically in the photo, and hands down a verdict instead of describing a mood. Do that.
         """.trimIndent()
 
     internal val COPY_VOICE =
