@@ -41,9 +41,13 @@ internal inline fun <reified T : Any> geminiListSchema(
         .maxItems(maxItems.toLong())
         .build()
 
-internal fun geminiObjectSchema(type: KClass<*>): Schema {
+internal fun geminiObjectSchema(
+    type: KClass<*>,
+    descriptionOverride: String? = null,
+): Schema {
     val description =
-        type.findAnnotation<GeminiObject>()?.description
+        descriptionOverride
+            ?: type.findAnnotation<GeminiObject>()?.description
             ?: error("${type.simpleName}에 @GeminiObject 설명이 없습니다.")
     val parameters =
         type.primaryConstructor?.parameters
@@ -63,8 +67,11 @@ internal fun geminiObjectSchema(type: KClass<*>): Schema {
 private val KParameter.schemaName: String
     get() = name ?: error("이름 없는 생성자 파라미터는 응답 스키마로 쓸 수 없습니다.")
 
-private fun KParameter.geminiField(owner: KClass<*>): GeminiField =
-    findAnnotation<GeminiField>() ?: error("${owner.simpleName}.$schemaName 에 @GeminiField 설명이 없습니다.")
+private fun KParameter.geminiField(owner: KClass<*>): GeminiField {
+    val field = findAnnotation<GeminiField>() ?: error("${owner.simpleName}.$schemaName 에 @GeminiField 설명이 없습니다.")
+    require(field.description.isNotBlank()) { "${owner.simpleName}.$schemaName 의 설명이 비어 있습니다." }
+    return field
+}
 
 private fun GeminiField.schemaOf(type: KType): Schema {
     val classifier = type.withNullability(false).classifier as? KClass<*> ?: error("지원하지 않는 응답 필드 타입입니다: $type")
@@ -82,7 +89,7 @@ private fun GeminiField.listSchemaOf(type: KType): Schema {
     val itemClassifier = itemType.withNullability(false).classifier as? KClass<*> ?: error("지원하지 않는 원소 타입입니다: $itemType")
     val items =
         if (itemClassifier.findAnnotation<GeminiObject>() != null) {
-            geminiObjectSchema(itemClassifier)
+            geminiObjectSchema(itemClassifier, itemDescription.takeIf(String::isNotBlank))
         } else {
             require(itemDescription.isNotBlank()) { "$description 리스트에 itemDescription이 없습니다." }
             scalarSchema(itemClassifier, itemDescription)
@@ -103,7 +110,7 @@ private fun scalarSchema(
     classifier: KClass<*>,
     description: String,
 ): Schema {
-    if (classifier.findAnnotation<GeminiObject>() != null) return geminiObjectSchema(classifier)
+    if (classifier.findAnnotation<GeminiObject>() != null) return geminiObjectSchema(classifier, description)
 
     val type =
         when (classifier) {

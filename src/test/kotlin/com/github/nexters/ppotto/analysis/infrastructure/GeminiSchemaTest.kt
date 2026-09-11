@@ -20,6 +20,12 @@ private data class SampleResponse(
     val fifth: SampleNested,
 )
 
+@GeminiObject("설명이 빈 응답")
+private data class BlankDescriptionResponse(
+    @GeminiField(description = "  ")
+    val first: String,
+)
+
 @GeminiObject("중첩 응답")
 private data class SampleNested(
     @GeminiField(description = "좌표")
@@ -78,9 +84,9 @@ class GeminiSchemaTest :
                     third.maxItems().get() shouldBe 5L
                 }
 
-                Then("중첩 응답 타입은 자기 설명으로 다시 펼쳐진다") {
+                Then("중첩 응답 타입은 펼쳐지되 필드에 적은 설명이 타입 설명을 이긴다") {
                     val fifth = schema.properties().get()["fifth"]!!
-                    fifth.description().get() shouldBe "중첩 응답"
+                    fifth.description().get() shouldBe "다섯 번째"
                     fifth.propertyOrdering().get() shouldContainExactly listOf("position")
                 }
             }
@@ -92,6 +98,16 @@ class GeminiSchemaTest :
 
                 Then("설명 없는 스키마를 내보내지 않고 타입 이름과 함께 실패한다") {
                     failure.message!! shouldContain "UnannotatedResponse"
+                }
+            }
+        }
+
+        Given("설명을 빈 문자열로 둔 필드가 있을 때") {
+            When("스키마를 만들면") {
+                val failure = shouldThrow<IllegalArgumentException> { geminiSchema<BlankDescriptionResponse>() }
+
+                Then("설명 없는 필드를 모델에 내보내지 않고 실패한다") {
+                    failure.message!! shouldContain "first"
                 }
             }
         }
