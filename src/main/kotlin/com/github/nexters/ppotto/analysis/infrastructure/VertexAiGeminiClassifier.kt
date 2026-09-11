@@ -44,6 +44,7 @@ class VertexAiGeminiClassifier(
                 responseSchema = VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA,
                 timeoutMs = vertexAiProperties.classifyTimeoutMs,
                 photoCount = photos.size,
+                systemInstruction = Content.fromParts(Part.fromText(GeminiPrompts.COPY_VOICE)),
             ).toList()
 
         val repair = toClassifications(rawThemes, photoAliases).cappedToMaxThemeCount().repairCrossThemeDuplicates()
@@ -88,15 +89,17 @@ class VertexAiGeminiClassifier(
         responseSchema: Schema,
         timeoutMs: Long,
         photoCount: Int,
+        systemInstruction: Content? = null,
     ): T {
         val content = Content.fromParts(*parts.toTypedArray())
-        val config =
+        val configBuilder =
             GenerateContentConfig
                 .builder()
                 .responseMimeType("application/json")
                 .responseSchema(responseSchema)
                 .httpOptions(buildHttpOptions(timeoutMs))
-                .build()
+        systemInstruction?.let(configBuilder::systemInstruction)
+        val config = configBuilder.build()
         val response =
             runCatching {
                 LlmTracer.trace(pipeline, MODEL, attributes = mapOf(ATTR_PHOTO_COUNT to photoCount.toString())) { span ->
