@@ -18,7 +18,7 @@
 
 ```bash
 # API 서버 실행 (다른 터미널에서)
-cd /Users/dustin.hwang/IdeaProjects/Gallery100-Server
+cd Server
 ./gradlew bootRun
 
 # 데이터베이스 실행 (다른 터미널에서)
@@ -75,7 +75,7 @@ python3 test_photosanalysis_pipeline.py \
   --api-url http://localhost:8080              # API 서버 주소
   --db-host localhost                          # PostgreSQL 호스트
   --db-port 54782                              # PostgreSQL 포트
-  --photos-dir ~/Desktop/etc/wark              # 사진 디렉토리
+  --photos-dir e2e/photos                      # 사진 디렉토리 (기본값, PPOTTO_E2E_PHOTOS_DIR로도 지정 가능)
   --photos-count 90                            # 테스트 사진 개수
   --group-size 1                               # 분석 요청 그룹당 사진 개수 (1-10)
   --max-workers 10                             # 병렬 업로드 워커 수
@@ -122,6 +122,40 @@ grep "analysis pipeline result" <path-to-api-log>
 
 `e2e/reports/e2e_test_report_<YYYYMMDD_HHMMSS>.html`에 업로드 사진, 생성 스티커(제목·mainColor 색상 스와치 포함), signed URL, 모델명, Gemini 파이프라인 시간, 테마 분류 요약, 스티커 재생성 전후 정보가 기록됩니다. 실행마다 타임스탬프가 붙은 새 파일로 저장되므로 이전 결과를 덮어쓰지 않습니다.
 
+## 🎯 카피 점수와 before/after 비교
+
+프롬프트를 고친 뒤 "정말 좋아졌는지"를 숫자로 본다.
+
+### 시드셋 규약
+
+`e2e/photos/`에 팀 공유 드라이브의 고정 90장을 풀어둔다. 이 디렉토리는 gitignore 대상이라 저장소에 들어가지 않는다. 다른 경로를 쓰려면 `PPOTTO_E2E_PHOTOS_DIR` 환경변수나 `--photos-dir`을 쓴다.
+
+리포트 헤더의 **시드셋 지문**(파일명·크기 md5 8자리)이 두 run에서 다르면 비교는 의미가 없다. 먼저 지문부터 확인한다.
+
+### 실행
+
+```bash
+./gradlew bootRun                                          # 터미널1, 프롬프트 수정 전 상태
+python3 e2e/test_photosanalysis_pipeline.py                # BEFORE, 끝에 분석 ID 출력
+# GeminiPrompts.kt 수정 → bootRun 재시작 → 위 줄 한 번 더 (AFTER)
+python3 e2e/test_photosanalysis_pipeline.py --compare <before-id> <after-id>
+```
+
+`--compare`는 DB만 읽으므로 서버가 꺼져 있어도 된다. 리포트를 눈으로 볼 땐 `open $(ls -t e2e/reports/e2e_test_report_*.html | head -1)`.
+
+### 읽는 법
+
+- **무색어율** — "멋진", "행복한", "추억" 같은 무색 어간이 포함된 카피 비율. 낮을수록 좋다.
+- **어휘 다양도** — 전체 카피 어절의 distinct/total. 무색 카피는 테마가 달라도 어휘가 겹치므로 이 값이 낮아진다. 구체성의 프록시다.
+- **길이/폴백** — 뱃지 15자 초과는 저장 시점에 분석 전체를 실패시키는 값이고, mainColor 기본값 대체와 개수 이탈은 응답 품질 저하 신호다.
+
+### 주의
+
+- run당 스티커가 6개뿐이라 무색어율 한 칸이 16.7%p다. **20%p 미만 차이는 노이즈로 본다.** 그 이하를 판정하려면 조건당 2회 돌린다.
+- `COPY_BANNED_STEMS`를 바꾼 커밋에서는 이전 run과 비교하지 않는다. 야드스틱이 움직여서 delta가 거짓말을 한다. 프롬프트와 금지어 목록을 같은 커밋에서 함께 바꾸지 않는다.
+- 이 목록은 프로덕션 프롬프트의 금지어와 **의도적으로 중복**이다. 공유하면 "프롬프트에 단어를 추가 → 점수 개선"이 자동 성립해서 채점기가 판정자가 아니라 프롬프트의 거울이 된다.
+- `BUBBLE_WIDTH_CHAR_LIMIT`은 캘리브레이션 노브다. 실측 폭을 한 번 재서 보정하기 전까지 `말풍선 초과` 숫자를 그대로 신뢰하지 않는다.
+
 ## 🔧 문제 해결
 
 ### API 서버 연결 안 됨
@@ -131,7 +165,7 @@ grep "analysis pipeline result" <path-to-api-log>
 curl -v http://localhost:8080/actuator/health
 
 # 서버 시작
-cd /Users/dustin.hwang/IdeaProjects/Gallery100-Server
+cd Server
 ./gradlew bootRun
 ```
 
@@ -139,10 +173,10 @@ cd /Users/dustin.hwang/IdeaProjects/Gallery100-Server
 
 ```bash
 # 디렉토리 확인
-ls /Users/dustin.hwang/Desktop/etc/wark/ | head -10
+ls e2e/photos/ | head -10
 
 # 사진 개수 확인
-ls /Users/dustin.hwang/Desktop/etc/wark/*.{jpeg,jpg,png,webp} 2>/dev/null | wc -l
+ls e2e/photos/*.{jpeg,jpg,png,webp} 2>/dev/null | wc -l
 
 # 다른 경로 지정
 python3 test_photosanalysis_pipeline.py --photos-dir /path/to/photos
