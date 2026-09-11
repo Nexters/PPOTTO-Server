@@ -421,7 +421,7 @@ class VertexAiGeminiClassifierSchemaTest :
             When("sourcePhotoId alias가 유효하면") {
                 val target =
                     VertexAiGeminiClassifier.toRegenerationTarget(
-                        GeminiStickerResponse(
+                        GeminiStickerRegenerationResponse(
                             targetSubject = "고양이",
                             sourcePhotoId = "P002",
                             mainColor = "#123456",
@@ -441,7 +441,7 @@ class VertexAiGeminiClassifierSchemaTest :
                 val exception =
                     shouldThrow<BusinessException> {
                         VertexAiGeminiClassifier.toRegenerationTarget(
-                            GeminiStickerResponse(
+                            GeminiStickerRegenerationResponse(
                                 targetSubject = "고양이",
                                 sourcePhotoId = "PX99",
                                 mainColor = "#123456",

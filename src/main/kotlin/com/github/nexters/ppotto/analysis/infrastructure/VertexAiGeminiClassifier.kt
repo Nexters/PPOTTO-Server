@@ -62,7 +62,7 @@ class VertexAiGeminiClassifier(
     ): StickerRegenerationTarget {
         val photoAliases = GeminiPhotoAliases.from(photos)
         val prompt = GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId))
-        return generate<GeminiStickerResponse>(
+        return generate<GeminiStickerRegenerationResponse>(
             pipeline = LlmPipeline.STICKER_REGENERATION,
             parts = photos.toParts() + Part.fromText(prompt),
             responseSchema = VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA,
@@ -200,7 +200,7 @@ class VertexAiGeminiClassifier(
             }
 
         internal fun toRegenerationTarget(
-            rawSticker: GeminiStickerResponse,
+            rawSticker: GeminiStickerRegenerationResponse,
             photoAliases: GeminiPhotoAliases,
             inputPhotoIds: Set<PhotoId>,
         ): StickerRegenerationTarget {
@@ -228,7 +228,7 @@ class VertexAiGeminiClassifier(
         }
 
         private fun validateRegeneration(
-            sticker: GeminiStickerResponse,
+            sticker: GeminiStickerRegenerationResponse,
             sourcePhotoId: PhotoId,
             inputPhotoIds: Set<PhotoId>,
         ) {
@@ -325,40 +325,3 @@ internal class GeminiPhotoAliases private constructor(
             GeminiPhotoAliases(photos.mapIndexed { index, photo -> "P%03d".format(index + 1) to photo.photoId }.toMap())
     }
 }
-
-internal data class GeminiThemeResponse(
-    val observedDetails: List<String>? = null,
-    val theme: String,
-    val categorizedPhotoIds: List<String>,
-    val recap: GeminiRecapResponse,
-    val sticker: GeminiStickerResponse,
-    val comments: GeminiCommentsResponse?,
-)
-
-internal data class GeminiRecapResponse(
-    val badge: String,
-    val text: String,
-)
-
-internal data class GeminiStickerResponse(
-    val targetSubject: String,
-    val sourcePhotoId: String,
-    val mainColor: String?,
-)
-
-internal data class GeminiSubjectVerificationResponse(
-    val subjectPresent: Boolean?,
-    val targetSubject: String?,
-    val mainColor: String?,
-)
-
-internal data class GeminiCommentsResponse(
-    val speechBubbles: List<GeminiSpeechBubbleResponse>?,
-    val keywordChips: List<String>?,
-)
-
-internal data class GeminiSpeechBubbleResponse(
-    val content: String?,
-    val posX: Double?,
-    val posY: Double?,
-)
