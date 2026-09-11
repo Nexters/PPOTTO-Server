@@ -148,14 +148,29 @@ class VertexAiGeminiClassifier(
             return DEFAULT_MAIN_COLOR
         }
 
+        private fun cappedText(
+            raw: String,
+            max: Int,
+            field: String,
+            context: String,
+        ): String {
+            if (raw.length <= max) return raw
+
+            log.warn("Gemini가 {} 길이 상한을 넘겨 잘라냅니다: context={}, length={}", field, context, raw.length)
+            return raw
+                .take(max)
+                .trimEnd { it.isHighSurrogate() }
+                .trimEnd()
+        }
+
         private fun sanitizedComments(
             raw: GeminiCommentsResponse?,
             context: String,
         ): List<ThemeComment> {
             val bubbles =
                 raw?.speechBubbles.orEmpty().mapNotNull { bubble ->
-                    val content = bubble.content
-                    if (content.isNullOrBlank() || bubble.posX == null || bubble.posY == null) {
+                    val content = bubble.content?.takeIf { it.isNotBlank() && it.length <= ThemeComment.MAX_BUBBLE_LENGTH }
+                    if (content == null || bubble.posX == null || bubble.posY == null) {
                         log.warn("Gemini가 유효하지 않은 speechBubble을 반환해 건너뜁니다: context={}, bubble={}", context, bubble)
                         null
                     } else {
@@ -164,12 +179,13 @@ class VertexAiGeminiClassifier(
                 }
             val chips =
                 raw?.keywordChips.orEmpty().mapNotNull { chip ->
-                    stripHashtagPrefix(chip).takeUnless(String::isBlank)?.let { ThemeComment(content = it, posX = null, posY = null) }
+                    chip
+                        .withoutHashtagPrefix()
+                        .takeUnless { it.isBlank() || it.length > ThemeComment.MAX_CHIP_LENGTH }
+                        ?.let { ThemeComment(content = it, posX = null, posY = null) }
                 }
             return bubbles + chips
         }
-
-        private fun stripHashtagPrefix(text: String): String = text.trimStart('#').trim()
 
         internal fun toClassifications(
             rawThemes: List<GeminiThemeResponse?>,
@@ -237,7 +253,11 @@ class VertexAiGeminiClassifier(
             return ThemeClassification(
                 theme = theme,
                 categorizedPhotoIds = categorizedPhotoIds,
-                recap = RecapContent(badge = recap.badge, text = recap.text),
+                recap =
+                    RecapContent(
+                        badge = cappedText(recap.badge, RecapContent.MAX_BADGE_LENGTH, "recap.badge", theme),
+                        text = cappedText(recap.text, RecapContent.MAX_TEXT_LENGTH, "recap.text", theme),
+                    ),
                 stickerTargetSubject = sticker.targetSubject,
                 stickerSourcePhotoId = stickerSourcePhotoId,
                 stickerMainColor = sanitizedMainColor(sticker.mainColor, theme),
@@ -283,6 +303,8 @@ class VertexAiGeminiClassifier(
         }
     }
 }
+
+private fun String.withoutHashtagPrefix(): String = trimStart('#').trim()
 
 internal class GeminiPhotoAliases private constructor(
     private val photoIdByAlias: Map<String, PhotoId>,

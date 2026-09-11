@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
 import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.PhotoId
+import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.google.genai.types.Schema
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
@@ -246,14 +247,15 @@ class VertexAiGeminiClassifierSchemaTest :
                                         GeminiSpeechBubbleResponse(content = "정상 말풍선", posX = -96.0, posY = -150.0),
                                         GeminiSpeechBubbleResponse(content = "좌표 없음", posX = null, posY = -150.0),
                                         GeminiSpeechBubbleResponse(content = "  ", posX = -10.0, posY = -20.0),
+                                        GeminiSpeechBubbleResponse(content = "가".repeat(21), posX = 10.0, posY = 20.0),
                                     ),
-                                keywordChips = listOf("여행", "   "),
+                                keywordChips = listOf("여행", "   ", "나".repeat(21)),
                             ),
                         ),
                         aliases,
                     )
 
-                Then("분류를 실패시키지 않고 망가진 항목만 버린다") {
+                Then("분류를 실패시키지 않고 화면에 못 담을 항목만 버린다") {
                     classifications
                         .single()
                         .comments
@@ -262,6 +264,73 @@ class VertexAiGeminiClassifierSchemaTest :
                             "정상 말풍선" to (-96.0 to -150.0),
                             "여행" to (null to null),
                         )
+                }
+            }
+
+            When("recap.badge가 스티커 제목 저장 한계를 넘으면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(
+                            themeResponse(
+                                badge = "가".repeat(16),
+                                categorizedPhotoIds = listOf("P001"),
+                                sourcePhotoId = "P001",
+                            ),
+                        ),
+                        aliases,
+                    )
+
+                Then("분석을 실패시키지 않고 저장 규칙에 맞게 잘라낸다") {
+                    Sticker.isValidTitle(
+                        classifications
+                            .single()
+                            .recap.badge,
+                    ) shouldBe true
+                }
+            }
+
+            When("recap.badge가 이모지 때문에 한계를 넘으면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(
+                            themeResponse(
+                                badge = "아주아주아주긴뱃지문구입니다\uD83E\uDDF3",
+                                categorizedPhotoIds = listOf("P001"),
+                                sourcePhotoId = "P001",
+                            ),
+                        ),
+                        aliases,
+                    )
+
+                Then("잘린 끝에 깨진 문자를 남기지 않는다") {
+                    val badge =
+                        classifications
+                            .single()
+                            .recap.badge
+                    Sticker.isValidTitle(badge) shouldBe true
+                    badge.last().isHighSurrogate() shouldBe false
+                }
+            }
+
+            When("recap.text가 한 줄 요약 저장 한계를 넘으면") {
+                val classifications =
+                    VertexAiGeminiClassifier.toClassifications(
+                        listOf(
+                            themeResponse(
+                                text = "가".repeat(101),
+                                categorizedPhotoIds = listOf("P001"),
+                                sourcePhotoId = "P001",
+                            ),
+                        ),
+                        aliases,
+                    )
+
+                Then("분석을 실패시키지 않고 저장 규칙에 맞게 잘라낸다") {
+                    Sticker.isValidSummary(
+                        classifications
+                            .single()
+                            .recap.text,
+                    ) shouldBe true
                 }
             }
 
@@ -428,6 +497,8 @@ private fun Schema.containsEnum(): Boolean {
 
 private fun themeResponse(
     theme: String = "테마",
+    badge: String = "뱃지",
+    text: String = "리캡",
     categorizedPhotoIds: List<String>,
     sourcePhotoId: String,
     keywordChips: List<String> = emptyList(),
@@ -437,7 +508,7 @@ private fun themeResponse(
 ) = GeminiThemeResponse(
     theme = theme,
     categorizedPhotoIds = categorizedPhotoIds,
-    recap = GeminiRecapResponse(badge = "뱃지", text = "리캡"),
+    recap = GeminiRecapResponse(badge = badge, text = text),
     sticker =
         GeminiStickerResponse(
             targetSubject = "피사체",
