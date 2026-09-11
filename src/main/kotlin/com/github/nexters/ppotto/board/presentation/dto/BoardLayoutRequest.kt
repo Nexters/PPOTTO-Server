@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.board.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.github.nexters.ppotto.board.application.BoardLayoutUpdateCommand
+import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing

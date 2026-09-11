@@ -1,10 +1,10 @@
 package com.github.nexters.ppotto.auth.infrastructure.oauth
 
 import com.github.nexters.ppotto.auth.application.port.OAuthClient
-import com.github.nexters.ppotto.auth.config.KakaoAuthProperties
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
 import com.github.nexters.ppotto.auth.domain.LoginCommand
 import com.github.nexters.ppotto.auth.domain.SocialProfile
+import com.github.nexters.ppotto.auth.infrastructure.config.KakaoAuthProperties
 import com.github.nexters.ppotto.global.error.ForbiddenException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.UnauthorizedException

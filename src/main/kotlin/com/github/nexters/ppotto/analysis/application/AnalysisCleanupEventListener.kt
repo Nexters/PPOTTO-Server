@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.application.port.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.AnalysisDiscardedEvent
-import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.global.logging.bestEffort
 import org.slf4j.LoggerFactory

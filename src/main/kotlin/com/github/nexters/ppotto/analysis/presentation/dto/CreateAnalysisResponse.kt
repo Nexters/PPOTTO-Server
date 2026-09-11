@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.analysis.presentation.dto
 
-import com.github.nexters.ppotto.analysis.application.AnalysisCreationResult
-import com.github.nexters.ppotto.analysis.application.PhotoUploadUrlItem
+import com.github.nexters.ppotto.analysis.application.model.AnalysisCreationResult
+import com.github.nexters.ppotto.analysis.application.model.PhotoUploadUrlItem
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import io.swagger.v3.oas.annotations.media.Schema

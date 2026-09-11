@@ -3,6 +3,8 @@ package com.github.nexters.ppotto.sticker.application
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.lock.AdvisoryLock
+import com.github.nexters.ppotto.sticker.application.model.SaveAnalysisResultCommand
+import com.github.nexters.ppotto.sticker.application.model.SavedAnalysisResult
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipPort
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipScope
 import com.github.nexters.ppotto.sticker.application.port.singlePort

@@ -5,6 +5,12 @@ import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.sticker.application.model.RecapCommentResult
+import com.github.nexters.ppotto.sticker.application.model.RecapGroupPhotoResult
+import com.github.nexters.ppotto.sticker.application.model.RecapPhotoResult
+import com.github.nexters.ppotto.sticker.application.model.RecapShareResult
+import com.github.nexters.ppotto.sticker.application.model.StickerItemResult
+import com.github.nexters.ppotto.sticker.application.model.StickerRecapResult
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoMetadata
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort

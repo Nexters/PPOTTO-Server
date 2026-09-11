@@ -1,0 +1,294 @@
+package com.github.nexters.ppotto.analysis.infrastructure.persistence
+
+import com.github.nexters.ppotto.analysis.domain.PhotoContentType
+import com.github.nexters.ppotto.analysis.domain.UploadStatus
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
+import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
+import com.github.nexters.ppotto.support.IntegrationTest
+import com.github.nexters.ppotto.support.saveTestUser
+import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
+import org.jooq.DSLContext
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.UUID
+
+class PhotoRepositoryTest(
+    photoRepository: PhotoRepository,
+    analysisRepository: AnalysisRepository,
+    boardRepository: BoardRepository,
+    userRepository: UserRepository,
+    dslContext: DSLContext,
+) : IntegrationTest({
+        Given("Analysis가 등록된 상태에서 여러 Photo를 배치로 저장하면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val items =
+                listOf(
+                    PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                    PhotoCreate(PhotoContentType.PNG, Instant.parse("2026-07-02T00:00:00Z")),
+                )
+
+            val saved = photoRepository.saveAll(analysis.id, board.id, items)
+
+            When("입력 순서와 저장된 Photo를 비교하면") {
+                Then("요청 순서와 동일한 순서로 반환된다") {
+                    saved shouldHaveSize 2
+                    saved.map { it.contentType } shouldBe listOf(PhotoContentType.JPEG, PhotoContentType.PNG)
+                    saved.map { it.takenAt } shouldBe items.map { it.takenAt }
+                }
+            }
+
+            When("analysisId로 PENDING 상태 Photo를 조회하면") {
+                val found = photoRepository.findPendingByAnalysisId(analysis.id)
+
+                Then("저장된 Photo 전부를 반환한다") {
+                    found.map { it.id } shouldContainExactlyInAnyOrder saved.map { it.id }
+                    found.forEach { it.uploadStatus shouldBe UploadStatus.PENDING }
+                }
+            }
+        }
+
+        Given("빈 아이템 목록으로 배치 저장을 호출하면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+
+            When("저장을 수행하면") {
+                val saved = photoRepository.saveAll(analysis.id, board.id, emptyList())
+
+                Then("빈 목록을 반환한다") {
+                    saved.shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("PENDING 상태의 Photo가 한 장 저장된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photo =
+                photoRepository
+                    .saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
+                    .single()
+            val microsecondPrecisionUploadedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
+
+            When("기대 상태(PENDING)를 걸고 COMPLETED로 배치 갱신하면") {
+                val updated = photoRepository.markCompletedBatch(mapOf(photo.id to microsecondPrecisionUploadedAt))
+
+                Then("갱신된 행 수를 반환한다") {
+                    updated shouldBe 1
+                }
+
+                Then("업로드 시각을 그대로 기록한다") {
+                    val completed = photoRepository.findAllByAnalysisId(analysis.id).first { it.id == photo.id }
+                    completed.uploadStatus shouldBe UploadStatus.COMPLETED
+                    completed.uploadedAt shouldBe microsecondPrecisionUploadedAt
+                }
+            }
+
+            When("빈 id 목록으로 갱신하면") {
+                val updated = photoRepository.markCompletedBatch(emptyMap())
+
+                Then("쿼리 없이 0건을 반환한다") {
+                    updated shouldBe 0
+                }
+            }
+        }
+
+        Given("이미 COMPLETED로 바뀐 Photo가 한 장 있는 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photo =
+                photoRepository
+                    .saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
+                    .single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
+
+            When("기대 상태(PENDING)를 걸고 FAILED로 갱신하면") {
+                val updated = photoRepository.markFailedBatch(listOf(photo.id))
+
+                Then("PENDING이 아니므로 한 행도 갱신하지 않는다") {
+                    updated shouldBe 0
+                }
+
+                Then("기존 COMPLETED 상태를 그대로 둔다") {
+                    photoRepository
+                        .findAllByAnalysisId(analysis.id)
+                        .first { it.id == photo.id }
+                        .uploadStatus shouldBe UploadStatus.COMPLETED
+                }
+            }
+        }
+
+        Given("DB에 애플리케이션이 모르는 content_type이 저장된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photo =
+                photoRepository
+                    .saveAll(analysis.id, board.id, listOf(PhotoCreate(PhotoContentType.JPEG, Instant.now())))
+                    .single()
+            dslContext
+                .update(PHOTOS)
+                .set(PHOTOS.CONTENT_TYPE, "image/gif")
+                .where(PHOTOS.ID.eq(photo.id))
+                .execute()
+
+            When("해당 분석의 Photo를 조회하면") {
+                val exception = shouldThrow<IllegalStateException> { photoRepository.findAllByAnalysisId(analysis.id) }
+
+                Then("클라이언트 입력 오류(400)가 아니라 서버 오류로 실패한다") {
+                    exception.message shouldBe "unknown photos.content_type: image/gif"
+                }
+            }
+        }
+
+        Given("연사 그룹과 단독 사진을 함께 저장하면") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val burstGroupId = UUID.randomUUID()
+            val items =
+                listOf(
+                    PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                    PhotoCreate(
+                        PhotoContentType.JPEG,
+                        Instant.parse("2026-07-02T00:00:00Z"),
+                        burstGroupId = burstGroupId,
+                        isRepresentative = true,
+                    ),
+                    PhotoCreate(
+                        PhotoContentType.JPEG,
+                        Instant.parse("2026-07-02T00:00:01Z"),
+                        burstGroupId = burstGroupId,
+                        isRepresentative = false,
+                    ),
+                )
+
+            val saved = photoRepository.saveAll(analysis.id, board.id, items)
+
+            When("저장된 Photo를 확인하면") {
+                Then("단독 사진은 burstGroupId가 없고 대표다") {
+                    val standalone = saved[0]
+                    standalone.burstGroupId.shouldBeNull()
+                    standalone.isRepresentative shouldBe true
+                }
+
+                Then("연사 그룹은 burstGroupId를 공유하고 대표가 정확히 1장이다") {
+                    val burstPhotos = saved.subList(1, 3)
+                    burstPhotos.map { it.burstGroupId } shouldBe listOf(burstGroupId, burstGroupId)
+                    burstPhotos.count { it.isRepresentative } shouldBe 1
+                }
+            }
+        }
+
+        Given("여러 상태로 섞인 Photo가 저장된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photos =
+                photoRepository.saveAll(
+                    analysis.id,
+                    board.id,
+                    listOf(
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-03T00:00:00Z")),
+                    ),
+                )
+            photoRepository.markCompletedBatch(mapOf(photos[0].id to Instant.now()))
+            photoRepository.markFailedBatch(listOf(photos[1].id))
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
+            val otherPhoto =
+                photoRepository
+                    .saveAll(
+                        otherAnalysis.id,
+                        otherBoard.id,
+                        listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-04T00:00:00Z"))),
+                    ).single()
+
+            When("markAllFailedByAnalysisId를 호출하면") {
+                val updatedCount = photoRepository.markAllFailedByAnalysisId(analysis.id)
+
+                Then("상태와 무관하게 해당 분석의 모든 Photo가 FAILED가 된다") {
+                    updatedCount shouldBe 3
+                    photoRepository
+                        .findAllByAnalysisId(analysis.id)
+                        .map { it.uploadStatus }
+                        .toSet() shouldBe setOf(UploadStatus.FAILED)
+                }
+
+                Then("다른 분석의 Photo는 영향받지 않는다") {
+                    val untouched = photoRepository.findAllByAnalysisId(otherAnalysis.id).single()
+                    untouched.id shouldBe otherPhoto.id
+                    untouched.uploadStatus shouldBe UploadStatus.PENDING
+                }
+            }
+        }
+
+        Given("서로 다른 분석에 완료 사진과 대기 사진이 저장된 상태에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            val photos =
+                photoRepository.saveAll(
+                    analysis.id,
+                    board.id,
+                    listOf(
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z")),
+                        PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-02T00:00:00Z")),
+                    ),
+                )
+            val completedPhoto = photos.first()
+            val pendingPhoto = photos.last()
+            photoRepository.markCompletedBatch(mapOf(completedPhoto.id to Instant.now()))
+            val otherBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val otherAnalysis = analysisRepository.save(otherBoard.userId, otherBoard.id)
+            val otherPhoto =
+                photoRepository
+                    .saveAll(
+                        otherAnalysis.id,
+                        otherBoard.id,
+                        listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-03T00:00:00Z"))),
+                    ).single()
+            photoRepository.markCompletedBatch(mapOf(otherPhoto.id to Instant.now()))
+
+            When("분석 스코프로 완료 사진을 조회하면") {
+                val found =
+                    photoRepository.findCompletedByIds(
+                        analysis.id,
+                        board.id,
+                        listOf(completedPhoto.id, pendingPhoto.id, otherPhoto.id),
+                    )
+
+                Then("해당 분석의 완료 사진만 반환하고 대기 사진과 다른 분석 사진은 제외한다") {
+                    found.map { it.id } shouldContainExactlyInAnyOrder listOf(completedPhoto.id)
+                }
+            }
+
+            When("대기 사진이 섞인 목록으로 소유 수를 세면") {
+                val count =
+                    photoRepository.countOwnedByAnalysis(
+                        analysis.id,
+                        board.id,
+                        listOf(completedPhoto.id, pendingPhoto.id),
+                    )
+
+                Then("완료 사진만 소유로 인정한다") {
+                    count shouldBe 1
+                }
+            }
+
+            When("다른 분석의 완료 사진 id로 소유 수를 세면") {
+                val count = photoRepository.countOwnedByAnalysis(analysis.id, board.id, listOf(otherPhoto.id))
+
+                Then("분석 스코프 밖 사진은 세지 않는다") {
+                    count shouldBe 0
+                }
+            }
+        }
+    })

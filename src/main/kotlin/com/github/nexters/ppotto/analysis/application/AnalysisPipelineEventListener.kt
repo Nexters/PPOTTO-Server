@@ -1,19 +1,20 @@
 package com.github.nexters.ppotto.analysis.application
 
-import com.github.nexters.ppotto.analysis.config.AnalysisPipelineProperties
+import com.github.nexters.ppotto.analysis.application.model.ThemeAnalysisResult
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.config.AnalysisPipelineProperties
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.logging.bestEffort
 import com.github.nexters.ppotto.notification.domain.PushNotificationRequestedEvent
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
-import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
-import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
+import com.github.nexters.ppotto.sticker.application.model.AnalysisStickerResult
+import com.github.nexters.ppotto.sticker.application.model.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.slf4j.LoggerFactory

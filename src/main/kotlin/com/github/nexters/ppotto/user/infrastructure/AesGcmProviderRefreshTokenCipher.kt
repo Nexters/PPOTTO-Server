@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.user.infrastructure
 
 import com.github.nexters.ppotto.user.domain.EncryptedProviderRefreshToken
+import com.github.nexters.ppotto.user.infrastructure.config.ProviderRefreshTokenEncryptionProperties
 import org.springframework.stereotype.Component
 import java.nio.charset.StandardCharsets.UTF_8
 import java.security.SecureRandom

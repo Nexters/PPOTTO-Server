@@ -1,13 +1,15 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.application.model.AnalysisPipelineResult
+import com.github.nexters.ppotto.analysis.application.model.ThemeAnalysisResult
+import com.github.nexters.ppotto.analysis.application.port.StickerGenerator
+import com.github.nexters.ppotto.analysis.application.port.StickerStorage
+import com.github.nexters.ppotto.analysis.application.port.ThemeClassifier
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
-import com.github.nexters.ppotto.analysis.domain.StickerGenerator
-import com.github.nexters.ppotto.analysis.domain.StickerStorage
 import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
-import com.github.nexters.ppotto.analysis.domain.ThemeClassifier
-import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
+import com.github.nexters.ppotto.analysis.infrastructure.storage.StickerObjectKeys
 import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import org.slf4j.LoggerFactory

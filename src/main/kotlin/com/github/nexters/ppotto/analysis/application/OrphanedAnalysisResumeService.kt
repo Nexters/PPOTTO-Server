@@ -1,14 +1,14 @@
 package com.github.nexters.ppotto.analysis.application
 
-import com.github.nexters.ppotto.analysis.config.AnalysisPipelineProperties
+import com.github.nexters.ppotto.analysis.application.port.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
-import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.toRef
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisCleanupRepository
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
-import com.github.nexters.ppotto.analysis.infrastructure.StaleAnalysisCleanupProperties
+import com.github.nexters.ppotto.analysis.infrastructure.config.AnalysisPipelineProperties
+import com.github.nexters.ppotto.analysis.infrastructure.config.StaleAnalysisCleanupProperties
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisCleanupRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.global.logging.bestEffort
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent

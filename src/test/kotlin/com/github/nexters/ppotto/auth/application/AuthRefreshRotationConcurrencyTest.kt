@@ -3,8 +3,8 @@ package com.github.nexters.ppotto.auth.application
 import com.github.nexters.ppotto.auth.application.port.AuthActiveUserPort
 import com.github.nexters.ppotto.auth.application.port.AuthTermsPort
 import com.github.nexters.ppotto.auth.application.port.AuthUserPort
-import com.github.nexters.ppotto.auth.config.JwtAuthProperties
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
+import com.github.nexters.ppotto.auth.infrastructure.config.JwtAuthProperties
 import com.github.nexters.ppotto.auth.infrastructure.sha256Hex
 import com.github.nexters.ppotto.auth.infrastructure.token.JwtTokenProvider
 import com.github.nexters.ppotto.auth.infrastructure.token.RedisRefreshTokenStore

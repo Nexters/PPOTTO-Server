@@ -1,8 +1,8 @@
 package com.github.nexters.ppotto.auth.infrastructure.oauth
 
-import com.github.nexters.ppotto.auth.config.AppleAuthProperties
 import com.github.nexters.ppotto.auth.domain.AuthErrorCode
 import com.github.nexters.ppotto.auth.domain.LoginCommand
+import com.github.nexters.ppotto.auth.infrastructure.config.AppleAuthProperties
 import com.github.nexters.ppotto.auth.infrastructure.sha256Hex
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.nimbusds.jose.JWSAlgorithm

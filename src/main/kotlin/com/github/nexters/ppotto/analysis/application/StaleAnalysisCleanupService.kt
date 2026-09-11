@@ -1,8 +1,8 @@
 package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisCleanupRepository
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisCleanupRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

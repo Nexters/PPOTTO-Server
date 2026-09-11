@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
+import com.github.nexters.ppotto.user.infrastructure.config.WithdrawnUserCleanupProperties
 import io.kotest.matchers.maps.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext

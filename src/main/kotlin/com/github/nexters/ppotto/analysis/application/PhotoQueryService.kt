@@ -1,8 +1,9 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.application.model.PhotoReadResult
+import com.github.nexters.ppotto.analysis.application.port.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
-import com.github.nexters.ppotto.analysis.domain.PhotoStorage
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId

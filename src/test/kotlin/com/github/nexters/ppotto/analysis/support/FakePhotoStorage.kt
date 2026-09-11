@@ -1,9 +1,9 @@
 package com.github.nexters.ppotto.analysis.support
 
-import com.github.nexters.ppotto.analysis.domain.BlobMeta
+import com.github.nexters.ppotto.analysis.application.port.BlobMeta
+import com.github.nexters.ppotto.analysis.application.port.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.Photo
-import com.github.nexters.ppotto.analysis.domain.PhotoStorage
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoObjectKeys
+import com.github.nexters.ppotto.analysis.infrastructure.storage.PhotoObjectKeys
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.storage.GcsReadUrlIssuer

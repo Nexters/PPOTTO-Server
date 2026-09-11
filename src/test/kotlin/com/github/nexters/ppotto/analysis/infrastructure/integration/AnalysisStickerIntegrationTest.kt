@@ -1,10 +1,10 @@
 package com.github.nexters.ppotto.analysis.infrastructure.integration
 
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
-import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
+import com.github.nexters.ppotto.analysis.infrastructure.storage.StickerObjectKeys
 import com.github.nexters.ppotto.analysis.support.FakeStickerGenerator
 import com.github.nexters.ppotto.analysis.support.FakeStickerStorage
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
@@ -13,9 +13,9 @@ import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
-import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
-import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
+import com.github.nexters.ppotto.sticker.application.model.AnalysisStickerResult
+import com.github.nexters.ppotto.sticker.application.model.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.application.port.AnalysisPhotoOwnershipPort
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoQueryPort
 import com.github.nexters.ppotto.sticker.application.port.StickerImageStoragePort

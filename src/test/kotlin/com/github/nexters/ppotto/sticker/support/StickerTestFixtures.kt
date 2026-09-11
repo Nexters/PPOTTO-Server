@@ -3,7 +3,7 @@ package com.github.nexters.ppotto.sticker.support
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
-import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
+import com.github.nexters.ppotto.sticker.application.model.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerCreation

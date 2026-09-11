@@ -2,11 +2,11 @@ package com.github.nexters.ppotto.sticker.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.global.identifier.PhotoId
-import com.github.nexters.ppotto.sticker.application.RecapCommentResult
-import com.github.nexters.ppotto.sticker.application.RecapGroupPhotoResult
-import com.github.nexters.ppotto.sticker.application.RecapPhotoResult
-import com.github.nexters.ppotto.sticker.application.RecapShareResult
-import com.github.nexters.ppotto.sticker.application.StickerRecapResult
+import com.github.nexters.ppotto.sticker.application.model.RecapCommentResult
+import com.github.nexters.ppotto.sticker.application.model.RecapGroupPhotoResult
+import com.github.nexters.ppotto.sticker.application.model.RecapPhotoResult
+import com.github.nexters.ppotto.sticker.application.model.RecapShareResult
+import com.github.nexters.ppotto.sticker.application.model.StickerRecapResult
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
 import java.util.UUID

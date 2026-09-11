@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.auth.infrastructure.oauth
 
-import com.github.nexters.ppotto.auth.config.AppleAuthProperties
+import com.github.nexters.ppotto.auth.infrastructure.config.AppleAuthProperties
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClientException
