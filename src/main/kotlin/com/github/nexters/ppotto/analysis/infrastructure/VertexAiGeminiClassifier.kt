@@ -40,11 +40,10 @@ class VertexAiGeminiClassifier(
         val rawThemes =
             generate<Array<GeminiThemeResponse?>>(
                 pipeline = LlmPipeline.PHOTO_CLASSIFICATION,
-                parts = photos.toParts() + Part.fromText(GeminiPrompts.themeClassification(photoAliases.aliases)),
+                photos = photos,
+                prompt = GeminiPrompts.themeClassification(photoAliases.aliases),
                 responseSchema = VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA,
                 timeoutMs = vertexAiProperties.classifyTimeoutMs,
-                photoCount = photos.size,
-                systemInstruction = Content.fromParts(Part.fromText(GeminiPrompts.COPY_VOICE)),
             ).toList()
 
         val repair = toClassifications(rawThemes, photoAliases).cappedToMaxThemeCount().repairCrossThemeDuplicates()
@@ -61,13 +60,12 @@ class VertexAiGeminiClassifier(
         previousSourcePhotoId: PhotoId,
     ): StickerRegenerationTarget {
         val photoAliases = GeminiPhotoAliases.from(photos)
-        val prompt = GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId))
         return generate<GeminiStickerRegenerationResponse>(
             pipeline = LlmPipeline.STICKER_REGENERATION,
-            parts = photos.toParts() + Part.fromText(prompt),
+            photos = photos,
+            prompt = GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId)),
             responseSchema = VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA,
             timeoutMs = vertexAiProperties.classifyTimeoutMs,
-            photoCount = photos.size,
         ).let { toRegenerationTarget(it, photoAliases, photos.map { photo -> photo.photoId }.toSet()) }
     }
 
@@ -77,32 +75,31 @@ class VertexAiGeminiClassifier(
     ): StickerSubjectVerification? =
         generate<GeminiSubjectVerificationResponse>(
             pipeline = LlmPipeline.STICKER_SUBJECT_VERIFICATION,
-            parts = listOf(photo).toParts() + Part.fromText(GeminiPrompts.verifyStickerSubject(targetSubject)),
+            photos = listOf(photo),
+            prompt = GeminiPrompts.verifyStickerSubject(targetSubject),
             responseSchema = VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA,
             timeoutMs = vertexAiProperties.verifyTimeoutMs,
-            photoCount = 1,
         ).let { toVerification(it) }
 
     private inline fun <reified T> generate(
         pipeline: LlmPipeline,
-        parts: List<Part>,
+        photos: List<PhotoRef>,
+        prompt: GeminiPrompt,
         responseSchema: Schema,
         timeoutMs: Long,
-        photoCount: Int,
-        systemInstruction: Content? = null,
     ): T {
-        val content = Content.fromParts(*parts.toTypedArray())
+        val content = Content.fromParts(*(photos.toParts() + Part.fromText(prompt.text)).toTypedArray())
         val configBuilder =
             GenerateContentConfig
                 .builder()
                 .responseMimeType("application/json")
                 .responseSchema(responseSchema)
                 .httpOptions(buildHttpOptions(timeoutMs))
-        systemInstruction?.let(configBuilder::systemInstruction)
+        prompt.systemInstruction?.let { configBuilder.systemInstruction(Content.fromParts(Part.fromText(it))) }
         val config = configBuilder.build()
         val response =
             runCatching {
-                LlmTracer.trace(pipeline, MODEL, attributes = mapOf(ATTR_PHOTO_COUNT to photoCount.toString())) { span ->
+                LlmTracer.trace(pipeline, MODEL, attributes = mapOf(ATTR_PHOTO_COUNT to photos.size.toString())) { span ->
                     span.recordRequest(content, config)
                     genAiClient.models
                         .generateContent(MODEL, content, config)
