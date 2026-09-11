@@ -87,7 +87,7 @@ class StaleAnalysisCleanupServiceTest(
                     analysis.status shouldBe AnalysisStatus.FAILED
                     analysis.failedReason shouldBe AnalysisRepository.FAILED_REASON_EXPIRED
                     analysis.failedCode shouldBe AnalysisErrorCode.INTERNAL_ERROR
-                    analysis.failedCode?.code shouldBe "ANALYSIS-016"
+                    analysis.failedCode?.code shouldBe "ANALYSIS-015"
                 }
 
                 Then("점유가 풀려 같은 사용자가 새 분석을 만들 수 있다") {

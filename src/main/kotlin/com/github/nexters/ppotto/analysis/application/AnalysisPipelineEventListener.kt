@@ -6,7 +6,6 @@ import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.global.config.AsyncConfig
-import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.logging.bestEffort
@@ -58,12 +57,7 @@ class AnalysisPipelineEventListener(
                 pipelineRun.measured(ANALYSIS_LOAD_STEP) {
                     analysisRepository.findById(analysisId) ?: error("분석을 찾을 수 없습니다: $analysisId")
                 }
-            val stickers =
-                pipelineRun.measured(ANALYSIS_RESULT_VALIDATE_STEP) {
-                    pipelineResult.themes.mapNotNull { it.toStickerResult() }.also {
-                        if (it.isEmpty()) throw BusinessException(AnalysisErrorCode.NO_STICKER_GENERATED)
-                    }
-                }
+            val stickers = pipelineResult.themes.mapNotNull { it.toStickerResult() }
             val completed =
                 pipelineRun.measured(ANALYSIS_RESULT_SAVE_STEP, AnalysisErrorCode.RESULT_SAVE_FAILED) {
                     saveResult(analysis, stickers)
@@ -159,7 +153,6 @@ class AnalysisPipelineEventListener(
     companion object {
         private const val PIPELINE_RUN_STEP = "pipeline-run"
         private const val ANALYSIS_LOAD_STEP = "analysis-load"
-        private const val ANALYSIS_RESULT_VALIDATE_STEP = "analysis-result-validate"
         private const val ANALYSIS_RESULT_SAVE_STEP = "analysis-result-save"
 
         private val NOTIFICATION_COMPLETED =

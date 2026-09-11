@@ -204,14 +204,14 @@ Table analysis {
 
   성공한 스티커가 1개 이상이면 성공 결과만 저장하고 COMPLETED 로 전환한다.
   스티커·리캡 저장과 COMPLETED 전환은 같은 트랜잭션으로 처리한다.
-  성공이 0개면 FAILED 이며, 전부 명시적 대상 없음은 ANALYSIS-013,
-  생성 오류가 하나라도 있으면 ANALYSIS-014 이다.
-  분류 호출 실패는 ANALYSIS-018, 응답 검증 실패는 ANALYSIS-007,
-  결과 저장 실패는 ANALYSIS-015, 나머지 처리 오류는 ANALYSIS-016 이다.
+  성공이 0개면 FAILED 이며, 전부 명시적 대상 없음은 ANALYSIS-012,
+  생성 오류가 하나라도 있으면 ANALYSIS-013 이다.
+  분류 호출 실패는 ANALYSIS-017, 응답 검증 실패는 ANALYSIS-007,
+  결과 저장 실패는 ANALYSIS-014, 나머지 처리 오류는 ANALYSIS-015 이다.
 
-  UPLOADING 취소는 FAILED / ANALYSIS-017 / CANCELED 로 기록한다.
+  UPLOADING 취소는 FAILED / ANALYSIS-016 / CANCELED 로 기록한다.
   만료 배치는 updated_at 이 설정된 타임아웃(기본 60분)보다 오래된
-  UPLOADING/ANALYZING 을 FAILED / ANALYSIS-016 / EXPIRED 로 전환한다.
+  UPLOADING/ANALYZING 을 FAILED / ANALYSIS-015 / EXPIRED 로 전환한다.
   기본 10분 간격으로 실행하며 취소와 같은 사진 실패 처리·오브젝트 정리를 사용한다.
   만료 시 푸시는 보내지 않는다. 종료된 행은 uk_analysis_active 점유에서 제외되어
   사용자가 새 분석을 생성할 수 있다.

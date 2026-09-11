@@ -193,7 +193,7 @@ class AnalysisRepositoryTest(
                         .select(ANALYSIS.FAILED_CODE)
                         .from(ANALYSIS)
                         .where(ANALYSIS.ID.eq(saved.id))
-                        .fetchOne(ANALYSIS.FAILED_CODE) shouldBe "ANALYSIS-018"
+                        .fetchOne(ANALYSIS.FAILED_CODE) shouldBe "ANALYSIS-017"
                 }
             }
         }

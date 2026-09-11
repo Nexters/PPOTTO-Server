@@ -360,7 +360,6 @@ class OpenApiDocumentationTest(
                                         "ANALYSIS-015",
                                         "ANALYSIS-016",
                                         "ANALYSIS-017",
-                                        "ANALYSIS-018",
                                     ),
                                 ),
                         ).andExpect(jsonPath("$schemaPath['required']").value(not(hasItem("failedCode"))))

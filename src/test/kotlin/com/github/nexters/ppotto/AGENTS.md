@@ -4,7 +4,7 @@
 
 Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for integration tests.
 
-`analysis/presentation/AnalysisFailureHttpTest.kt`는 실제 임의 포트 서버와 JWT로 상태 조회 및 전체 생성 실패 후 `ANALYSIS-014` 응답을 확인하고, 종료 시 서버와 HTTP 클라이언트를 닫는다.
+`analysis/presentation/AnalysisFailureHttpTest.kt`는 실제 임의 포트 서버와 JWT로 상태 조회 및 전체 생성 실패 후 `ANALYSIS-013` 응답을 확인하고, 종료 시 서버와 HTTP 클라이언트를 닫는다.
 
 | File | Description |
 |------|-------------|
@@ -18,10 +18,10 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `support/Concurrency.kt` | Shared `runConcurrently(taskCount) { index -> ... }` helper with ready/start latches. Returns `List<Result<T>>` so failure causes are preserved; call `getOrThrow` when only successes are expected. The readiness `check` names how many tasks failed to arrive, so a hung task reads as a message instead of a bare `IllegalStateException` |
 | `support/UserJourneyTestConfig.kt` | `@Primary` stub Kakao `OAuthClient` and in-memory `RefreshTokenStore` wired into a `@Primary` `AuthService`, so `/auth/login` runs end to end with real JWTs and no provider HTTP or Redis |
 | `UserJourneyIntegrationTest.kt` | Issue #50 whole-journey integration test. One stage per `When`, its outcomes as `Then`s, with the ids the next stage needs held in the root `Given`. Overrides `isolationMode()` to `SingleInstance` on purpose: under `InstancePerLeaf` only the ancestors of a leaf re-run, so the preceding sibling `When`s would be skipped and the relay would break. Drives login, terms agreement (including the `TERM-001` rejection), board creation, both analyses, recap read, sticker edit/delete, three authenticated failure paths (another user's board → `BOARD-002`, tampered token and no token → `COMMON-004`), withdrawal, and the cleanup batch through MockMvc. Photos are marked uploaded on `FakePhotoStorage` before each `POST /analysis/{id}/start`, otherwise upload verification answers `ANALYSIS-008`. A second analysis leaves one sticker alive at withdrawal time, so the post-cleanup STICKERS absence assertion actually proves the batch deletes stickers |
-| `analysis/` | 소유권·업로드·상태 조회, 진행률·결과 저장, 분류·생성 실패 코드와 취소 `017`을 검증한다. 파이프라인은 전체 실패 `013/014`·일부 성공·저장 롤백 `015`·종료 뒤 결과 저장 차단을, API·OpenAPI는 HTTP 200 안의 `FAILED`와 코드 문자열·null 생략을 확인한다. |
-| `analysis/infrastructure/VertexAiGeminiClassifierFailureTest.kt` | 로컬 HTTP 서버와 실제 SDK로 분류 호출 실패 `018`, 성공 응답의 JSON 파싱·빈 분류 오류 `007`을 구분한다. 외부 Vertex AI에 요청하지 않는다. |
+| `analysis/` | 소유권·업로드·상태 조회, 진행률·결과 저장, 분류·생성 실패 코드와 취소 `016`을 검증한다. 파이프라인은 전체 실패 `012/013`·일부 성공·저장 롤백 `014`·종료 뒤 결과 저장 차단을, API·OpenAPI는 HTTP 200 안의 `FAILED`와 코드 문자열·null 생략을 확인한다. |
+| `analysis/infrastructure/VertexAiGeminiClassifierFailureTest.kt` | 로컬 HTTP 서버와 실제 SDK로 분류 호출 실패 `017`, 성공 응답의 JSON 파싱·빈 분류 오류 `007`을 구분한다. 외부 Vertex AI에 요청하지 않는다. |
 | `analysis/infrastructure/VertexAiGeminiClassifierSchemaTest.kt` | 사진 alias·응답 검증·부가값 복구와 피사체 재검증을 확인한다. 명시적 `false`만 피사체 없음이며 판정 누락·`true`와 빈 대상은 `007` 예외로 최초 분류 복구를 유도한다. |
-| `analysis/application/StaleAnalysisCleanupServiceTest.kt` | 오래 갱신되지 않은 UPLOADING/ANALYZING의 `016/EXPIRED` 종료와 사진 정리, 최근 갱신·완료 행 보호를 검증한다. 스케줄러는 테스트 프로필에서 끄고 서비스를 직접 호출한다. |
+| `analysis/application/StaleAnalysisCleanupServiceTest.kt` | 오래 갱신되지 않은 UPLOADING/ANALYZING의 `015/EXPIRED` 종료와 사진 정리, 최근 갱신·완료 행 보호를 검증한다. 스케줄러는 테스트 프로필에서 끄고 서비스를 직접 호출한다. |
 | `analysis/infrastructure/integration/AnalysisStickerIntegrationTest.kt` | Production analysis/sticker port wiring, analysis-result save to recap read round trip with real signed URLs, and photo-ownership rejection tests |
 | `user/` | User domain, concurrent signup, AES-GCM token cipher, repository, application-service, session-revoking withdrawal, cleanup, and controller tests |
 | `user/application/WithdrawnUserDataDeletionIntegrationTest.kt` | `WithdrawnUserCleanupService` driving the four production `WithdrawnUserXxxDeletionPort` adapters in order: full cross-domain hard deletion, object-storage prefixes and keys observed through `FakePhotoStorage`/`RecordingObjectStorageCleaner`, and batch idempotency |

@@ -25,7 +25,7 @@ data class AnalysisStatusResponse(
     @field:Schema(description = "진행률 0~100", example = "45")
     val progress: Int,
 
-    @field:Schema(description = "분석 실패 코드. 실패 전 또는 원인을 구분할 수 없는 기존 이력은 생략", example = "ANALYSIS-018")
+    @field:Schema(description = "분석 실패 코드. 실패 전 또는 원인을 구분할 수 없는 기존 이력은 생략", example = "ANALYSIS-017")
     val failedCode: AnalysisErrorCode?,
 
     @field:Schema(description = "실패 사유", example = "AI 분석 호출이 반복 실패했습니다.")

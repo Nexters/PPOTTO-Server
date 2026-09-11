@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.presentation
 
 import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.application.CreateAnalysisCommand
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
@@ -489,14 +490,13 @@ class AnalysisControllerTest(
             val analysis = analysisRepository.save(board.userId, board.id)
 
             listOf(
-                "ANALYSIS-007",
-                "ANALYSIS-012",
-                "ANALYSIS-013",
-                "ANALYSIS-014",
-                "ANALYSIS-015",
-                "ANALYSIS-016",
-                "ANALYSIS-018",
-            ).forEach { code ->
+                AnalysisErrorCode.INVALID_GEMINI_RESPONSE to "ANALYSIS-007",
+                AnalysisErrorCode.NO_STICKER_SUBJECT to "ANALYSIS-012",
+                AnalysisErrorCode.STICKER_GENERATION_FAILED to "ANALYSIS-013",
+                AnalysisErrorCode.RESULT_SAVE_FAILED to "ANALYSIS-014",
+                AnalysisErrorCode.INTERNAL_ERROR to "ANALYSIS-015",
+                AnalysisErrorCode.CLASSIFICATION_FAILED to "ANALYSIS-017",
+            ).forEach { (failedCode, code) ->
                 When("실패 코드가 $code 이면") {
                     dslContext
                         .update(ANALYSIS)
@@ -508,6 +508,7 @@ class AnalysisControllerTest(
                     val response = mockMvc.perform(get("/analysis/${analysis.id}").authenticatedAs(board.userId))
 
                     Then("HTTP 오류가 아닌 성공 응답의 데이터에 코드 문자열을 담는다") {
+                        analysisRepository.findById(analysis.id)!!.failedCode shouldBe failedCode
                         response
                             .andExpect(status().isOk)
                             .andExpect(jsonPath("$.success").value(true))
@@ -613,7 +614,8 @@ class AnalysisControllerTest(
                     val analysis = analysisRepository.findById(created.analysisId)
                     analysis.shouldNotBeNull()
                     analysis.status shouldBe AnalysisStatus.FAILED
-                    analysis.failedCode?.code shouldBe "ANALYSIS-017"
+                    analysis.failedCode shouldBe AnalysisErrorCode.ANALYSIS_CANCELED
+                    analysis.failedCode?.code shouldBe "ANALYSIS-016"
                     analysis.failedReason shouldBe "CANCELED"
                 }
 
@@ -623,7 +625,7 @@ class AnalysisControllerTest(
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.success").value(true))
                         .andExpect(jsonPath("$.data.status").value("FAILED"))
-                        .andExpect(jsonPath("$.data.failedCode").value("ANALYSIS-017"))
+                        .andExpect(jsonPath("$.data.failedCode").value("ANALYSIS-016"))
                         .andExpect(jsonPath("$.data.failedReason").value("CANCELED"))
                         .andExpect(jsonPath("$.error").doesNotExist())
                 }

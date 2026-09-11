@@ -77,7 +77,7 @@ class AnalysisFailureHttpTest(
                     body
                         .path("data")
                         .path("failedCode")
-                        .asText() shouldBe "ANALYSIS-018"
+                        .asText() shouldBe "ANALYSIS-017"
                     body.has("error") shouldBe false
                 }
             }
@@ -94,7 +94,7 @@ class AnalysisFailureHttpTest(
                 val started = request("/analysis/${created.analysisId}/start", accessToken, "POST")
                 val polled = request("/analysis/${created.analysisId}", accessToken)
 
-                Then("시작 수락 뒤 전체 생성 실패를 ANALYSIS-014로 반환한다") {
+                Then("시작 수락 뒤 전체 생성 실패를 ANALYSIS-013로 반환한다") {
                     started.statusCode() shouldBe 202
                     polled.statusCode() shouldBe 200
                     val body = objectMapper.readTree(polled.body())
@@ -106,7 +106,7 @@ class AnalysisFailureHttpTest(
                     body
                         .path("data")
                         .path("failedCode")
-                        .asText() shouldBe "ANALYSIS-014"
+                        .asText() shouldBe "ANALYSIS-013"
                     body.has("error") shouldBe false
                 }
             }

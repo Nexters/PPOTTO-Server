@@ -56,7 +56,7 @@ class VertexAiGeminiClassifierFailureTest :
                 Then("호출 실패 코드로 반환한다") {
                     status = 400
                     responseText = """{"error":{"code":400,"message":"provider failure","status":"INVALID_ARGUMENT"}}"""
-                    shouldThrow<BusinessException> { classifier.classifyAndRecap(photos) }.errorCode.code shouldBe "ANALYSIS-018"
+                    shouldThrow<BusinessException> { classifier.classifyAndRecap(photos) }.errorCode.code shouldBe "ANALYSIS-017"
                 }
             }
         }
