@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.global.config
 
 import com.github.nexters.ppotto.PpottoApplication
+import com.github.nexters.ppotto.global.web.ApiVersions
 import com.github.nexters.ppotto.support.IntegrationTest
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder

@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.analysis.application
+package com.github.nexters.ppotto.analysis.application.pipeline
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.global.error.BusinessException

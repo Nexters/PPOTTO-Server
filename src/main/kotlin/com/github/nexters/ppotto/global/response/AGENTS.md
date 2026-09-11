@@ -1,6 +1,6 @@
 <!-- Parent: ../AGENTS.md -->
 
-# global.response
+# global.web
 
 API response envelope.
 

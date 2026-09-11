@@ -1,5 +1,6 @@
-package com.github.nexters.ppotto.analysis.application
+package com.github.nexters.ppotto.analysis.application.pipeline
 
+import com.github.nexters.ppotto.analysis.application.pipeline.SimulatedProgressTicker
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue

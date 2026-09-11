@@ -3,7 +3,7 @@ package com.github.nexters.ppotto.terms.presentation
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
 import com.github.nexters.ppotto.terms.presentation.dto.AgreeTermsRequest
 import com.github.nexters.ppotto.terms.presentation.dto.TermResponse
 import io.swagger.v3.oas.annotations.Operation

@@ -1,9 +1,9 @@
 package com.github.nexters.ppotto.auth.infrastructure.security
 
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
-import com.github.nexters.ppotto.global.config.PublicPaths
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.web.PublicPaths
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse

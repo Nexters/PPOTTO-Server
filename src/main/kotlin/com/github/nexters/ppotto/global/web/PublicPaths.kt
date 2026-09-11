@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.global.config
+package com.github.nexters.ppotto.global.web
 
 object PublicPaths {
     private const val ACTUATOR_PATH_PREFIX = "/actuator"

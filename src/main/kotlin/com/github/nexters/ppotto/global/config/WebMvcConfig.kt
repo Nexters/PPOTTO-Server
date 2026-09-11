@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.global.config
 
 import com.github.nexters.ppotto.global.security.CurrentUserArgumentResolver
+import com.github.nexters.ppotto.global.web.ApiVersions
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.servlet.config.annotation.ApiVersionConfigurer

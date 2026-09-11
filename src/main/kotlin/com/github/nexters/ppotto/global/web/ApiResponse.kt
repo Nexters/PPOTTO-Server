@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.global.response
+package com.github.nexters.ppotto.global.web
 
 import com.github.nexters.ppotto.global.error.ErrorResponse
 import io.swagger.v3.oas.annotations.media.Schema

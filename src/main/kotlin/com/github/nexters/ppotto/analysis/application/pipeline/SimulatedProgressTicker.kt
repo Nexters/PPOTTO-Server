@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.analysis.application
+package com.github.nexters.ppotto.analysis.application.pipeline
 
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit

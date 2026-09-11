@@ -4,7 +4,7 @@ import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.openapi.EmptySuccessApiResponse
 import com.github.nexters.ppotto.global.openapi.InvalidInputApiResponse
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapDetailResponse
 import com.github.nexters.ppotto.sticker.presentation.dto.ShareRecapRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.ShareRecapResponse

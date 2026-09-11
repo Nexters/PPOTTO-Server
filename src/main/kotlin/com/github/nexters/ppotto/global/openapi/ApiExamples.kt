@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.global.openapi
 
 import com.github.nexters.ppotto.global.error.ErrorResponse
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
 import java.time.Instant
 
 object ApiExamples {

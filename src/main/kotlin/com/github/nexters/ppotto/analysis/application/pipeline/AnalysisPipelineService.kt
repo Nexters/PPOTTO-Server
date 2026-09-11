@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.analysis.application
+package com.github.nexters.ppotto.analysis.application.pipeline
 
 import com.github.nexters.ppotto.analysis.application.model.AnalysisPipelineResult
 import com.github.nexters.ppotto.analysis.application.model.ThemeAnalysisResult

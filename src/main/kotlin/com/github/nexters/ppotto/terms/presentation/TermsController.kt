@@ -1,9 +1,9 @@
 package com.github.nexters.ppotto.terms.presentation
 
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import com.github.nexters.ppotto.global.security.CurrentUser
+import com.github.nexters.ppotto.global.web.ApiResponse
 import com.github.nexters.ppotto.terms.application.TermsService
 import com.github.nexters.ppotto.terms.presentation.dto.AgreeTermsRequest
 import com.github.nexters.ppotto.terms.presentation.dto.TermResponse

@@ -2,7 +2,7 @@ package com.github.nexters.ppotto.auth.infrastructure.config
 
 import com.github.nexters.ppotto.auth.infrastructure.security.AuthAuthenticationEntryPoint
 import com.github.nexters.ppotto.auth.infrastructure.security.BearerTokenAuthenticationFilter
-import com.github.nexters.ppotto.global.config.PublicPaths
+import com.github.nexters.ppotto.global.web.PublicPaths
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration

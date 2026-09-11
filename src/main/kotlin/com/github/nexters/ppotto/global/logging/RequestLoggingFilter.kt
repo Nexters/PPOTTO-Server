@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.global.logging
 
-import com.github.nexters.ppotto.global.config.PublicPaths
 import com.github.nexters.ppotto.global.observability.HttpPayloadAttributes
+import com.github.nexters.ppotto.global.web.PublicPaths
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse

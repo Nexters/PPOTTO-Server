@@ -2,8 +2,8 @@ package com.github.nexters.ppotto.sticker.presentation
 
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
+import com.github.nexters.ppotto.global.web.ApiResponse
 import com.github.nexters.ppotto.sticker.application.RecapCommentCommandService
 import com.github.nexters.ppotto.sticker.application.RecapShareService
 import com.github.nexters.ppotto.sticker.application.StickerCommandService

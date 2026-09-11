@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.global.config
+package com.github.nexters.ppotto.global.web
 
 import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.web.bind.annotation.RequestMapping

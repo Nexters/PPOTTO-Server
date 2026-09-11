@@ -4,8 +4,8 @@ import com.github.nexters.ppotto.board.application.BoardQueryService
 import com.github.nexters.ppotto.board.presentation.dto.BoardDetailV2Response
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
+import com.github.nexters.ppotto.global.web.ApiResponse
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RestController
 

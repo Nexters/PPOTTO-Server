@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.global.config
 
+import com.github.nexters.ppotto.global.web.PublicPaths
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
