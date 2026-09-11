@@ -4,9 +4,9 @@ import com.github.nexters.ppotto.auth.application.port.AuthUserPort
 import com.github.nexters.ppotto.auth.domain.AuthUser
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.board.application.BoardCommandService
-import com.github.nexters.ppotto.user.application.SocialUserCommand
-import com.github.nexters.ppotto.user.application.UserRegistrationResult
 import com.github.nexters.ppotto.user.application.UserService
+import com.github.nexters.ppotto.user.application.model.SocialUserCommand
+import com.github.nexters.ppotto.user.application.model.UserRegistrationResult
 import org.springframework.stereotype.Component
 
 @Component

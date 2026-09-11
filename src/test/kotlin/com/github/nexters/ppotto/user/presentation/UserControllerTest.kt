@@ -2,8 +2,8 @@ package com.github.nexters.ppotto.user.presentation
 
 import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.support.IntegrationTest
-import com.github.nexters.ppotto.user.application.SocialUserCommand
 import com.github.nexters.ppotto.user.application.UserService
+import com.github.nexters.ppotto.user.application.model.SocialUserCommand
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.nulls.shouldBeNull
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc

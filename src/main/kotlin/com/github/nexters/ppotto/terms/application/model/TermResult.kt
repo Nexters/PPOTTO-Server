@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.terms.application
+package com.github.nexters.ppotto.terms.application.model
 
 import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.terms.domain.Term

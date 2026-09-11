@@ -4,6 +4,8 @@ import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.transaction.afterCommit
+import com.github.nexters.ppotto.user.application.model.SocialUserCommand
+import com.github.nexters.ppotto.user.application.model.UserRegistrationResult
 import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
 import com.github.nexters.ppotto.user.application.port.UserSessionRevoker
 import com.github.nexters.ppotto.user.domain.EncryptedProviderRefreshToken

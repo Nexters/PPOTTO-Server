@@ -10,7 +10,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain provides the real adapter |
 | `application/port/UserSessionRevoker.kt` | Auth integration boundary that revokes the service refresh token on withdrawal |
 | `application/port/WithdrawnUserDataPorts.kt` | Per-provider deletion contracts the cleanup service fans out to: board(+drawing), sticker(+recap, sticker image objects), analysis(+photo, original GCS objects), term agreement |
-| `application/UserModels.kt` | `SocialUserCommand`, `UserRegistrationResult`, and `WithdrawnUserCleanupResult` — every application-layer value type of this domain |
+| `application/model/UserModels.kt` | `SocialUserCommand`, `UserRegistrationResult`, and `WithdrawnUserCleanupResult` — every application-layer value type of this domain |
 | `application/UserService.kt` | Atomic social lookup/create, active account lookup, and withdrawal ordering |
 | `application/WithdrawnUserCleanupService.kt` | Bounded cleanup batch; orders the four deletion ports itself and hard-deletes a user only after they all succeed. Owns `MAX_CLEANUP_BATCH_SIZE` |
 | `presentation/UserApi.kt` | Version 1 `GET /users/me` and `DELETE /users/me` mapping and Swagger contract |

@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.jooq.tables.references.USERS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.runConcurrently
+import com.github.nexters.ppotto.user.application.model.SocialUserCommand
 import com.github.nexters.ppotto.user.application.port.SocialAccountRevoker
 import com.github.nexters.ppotto.user.infrastructure.AesGcmProviderRefreshTokenCipher
 import com.github.nexters.ppotto.user.infrastructure.UserRepository

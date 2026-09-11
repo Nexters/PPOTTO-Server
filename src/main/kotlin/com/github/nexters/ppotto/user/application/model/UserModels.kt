@@ -1,4 +1,4 @@
-package com.github.nexters.ppotto.user.application
+package com.github.nexters.ppotto.user.application.model
 
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.oauth.OAuthProvider
