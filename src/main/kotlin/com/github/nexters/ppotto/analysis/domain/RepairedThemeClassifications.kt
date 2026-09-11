@@ -1,11 +1,23 @@
 package com.github.nexters.ppotto.analysis.domain
 
 import com.github.nexters.ppotto.global.identifier.PhotoId
+import org.slf4j.LoggerFactory
 
 data class RepairedThemeClassifications(
     val classifications: List<ThemeClassification>,
     val removedPhotoCount: Int,
 )
+
+fun List<ThemeClassification>.cappedToMaxThemeCount(): List<ThemeClassification> {
+    if (size <= ThemeClassificationValidator.MAX_THEME_COUNT) return this
+
+    log.warn(
+        "Gemini가 최대 테마 개수를 초과해 반환하여 앞에서부터 {}개만 사용합니다: 반환={}개",
+        ThemeClassificationValidator.MAX_THEME_COUNT,
+        size,
+    )
+    return take(ThemeClassificationValidator.MAX_THEME_COUNT)
+}
 
 fun List<ThemeClassification>.repairCrossThemeDuplicates(): RepairedThemeClassifications {
     val ownerIndexByPhotoId = ownerIndexByPhotoId()
@@ -34,3 +46,5 @@ private fun List<ThemeClassification>.ownerIndexByPhotoId(): Map<PhotoId, Int> {
     }
     return firstSeenOwner + stickerSourceOwner
 }
+
+private val log = LoggerFactory.getLogger("com.github.nexters.ppotto.analysis.domain.ThemeClassifications")

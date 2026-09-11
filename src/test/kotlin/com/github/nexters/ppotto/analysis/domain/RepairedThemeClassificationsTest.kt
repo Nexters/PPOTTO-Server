@@ -27,6 +27,40 @@ private fun theme(
 
 class RepairedThemeClassificationsTest :
     BehaviorSpec({
+        Given("최대 개수보다 한 개 많은 테마를 Gemini가 반환했을 때") {
+            val classifications =
+                (0..ThemeClassificationValidator.MAX_THEME_COUNT).map { index ->
+                    theme("테마$index", listOf(photoId()))
+                }
+
+            When("최대 개수로 자르면") {
+                val capped = classifications.cappedToMaxThemeCount()
+
+                Then("앞에서부터 최대 개수만큼만 남고 분석은 계속된다") {
+                    capped.map { it.theme } shouldContainExactly
+                        (0 until ThemeClassificationValidator.MAX_THEME_COUNT).map { "테마$it" }
+                }
+
+                Then("잘라낸 결과는 검증을 통과한다") {
+                    shouldNotThrowAny {
+                        ThemeClassificationValidator.validate(capped, capped.flatMap { it.categorizedPhotoIds }.toSet())
+                    }
+                }
+            }
+        }
+
+        Given("최대 개수 이하의 테마가 주어졌을 때") {
+            val classifications = listOf(theme("가을", listOf(photoId())))
+
+            When("최대 개수로 자르면") {
+                val capped = classifications.cappedToMaxThemeCount()
+
+                Then("원본 목록을 그대로 돌려준다") {
+                    capped shouldBe classifications
+                }
+            }
+        }
+
         val photo1 = photoId()
         val photo2 = photoId()
         val photo3 = photoId()

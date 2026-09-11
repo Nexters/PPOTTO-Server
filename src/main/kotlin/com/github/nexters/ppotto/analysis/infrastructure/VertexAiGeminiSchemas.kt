@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
+import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
 import com.google.genai.types.Schema
 import com.google.genai.types.Type
 
@@ -41,6 +42,8 @@ internal object VertexAiGeminiSchemas {
             .builder()
             .type(Type.Known.ARRAY)
             .items(themeSchema())
+            .minItems(ThemeClassificationValidator.MIN_THEME_COUNT.toLong())
+            .maxItems(ThemeClassificationValidator.MAX_THEME_COUNT.toLong())
             .build()
 
     private fun stringSchema(): Schema =
