@@ -26,7 +26,8 @@ data class Analysis(
     val startedAt: Instant? = null,
     val completedAt: Instant? = null,
     val createdAt: Instant? = null,
-    val updatedAt: Instant? = null
+    val updatedAt: Instant? = null,
+    val failedCode: String? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -85,6 +86,12 @@ data class Analysis(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
+        if (this.failedCode == null) {
+            if (o.failedCode != null)
+                return false
+        }
+        else if (this.failedCode != o.failedCode)
+            return false
         return true
     }
 
@@ -101,6 +108,7 @@ data class Analysis(
         result = prime * result + (if (this.completedAt == null) 0 else this.completedAt.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
+        result = prime * result + (if (this.failedCode == null) 0 else this.failedCode.hashCode())
         return result
     }
 
@@ -117,6 +125,7 @@ data class Analysis(
         sb.append(", ").append(completedAt)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
+        sb.append(", ").append(failedCode)
 
         sb.append(")")
         return sb.toString()

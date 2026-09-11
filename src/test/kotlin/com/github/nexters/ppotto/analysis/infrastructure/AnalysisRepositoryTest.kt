@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.infrastructure
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.identifier.AnalysisId
@@ -179,7 +180,7 @@ class AnalysisRepositoryTest(
             analysisRepository.updateProgress(saved.id, 60)
 
             When("markFailed를 호출하면") {
-                analysisRepository.markFailed(saved.id, "실패")
+                analysisRepository.markFailed(saved.id, "실패", AnalysisErrorCode.CLASSIFICATION_FAILED)
 
                 Then("마지막 진행률을 유지한다") {
                     val found = analysisRepository.findById(saved.id)
@@ -187,6 +188,12 @@ class AnalysisRepositoryTest(
                     found?.status shouldBe AnalysisStatus.FAILED
                     found?.progress shouldBe 60
                     found?.failedReason shouldBe "실패"
+                    found?.failedCode shouldBe AnalysisErrorCode.CLASSIFICATION_FAILED
+                    dslContext
+                        .select(ANALYSIS.FAILED_CODE)
+                        .from(ANALYSIS)
+                        .where(ANALYSIS.ID.eq(saved.id))
+                        .fetchOne(ANALYSIS.FAILED_CODE) shouldBe "ANALYSIS-017"
                 }
             }
         }

@@ -79,7 +79,7 @@ class AnalysisService(
             throw ConflictException(AnalysisErrorCode.CANCEL_NOT_ALLOWED)
         }
 
-        analysisDiscardService.discard(analysisId, AnalysisRepository.FAILED_REASON_CANCELED)
+        analysisDiscardService.discard(analysisId, AnalysisRepository.FAILED_REASON_CANCELED, AnalysisErrorCode.ANALYSIS_CANCELED)
     }
 
     private fun savePendingPhotos(

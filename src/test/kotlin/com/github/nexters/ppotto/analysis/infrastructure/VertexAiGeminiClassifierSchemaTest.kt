@@ -397,17 +397,22 @@ class VertexAiGeminiClassifierSchemaTest :
             }
 
             When("subjectPresent는 true인데 targetSubject가 비어있으면") {
-                val verification =
-                    VertexAiGeminiClassifier.toVerification(
-                        GeminiSubjectVerificationResponse(
-                            subjectPresent = true,
-                            targetSubject = "  ",
-                            mainColor = "#123456",
-                        ),
-                    )
+                Then("피사체 없음 대신 잘못된 응답 예외를 반환해 최초 분류로 복구할 수 있다") {
+                    listOf(null, "  ").forEach { targetSubject ->
+                        shouldThrow<BusinessException> {
+                            VertexAiGeminiClassifier.toVerification(
+                                GeminiSubjectVerificationResponse(true, targetSubject, "#123456"),
+                            )
+                        }.errorCode.code shouldBe "ANALYSIS-007"
+                    }
+                }
+            }
 
-                Then("null을 반환한다") {
-                    verification.shouldBeNull()
+            When("subjectPresent 값이 누락되면") {
+                Then("피사체 없음으로 판정하지 않는다") {
+                    shouldThrow<BusinessException> {
+                        VertexAiGeminiClassifier.toVerification(GeminiSubjectVerificationResponse(null, "고양이", "#123456"))
+                    }.errorCode.code shouldBe "ANALYSIS-007"
                 }
             }
         }

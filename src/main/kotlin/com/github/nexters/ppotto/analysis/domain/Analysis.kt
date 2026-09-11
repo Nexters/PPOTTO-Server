@@ -12,6 +12,7 @@ data class Analysis(
     val boardId: BoardId,
     val status: AnalysisStatus,
     val progress: Int,
+    val failedCode: AnalysisErrorCode?,
     val failedReason: String?,
     val startedAt: Instant?,
     val completedAt: Instant?,

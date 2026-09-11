@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.Photo
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
@@ -396,7 +397,8 @@ class AnalysisServiceTest(
                     analysis.status shouldBe AnalysisStatus.FAILED
                     analysis.progress shouldBe 10
                     analysis.failedReason shouldContain "[gemini-classification]"
-                    analysis.failedReason shouldContain "AI 분석 실패"
+                    analysis.failedCode shouldBe AnalysisErrorCode.INTERNAL_ERROR
+                    analysis.failedReason shouldContain AnalysisErrorCode.INTERNAL_ERROR.message
                 }
             }
         }
@@ -616,6 +618,7 @@ class AnalysisServiceTest(
                     analysis.shouldNotBeNull()
                     analysis.status shouldBe AnalysisStatus.FAILED
                     analysis.failedReason shouldBe "CANCELED"
+                    analysis.failedCode shouldBe AnalysisErrorCode.ANALYSIS_CANCELED
 
                     photoRepository
                         .findAllByAnalysisId(created.analysisId)
