@@ -114,6 +114,7 @@ class AnalysisPipelineServiceTest :
             val missingPhoto = photoRef("12")
             val photos = listOf(correctedPhoto, missingPhoto)
             val stickerGenerator = FakeStickerGenerator()
+            val stickerStorage = FakeStickerStorage()
             val themeClassifier =
                 FakeThemeClassifier().apply {
                     onClassify = { themePerPhoto(photos) }
@@ -129,25 +130,69 @@ class AnalysisPipelineServiceTest :
                 AnalysisPipelineService(
                     themeClassifier = themeClassifier,
                     stickerGenerator = stickerGenerator,
-                    stickerStorage = FakeStickerStorage(),
+                    stickerStorage = stickerStorage,
                 )
 
             When("파이프라인을 실행하면") {
                 val result = service.run(PipelineRun(analysisId), photos)
 
-                Then("보정된 테마는 보정된 피사체로 스티커를 만들고 보정된 mainColor를 쓴다") {
+                Then("보정된 테마는 보정된 mainColor로 스티커를 남긴다") {
                     val correctedTheme = result.themes.first { it.stickerSourcePhotoId == correctedPhoto.photoId }
                     correctedTheme.stickerMainColor shouldBe "#00FF00"
                     correctedTheme.stickerImageKey.shouldNotBeNull()
-                    stickerGenerator.requestedTargetSubjects shouldContainExactly listOf("보정된 피사체")
                 }
 
-                Then("피사체 없음으로 판정된 테마는 스티커 없이 테마 정보만 남는다") {
+                Then("재확인과 병렬로 돌기 때문에 두 테마 모두 분류 단계 피사체로 스티커를 만든다") {
+                    stickerGenerator.requestedTargetSubjects shouldContainExactlyInAnyOrder listOf("피사체0", "피사체1")
+                }
+
+                Then("피사체 없음으로 판정된 테마는 만든 스티커를 업로드하지 않고 버린다") {
                     val missingTheme = result.themes.first { it.stickerSourcePhotoId == missingPhoto.photoId }
                     missingTheme.stickerImageKey.shouldBeNull()
                     missingTheme.failedCode shouldBe AnalysisErrorCode.NO_STICKER_SUBJECT
                     missingTheme.theme shouldBe "테마1"
                     missingTheme.badge shouldBe "뱃지1"
+                    stickerStorage.uploaded.keys shouldContainExactly listOf("stickers/$analysisId/0-${correctedPhoto.photoId}.png")
+                }
+            }
+        }
+
+        Given("재확인과 스티커 생성이 서로를 기다리는 테마 하나가") {
+            val analysisId = AnalysisId(UUID.fromString("550e8400-e29b-41d4-a716-446655440070"))
+            val photo = photoRef("71")
+            val generateStarted = CountDownLatch(1)
+            val verifyStarted = CountDownLatch(1)
+            val stickerGenerator =
+                FakeStickerGenerator().apply {
+                    onGenerate = {
+                        generateStarted.countDown()
+                        verifyStarted.await(5, TimeUnit.SECONDS).shouldBeTrue()
+                    }
+                }
+            val themeClassifier =
+                FakeThemeClassifier().apply {
+                    onClassify = { themePerPhoto(listOf(photo)) }
+                    onVerify = { _, subject ->
+                        verifyStarted.countDown()
+                        generateStarted.await(5, TimeUnit.SECONDS).shouldBeTrue()
+                        StickerSubjectVerification(subject, "#00FF00")
+                    }
+                }
+            val service =
+                AnalysisPipelineService(
+                    themeClassifier = themeClassifier,
+                    stickerGenerator = stickerGenerator,
+                    stickerStorage = FakeStickerStorage(),
+                )
+
+            When("파이프라인을 실행하면") {
+                val result = service.run(PipelineRun(analysisId), listOf(photo))
+
+                Then("서로를 기다려도 교착되지 않고 스티커가 만들어진다") {
+                    result.themes
+                        .single()
+                        .stickerImageKey
+                        .shouldNotBeNull()
                 }
             }
         }
