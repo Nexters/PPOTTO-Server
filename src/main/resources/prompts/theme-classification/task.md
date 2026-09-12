@@ -1,3 +1,6 @@
-Classify the attached photos into between {{minThemeCount}} and
-{{maxThemeCount}} themes. Each photo must belong to exactly one theme,
-and you may exclude photos that don't fit any theme from the result.
+## Task
+
+Classify the attached photos into between {{minThemeCount}} and {{maxThemeCount}} themes.
+
+- Each photo belongs to exactly one theme.
+- Photos that fit no theme may be left out of the result.

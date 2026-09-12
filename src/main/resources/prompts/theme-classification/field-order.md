@@ -1,24 +1,9 @@
-Fill every field of the response schema. Each field carries its own spec, so read the field
-description before writing it and treat it as binding. What follows is only what no single
-field description can say: the order the fields depend on each other in.
+## How the fields depend on each other
 
-1. observedDetails comes first and everything else is built out of it. Look at this theme's
-   photos and write down what is physically there before you name anything. If a later field
-   contains a word that could not have come from observedDetails, it is wrong.
-2. theme is internal. The user never sees it, so name what literally happened, not a mood.
-3. recap.badge is the verdict, recap.text is the evidence for it, comments.speechBubbles is
-   what was said at that moment, and comments.keywordChips is the rest of the evidence. They
-   are one verdict about one person: keep them in one voice, and make each one add something
-   the others did not already say.
-4. sticker.sourcePhotoId is chosen BEFORE any subject description is written. It must be a
-   value that actually appears in **this theme's own categorizedPhotoIds array**. Never use an
-   alias that exists in the overall photo list but is NOT in this theme's categorizedPhotoIds
-   (i.e. an alias belonging to a different theme) — always copy one of the aliases you listed
-   in categorizedPhotoIds.
-5. sticker.targetSubject is written ONLY AFTER sourcePhotoId is fixed. Look again at that exact
-   photo and describe a subject that is literally, visibly present in it. Do not describe
-   something you recall from a different photo in this batch, and do not write an idealized or
-   generic subject. Before finalizing, re-check yourself: if you looked at that sourcePhotoId
-   photo again right now, would everything in targetSubject be immediately visible in it? If
-   not, either choose a different sourcePhotoId or rewrite targetSubject to match what that
-   photo truly shows.
+Fill every field of the response schema. Each field carries its own spec in its description — read it before writing that field and treat it as binding. What follows is only what no single field description can say: the order the fields depend on each other in.
+
+1. **`observedDetails` comes first and everything else is built out of it.** Look at this theme's photos and write down what is physically there before you name anything. If a later field contains a word that could not have come from `observedDetails`, it is wrong.
+2. **`theme` is internal.** The user never sees it, so name what literally happened, not a mood.
+3. **The four copy fields are one verdict about one person.** `recap.badge` is the verdict, `recap.text` is the evidence for it, `comments.speechBubbles` is what was said at that moment, and `comments.keywordChips` is the rest of the evidence. Keep them in one voice, and make each one add something the others did not already say.
+4. **`sticker.sourcePhotoId` is chosen BEFORE any subject description is written.** It must be a value that actually appears in **this theme's own `categorizedPhotoIds` array**. Never use an alias that exists in the overall photo list but is NOT in this theme's `categorizedPhotoIds` — that is, an alias belonging to a different theme. Always copy one of the aliases you listed in `categorizedPhotoIds`.
+5. **`sticker.targetSubject` is written ONLY AFTER `sourcePhotoId` is fixed.** Look again at that exact photo and describe a subject that is literally, visibly present in it. Do not describe something you recall from a different photo in this batch, and do not write an idealized or generic subject. Before finalizing, re-check yourself: if you looked at that `sourcePhotoId` photo again right now, would everything in `targetSubject` be immediately visible in it? If not, either choose a different `sourcePhotoId` or rewrite `targetSubject` to match what that photo truly shows.

@@ -1,1 +1,3 @@
-Photo alias list (in the same order as the attached photos): {{photoAliases}}
+## Photos
+
+Photo aliases, in the same order as the attached photos: {{photoAliases}}
