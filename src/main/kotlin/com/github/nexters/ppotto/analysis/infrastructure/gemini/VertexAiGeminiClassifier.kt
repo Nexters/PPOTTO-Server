@@ -41,8 +41,8 @@ class VertexAiGeminiClassifier(
             generate<Array<GeminiThemeResponse?>>(
                 pipeline = LlmPipeline.PHOTO_CLASSIFICATION,
                 photos = photos,
-                prompt = GeminiPrompts.themeClassification(photoAliases.aliases),
-                responseSchema = VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA,
+                prompt = themeClassificationPrompt(photoAliases.aliases),
+                responseSchema = GeminiResponseSchemas.CLASSIFICATION_RESPONSE_SCHEMA,
                 timeoutMs = vertexAiProperties.classifyTimeoutMs,
             ).toList()
 
@@ -63,8 +63,8 @@ class VertexAiGeminiClassifier(
         return generate<GeminiStickerRegenerationResponse>(
             pipeline = LlmPipeline.STICKER_REGENERATION,
             photos = photos,
-            prompt = GeminiPrompts.stickerRegeneration(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId)),
-            responseSchema = VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA,
+            prompt = stickerRegenerationPrompt(photoAliases.aliases, photoAliases.aliasFor(previousSourcePhotoId)),
+            responseSchema = GeminiResponseSchemas.STICKER_RESPONSE_SCHEMA,
             timeoutMs = vertexAiProperties.classifyTimeoutMs,
         ).let { toRegenerationTarget(it, photoAliases, photos.map { photo -> photo.photoId }.toSet()) }
     }
@@ -76,8 +76,8 @@ class VertexAiGeminiClassifier(
         generate<GeminiSubjectVerificationResponse>(
             pipeline = LlmPipeline.STICKER_SUBJECT_VERIFICATION,
             photos = listOf(photo),
-            prompt = GeminiPrompts.verifyStickerSubject(targetSubject),
-            responseSchema = VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA,
+            prompt = stickerSubjectVerificationPrompt(targetSubject),
+            responseSchema = GeminiResponseSchemas.VERIFICATION_RESPONSE_SCHEMA,
             timeoutMs = vertexAiProperties.verifyTimeoutMs,
         ).let { toVerification(it) }
 

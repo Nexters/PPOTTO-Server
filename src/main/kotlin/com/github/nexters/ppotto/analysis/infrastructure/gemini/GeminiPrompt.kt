@@ -43,3 +43,9 @@ internal class GeminiPromptSections {
         declared += section
     }
 }
+
+internal fun photoAliasSection(photoAliases: List<String>): PromptSection =
+    PromptSection(
+        "photo aliases",
+        "Photo alias list (in the same order as the attached photos): ${photoAliases.joinToString(", ")}",
+    )

@@ -1,7 +1,6 @@
 package com.github.nexters.ppotto.analysis.infrastructure.gemini
 
-import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiPrompts
-import com.github.nexters.ppotto.analysis.infrastructure.gemini.VertexAiGeminiSchemas
+import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiResponseSchemas
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.geminiPrompt
 import com.google.genai.types.Schema
 import io.kotest.assertions.throwables.shouldThrow
@@ -20,7 +19,7 @@ class GeminiPromptTest :
         val aliases = (1..100).map { "P%03d".format(it) }
 
         Given("분류 프롬프트가 주어졌을 때") {
-            val prompt = GeminiPrompts.themeClassification(aliases)
+            val prompt = themeClassificationPrompt(aliases)
 
             When("프롬프트를 확인하면") {
                 Then("카피 톤 지시를 시스템 지시로 함께 들고 있다") {
@@ -41,21 +40,15 @@ class GeminiPromptTest :
         Given("컷아웃 대상만 고르는 프롬프트가 주어졌을 때") {
             When("스티커 재생성과 피사체 재확인 프롬프트를 확인하면") {
                 Then("카피 톤 지시가 붙지 않는다") {
-                    GeminiPrompts
-                        .stickerRegeneration(aliases, "P002")
-                        .systemInstruction
-                        .shouldBeNull()
-                    GeminiPrompts
-                        .verifyStickerSubject("빨간 우산")
-                        .systemInstruction
-                        .shouldBeNull()
+                    stickerRegenerationPrompt(aliases, "P002").systemInstruction.shouldBeNull()
+                    stickerSubjectVerificationPrompt("빨간 우산").systemInstruction.shouldBeNull()
                 }
             }
         }
 
         Given("프롬프트가 응답 필드 이름을 지목할 때") {
-            val text = GeminiPrompts.themeClassification(aliases).text
-            val schemaNames = VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA.propertyNames()
+            val text = themeClassificationPrompt(aliases).text
+            val schemaNames = GeminiResponseSchemas.CLASSIFICATION_RESPONSE_SCHEMA.propertyNames()
 
             When("지목한 이름을 응답 스키마와 맞춰보면") {
                 Then("스키마에 없는 필드를 지시하지 않는다") {

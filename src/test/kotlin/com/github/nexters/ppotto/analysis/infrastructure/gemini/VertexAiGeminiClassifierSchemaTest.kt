@@ -5,13 +5,13 @@ import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiCommentsResponse
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiPhotoAliases
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiRecapResponse
+import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiResponseSchemas
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiSpeechBubbleResponse
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiStickerRegenerationResponse
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiStickerResponse
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiSubjectVerificationResponse
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiThemeResponse
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.VertexAiGeminiClassifier
-import com.github.nexters.ppotto.analysis.infrastructure.gemini.VertexAiGeminiSchemas
 import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.sticker.domain.Sticker
@@ -41,17 +41,17 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 분류 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
+                    GeminiResponseSchemas.CLASSIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
 
                 Then("모든 필드가 디코딩 직전에 읽히는 설명을 갖는다") {
-                    VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA
+                    GeminiResponseSchemas.CLASSIFICATION_RESPONSE_SCHEMA
                         .missingDescriptionPaths()
                         .shouldBeEmpty()
                 }
 
                 Then("구체 명사를 theme보다 먼저 생성하도록 순서를 강제한다") {
-                    VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA
+                    GeminiResponseSchemas.CLASSIFICATION_RESPONSE_SCHEMA
                         .items()
                         .get()
                         .propertyOrdering()
@@ -61,7 +61,7 @@ class VertexAiGeminiClassifierSchemaTest :
 
                 Then("말풍선과 키워드칩 개수를 schema가 강제한다") {
                     val comments =
-                        VertexAiGeminiSchemas.CLASSIFICATION_RESPONSE_SCHEMA
+                        GeminiResponseSchemas.CLASSIFICATION_RESPONSE_SCHEMA
                             .items()
                             .get()
                             .properties()
@@ -79,17 +79,17 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 스티커 재생성 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA.containsEnum() shouldBe false
+                    GeminiResponseSchemas.STICKER_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
 
                 Then("모든 필드가 디코딩 직전에 읽히는 설명을 갖는다") {
-                    VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA
+                    GeminiResponseSchemas.STICKER_RESPONSE_SCHEMA
                         .missingDescriptionPaths()
                         .shouldBeEmpty()
                 }
 
                 Then("sourcePhotoId를 targetSubject보다 먼저 생성하도록 순서를 강제한다") {
-                    VertexAiGeminiSchemas.STICKER_RESPONSE_SCHEMA
+                    GeminiResponseSchemas.STICKER_RESPONSE_SCHEMA
                         .propertyOrdering()
                         .get() shouldContainExactly listOf("sourcePhotoId", "targetSubject", "mainColor")
                 }
@@ -99,11 +99,11 @@ class VertexAiGeminiClassifierSchemaTest :
         Given("Gemini 스티커 대상 재확인 응답 schema가 주어졌을 때") {
             When("schema를 확인하면") {
                 Then("동적 enum 제약을 포함하지 않는다") {
-                    VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
+                    GeminiResponseSchemas.VERIFICATION_RESPONSE_SCHEMA.containsEnum() shouldBe false
                 }
 
                 Then("모든 필드가 디코딩 직전에 읽히는 설명을 갖는다") {
-                    VertexAiGeminiSchemas.VERIFICATION_RESPONSE_SCHEMA
+                    GeminiResponseSchemas.VERIFICATION_RESPONSE_SCHEMA
                         .missingDescriptionPaths()
                         .shouldBeEmpty()
                 }

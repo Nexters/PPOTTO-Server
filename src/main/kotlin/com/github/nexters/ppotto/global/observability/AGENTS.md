@@ -31,7 +31,7 @@ Spec: [develop.sentry.dev AI Agents Module](https://develop.sentry.dev/sdk/telem
 | `gen_ai.response.finish_reasons` | comma-joined string | Spec types this as a string, not a list |
 | `gen_ai.input.messages` / `gen_ai.output.messages` | `[{"role","parts":[{"type","content"}]}]` JSON string | Current spec shape. Photo parts become `{"type":"uri","modality","mime_type","uri"}` |
 | `gen_ai.request.messages` / `gen_ai.response.text` / `gen_ai.system` | **not sent** | sentry-conventions marks all three Deprecated and names the current key to use instead. They were emitted alongside the current keys for a while out of uncertainty about which the UI reads; that duplication is gone |
-| `gen_ai.system_instructions` | plain string | Spec types this as a string. Set on the classification call only — `VertexAiGeminiClassifier` passes `GeminiPrompts.COPY_VOICE` as `systemInstruction`, so it is present (about 2.2k chars) on every `photo-classification` span and absent on the sticker-regeneration and subject-verification spans, which attach no tone instruction by design |
+| `gen_ai.system_instructions` | plain string | Spec types this as a string. Set on the classification call only — `VertexAiGeminiClassifier` passes `COPY_VOICE` as `systemInstruction`, so it is present (about 2.2k chars) on every `photo-classification` span and absent on the sticker-regeneration and subject-verification spans, which attach no tone instruction by design |
 | `ppotto.llm.photo_count` | request photo count | Custom attribute, `ppotto.llm.` prefixed |
 
 ## HTTP payload capture on transactions
