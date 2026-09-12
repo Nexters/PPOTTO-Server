@@ -11,12 +11,16 @@ import io.kotest.matchers.string.shouldContain
 private data class SampleResponse(
     @GeminiField(description = "첫 번째")
     val first: String,
+
     @GeminiField(description = "두 번째", required = false)
     val second: String?,
+
     @GeminiField(description = "세 번째", itemDescription = "원소", minItems = 2, maxItems = 5)
     val third: List<String>,
+
     @GeminiField(description = "네 번째")
     val fourth: Boolean?,
+
     @GeminiField(description = "다섯 번째")
     val fifth: SampleNested,
 )

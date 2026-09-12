@@ -35,21 +35,26 @@ internal data class GeminiThemeResponse(
         maxItems = MAX_OBSERVED_DETAIL_COUNT,
     )
     val observedDetails: List<String>? = null,
+
     @GeminiField(
         description =
             "Theme name in Korean. Internal only, never shown to the user, " +
                 "so name what literally happened rather than a mood.",
     )
     val theme: String,
+
     @GeminiField(
         description = "Photo aliases belonging to this theme, copied exactly from the alias list in the prompt.",
         itemDescription = PHOTO_ALIAS,
     )
     val categorizedPhotoIds: List<String>,
+
     @GeminiField(description = "The verdict card text shown to the user.")
     val recap: GeminiRecapResponse,
+
     @GeminiField(description = "Which photo to cut out and what to cut out of it.")
     val sticker: GeminiStickerResponse,
+
     @GeminiField(description = "Reactions and evidence shown around the sticker.")
     val comments: GeminiCommentsResponse?,
 )
@@ -65,6 +70,7 @@ internal data class GeminiRecapResponse(
                 "A line only these photos could produce.",
     )
     val badge: String,
+
     @GeminiField(
         description =
             "One casual Korean sentence, 24 characters or fewer, 반말. " +
@@ -83,8 +89,10 @@ internal data class GeminiStickerResponse(
                 "Never an alias that belongs to a different theme.",
     )
     val sourcePhotoId: String,
+
     @GeminiField(description = TARGET_SUBJECT)
     val targetSubject: String,
+
     @GeminiField(description = MAIN_COLOR)
     val mainColor: String?,
 )
@@ -93,8 +101,10 @@ internal data class GeminiStickerResponse(
 internal data class GeminiStickerRegenerationResponse(
     @GeminiField(description = "One alias copied exactly from the alias list in the prompt.")
     val sourcePhotoId: String,
+
     @GeminiField(description = TARGET_SUBJECT)
     val targetSubject: String,
+
     @GeminiField(description = MAIN_COLOR)
     val mainColor: String?,
 )
@@ -105,8 +115,10 @@ internal data class GeminiSubjectVerificationResponse(
         description = "true if a usable sticker subject exists in this photo, false if nothing here is isolable.",
     )
     val subjectPresent: Boolean?,
+
     @GeminiField(description = TARGET_SUBJECT, required = false)
     val targetSubject: String?,
+
     @GeminiField(description = MAIN_COLOR, required = false)
     val mainColor: String?,
 )
@@ -121,6 +133,7 @@ internal data class GeminiCommentsResponse(
         maxItems = MAX_SPEECH_BUBBLE_COUNT,
     )
     val speechBubbles: List<GeminiSpeechBubbleResponse>?,
+
     @GeminiField(
         description =
             "$MIN_KEYWORD_CHIP_COUNT to $MAX_KEYWORD_CHIP_COUNT short Korean evidence phrases " +
@@ -143,8 +156,10 @@ internal data class GeminiSpeechBubbleResponse(
                 "Longer bubbles cover the sticker image on screen and get dropped by the server.",
     )
     val content: String?,
+
     @GeminiField(description = "Horizontal offset in pixels from the sticker center, between -150 and 150.")
     val posX: Double?,
+
     @GeminiField(
         description =
             "Vertical offset in pixels from the sticker center, between -150 and 150, " +

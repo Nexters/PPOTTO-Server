@@ -29,6 +29,7 @@ import java.util.UUID
 class AuthSignupBoardRollbackIntegrationTest(
     authUserPort: AuthUserPort,
     userRepository: UserRepository,
+
     @Qualifier(SIGNUP_TRANSACTION) signupTransaction: TransactionOperations,
 ) : IntegrationTest({
         Given("신규 가입 중 기본 보드 생성이 실패할 때") {
