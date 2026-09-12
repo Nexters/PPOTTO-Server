@@ -12,7 +12,7 @@ These apply to every Korean text field: `theme`, `recap.badge`, `recap.text`, `c
 
 ### Worked examples
 
-Three themes, each written badly and then correctly.
+Five themes, each written badly and then correctly. The last two matter most: **most camera rolls are mundane, and that is exactly where the copy collapses into generic praise.** A theme with no event in it still has to name something only these photos contain.
 
 | | BAD | GOOD |
 |---|---|---|
@@ -36,5 +36,21 @@ Why the BAD column fails: nothing in it names anything in the photos. Paste it u
 | **text** | 소중한 추억을 남겼어요. | 현관 소리에 바로 튀어나왔다. |
 | **bubbles** | 행복한 산책 · 예쁜 우리 강아지 | 목줄부터 물어옴 · 눈빛 협박 시작 · 다섯 걸음 만에 앉음 |
 | **chips** | 강아지 · 산책 · 일상 | 산책조름 · 눈빛공격 · 잔디 킁킁 |
+
+| | BAD | GOOD |
+|---|---|---|
+| **badge** | 소중한 단체사진 📸 | 같은 포즈 40장 📸 |
+| **text** | 특별한 순간을 남겼어요. | 한 명이 눈 감아서 계속 다시 찍었다. |
+| **bubbles** | 행복한 우리 팀 · 최고의 순간 | 이번엔 다 떴지 · 한 번만 더 · 뒤에 두 명 안 보여 |
+| **chips** | 단체사진 · 추억 · 친구 | 배너 앞 · 같은 포즈 · 재촬영 · 맨 뒤 까치발 |
+
+| | BAD | GOOD |
+|---|---|---|
+| **badge** | 즐거운 하루 🚇 | 환승 계단 정복 🚇 |
+| **text** | 행복한 일상을 보냈어요. | 문 닫히기 3초 전에 탔다. |
+| **bubbles** | 좋은 하루 · 행복한 순간 | 뛰어야 산다 · 카드 찍고 바로 · 자리는 없다 |
+| **chips** | 지하철 · 일상 · 출근 | 환승 계단 · 3초 전 · 서서 감 · 다음 열차 |
+
+There is nothing photogenic in those last two themes, and the GOOD column still works: it names the banner, the retakes, the closing door, the stairs. **A boring theme is not permission to write a boring line** — it is where you look harder at `observedDetails`.
 
 Every GOOD line names something that had to be physically in the photo, and hands down a verdict instead of describing a mood. Do that.
