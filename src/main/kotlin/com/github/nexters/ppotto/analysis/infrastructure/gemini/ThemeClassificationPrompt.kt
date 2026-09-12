@@ -1,9 +1,13 @@
 package com.github.nexters.ppotto.analysis.infrastructure.gemini
 
 import com.github.nexters.ppotto.analysis.domain.ThemeClassificationValidator
+import com.google.genai.types.MediaResolution
 
 internal fun themeClassificationPrompt(photoAliases: List<String>): GeminiPrompt =
-    geminiPrompt(systemInstruction = COPY_VOICE) {
+    geminiPrompt(
+        systemInstruction = COPY_VOICE,
+        mediaResolution = MediaResolution(MediaResolution.Known.MEDIA_RESOLUTION_MEDIUM),
+    ) {
         section(
             promptSection(
                 "theme-classification/task",

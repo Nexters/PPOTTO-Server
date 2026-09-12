@@ -1,5 +1,7 @@
 package com.github.nexters.ppotto.analysis.infrastructure.gemini
 
+import com.google.genai.types.MediaResolution
+
 private const val SECTION_SEPARATOR = "\n\n"
 
 internal data class PromptSection(
@@ -9,6 +11,7 @@ internal data class PromptSection(
 
 internal class GeminiPrompt(
     val systemInstruction: String?,
+    val mediaResolution: MediaResolution?,
     val sections: List<PromptSection>,
 ) {
     val text: String = sections.joinToString(SECTION_SEPARATOR) { it.text }
@@ -25,8 +28,9 @@ internal class GeminiPrompt(
 
 internal fun geminiPrompt(
     systemInstruction: String? = null,
+    mediaResolution: MediaResolution? = null,
     build: GeminiPromptSections.() -> Unit,
-): GeminiPrompt = GeminiPrompt(systemInstruction, GeminiPromptSections().apply(build).sections)
+): GeminiPrompt = GeminiPrompt(systemInstruction, mediaResolution, GeminiPromptSections().apply(build).sections)
 
 internal class GeminiPromptSections {
     private val declared = mutableListOf<PromptSection>()

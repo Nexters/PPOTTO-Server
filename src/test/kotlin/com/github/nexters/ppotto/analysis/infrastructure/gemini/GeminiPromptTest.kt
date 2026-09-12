@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.infrastructure.gemini
 
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.GeminiResponseSchemas
 import com.github.nexters.ppotto.analysis.infrastructure.gemini.geminiPrompt
+import com.google.genai.types.MediaResolution
 import com.google.genai.types.Schema
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
@@ -31,6 +32,12 @@ class GeminiPromptTest :
                     names.indexOf("copy style examples") shouldBe names.indexOf("sticker candidate guide") + 1
                 }
 
+                Then("분류는 중간 해상도로 사진을 읽는다") {
+                    prompt.mediaResolution
+                        .shouldNotBeNull()
+                        .knownEnum() shouldBe MediaResolution.Known.MEDIA_RESOLUTION_MEDIUM
+                }
+
                 Then("사진 100장을 붙여도 트레이스 한 조각 안에 들어간다") {
                     prompt.text.length shouldBeLessThanOrEqual TRACE_TEXT_PART_LIMIT
                 }
@@ -42,6 +49,11 @@ class GeminiPromptTest :
                 Then("카피 톤 지시가 붙지 않는다") {
                     stickerRegenerationPrompt(aliases, "P002").systemInstruction.shouldBeNull()
                     stickerSubjectVerificationPrompt("빨간 우산").systemInstruction.shouldBeNull()
+                }
+
+                Then("해상도를 낮추지 않는다 — 컷아웃 대상 판별은 세밀함이 필요하다") {
+                    stickerRegenerationPrompt(aliases, "P002").mediaResolution.shouldBeNull()
+                    stickerSubjectVerificationPrompt("빨간 우산").mediaResolution.shouldBeNull()
                 }
             }
         }

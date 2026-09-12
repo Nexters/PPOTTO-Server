@@ -96,6 +96,7 @@ class VertexAiGeminiClassifier(
                 .responseSchema(responseSchema)
                 .httpOptions(buildHttpOptions(timeoutMs))
         prompt.systemInstruction?.let { configBuilder.systemInstruction(Content.fromParts(Part.fromText(it))) }
+        prompt.mediaResolution?.let(configBuilder::mediaResolution)
         val config = configBuilder.build()
         val response =
             runCatching {
@@ -119,7 +120,7 @@ class VertexAiGeminiClassifier(
     private fun List<PhotoRef>.toParts(): List<Part> = map { Part.fromUri(it.sourceUri, it.mimeType) }
 
     companion object {
-        private const val MODEL = "gemini-2.5-flash"
+        private const val MODEL = "gemini-3.1-flash-lite"
         private const val ATTR_PHOTO_COUNT = "ppotto.llm.photo_count"
         private const val DEFAULT_MAIN_COLOR = "#222222"
         private const val RETRY_ATTEMPTS = 5
