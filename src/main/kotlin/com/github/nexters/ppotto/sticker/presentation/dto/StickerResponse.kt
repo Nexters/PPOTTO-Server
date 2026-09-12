@@ -2,7 +2,7 @@ package com.github.nexters.ppotto.sticker.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.global.identifier.StickerId
-import com.github.nexters.ppotto.sticker.application.StickerItemResult
+import com.github.nexters.ppotto.sticker.application.model.StickerItemResult
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import io.swagger.v3.oas.annotations.media.Schema
 

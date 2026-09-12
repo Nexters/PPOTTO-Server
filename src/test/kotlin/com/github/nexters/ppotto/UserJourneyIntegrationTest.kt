@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto
 
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
 import com.github.nexters.ppotto.analysis.support.FakePhotoStorage
 import com.github.nexters.ppotto.global.identifier.AnalysisId

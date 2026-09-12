@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Dict, List, Tuple
@@ -29,6 +30,83 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+COPY_BANNED_STEMS = [
+    "멋지", "멋진", "멋짐", "행복", "특별", "소중", "완벽", "아름다", "즐거", "신나", "예쁘", "예쁜",
+    "최고", "다채", "알찬", "뜻깊", "값진", "따뜻", "설레",
+    "추억", "순간", "시간", "하루", "기억", "여운", "낭만", "일상", "힐링", "감성", "필수템", "인생샷",
+    "여유", "모음집", "컬렉션",
+]
+
+BUBBLE_WIDTH_CHAR_LIMIT = 20
+BADGE_LENGTH_LIMIT = 15
+SUMMARY_LENGTH_LIMIT = 100
+EXPECTED_STICKER_COUNT = 6
+DEFAULT_MAIN_COLOR = "#222222"
+
+
+def _banned_hits(texts: List[str]) -> Dict:
+    hits = {}
+    hit_count = 0
+    for text in texts:
+        matched = [stem for stem in COPY_BANNED_STEMS if stem in text]
+        if matched:
+            hit_count += 1
+        for stem in matched:
+            hits[stem] = hits.get(stem, 0) + 1
+    total = len(texts)
+    return {
+        "hits": hit_count,
+        "total": total,
+        "rate": (hit_count / total) if total else 0.0,
+        "words": dict(sorted(hits.items(), key=lambda item: -item[1])),
+    }
+
+
+def score_copy(rows: List[Dict]) -> Dict:
+    badges = [row["badge"] for row in rows]
+    summaries = [row["summary"] for row in rows]
+    bubbles = [bubble for row in rows for bubble in row["bubbles"]]
+    chips = [chip for row in rows for chip in row["chips"]]
+    all_copy = badges + summaries + bubbles + chips
+    words = [word for text in all_copy for word in text.split()]
+    repeated = sorted(
+        {
+            word
+            for word in set(words)
+            if sum(1 for row in rows if word in " ".join([row["badge"], row["summary"]] + row["bubbles"] + row["chips"])) > 1
+        }
+    )
+
+    return {
+        "banned": {
+            "badge": _banned_hits(badges),
+            "summary": _banned_hits(summaries),
+            "bubble": _banned_hits(bubbles),
+            "chip": _banned_hits(chips),
+        },
+        "length": {
+            "badge_max": max((len(text) for text in badges), default=0),
+            "badge_over": sum(1 for text in badges if len(text) > BADGE_LENGTH_LIMIT),
+            "summary_max": max((len(text) for text in summaries), default=0),
+            "summary_over": sum(1 for text in summaries if len(text) > SUMMARY_LENGTH_LIMIT),
+            "bubble_max": max((len(text) for text in bubbles), default=0),
+            "bubble_over": sum(1 for text in bubbles if len(text) > BUBBLE_WIDTH_CHAR_LIMIT),
+            "chip_max": max((len(text) for text in chips), default=0),
+        },
+        "degrade": {
+            "sticker_count": len(rows),
+            "expected_sticker_count": EXPECTED_STICKER_COUNT,
+            "default_main_color": sum(1 for row in rows if row["main_color"] == DEFAULT_MAIN_COLOR),
+            "bubbles_out_of_range": sum(1 for row in rows if not 2 <= len(row["bubbles"]) <= 4),
+            "chips_out_of_range": sum(1 for row in rows if not 4 <= len(row["chips"]) <= 8),
+        },
+        "variety": {
+            "distinct_ratio": (len(set(words)) / len(words)) if words else 0.0,
+            "repeated_words": repeated,
+        },
+    }
 
 
 class PhotosPipelineE2ETest:
@@ -62,7 +140,7 @@ class PhotosPipelineE2ETest:
         self.db_name = db_name
         self.db_user = db_user
         self.db_password = db_password
-        self.photos_dir = photos_dir or os.path.expanduser("~/Desktop/etc/wark")
+        self.photos_dir = photos_dir or os.environ.get("PPOTTO_E2E_PHOTOS_DIR") or "e2e/photos"
         self.photos_count = photos_count
         self.group_size = group_size
         self.max_workers = max_workers
@@ -121,6 +199,7 @@ class PhotosPipelineE2ETest:
             self.test_results['elapsed_seconds'] = elapsed
             self.test_results['status'] = 'success'
             self._write_report()
+            logger.info(f"분석 ID: {self.test_results.get('analysis_id')}")
 
             return True
 
@@ -275,7 +354,12 @@ class PhotosPipelineE2ETest:
                     "_filename": f
                 })
 
-            logger.info(f"✅ {len(photos)}개 사진 준비 완료")
+            fingerprint_source = ";".join(
+                f"{f}:{os.path.getsize(os.path.join(self.photos_dir, f))}" for f in image_files
+            )
+            self.test_results["photos_fingerprint"] = hashlib.md5(fingerprint_source.encode()).hexdigest()[:8]
+
+            logger.info(f"✅ {len(photos)}개 사진 준비 완료 (시드셋 지문 {self.test_results['photos_fingerprint']})")
             return photos
 
         except Exception as e:
@@ -447,6 +531,7 @@ class PhotosPipelineE2ETest:
             self.test_results['stickers'] = self._fetch_sticker_report_items(analysis_id)
             self.test_results['models'] = self._model_report_items()
             self.test_results['themes'] = self._fetch_theme_report_items(analysis_id)
+            self.test_results['copy_score'] = score_copy(self._fetch_copy_rows(analysis_id))
 
             return True
 
@@ -733,6 +818,7 @@ class PhotosPipelineE2ETest:
         self.test_results["analysis_timing"] = self._fetch_analysis_timing(analysis_id)
         self.test_results["models"] = self._model_report_items()
         self.test_results["themes"] = self._fetch_theme_report_items(analysis_id)
+        self.test_results["copy_score"] = score_copy(self._fetch_copy_rows(analysis_id))
         self.test_results["uploaded_photos"] = len(self.test_results["photos"])
         self._write_report()
 
@@ -806,6 +892,43 @@ class PhotosPipelineE2ETest:
                 }
             )
         return themes
+
+    def _fetch_copy_rows(self, analysis_id: str) -> List[Dict]:
+        cmd = f"""docker exec ppotto-postgres psql -U {self.db_user} -d {self.db_name} -A -t -F '|' -R '{self._ROW_SEP}' -c "
+            SELECT s.title,
+                   s.summary,
+                   s.main_color,
+                   COALESCE(bubbles.texts, ''),
+                   COALESCE(chips.texts, '')
+            FROM stickers s
+            LEFT JOIN LATERAL (
+                SELECT string_agg(content, E'\t' ORDER BY created_at) AS texts
+                FROM recap_comments WHERE sticker_id = s.id AND pos_x IS NOT NULL
+            ) bubbles ON true
+            LEFT JOIN LATERAL (
+                SELECT string_agg(content, E'\t' ORDER BY created_at) AS texts
+                FROM recap_comments WHERE sticker_id = s.id AND pos_x IS NULL
+            ) chips ON true
+            WHERE s.analysis_id = '{analysis_id}' AND s.deleted_at IS NULL
+            ORDER BY s.created_at
+        " 2>/dev/null"""
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
+        if result.returncode != 0 or not result.stdout.strip():
+            return []
+
+        rows = []
+        for line in self._split_rows(result.stdout):
+            title, summary, main_color, bubbles, chips = line.split("|", 4)
+            rows.append(
+                {
+                    "badge": title,
+                    "summary": summary,
+                    "main_color": main_color,
+                    "bubbles": [text for text in bubbles.split("\t") if text.strip()],
+                    "chips": [text for text in chips.split("\t") if text.strip()],
+                }
+            )
+        return rows
 
     def _build_theme_report_items_from_stickers(self) -> List[Dict]:
         themes = []
@@ -958,12 +1081,73 @@ class PhotosPipelineE2ETest:
             f.write(self._render_html_report())
         logger.info(f"HTML 보고서: {self.report_html_path}")
 
+        score = self.test_results.get("copy_score")
+        if score:
+            score_path = self.report_html_path.replace("e2e_test_report_", "copy_score_").replace(".html", ".json")
+            with open(score_path, "w") as f:
+                json.dump(
+                    {
+                        "analysis_id": self.test_results.get("analysis_id"),
+                        "photos_fingerprint": self.test_results.get("photos_fingerprint"),
+                        "score": score,
+                    },
+                    f,
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            logger.info(f"카피 점수: {score_path}")
+
+    def _render_copy_score(self, score: Dict) -> str:
+        if not score:
+            return ""
+        banned = score["banned"]
+        length = score["length"]
+        degrade = score["degrade"]
+        variety = score["variety"]
+        banned_rows = "\n".join(
+            f"""
+            <tr>
+              <td>{html.escape(label)}</td>
+              <td>{banned[key]['hits']} / {banned[key]['total']}</td>
+              <td>{banned[key]['rate'] * 100:.1f}%</td>
+              <td>{html.escape(', '.join(f"{word}({count})" for word, count in banned[key]['words'].items()) or '-')}</td>
+            </tr>
+            """
+            for key, label in [("badge", "뱃지"), ("summary", "한 줄 요약"), ("bubble", "말풍선"), ("chip", "키워드 칩")]
+        )
+        return f"""
+  <section>
+    <h2>Copy Score (카피 점수)</h2>
+    <h3>무색어</h3>
+    <table>
+      <thead><tr><th>필드</th><th>히트</th><th>비율</th><th>히트 단어</th></tr></thead>
+      <tbody>{banned_rows}</tbody>
+    </table>
+    <h3>길이 / 폴백</h3>
+    <table>
+      <tbody>
+        <tr><td>뱃지 최대 / {BADGE_LENGTH_LIMIT}자 초과</td><td>{length['badge_max']} / {length['badge_over']}</td></tr>
+        <tr><td>요약 최대 / {SUMMARY_LENGTH_LIMIT}자 초과</td><td>{length['summary_max']} / {length['summary_over']}</td></tr>
+        <tr><td>말풍선 최대 / {BUBBLE_WIDTH_CHAR_LIMIT}자 초과</td><td>{length['bubble_max']} / {length['bubble_over']}</td></tr>
+        <tr><td>칩 최대</td><td>{length['chip_max']}</td></tr>
+        <tr><td>스티커 수 (기대 {degrade['expected_sticker_count']})</td><td>{degrade['sticker_count']}</td></tr>
+        <tr><td>mainColor 기본값 대체</td><td>{degrade['default_main_color']}</td></tr>
+        <tr><td>말풍선 개수 범위 밖 테마</td><td>{degrade['bubbles_out_of_range']}</td></tr>
+        <tr><td>칩 개수 범위 밖 테마</td><td>{degrade['chips_out_of_range']}</td></tr>
+        <tr><td>어휘 다양도 (distinct/total)</td><td>{variety['distinct_ratio']:.2f}</td></tr>
+        <tr><td>테마를 넘어 반복된 어절</td><td>{html.escape(', '.join(variety['repeated_words']) or '-')}</td></tr>
+      </tbody>
+    </table>
+  </section>
+"""
+
     def _render_html_report(self) -> str:
         photos = self.test_results.get("photos", [])
         stickers = self.test_results.get("stickers", [])
         models = self.test_results.get("models", [])
         themes = self.test_results.get("themes", [])
         regeneration = self.test_results.get("regeneration")
+        copy_score_section = self._render_copy_score(self.test_results.get("copy_score") or {})
         timing = self.test_results.get("analysis_timing", {})
         pipeline_elapsed = timing.get("pipeline_elapsed_seconds")
         pipeline_elapsed_text = f"{pipeline_elapsed:.1f}s" if pipeline_elapsed is not None else "-"
@@ -1077,6 +1261,7 @@ class PhotosPipelineE2ETest:
       <tbody>{model_items}</tbody>
     </table>
   </section>
+  {copy_score_section}
   <section>
     <h2>Theme Classification</h2>
     <div class="themes">{theme_items}</div>
@@ -1160,6 +1345,47 @@ class PhotosPipelineE2ETest:
 """
 
 
+def _pad(label: str, width: int = 26) -> str:
+    display_width = sum(2 if unicodedata.east_asian_width(char) in "WF" else 1 for char in label)
+    return label + " " * max(1, width - display_width)
+
+
+def _print_comparison(before: Dict, after: Dict) -> None:
+    def delta_text(before_value: float, after_value: float, suffix: str) -> str:
+        difference = after_value - before_value
+        return f"{difference:+.1f}{suffix}" if suffix == "%p" else f"{difference:+d}"
+
+    print(f"{_pad('지표')}{'before':>10}{'after':>10}{'delta':>12}")
+    for key, label in [("badge", "무색어율 뱃지"), ("summary", "무색어율 요약"), ("bubble", "무색어율 말풍선"), ("chip", "무색어율 칩")]:
+        before_rate = before["banned"][key]["rate"] * 100
+        after_rate = after["banned"][key]["rate"] * 100
+        print(f"{_pad(label)}{before_rate:>9.1f}%{after_rate:>9.1f}%{delta_text(before_rate, after_rate, '%p'):>12}")
+
+    before_variety = before["variety"]["distinct_ratio"]
+    after_variety = after["variety"]["distinct_ratio"]
+    print(f"{_pad('어휘 다양도')}{before_variety:>10.2f}{after_variety:>10.2f}{after_variety - before_variety:>+12.2f}")
+
+    for path, label in [
+        (("length", "badge_over"), f"뱃지 {BADGE_LENGTH_LIMIT}자 초과"),
+        (("length", "bubble_over"), f"말풍선 {BUBBLE_WIDTH_CHAR_LIMIT}자 초과"),
+        (("degrade", "default_main_color"), "mainColor 기본값"),
+        (("degrade", "bubbles_out_of_range"), "말풍선 개수 이탈"),
+        (("degrade", "chips_out_of_range"), "칩 개수 이탈"),
+        (("degrade", "sticker_count"), "스티커 수"),
+    ]:
+        before_value = before[path[0]][path[1]]
+        after_value = after[path[0]][path[1]]
+        print(f"{_pad(label)}{before_value:>10}{after_value:>10}{delta_text(before_value, after_value, ''):>12}")
+
+    for label, score in [("before", before), ("after ", after)]:
+        words = {}
+        for group in score["banned"].values():
+            for word, count in group["words"].items():
+                words[word] = words.get(word, 0) + count
+        ranked = " ".join(f"{word}({count})" for word, count in sorted(words.items(), key=lambda item: -item[1]))
+        print(f"히트 단어 {label}: {ranked or '-'}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="뽀또 사진 분석 파이프라인 E2E 테스트")
 
@@ -1171,6 +1397,7 @@ def main():
     parser.add_argument('--group-size', type=int, default=1, help='분석 요청 그룹당 사진 개수')
     parser.add_argument('--max-workers', type=int, default=10, help='병렬 워커 수')
     parser.add_argument('--report-analysis-id', help='기존 analysisId로 보고서만 생성')
+    parser.add_argument('--compare', nargs=2, metavar=('BEFORE_ID', 'AFTER_ID'), help='두 분석의 카피 점수를 비교')
     parser.add_argument('--theme-query', help='재생성할 테마 또는 스티커 제목 검색어')
     parser.add_argument('--regenerate-theme', action='store_true', help='분석 후 특정 테마의 스티커를 재생성')
     parser.add_argument('--poll-interval-seconds', type=int, default=5, help='GET /analysis/{id} 폴링 간격')
@@ -1191,6 +1418,15 @@ def main():
         poll_interval_seconds=args.poll_interval_seconds,
         poll_timeout_seconds=args.poll_timeout_seconds,
     )
+
+    if args.compare:
+        before_rows = test._fetch_copy_rows(args.compare[0])
+        after_rows = test._fetch_copy_rows(args.compare[1])
+        if not before_rows or not after_rows:
+            logger.error("비교할 카피를 찾지 못했습니다. analysisId와 DB 상태를 확인하세요.")
+            return 1
+        _print_comparison(score_copy(before_rows), score_copy(after_rows))
+        return 0
 
     if args.report_analysis_id:
         test.write_report_for_analysis(args.report_analysis_id)

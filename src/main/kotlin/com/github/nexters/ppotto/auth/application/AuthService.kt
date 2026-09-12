@@ -24,6 +24,7 @@ import org.springframework.transaction.support.TransactionOperations
 @Service
 class AuthService(
     oauthClients: List<OAuthClient>,
+
     @Qualifier(SIGNUP_TRANSACTION)
     private val signupTransaction: TransactionOperations,
     private val tokenProvider: TokenProvider,

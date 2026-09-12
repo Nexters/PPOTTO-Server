@@ -3,8 +3,8 @@ package com.github.nexters.ppotto.auth.infrastructure.integration
 import com.github.nexters.ppotto.auth.application.AuthService.Companion.SIGNUP_TRANSACTION
 import com.github.nexters.ppotto.auth.application.port.AuthTermsPort
 import com.github.nexters.ppotto.auth.application.port.AuthUserPort
-import com.github.nexters.ppotto.auth.config.AuthTransactionConfig.Companion.SIGNUP_TRANSACTION_TIMEOUT_SECONDS
 import com.github.nexters.ppotto.auth.domain.SocialProfile
+import com.github.nexters.ppotto.auth.infrastructure.config.AuthTransactionConfig.Companion.SIGNUP_TRANSACTION_TIMEOUT_SECONDS
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.oauth.OAuthProvider
 import com.github.nexters.ppotto.jooq.tables.references.TERMS

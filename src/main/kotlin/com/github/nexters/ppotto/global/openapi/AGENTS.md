@@ -27,3 +27,6 @@ Shared Swagger response contracts and the foundation for injecting type-safe exa
 - Every new operation must also be registered with an `ApiExampleProvider`. Omissions are caught by `OpenApiExampleWiringTest`.
 
 Update this file when shared OpenAPI annotations or the example injection mechanism changes.
+- **예시의 코드와 메시지는 `ErrorCode` enum 에서만 온다.** `errorExample(errorCode, summary)` 가 `code`·`message` 를 enum 에서 읽으므로 예시에 문자열을 다시 적을 자리가 없다. 이전 시그니처는 둘을 손으로 받았고, 그래서 상한을 바꾸면 런타임은 새 숫자로 답하고 발행된 Swagger 예시는 옛 숫자를 보여주는 상태가 됐다 — 잡아주는 테스트가 없었다(`OpenApiExampleWiringTest` 는 예시의 *존재*만 본다).
+- **예외는 다른 도메인의 에러 코드 하나뿐이다.** `crossDomainErrorExample(code, summary, message)` 는 도메인 경계가 상대 도메인의 `ErrorCode` import 를 금지하기 때문에 존재한다 — `analysis` 엔드포인트가 `BoardAccessService` 를 호출하므로 `BOARD-002` 를 반환할 수 있지만, `board.domain` 을 import 하면 `BoardAnalysisDependencyTest` 가 실패한다. 함수 이름이 그 복사가 의도된 것임을 표시하므로 `errorExample` 을 쓸 수 있는 곳에서는 쓰지 말 것.
+

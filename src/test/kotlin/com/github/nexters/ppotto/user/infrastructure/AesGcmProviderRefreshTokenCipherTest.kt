@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.user.infrastructure
 
+import com.github.nexters.ppotto.user.infrastructure.config.ProviderRefreshTokenEncryptionProperties
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe

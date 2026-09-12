@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.analysis.support
 
-import com.github.nexters.ppotto.analysis.domain.StickerGenerator
+import com.github.nexters.ppotto.analysis.application.port.StickerGenerator
 import com.github.nexters.ppotto.support.ResettableFake
 import java.util.concurrent.CopyOnWriteArrayList
 

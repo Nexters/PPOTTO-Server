@@ -4,8 +4,8 @@ import com.github.nexters.ppotto.board.application.BoardLayoutService
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutV2Request
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
+import com.github.nexters.ppotto.global.web.ApiResponse
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody

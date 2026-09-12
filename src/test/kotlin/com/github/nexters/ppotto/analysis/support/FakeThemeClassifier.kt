@@ -1,11 +1,11 @@
 package com.github.nexters.ppotto.analysis.support
 
+import com.github.nexters.ppotto.analysis.application.port.ThemeClassifier
 import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.StickerRegenerationTarget
 import com.github.nexters.ppotto.analysis.domain.StickerSubjectVerification
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
-import com.github.nexters.ppotto.analysis.domain.ThemeClassifier
 import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.support.ResettableFake

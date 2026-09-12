@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.user.infrastructure
 
 import com.github.nexters.ppotto.user.application.WithdrawnUserCleanupService
+import com.github.nexters.ppotto.user.infrastructure.config.WithdrawnUserCleanupProperties
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Configuration

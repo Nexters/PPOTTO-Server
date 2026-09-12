@@ -1,8 +1,8 @@
 package com.github.nexters.ppotto.auth.infrastructure.token
 
 import com.github.nexters.ppotto.auth.application.port.TokenProvider
-import com.github.nexters.ppotto.auth.config.JwtAuthProperties
 import com.github.nexters.ppotto.auth.domain.TokenPair
+import com.github.nexters.ppotto.auth.infrastructure.config.JwtAuthProperties
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.nimbusds.jose.JOSEException

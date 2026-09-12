@@ -18,4 +18,8 @@ data class Photo(
     val isRepresentative: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
-)
+) {
+    companion object {
+        const val MAX_BURST_GROUP_SIZE = 10
+    }
+}

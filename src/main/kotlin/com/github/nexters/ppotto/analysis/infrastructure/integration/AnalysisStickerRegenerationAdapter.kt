@@ -1,11 +1,11 @@
 package com.github.nexters.ppotto.analysis.infrastructure.integration
 
 import com.github.nexters.ppotto.analysis.application.PhotoQueryService
+import com.github.nexters.ppotto.analysis.application.port.StickerGenerator
+import com.github.nexters.ppotto.analysis.application.port.StickerStorage
+import com.github.nexters.ppotto.analysis.application.port.ThemeClassifier
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
-import com.github.nexters.ppotto.analysis.domain.StickerGenerator
-import com.github.nexters.ppotto.analysis.domain.StickerStorage
-import com.github.nexters.ppotto.analysis.domain.ThemeClassifier
-import com.github.nexters.ppotto.analysis.infrastructure.StickerObjectKeys
+import com.github.nexters.ppotto.analysis.infrastructure.storage.StickerObjectKeys
 import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId

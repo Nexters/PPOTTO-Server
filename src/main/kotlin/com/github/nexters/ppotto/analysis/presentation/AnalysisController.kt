@@ -9,8 +9,8 @@ import com.github.nexters.ppotto.analysis.presentation.dto.ReissueUploadUrlsResp
 import com.github.nexters.ppotto.analysis.presentation.dto.StartUploadResponse
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
+import com.github.nexters.ppotto.global.web.ApiResponse
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestBody

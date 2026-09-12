@@ -1,0 +1,112 @@
+package com.github.nexters.ppotto.analysis.infrastructure.image
+
+import org.springframework.stereotype.Component
+import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import javax.imageio.ImageIO
+import kotlin.math.ceil
+import kotlin.math.max
+
+@Component
+class StickerImageCropper {
+    fun cropTransparentPadding(pngBytes: ByteArray): ByteArray {
+        val image = readImage(pngBytes)
+        if (!image.colorModel.hasAlpha()) {
+            return pngBytes
+        }
+
+        val bounds = subjectBounds(image) ?: throw cropFailed()
+        val padding = ceil(max(bounds.width, bounds.height) * PADDING_RATIO).toInt()
+        val crop = bounds.expand(padding, image.width, image.height)
+        val cropped = image.getSubimage(crop.left, crop.top, crop.width, crop.height)
+        return writePng(cropped)
+    }
+
+    private fun readImage(pngBytes: ByteArray): BufferedImage = ImageIO.read(ByteArrayInputStream(pngBytes)) ?: throw cropFailed()
+
+    private fun subjectBounds(image: BufferedImage): Bounds? {
+        val coreBounds =
+            alphaBounds(image, CORE_ALPHA_THRESHOLD)
+                ?: return alphaBounds(image, DETAIL_ALPHA_THRESHOLD)
+        val detailPadding =
+            max(
+                ceil(max(coreBounds.width, coreBounds.height) * DETAIL_SEARCH_RATIO).toInt(),
+                MIN_DETAIL_SEARCH_PADDING,
+            )
+        val detailSearchBounds = coreBounds.expand(detailPadding, image.width, image.height)
+        return alphaBounds(image, DETAIL_ALPHA_THRESHOLD, detailSearchBounds) ?: coreBounds
+    }
+
+    private fun alphaBounds(
+        image: BufferedImage,
+        alphaThreshold: Int,
+        searchBounds: Bounds = Bounds(0, 0, image.width - 1, image.height - 1),
+    ): Bounds? {
+        var left = image.width
+        var top = image.height
+        var right = -1
+        var bottom = -1
+
+        for (y in searchBounds.top..searchBounds.bottom) {
+            for (x in searchBounds.left..searchBounds.right) {
+                val alpha = image.getRGB(x, y) ushr ALPHA_SHIFT
+                if (alpha > alphaThreshold) {
+                    left = minOf(left, x)
+                    top = minOf(top, y)
+                    right = maxOf(right, x)
+                    bottom = maxOf(bottom, y)
+                }
+            }
+        }
+
+        if (right < left || bottom < top) {
+            return null
+        }
+
+        return Bounds(left, top, right, bottom)
+    }
+
+    private fun writePng(image: BufferedImage): ByteArray =
+        ByteArrayOutputStream().use { output ->
+            if (!ImageIO.write(image, PNG_FORMAT, output)) {
+                throw cropFailed()
+            }
+            output.toByteArray()
+        }
+
+    private fun cropFailed() = IOException("스티커 이미지를 자를 수 없습니다. 투명하지 않은 픽셀이 없거나 PNG 디코딩에 실패했습니다.")
+
+    private data class Bounds(
+        val left: Int,
+        val top: Int,
+        val right: Int,
+        val bottom: Int,
+    ) {
+        val width: Int = right - left + 1
+        val height: Int = bottom - top + 1
+
+        fun expand(
+            padding: Int,
+            imageWidth: Int,
+            imageHeight: Int,
+        ): Bounds {
+            val nextLeft = (left - padding).coerceAtLeast(0)
+            val nextTop = (top - padding).coerceAtLeast(0)
+            val nextRight = (right + padding).coerceAtMost(imageWidth - 1)
+            val nextBottom = (bottom + padding).coerceAtMost(imageHeight - 1)
+            return Bounds(nextLeft, nextTop, nextRight, nextBottom)
+        }
+    }
+
+    companion object {
+        private const val PADDING_RATIO = 0.12
+        private const val DETAIL_SEARCH_RATIO = 0.25
+        private const val MIN_DETAIL_SEARCH_PADDING = 16
+        private const val ALPHA_SHIFT = 24
+        private const val CORE_ALPHA_THRESHOLD = 128
+        private const val DETAIL_ALPHA_THRESHOLD = 0
+        private const val PNG_FORMAT = "png"
+    }
+}

@@ -1,9 +1,9 @@
 package com.github.nexters.ppotto.user.application
 
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.analysis.support.FakePhotoStorage
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
@@ -30,8 +30,8 @@ import com.github.nexters.ppotto.jooq.tables.references.USER_DEVICE_TOKENS
 import com.github.nexters.ppotto.notification.domain.DevicePlatform
 import com.github.nexters.ppotto.notification.infrastructure.DeviceTokenRepository
 import com.github.nexters.ppotto.sticker.application.AnalysisResultSaveService
-import com.github.nexters.ppotto.sticker.application.AnalysisStickerResult
-import com.github.nexters.ppotto.sticker.application.SaveAnalysisResultCommand
+import com.github.nexters.ppotto.sticker.application.model.AnalysisStickerResult
+import com.github.nexters.ppotto.sticker.application.model.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.support.IntegrationTest

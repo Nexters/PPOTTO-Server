@@ -10,7 +10,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain provides the real adapter |
 | `application/port/UserSessionRevoker.kt` | Auth integration boundary that revokes the service refresh token on withdrawal |
 | `application/port/WithdrawnUserDataPorts.kt` | Per-provider deletion contracts the cleanup service fans out to: board(+drawing), sticker(+recap, sticker image objects), analysis(+photo, original GCS objects), term agreement |
-| `application/UserModels.kt` | `SocialUserCommand`, `UserRegistrationResult`, and `WithdrawnUserCleanupResult` — every application-layer value type of this domain |
+| `application/model/UserModels.kt` | `SocialUserCommand`, `UserRegistrationResult`, and `WithdrawnUserCleanupResult` — every application-layer value type of this domain |
 | `application/UserService.kt` | Atomic social lookup/create, active account lookup, and withdrawal ordering |
 | `application/WithdrawnUserCleanupService.kt` | Bounded cleanup batch; orders the four deletion ports itself and hard-deletes a user only after they all succeed. Owns `MAX_CLEANUP_BATCH_SIZE` |
 | `presentation/UserApi.kt` | Version 1 `GET /users/me` and `DELETE /users/me` mapping and Swagger contract |
@@ -18,9 +18,9 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `presentation/dto/UserResponse.kt` | Swagger-described public account response without social-provider identifiers or tokens |
 | `presentation/UserApiExamples.kt` | `ApiExampleProvider` implementation. Defines Kakao-user and Apple private-relay-user lookup response examples as real DTO instances |
 | `infrastructure/UserRepository.kt` | The only DSLContext persistence of this domain: conflict-free active social-account creation, active account lookup, profile refresh, withdrawal, and hard deletion |
-| `infrastructure/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration following the shared constructor property spacing convention |
+| `infrastructure/config/ProviderRefreshTokenEncryptionProperties.kt` | Validated base64 AES key configuration following the shared constructor property spacing convention |
 | `infrastructure/AesGcmProviderRefreshTokenCipher.kt` | Versioned AES-256-GCM provider refresh-token encryption; injected as the concrete class, not behind a port |
-| `infrastructure/WithdrawnUserCleanupProperties.kt` | Validated `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron |
+| `infrastructure/config/WithdrawnUserCleanupProperties.kt` | Validated `user.withdrawn-cleanup` enable flag, retention days, batch size, and cron |
 | `infrastructure/WithdrawnUserCleanupScheduler.kt` | Property-gated `@EnableScheduling` entry point that turns the retention policy into a `deletedBefore` cutoff |
 
 ## Rules

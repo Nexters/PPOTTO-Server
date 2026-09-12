@@ -40,6 +40,7 @@ class OpenApiExampleWiringTest(
     mockMvc: MockMvc,
     objectMapper: ObjectMapper,
     registry: ApiExampleRegistry,
+
     @Qualifier("requestMappingHandlerMapping")
     handlerMapping: RequestMappingHandlerMapping,
 ) : IntegrationTest({

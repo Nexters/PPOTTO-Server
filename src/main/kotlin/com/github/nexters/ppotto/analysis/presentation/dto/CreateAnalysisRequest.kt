@@ -2,9 +2,9 @@ package com.github.nexters.ppotto.analysis.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
-import com.github.nexters.ppotto.analysis.application.CreateAnalysisCommand
-import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
-import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
+import com.github.nexters.ppotto.analysis.application.model.CreateAnalysisCommand
+import com.github.nexters.ppotto.analysis.application.model.PhotoUploadGroupRequest
+import com.github.nexters.ppotto.analysis.application.model.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.global.identifier.BoardId
 import io.swagger.v3.oas.annotations.media.ArraySchema

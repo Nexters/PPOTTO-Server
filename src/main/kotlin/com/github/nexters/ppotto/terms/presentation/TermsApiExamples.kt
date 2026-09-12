@@ -5,7 +5,8 @@ import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.OperationExamples
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
+import com.github.nexters.ppotto.terms.domain.TermErrorCode
 import com.github.nexters.ppotto.terms.presentation.dto.AgreeTermsRequest
 import com.github.nexters.ppotto.terms.presentation.dto.TermResponse
 import org.springframework.stereotype.Component
@@ -58,9 +59,8 @@ private val AGREE_TERMS_REQUEST =
 
 private val REQUIRED_TERMS_MISSING =
     ApiExamples.errorExample(
-        code = "TERM-001",
+        errorCode = TermErrorCode.REQUIRED_TERMS_MISSING,
         summary = "필수 약관 미포함",
-        message = "필수 약관에 동의해야 합니다.",
     )
 
 @Component

@@ -8,9 +8,9 @@ import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
-import com.github.nexters.ppotto.sticker.application.StickerItemResult
-import com.github.nexters.ppotto.sticker.application.StickerLayoutCommand
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
+import com.github.nexters.ppotto.sticker.application.model.StickerItemResult
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.springframework.stereotype.Component

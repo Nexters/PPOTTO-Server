@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.board.presentation
 
+import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
@@ -25,7 +26,7 @@ import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.OperationExamples
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
 import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.reflect.KFunction
@@ -308,37 +309,32 @@ private val BOARD_DETAIL_V2_RESPONSE =
 
 private val INVALID_LAYOUT =
     ApiExamples.errorExample(
-        code = "BOARD-001",
+        errorCode = BoardErrorCode.INVALID_LAYOUT,
         summary = "소유하지 않은 항목 포함. 부분 저장 없이 전체 거부",
-        message = "편집 대상에 소유하지 않은 항목이 포함되어 있습니다.",
     )
 
 private val BOARD_NOT_FOUND =
     ApiExamples.errorExample(
-        code = "BOARD-002",
+        errorCode = BoardErrorCode.NOT_FOUND,
         summary = "보드 없음 또는 소유자 불일치",
-        message = "보드를 찾을 수 없습니다.",
     )
 
 private val COUNT_LIMIT_EXCEEDED =
     ApiExamples.errorExample(
-        code = "BOARD-003",
+        errorCode = BoardErrorCode.COUNT_LIMIT_EXCEEDED,
         summary = "보드 개수 제한(100개) 초과",
-        message = "보드는 최대 100개까지 만들 수 있습니다.",
     )
 
 private val LAST_BOARD_CANNOT_BE_DELETED =
     ApiExamples.errorExample(
-        code = "BOARD-004",
+        errorCode = BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED,
         summary = "마지막 보드는 삭제 불가",
-        message = "마지막 보드는 삭제할 수 없습니다.",
     )
 
 private val ACTIVE_ANALYSIS_EXISTS =
     ApiExamples.errorExample(
-        code = "BOARD-005",
+        errorCode = BoardErrorCode.ACTIVE_ANALYSIS_EXISTS,
         summary = "진행 중인 분석이 이 보드를 대상으로 함",
-        message = "분석이 진행 중인 보드는 삭제할 수 없습니다.",
     )
 
 @Component

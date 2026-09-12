@@ -1,15 +1,19 @@
 package com.github.nexters.ppotto.analysis.application
 
+import com.github.nexters.ppotto.analysis.application.model.AnalysisCreationResult
+import com.github.nexters.ppotto.analysis.application.model.CreateAnalysisCommand
+import com.github.nexters.ppotto.analysis.application.model.PhotoUploadUrlItem
+import com.github.nexters.ppotto.analysis.application.model.UploadVerificationResult
+import com.github.nexters.ppotto.analysis.application.port.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.domain.Photo
-import com.github.nexters.ppotto.analysis.domain.PhotoStorage
 import com.github.nexters.ppotto.analysis.domain.toRef
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoCreate
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException

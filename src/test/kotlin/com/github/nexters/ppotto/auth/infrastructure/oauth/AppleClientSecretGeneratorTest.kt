@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.auth.infrastructure.oauth
 
-import com.github.nexters.ppotto.auth.config.AppleAuthProperties
+import com.github.nexters.ppotto.auth.infrastructure.config.AppleAuthProperties
 import com.nimbusds.jose.JWSAlgorithm
 import com.nimbusds.jwt.SignedJWT
 import io.kotest.core.spec.style.BehaviorSpec

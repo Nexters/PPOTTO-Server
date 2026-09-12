@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.terms.application
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.TermId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.terms.application.model.TermResult
 import com.github.nexters.ppotto.terms.domain.Term
 import com.github.nexters.ppotto.terms.domain.TermErrorCode
 import com.github.nexters.ppotto.terms.infrastructure.TermAgreementRepository

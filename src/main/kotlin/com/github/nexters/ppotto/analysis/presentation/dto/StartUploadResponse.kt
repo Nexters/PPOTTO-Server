@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.analysis.presentation.dto
 
-import com.github.nexters.ppotto.analysis.application.UploadVerificationResult
+import com.github.nexters.ppotto.analysis.application.model.UploadVerificationResult
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import io.swagger.v3.oas.annotations.media.Schema
 

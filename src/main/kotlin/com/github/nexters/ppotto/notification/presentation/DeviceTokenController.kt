@@ -1,8 +1,8 @@
 package com.github.nexters.ppotto.notification.presentation
 
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.response.ApiResponse
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
+import com.github.nexters.ppotto.global.web.ApiResponse
 import com.github.nexters.ppotto.notification.application.DeviceTokenService
 import com.github.nexters.ppotto.notification.presentation.dto.RegisterDeviceTokenRequest
 import jakarta.validation.Valid

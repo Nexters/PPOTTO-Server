@@ -3,7 +3,7 @@ package com.github.nexters.ppotto.board.presentation.dto
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import com.github.nexters.ppotto.board.application.BoardDetail
+import com.github.nexters.ppotto.board.application.model.BoardDetail
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.global.identifier.BoardId

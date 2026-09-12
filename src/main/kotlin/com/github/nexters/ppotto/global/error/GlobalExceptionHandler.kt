@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.global.error
 
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

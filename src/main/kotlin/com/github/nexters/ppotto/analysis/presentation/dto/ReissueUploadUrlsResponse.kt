@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.analysis.presentation.dto
 
-import com.github.nexters.ppotto.analysis.application.PhotoUploadUrlItem
+import com.github.nexters.ppotto.analysis.application.model.PhotoUploadUrlItem
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(description = "재발급된 사진별 업로드 URL")

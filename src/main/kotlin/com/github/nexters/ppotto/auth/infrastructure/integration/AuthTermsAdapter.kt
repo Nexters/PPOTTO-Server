@@ -3,8 +3,8 @@ package com.github.nexters.ppotto.auth.infrastructure.integration
 import com.github.nexters.ppotto.auth.application.port.AuthTermsPort
 import com.github.nexters.ppotto.auth.domain.PendingTerm
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.terms.application.TermResult
 import com.github.nexters.ppotto.terms.application.TermsService
+import com.github.nexters.ppotto.terms.application.model.TermResult
 import org.springframework.stereotype.Component
 
 @Component

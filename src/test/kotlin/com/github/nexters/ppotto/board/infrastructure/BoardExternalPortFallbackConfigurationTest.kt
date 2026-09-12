@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.infrastructure
 
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
+import com.github.nexters.ppotto.board.infrastructure.config.BoardExternalPortFallbackConfiguration
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.assertions.throwables.shouldThrow

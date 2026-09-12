@@ -2,7 +2,7 @@ package com.github.nexters.ppotto.terms.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.global.identifier.TermId
-import com.github.nexters.ppotto.terms.application.TermResult
+import com.github.nexters.ppotto.terms.application.model.TermResult
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(description = "현재 유효한 약관과 사용자 동의 상태")

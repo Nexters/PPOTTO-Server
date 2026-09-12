@@ -1,8 +1,8 @@
 package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.integration.BoardAnalysisActivityAdapter
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository

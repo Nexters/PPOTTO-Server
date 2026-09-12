@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.global.observability
 
-import com.github.nexters.ppotto.global.config.PublicPaths
+import com.github.nexters.ppotto.global.web.PublicPaths
 import io.sentry.SamplingContext
 import io.sentry.SentryOptions
 import jakarta.servlet.http.HttpServletRequest

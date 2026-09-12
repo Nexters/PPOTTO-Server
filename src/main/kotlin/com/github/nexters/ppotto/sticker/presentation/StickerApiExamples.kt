@@ -6,7 +6,8 @@ import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.OperationExamples
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
+import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapCommentPositionRequest
 import com.github.nexters.ppotto.sticker.presentation.dto.RecapCommentResponse
@@ -161,40 +162,35 @@ private val UPDATE_RECAP_COMMENT_POSITIONS_REQUEST =
 private val STICKER_NOT_FOUND_RESPONSE =
     listOf(
         ApiExamples.errorExample(
-            code = "STICKER-001",
+            errorCode = StickerErrorCode.STICKER_NOT_FOUND,
             summary = "스티커 없음 또는 소유자 불일치",
-            message = "스티커를 찾을 수 없습니다.",
         ),
     )
 
 private val STICKER_REGENERATION_IN_PROGRESS_RESPONSE =
     listOf(
         ApiExamples.errorExample(
-            code = "STICKER-002",
+            errorCode = StickerErrorCode.STICKER_REGENERATION_IN_PROGRESS,
             summary = "재생성 진행 중",
-            message = "이미 재생성이 진행 중입니다.",
         ),
     )
 
 private val UNEDITABLE_RECAP_COMMENT_RESPONSE =
     ApiExamples.INVALID_INPUT_RESPONSE +
         ApiExamples.errorExample(
-            code = "STICKER-004",
+            errorCode = StickerErrorCode.UNEDITABLE_RECAP_COMMENT,
             summary = "코멘트 id 중복, 키워드 칩 id, 다른 스티커 소속 id, 유한하지 않은 좌표",
-            message = "수정할 수 없는 코멘트가 포함되어 있습니다.",
         )
 
 private val NOT_REGENERATABLE_STICKER_RESPONSE =
     listOf(
         ApiExamples.errorExample(
-            code = "STICKER-005",
+            errorCode = StickerErrorCode.NOT_REGENERATABLE_STICKER_TYPE,
             summary = "이미지형 스티커가 아님",
-            message = "이미지형 스티커만 재생성할 수 있습니다.",
         ),
         ApiExamples.errorExample(
-            code = "STICKER-006",
+            errorCode = StickerErrorCode.REGENERATION_PHOTOS_NOT_FOUND,
             summary = "재생성할 사진 구성 없음",
-            message = "재생성할 사진 구성이 없습니다.",
         ),
     )
 

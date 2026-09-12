@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.auth.presentation
 
+import com.github.nexters.ppotto.auth.domain.AuthErrorCode
 import com.github.nexters.ppotto.auth.presentation.dto.LoginRequest
 import com.github.nexters.ppotto.auth.presentation.dto.LoginResponse
 import com.github.nexters.ppotto.auth.presentation.dto.PendingTermResponse
@@ -11,7 +12,7 @@ import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.OperationExamples
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
 import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.reflect.KFunction
@@ -136,58 +137,50 @@ private val TOKEN_PAIR_RESPONSE =
 
 private val SOCIAL_AUTHENTICATION_FAILED =
     ApiExamples.errorExample(
-        code = "AUTH-001",
+        errorCode = AuthErrorCode.SOCIAL_AUTHENTICATION_FAILED,
         summary = "provider 토큰 검증 실패 (만료, 위조, aud/app_id 불일치, nonce 불일치)",
-        message = "소셜 로그인 검증에 실패했습니다.",
     )
 
 private val APPLE_CODE_EXCHANGE_FAILED =
     ApiExamples.errorExample(
-        code = "AUTH-003",
+        errorCode = AuthErrorCode.APPLE_CODE_EXCHANGE_FAILED,
         summary = "애플 authorization code 교환 실패 (만료 또는 재사용). 최초 로그인에서만 치명",
-        message = "애플 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요.",
     )
 
 private val KAKAO_EMAIL_CONSENT_REQUIRED =
     ApiExamples.errorExample(
-        code = "AUTH-004",
+        errorCode = AuthErrorCode.KAKAO_EMAIL_CONSENT_REQUIRED,
         summary = "카카오 이메일 동의 필요. account_email 추가 동의 후 재시도",
-        message = "이메일 제공에 동의해야 가입할 수 있습니다.",
     )
 
 private val KAKAO_NICKNAME_CONSENT_REQUIRED =
     ApiExamples.errorExample(
-        code = "AUTH-005",
+        errorCode = AuthErrorCode.KAKAO_NICKNAME_CONSENT_REQUIRED,
         summary = "카카오 닉네임 동의 필요. profile_nickname 추가 동의 후 재시도",
-        message = "닉네임 제공에 동의해야 가입할 수 있습니다.",
     )
 
 private val SIGNUP_NAME_REQUIRED =
     ApiExamples.errorExample(
-        code = "AUTH-006",
+        errorCode = AuthErrorCode.SIGNUP_NAME_REQUIRED,
         summary = "애플 신규 가입인데 name 미전달. 최초 인가에서 받은 이름을 함께 보내야 함",
-        message = "가입에 필요한 이름이 전달되지 않았습니다.",
     )
 
 private val SIGNUP_EMAIL_REQUIRED =
     ApiExamples.errorExample(
-        code = "AUTH-007",
+        errorCode = AuthErrorCode.SIGNUP_EMAIL_REQUIRED,
         summary = "애플 신규 가입인데 이메일 확보 실패. 애플 설정에서 앱 연동 해제 후 재로그인 필요",
-        message = "가입에 필요한 이메일을 확인할 수 없습니다. 다시 로그인해 주세요.",
     )
 
 private val KAKAO_CODE_EXCHANGE_FAILED =
     ApiExamples.errorExample(
-        code = "AUTH-008",
+        errorCode = AuthErrorCode.KAKAO_CODE_EXCHANGE_FAILED,
         summary = "카카오 authorization code 교환 실패 (만료, 재사용, redirect URI 불일치)",
-        message = "카카오 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요.",
     )
 
 private val INVALID_REFRESH_TOKEN =
     ApiExamples.errorExample(
-        code = "AUTH-002",
+        errorCode = AuthErrorCode.INVALID_REFRESH_TOKEN,
         summary = "refresh token 만료 또는 위조. 재로그인 필요",
-        message = "로그인이 만료되었습니다. 다시 로그인해 주세요.",
     )
 
 @Component

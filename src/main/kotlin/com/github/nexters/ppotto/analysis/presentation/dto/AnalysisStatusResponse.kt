@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.analysis.presentation.dto
 
-import com.github.nexters.ppotto.analysis.application.AnalysisStatusResult
+import com.github.nexters.ppotto.analysis.application.model.AnalysisStatusResult
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.global.identifier.AnalysisId

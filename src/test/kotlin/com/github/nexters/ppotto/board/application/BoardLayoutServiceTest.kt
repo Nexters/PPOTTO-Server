@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.board.application
 
+import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.Drawing

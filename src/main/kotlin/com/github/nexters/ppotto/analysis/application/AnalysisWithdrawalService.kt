@@ -1,8 +1,8 @@
 package com.github.nexters.ppotto.analysis.application
 
-import com.github.nexters.ppotto.analysis.domain.PhotoStorage
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisWithdrawalRepository
-import com.github.nexters.ppotto.analysis.infrastructure.PhotoRepository
+import com.github.nexters.ppotto.analysis.application.port.PhotoStorage
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisWithdrawalRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate

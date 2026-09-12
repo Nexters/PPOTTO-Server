@@ -7,7 +7,7 @@ Terms domain. Owns effective term versions and append-only user agreement histor
 | Directory | Description |
 |-----------|-------------|
 | `application/TermsService.kt` | Anonymous/authenticated current-term reads, required-term guard, idempotent agreement, and withdrawn-user agreement deletion |
-| `application/TermResult.kt` | Application-layer term projection carrying the requesting user's agreement state |
+| `application/model/TermResult.kt` | Application-layer term projection carrying the requesting user's agreement state |
 | `domain/` | Pure `Term` model plus `TERM-*` error codes |
 | `infrastructure/` | jOOQ repositories for effective term lookup, idempotent agreement persistence, and user-scoped agreement deletion |
 | `infrastructure/integration/WithdrawnUserTermAgreementDeletionAdapter.kt` | User-domain `WithdrawnUserTermAgreementDeletionPort` adapter through `TermsService` |

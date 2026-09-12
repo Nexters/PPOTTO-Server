@@ -18,7 +18,7 @@ import com.github.nexters.ppotto.global.openapi.ApiExample
 import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.OperationExamples
-import com.github.nexters.ppotto.global.response.ApiResponse
+import com.github.nexters.ppotto.global.web.ApiResponse
 import org.springframework.stereotype.Component
 import java.time.Instant
 import java.util.UUID
@@ -177,7 +177,7 @@ private val REISSUE_UPLOAD_URLS_RESPONSE =
     )
 
 private val BOARD_NOT_FOUND =
-    ApiExamples.errorExample(
+    ApiExamples.crossDomainErrorExample(
         code = "BOARD-002",
         summary = "보드 없음 또는 소유자 불일치",
         message = "보드를 찾을 수 없습니다.",
@@ -185,59 +185,51 @@ private val BOARD_NOT_FOUND =
 
 private val GROUP_COUNT_OUT_OF_RANGE =
     ApiExamples.errorExample(
-        code = "ANALYSIS-001",
+        errorCode = AnalysisErrorCode.GROUP_COUNT_OUT_OF_RANGE,
         summary = "사진 그룹 수 정책 위반 (20~100개)",
-        message = "사진 그룹은 20개에서 100개 사이여야 합니다.",
     )
 
 private val INVALID_BURST_GROUP =
     ApiExamples.errorExample(
-        code = "ANALYSIS-009",
+        errorCode = AnalysisErrorCode.INVALID_BURST_GROUP,
         summary = "연사 그룹 내 대표 사진이 정확히 1장이 아님",
-        message = "연사 그룹은 대표 사진을 정확히 1장 포함해야 합니다.",
     )
 
 private val BURST_GROUP_SIZE_EXCEEDED =
     ApiExamples.errorExample(
-        code = "ANALYSIS-010",
+        errorCode = AnalysisErrorCode.BURST_GROUP_SIZE_EXCEEDED,
         summary = "그룹당 사진이 10장을 초과함",
-        message = "그룹당 사진은 최대 10장까지 가능합니다.",
     )
 
 private val ACTIVE_ANALYSIS_EXISTS =
     ApiExamples.errorExample(
-        code = "ANALYSIS-002",
+        errorCode = AnalysisErrorCode.ACTIVE_ANALYSIS_EXISTS,
         summary = "유저당 1개. /analysis/active로 복귀하거나 취소 후 재시도",
-        message = "이미 진행 중인 분석이 있습니다.",
     )
 
 private val ALREADY_STARTED_OR_FINISHED =
     ApiExamples.errorExample(
-        code = "ANALYSIS-003",
+        errorCode = AnalysisErrorCode.ALREADY_STARTED_OR_FINISHED,
         summary = "이미 시작되었거나 종료된 분석",
-        message = "이미 시작되었거나 종료된 분석입니다.",
     )
 
 private val NO_UPLOADED_PHOTOS =
     ApiExamples.errorExample(
-        code = "ANALYSIS-008",
+        errorCode = AnalysisErrorCode.NO_UPLOADED_PHOTOS,
         summary = "업로드 완료된 사진 0장",
-        message = "업로드된 사진이 없습니다.",
     )
 
 private val CANCEL_NOT_ALLOWED =
     ApiExamples.errorExample(
-        code = "ANALYSIS-004",
+        errorCode = AnalysisErrorCode.CANCEL_NOT_ALLOWED,
         summary = "UPLOADING이 아닌 분석은 취소 불가",
-        message = "분석이 시작되어 취소할 수 없습니다.",
     )
 
 private val ANALYSIS_NOT_FOUND_RESPONSE =
     listOf(
         ApiExamples.errorExample(
-            code = "ANALYSIS-005",
+            errorCode = AnalysisErrorCode.ANALYSIS_NOT_FOUND,
             summary = "분석 없음 또는 소유자 불일치",
-            message = "분석을 찾을 수 없습니다.",
         ),
     )
 

@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.user.application
 
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.user.application.model.WithdrawnUserCleanupResult
 import com.github.nexters.ppotto.user.application.port.WithdrawnUserAnalysisDeletionPort
 import com.github.nexters.ppotto.user.application.port.WithdrawnUserBoardDeletionPort
 import com.github.nexters.ppotto.user.application.port.WithdrawnUserStickerDeletionPort

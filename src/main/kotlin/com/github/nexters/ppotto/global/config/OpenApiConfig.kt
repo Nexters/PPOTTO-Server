@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.global.openapi.ApiExampleFactory
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.security.AuthenticatedUser
 import com.github.nexters.ppotto.global.security.CurrentUser
+import com.github.nexters.ppotto.global.web.ApiVersions
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Contact

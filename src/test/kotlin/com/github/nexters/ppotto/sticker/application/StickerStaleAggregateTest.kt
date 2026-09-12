@@ -1,6 +1,6 @@
 package com.github.nexters.ppotto.sticker.application
 
-import com.github.nexters.ppotto.analysis.infrastructure.AnalysisRepository
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException

@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.board.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.github.nexters.ppotto.board.application.BoardLayoutUpdateCommand
+import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 
@@ -43,7 +44,8 @@ data class StickerLayoutRequest(
     @get:JsonProperty("id")
     val id: StickerId,
 
-    @field:Size(min = 1, max = BoardStickerLayoutCommand.MAX_TITLE_LENGTH)
+    @field:Size(max = BoardStickerLayoutCommand.MAX_TITLE_LENGTH)
+    @field:Pattern(regexp = NOT_BLANK_WHEN_PRESENT)
     @field:Schema(description = "텍스트 모드에서 제목을 바꿨을 때만 보냄. 최대 15자", example = "고양이 모음집")
     val title: String? = null,
 
@@ -143,3 +145,5 @@ data class DrawingCreateRequest(
             strokeWidth = strokeWidth,
         )
 }
+
+private const val NOT_BLANK_WHEN_PRESENT = "(?s).*\\S.*"

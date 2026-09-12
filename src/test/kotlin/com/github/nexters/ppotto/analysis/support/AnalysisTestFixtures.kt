@@ -1,7 +1,7 @@
 package com.github.nexters.ppotto.analysis.support
 
-import com.github.nexters.ppotto.analysis.application.PhotoUploadGroupRequest
-import com.github.nexters.ppotto.analysis.application.PhotoUploadItemRequest
+import com.github.nexters.ppotto.analysis.application.model.PhotoUploadGroupRequest
+import com.github.nexters.ppotto.analysis.application.model.PhotoUploadItemRequest
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import java.time.Instant
 
