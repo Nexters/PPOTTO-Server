@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.presentation
 
+import com.github.nexters.ppotto.analysis.application.AnalysisNotificationService
 import com.github.nexters.ppotto.analysis.application.AnalysisQueryService
 import com.github.nexters.ppotto.analysis.application.AnalysisService
 import com.github.nexters.ppotto.analysis.presentation.dto.AnalysisStatusResponse
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 class AnalysisController(
     private val analysisService: AnalysisService,
     private val analysisQueryService: AnalysisQueryService,
+    private val analysisNotificationService: AnalysisNotificationService,
 ) : AnalysisApi {
     override fun create(
         @AuthenticatedUser userId: UserId,
@@ -64,6 +66,14 @@ class AnalysisController(
             .getAnalysis(analysisId, userId)
             .let(AnalysisStatusResponse::from)
             .let { ApiResponse.success(it) }
+
+    override fun requestCompletionNotification(
+        @AuthenticatedUser userId: UserId,
+        @PathVariable analysisId: AnalysisId,
+    ): ApiResponse<Unit> {
+        analysisNotificationService.requestCompletionNotification(userId, analysisId)
+        return ApiResponse.success()
+    }
 
     override fun cancel(
         @AuthenticatedUser userId: UserId,

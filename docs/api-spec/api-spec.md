@@ -83,6 +83,7 @@
 | analysis | POST | /analysis/{analysisId}/reissue | 업로드 URL 재발급 | 200 | 401, 404, 409 | Y |
 | analysis | POST | /analysis/{analysisId}/start | 업로드 완료 통보 + 분석 시작 | 202 | 401, 404, 409 | Y |
 | analysis | GET | /analysis/{analysisId} | 분석 상태 조회 (로딩 화면 폴링) | 200 | 401, 404 | Y |
+| analysis | POST | /analysis/{analysisId}/notifications | 분석 완료 알림 신청 | 200 | 401, 404, 409 | Y |
 | analysis | DELETE | /analysis/{analysisId} | 분석 취소 (업로드 중 이탈) | 200 | 401, 404, 409 | Y |
 
 ## 4. auth API
@@ -2532,7 +2533,7 @@ Request example:
 #### Success Spec
 | Status | Description | Data |
 | --- | --- | --- |
-| 200 | 진행 중 분석 또는 null | `id`, `boardId`, `status`, `progress`, `failedCode`, `failedReason`, `startedAt`, `completedAt` |
+| 200 | 진행 중 분석 또는 null | `id`, `boardId`, `status`, `progress`, `failedCode`, `failedReason`, `startedAt`, `completedAt`, `notificationRequested` |
 
 200 example (분석 진행 중):
 ```json
@@ -2543,6 +2544,7 @@ Request example:
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "ANALYZING",
     "progress": 45,
+    "notificationRequested": true,
     "startedAt": "2026-07-27T05:02:11Z"
   }
 }
@@ -2784,7 +2786,7 @@ Request example:
 #### Success Spec
 | Status | Description | Data |
 | --- | --- | --- |
-| 200 | 분석 상태 | `id`, `boardId`, `status`, `progress`, `failedCode`, `failedReason`, `startedAt`, `completedAt` |
+| 200 | 분석 상태 | `id`, `boardId`, `status`, `progress`, `failedCode`, `failedReason`, `startedAt`, `completedAt`, `notificationRequested` |
 
 200 example (분석 중):
 ```json
@@ -2795,6 +2797,7 @@ Request example:
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "ANALYZING",
     "progress": 45,
+    "notificationRequested": true,
     "startedAt": "2026-07-27T05:02:11Z"
   }
 }
@@ -2809,6 +2812,7 @@ Request example:
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "COMPLETED",
     "progress": 100,
+    "notificationRequested": true,
     "startedAt": "2026-07-27T05:02:11Z",
     "completedAt": "2026-07-27T05:03:38Z"
   }
@@ -2824,6 +2828,7 @@ Request example:
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "FAILED",
     "progress": 34,
+    "notificationRequested": true,
     "failedCode": "ANALYSIS-017",
     "failedReason": "[gemini-classification] 사진 분석에 실패했습니다.",
     "startedAt": "2026-07-27T05:02:11Z"
@@ -2840,6 +2845,7 @@ Request example:
     "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
     "status": "FAILED",
     "progress": 0,
+    "notificationRequested": false,
     "failedCode": "ANALYSIS-016",
     "failedReason": "CANCELED"
   }
@@ -2900,12 +2906,52 @@ Request example:
 ```
 
 #### Notes
+- `notificationRequested`는 현재 `analysisId`의 결과 알림 신청 여부입니다. 새 분석은 `false`이며 신청 API 성공 후 `true`가 되어, 같은 분석 화면으로 복귀한 클라이언트가 신청 완료 상태를 복원할 수 있습니다.
 - 로딩 화면에서 2~3초 간격으로 폴링합니다. 단계 문구는 클라이언트가 progress 구간으로 매핑합니다. 스티커가 1개 이상 생성되면 성공한 결과만 저장하고 COMPLETED로 전환합니다. 일부 테마의 실패는 전체 실패로 처리하지 않으며, COMPLETED가 되면 보드를 다시 조회합니다.
 - 성공한 스티커가 0개이면 FAILED로 전환합니다. 모든 테마가 명시적 대상 없음이면 `ANALYSIS-012`, 생성 오류가 섞여 있으면 `ANALYSIS-013`입니다. 대상 검증 호출 실패·타임아웃은 최초 분류 결과를 사용해 생성을 계속하며, 명시적 대상 없음과 구분합니다.
 - 스티커·리캡 저장과 COMPLETED 전환은 한 트랜잭션입니다. 실패하면 결과 저장을 롤백하며, 이미 종료된 분석에 뒤늦게 도착한 결과는 저장하거나 완료 알림을 보내지 않습니다.
 - 서버 만료 배치는 `updated_at`이 설정된 타임아웃(기본 60분)보다 오래된 UPLOADING/ANALYZING 분석을 `FAILED`, `failedCode=ANALYSIS-015`, `failedReason=EXPIRED`로 전환합니다. 기본 실행 간격은 10분이며, 사진을 실패 처리하고 업로드 오브젝트를 비동기로 정리합니다. 만료 시 푸시는 보내지 않습니다.
 - 새 파이프라인 실패의 `failedReason`은 단계와 정의된 오류 설명만 기록합니다. 과거 이력에는 내부 메시지가 있을 수 있으므로 화면에 그대로 노출하지 말고 `failedCode`별 고정 문구를 사용합니다.
 - 상태 조회의 네트워크 오류나 HTTP 오류는 분석 처리 실패를 뜻하지 않습니다. 기존 분석 ID로 상태를 다시 확인하며, `ANALYSIS-002` 발생 시에는 `/analysis/active`, `ANALYSIS-003` 발생 시에는 해당 ID의 상태 조회로 복구합니다.
+
+### POST /analysis/{analysisId}/notifications
+
+- Operation ID: `requestAnalysisCompletionNotification`
+- Summary: 분석 완료 알림 신청
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | analysisId | Y | `string` | 01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f | 알림을 신청할 분석 ID |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 분석별 완료·실패 알림 신청 완료 | `null` |
+
+200 example:
+```json
+{
+  "success": true
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | 인증 헤더 누락 또는 access token 만료 |
+| 404 | ANALYSIS-005 | 분석을 찾을 수 없습니다. | 분석 없음 또는 소유자 불일치 |
+| 409 | ANALYSIS-018 | 진행 중인 분석에만 결과 알림을 신청할 수 있습니다. | 분석 상태가 ANALYZING이 아님 |
+
+#### Notes
+- 알림 신청은 사용자 전체 설정이 아니라 `analysisId`별 일회성 신청이다.
+- 같은 분석에 대한 중복 요청은 성공하며 최초 신청 시각을 유지한다.
+- OS 알림 권한 및 FCM 디바이스 토큰 등록은 별도 `POST /device-tokens` 계약이다.
+- 분석 완료 처리와 신청 요청은 같은 분석 행 잠금으로 직렬화한다. 완료가 먼저 확정된 경우 `ANALYSIS-018`을 반환하며 클라이언트는 상태 조회 결과를 반영한다.
 
 ### DELETE /analysis/{analysisId}
 

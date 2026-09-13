@@ -76,6 +76,7 @@ data class AnalysisStatusResult(
     val failedReason: String?,
     val startedAt: Instant?,
     val completedAt: Instant?,
+    val notificationRequested: Boolean,
 ) {
     companion object {
         fun from(analysis: Analysis): AnalysisStatusResult =
@@ -88,6 +89,7 @@ data class AnalysisStatusResult(
                 failedReason = analysis.failedReason,
                 startedAt = analysis.startedAt,
                 completedAt = analysis.completedAt,
+                notificationRequested = analysis.notificationRequestedAt != null,
             )
     }
 }
