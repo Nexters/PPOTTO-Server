@@ -180,6 +180,7 @@ Table analysis {
   failed_reason text           [null]
   started_at    timestamptz    [null]
   completed_at  timestamptz    [null]
+  notification_requested_at timestamptz [null, note: '완료·실패 푸시 알림을 신청한 시각. NULL이면 미신청']
   ~timestamps
 
   Note: '''
@@ -199,6 +200,7 @@ Table analysis {
 
   로딩 화면 문구는 클라가 만들고 서버는 관여하지 않는다.
   서버는 status, progress, failed_code, failed_reason 을 제공한다.
+  notification_requested_at 은 분석마다 독립적인 일회성 알림 신청 상태다.
   failed_code 는 enum 이름이 아닌 ANALYSIS-007 등의 코드 문자열이며
   값이 없는 기존 실패 행은 NULL 을 유지한다.
 

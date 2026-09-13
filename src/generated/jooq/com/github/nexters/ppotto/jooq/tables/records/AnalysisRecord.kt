@@ -65,6 +65,10 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
         set(value): Unit = set(10, value)
         get(): String? = get(10) as String?
 
+    open var notificationRequestedAt: Instant?
+        set(value): Unit = set(11, value)
+        get(): Instant? = get(11) as Instant?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -74,7 +78,7 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
     /**
      * Create a detached, initialised AnalysisRecord
      */
-    constructor(id: AnalysisId? = null, userId: UserId, boardId: BoardId, status: String, progress: Int? = null, failedReason: String? = null, startedAt: Instant? = null, completedAt: Instant? = null, createdAt: Instant? = null, updatedAt: Instant? = null, failedCode: String? = null): this() {
+    constructor(id: AnalysisId? = null, userId: UserId, boardId: BoardId, status: String, progress: Int? = null, failedReason: String? = null, startedAt: Instant? = null, completedAt: Instant? = null, createdAt: Instant? = null, updatedAt: Instant? = null, failedCode: String? = null, notificationRequestedAt: Instant? = null): this() {
         this.id = id
         this.userId = userId
         this.boardId = boardId
@@ -86,6 +90,7 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         this.failedCode = failedCode
+        this.notificationRequestedAt = notificationRequestedAt
         resetTouchedOnNotNull()
     }
 
@@ -105,6 +110,7 @@ open class AnalysisRecord private constructor() : UpdatableRecordImpl<AnalysisRe
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
             this.failedCode = value.failedCode
+            this.notificationRequestedAt = value.notificationRequestedAt
             resetTouchedOnNotNull()
         }
     }

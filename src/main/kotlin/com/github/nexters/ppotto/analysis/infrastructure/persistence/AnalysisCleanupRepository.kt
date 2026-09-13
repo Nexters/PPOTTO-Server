@@ -53,6 +53,7 @@ class AnalysisCleanupRepository(
             failedReason = failedReason,
             startedAt = startedAt,
             completedAt = completedAt,
+            notificationRequestedAt = notificationRequestedAt,
             createdAt = createdAt!!,
             updatedAt = updatedAt!!,
         )
