@@ -26,7 +26,7 @@ class AnalysisNotificationService(
         if (analysis == null || analysis.userId != userId) {
             throw NotFoundException(AnalysisErrorCode.ANALYSIS_NOT_FOUND)
         }
-        if (analysis.status != AnalysisStatus.ANALYZING) {
+        if (analysis.status !in AnalysisStatus.ACTIVE) {
             throw ConflictException(AnalysisErrorCode.NOTIFICATION_REQUEST_NOT_ALLOWED)
         }
 

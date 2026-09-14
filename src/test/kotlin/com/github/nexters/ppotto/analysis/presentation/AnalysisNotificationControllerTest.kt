@@ -88,6 +88,28 @@ class AnalysisNotificationControllerTest(
                         post("/analysis/${analysis.id}/notifications").authenticatedAs(board.userId),
                     )
 
+                Then("업로드 중에도 200 응답을 반환하고 신청 시각을 기록한다") {
+                    response.andExpect(status().isOk)
+                    analysisRepository
+                        .findById(analysis.id)
+                        ?.notificationRequestedAt
+                        .shouldNotBeNull()
+                }
+            }
+        }
+
+        Given("이미 완료된 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            analysisRepository.markAnalyzing(analysis.id, Instant.now())
+            analysisRepository.markCompleted(analysis.id, Instant.now())
+
+            When("완료 알림을 신청하면") {
+                val response =
+                    mockMvc.perform(
+                        post("/analysis/${analysis.id}/notifications").authenticatedAs(board.userId),
+                    )
+
                 Then("409 응답과 ANALYSIS-018을 반환한다") {
                     response
                         .andExpect(status().isConflict)

@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.analysis.domain.PhotoRef
 import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.infrastructure.config.AnalysisPipelineProperties
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisNotificationRepository
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
@@ -52,6 +53,7 @@ class AnalysisPipelineEventListenerTest(
     private val analysisPipelineService: AnalysisPipelineService,
     private val analysisResultSaveService: AnalysisResultSaveService,
     private val analysisRepository: AnalysisRepository,
+    private val analysisNotificationRepository: AnalysisNotificationRepository,
     private val photoRepository: PhotoRepository,
     private val stickerRepository: StickerRepository,
     private val deviceTokenRepository: DeviceTokenRepository,
@@ -66,7 +68,10 @@ class AnalysisPipelineEventListenerTest(
     boardRepository: BoardRepository,
     userRepository: UserRepository,
 ) : IntegrationTest({
-        fun analyzingAnalysis(photoCount: Int = 1): Pair<AnalysisId, List<PhotoRef>> {
+        fun analyzingAnalysis(
+            photoCount: Int = 1,
+            notificationRequested: Boolean = false,
+        ): Pair<AnalysisId, List<PhotoRef>> {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
             val analysis = analysisRepository.save(user.id, board.id)
@@ -78,12 +83,13 @@ class AnalysisPipelineEventListenerTest(
                 )
             photoRepository.markCompletedBatch(photos.associate { it.id to Instant.now() })
             analysisRepository.markAnalyzing(analysis.id, Instant.now())
+            if (notificationRequested) analysisNotificationRepository.markRequested(analysis.id, Instant.now())
             deviceTokenRepository.upsert(user.id, "device-1", DevicePlatform.IOS, "fcm-token-1")
             return analysis.id to photos.map { PhotoRef(it.id, "gs://bucket/${it.id}.jpg", "image/jpeg") }
         }
 
-        Given("업로드가 완료된 분석과 등록된 디바이스 토큰이 있는 상태에서") {
-            val (analysisId, photoRefs) = analyzingAnalysis()
+        Given("완료 알림을 신청하고 업로드가 완료된 분석과 등록된 디바이스 토큰이 있는 상태에서") {
+            val (analysisId, photoRefs) = analyzingAnalysis(notificationRequested = true)
 
             When("파이프라인이 성공적으로 완료되면") {
                 analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
@@ -187,8 +193,31 @@ class AnalysisPipelineEventListenerTest(
             }
         }
 
+        Given("완료 알림을 신청하지 않은 분석에서") {
+            val (analysisId, photoRefs) = analyzingAnalysis()
+
+            When("파이프라인이 성공적으로 완료되면") {
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("분석은 COMPLETED로 마감되지만 완료 알림은 보내지 않는다") {
+                    analysisRepository.findById(analysisId)!!.status shouldBe AnalysisStatus.COMPLETED
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_COMPLETED").shouldBeEmpty()
+                }
+            }
+
+            When("파이프라인이 실패하면") {
+                themeClassifier.failureToThrow = BusinessException(AnalysisErrorCode.CLASSIFICATION_FAILED, "provider-secret")
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("분석은 FAILED로 마감되지만 실패 알림은 보내지 않는다") {
+                    analysisRepository.findById(analysisId)!!.status shouldBe AnalysisStatus.FAILED
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_FAILED").shouldBeEmpty()
+                }
+            }
+        }
+
         Given("두 테마 중 한 테마의 스티커 생성만 실패하는 분석에서") {
-            val (analysisId, photoRefs) = analyzingAnalysis(photoCount = 2)
+            val (analysisId, photoRefs) = analyzingAnalysis(photoCount = 2, notificationRequested = true)
             themeClassifier.classifications =
                 photoRefs.mapIndexed { index, photo ->
                     ThemeClassification(
@@ -292,8 +321,8 @@ class AnalysisPipelineEventListenerTest(
             }
         }
 
-        Given("푸시 이벤트 발행이 항상 실패하는 리스너에서") {
-            val (analysisId, photoRefs) = analyzingAnalysis()
+        Given("완료 알림을 신청했고 푸시 이벤트 발행이 항상 실패하는 리스너에서") {
+            val (analysisId, photoRefs) = analyzingAnalysis(notificationRequested = true)
             val listener =
                 AnalysisPipelineEventListener(
                     analysisPipelineService,

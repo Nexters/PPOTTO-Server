@@ -77,11 +77,13 @@ class AnalysisPipelineEventListener(
                 analysisRepository.findById(analysisId) ?: error("분석을 찾을 수 없습니다: $analysisId")
             }
         val stickers = pipelineResult.themes.mapNotNull { it.toStickerResult() }
-        val completed =
+        val saveOutcome =
             pipelineRun.measured(ANALYSIS_RESULT_SAVE_STEP, AnalysisErrorCode.RESULT_SAVE_FAILED) {
                 saveResult(analysis, stickers)
             }
-        if (completed) notifyBestEffort(analysis.userId, analysisId, NOTIFICATION_COMPLETED)
+        if (saveOutcome.completed && saveOutcome.notificationRequested) {
+            notifyBestEffort(analysis.userId, analysisId, NOTIFICATION_COMPLETED)
+        }
     }
 
     private fun <T> withPipelineSlot(
@@ -102,10 +104,12 @@ class AnalysisPipelineEventListener(
     private fun saveResult(
         analysis: Analysis,
         stickers: List<AnalysisStickerResult>,
-    ): Boolean =
+    ): AnalysisSaveOutcome =
         transactionTemplate.execute {
             val currentAnalysis = checkNotNull(analysisRepository.findByIdForUpdate(analysis.id))
-            if (currentAnalysis.status != AnalysisStatus.ANALYZING) return@execute false
+            if (currentAnalysis.status != AnalysisStatus.ANALYZING) {
+                return@execute AnalysisSaveOutcome(completed = false, notificationRequested = false)
+            }
 
             analysisResultSaveService.save(
                 SaveAnalysisResultCommand(
@@ -116,13 +120,13 @@ class AnalysisPipelineEventListener(
                 ),
             )
             check(analysisRepository.markCompleted(analysis.id, Instant.now()) == 1)
-            true
-        } == true
+            AnalysisSaveOutcome(completed = true, notificationRequested = currentAnalysis.notificationRequestedAt != null)
+        }
 
     private fun notifyFailureBestEffort(analysisId: AnalysisId) {
         bestEffort(log, "분석 실패 푸시 알림 발행(analysisId=$analysisId)") {
             val analysis = checkNotNull(analysisRepository.findById(analysisId)) { "분석을 찾을 수 없습니다: $analysisId" }
-            publishNotification(analysis.userId, analysisId, NOTIFICATION_FAILED)
+            if (analysis.notificationRequestedAt != null) publishNotification(analysis.userId, analysisId, NOTIFICATION_FAILED)
         }
     }
 
@@ -177,6 +181,11 @@ class AnalysisPipelineEventListener(
         val title: String,
         val body: String,
         val type: String,
+    )
+
+    private data class AnalysisSaveOutcome(
+        val completed: Boolean,
+        val notificationRequested: Boolean,
     )
 
     companion object {
