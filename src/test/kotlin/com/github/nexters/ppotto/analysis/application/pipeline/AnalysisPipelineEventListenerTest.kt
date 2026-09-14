@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application.pipeline
 
+import com.github.nexters.ppotto.analysis.application.AnalysisNotificationService
 import com.github.nexters.ppotto.analysis.application.pipeline.AnalysisPipelineEventListener
 import com.github.nexters.ppotto.analysis.application.pipeline.AnalysisPipelineService
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
@@ -52,6 +53,7 @@ class AnalysisPipelineEventListenerTest(
     private val analysisPipelineEventListener: AnalysisPipelineEventListener,
     private val analysisPipelineService: AnalysisPipelineService,
     private val analysisResultSaveService: AnalysisResultSaveService,
+    private val analysisNotificationService: AnalysisNotificationService,
     private val analysisRepository: AnalysisRepository,
     private val analysisNotificationRepository: AnalysisNotificationRepository,
     private val photoRepository: PhotoRepository,
@@ -279,6 +281,7 @@ class AnalysisPipelineEventListenerTest(
                     analysisPipelineService,
                     analysisRepository,
                     analysisResultSaveService,
+                    analysisNotificationService,
                     eventPublisher,
                     transactionTemplate,
                     transactionManager,
@@ -328,6 +331,7 @@ class AnalysisPipelineEventListenerTest(
                     analysisPipelineService,
                     analysisRepository,
                     analysisResultSaveService,
+                    analysisNotificationService,
                     ApplicationEventPublisher { throw IllegalStateException("푸시 이벤트 발행 실패") },
                     transactionTemplate,
                     transactionManager,
@@ -351,6 +355,7 @@ class AnalysisPipelineEventListenerTest(
                     analysisPipelineService,
                     analysisRepository,
                     analysisResultSaveService,
+                    analysisNotificationService,
                     eventPublisher,
                     transactionTemplate,
                     FailingTransactionManager,

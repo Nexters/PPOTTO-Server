@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.analysis.application.pipeline
 
+import com.github.nexters.ppotto.analysis.application.AnalysisNotificationService
 import com.github.nexters.ppotto.analysis.application.model.ThemeAnalysisResult
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
@@ -34,6 +35,7 @@ class AnalysisPipelineEventListener(
     private val analysisPipelineService: AnalysisPipelineService,
     private val analysisRepository: AnalysisRepository,
     private val analysisResultSaveService: AnalysisResultSaveService,
+    private val analysisNotificationService: AnalysisNotificationService,
     private val eventPublisher: ApplicationEventPublisher,
     private val transactionTemplate: TransactionTemplate,
     transactionManager: PlatformTransactionManager,
@@ -125,8 +127,7 @@ class AnalysisPipelineEventListener(
 
     private fun notifyFailureBestEffort(analysisId: AnalysisId) {
         bestEffort(log, "분석 실패 푸시 알림 발행(analysisId=$analysisId)") {
-            val analysis = checkNotNull(analysisRepository.findById(analysisId)) { "분석을 찾을 수 없습니다: $analysisId" }
-            if (analysis.notificationRequestedAt != null) publishNotification(analysis.userId, analysisId, NOTIFICATION_FAILED)
+            analysisNotificationService.notifyFailureIfRequested(analysisId)
         }
     }
 
@@ -195,9 +196,6 @@ class AnalysisPipelineEventListener(
 
         private val NOTIFICATION_COMPLETED =
             PipelineNotification("스티커 생성 완료", "요청하신 스티커가 모두 준비됐어요", "ANALYSIS_COMPLETED")
-
-        private val NOTIFICATION_FAILED =
-            PipelineNotification("스티커 생성 실패", "스티커 생성에 실패했어요. 다시 시도해주세요", "ANALYSIS_FAILED")
 
         private val log = LoggerFactory.getLogger(AnalysisPipelineEventListener::class.java)
     }
