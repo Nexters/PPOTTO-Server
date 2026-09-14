@@ -36,6 +36,9 @@ data class AnalysisStatusResponse(
 
     @field:Schema(description = "분석이 완료된 시각", example = "2026-07-27T14:03:38+09:00")
     val completedAt: Instant?,
+
+    @field:Schema(description = "현재 분석의 완료 알림 신청 여부", example = "true")
+    val notificationRequested: Boolean,
 ) {
     companion object {
         fun from(result: AnalysisStatusResult): AnalysisStatusResponse =
@@ -48,6 +51,7 @@ data class AnalysisStatusResponse(
                 failedReason = result.failedReason,
                 startedAt = result.startedAt,
                 completedAt = result.completedAt,
+                notificationRequested = result.notificationRequested,
             )
     }
 }

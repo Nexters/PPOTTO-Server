@@ -24,6 +24,7 @@ class OrphanedAnalysisResumeService(
     private val analysisCleanupRepository: AnalysisCleanupRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorage: PhotoStorage,
+    private val analysisNotificationService: AnalysisNotificationService,
     private val eventPublisher: ApplicationEventPublisher,
     private val pipelineProperties: AnalysisPipelineProperties,
     private val staleCleanupProperties: StaleAnalysisCleanupProperties,
@@ -46,7 +47,9 @@ class OrphanedAnalysisResumeService(
     private fun resume(analysis: Analysis) {
         val photos = photoRepository.findCompletedByAnalysisId(analysis.id).map { it.toRef(photoStorage.sourceUri(it)) }
         if (photos.isEmpty()) {
-            analysisRepository.markFailed(analysis.id, AnalysisRepository.FAILED_REASON_NOT_RESUMABLE)
+            if (analysisRepository.markFailed(analysis.id, AnalysisRepository.FAILED_REASON_NOT_RESUMABLE) > 0) {
+                analysisNotificationService.notifyFailureIfRequested(analysis.id)
+            }
             return
         }
 

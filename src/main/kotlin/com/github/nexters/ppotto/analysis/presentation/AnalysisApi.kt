@@ -112,6 +112,27 @@ interface AnalysisApi {
         analysisId: AnalysisId,
     ): ApiResponse<AnalysisStatusResponse>
 
+    @PostMapping("/{analysisId}/notifications")
+    @Operation(
+        operationId = "requestAnalysisCompletionNotification",
+        summary = "분석 완료 알림 신청",
+        description = "현재 진행 중인 분석의 완료 또는 실패 결과 푸시 알림을 분석별로 신청합니다. 같은 분석에 대한 재요청은 동일하게 성공합니다.",
+        parameters = [
+            Parameter(
+                name = "analysisId",
+                description = ANALYSIS_ID_DESCRIPTION,
+                example = ANALYSIS_ID_EXAMPLE,
+            ),
+        ],
+    )
+    @EmptySuccessApiResponse
+    @AnalysisNotFoundApiResponse
+    @AnalysisNotificationRequestNotAllowedApiResponse
+    fun requestCompletionNotification(
+        userId: UserId,
+        analysisId: AnalysisId,
+    ): ApiResponse<Unit>
+
     @DeleteMapping("/{analysisId}")
     @Operation(
         summary = "분석 취소",

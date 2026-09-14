@@ -142,6 +142,11 @@ open class Analysis(
      */
     val FAILED_CODE: TableField<AnalysisRecord, String?> = createField(DSL.name("failed_code"), SQLDataType.VARCHAR(20), this, "")
 
+    /**
+     * The column <code>public.analysis.notification_requested_at</code>.
+     */
+    val NOTIFICATION_REQUESTED_AT: TableField<AnalysisRecord, Instant?> = createField(DSL.name("notification_requested_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
+
     private constructor(alias: Name, aliased: Table<AnalysisRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<AnalysisRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<AnalysisRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)

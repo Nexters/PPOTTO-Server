@@ -26,6 +26,7 @@ Configuration and database migrations.
 | `config/auth.yml` | OAuth HTTP Service client group timeouts (`spring.http.serviceclient.oauth.*` from `${OAUTH_*_TIMEOUT_MILLIS}`, bare integers bind as milliseconds), Kakao, Apple, service JWT, and token expiration settings from provider/auth env vars |
 | `db/migration/` | Flyway timestamp migrations. The base schema creates core tables; later migrations add legacy-compatible social accounts, terms, drawings, stickers, recap data, active-analysis index updates, the six-stickers-per-analysis guard, the recap one-line summary column that replaced `recap_comments.is_float`, and the drawing `type` discriminator with the text columns and the `z_index` promotion that backfills from the existing `stroke` JSON |
 | `db/migration/V20260911120000__add_analysis_failed_code.sql` | `analysis.failed_code VARCHAR(20)` nullable 열을 추가한다. 기존 실패 기록은 사유로 코드를 추정하지 않고 null을 유지한다. |
+| `db/migration/V20260914120000__add_analysis_notification_requested_at.sql` | 분석별 완료·실패 알림 신청 시각을 저장하는 nullable `analysis.notification_requested_at`을 추가한다. |
 
 ## Rules
 

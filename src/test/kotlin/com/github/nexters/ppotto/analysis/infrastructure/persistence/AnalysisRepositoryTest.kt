@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit
 
 class AnalysisRepositoryTest(
     analysisRepository: AnalysisRepository,
+    analysisNotificationRepository: AnalysisNotificationRepository,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
     dslContext: DSLContext,
@@ -53,6 +54,44 @@ class AnalysisRepositoryTest(
                     found?.boardId shouldBe board.id
                     found?.status shouldBe AnalysisStatus.UPLOADING
                     found?.progress shouldBe 0
+                    found?.notificationRequestedAt.shouldBeNull()
+                }
+            }
+        }
+
+        Given("알림을 신청하지 않은 Analysis가 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val saved = analysisRepository.save(board.userId, board.id)
+            val requestedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
+
+            When("알림 신청 시각을 기록하면") {
+                val updatedCount = analysisNotificationRepository.markRequested(saved.id, requestedAt)
+
+                Then("신청 시각을 저장한다") {
+                    updatedCount shouldBe 1
+                    analysisRepository.findById(saved.id)?.notificationRequestedAt shouldBe requestedAt
+                }
+            }
+        }
+
+        Given("이미 알림을 신청한 Analysis가 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val saved = analysisRepository.save(board.userId, board.id)
+            val firstRequestedAt =
+                Instant
+                    .now()
+                    .minusSeconds(10)
+                    .truncatedTo(ChronoUnit.MICROS)
+            val secondRequestedAt = Instant.now().truncatedTo(ChronoUnit.MICROS)
+            analysisNotificationRepository.markRequested(saved.id, firstRequestedAt)
+
+            When("알림 신청 시각을 다시 기록하면") {
+                val updatedCount =
+                    analysisNotificationRepository.markRequested(saved.id, secondRequestedAt)
+
+                Then("최초 신청 시각을 유지하고 변경하지 않는다") {
+                    updatedCount shouldBe 0
+                    analysisRepository.findById(saved.id)?.notificationRequestedAt shouldBe firstRequestedAt
                 }
             }
         }

@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.analysis.domain.RecapContent
 import com.github.nexters.ppotto.analysis.domain.ThemeClassification
 import com.github.nexters.ppotto.analysis.domain.ThemeComment
 import com.github.nexters.ppotto.analysis.domain.UploadStatus
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisNotificationRepository
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.analysis.infrastructure.storage.PhotoObjectKeys
@@ -27,6 +28,9 @@ import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
+import com.github.nexters.ppotto.notification.domain.DevicePlatform
+import com.github.nexters.ppotto.notification.infrastructure.DeviceTokenRepository
+import com.github.nexters.ppotto.notification.support.FakePushNotifier
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
@@ -54,12 +58,15 @@ import kotlin.concurrent.thread
 class AnalysisServiceTest(
     private val analysisService: AnalysisService,
     private val analysisRepository: AnalysisRepository,
+    private val analysisNotificationRepository: AnalysisNotificationRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorage: FakePhotoStorage,
     private val themeClassifier: FakeThemeClassifier,
     private val dslContext: DSLContext,
     private val stickerRepository: StickerRepository,
     private val stickerRecapRepository: StickerRecapRepository,
+    private val deviceTokenRepository: DeviceTokenRepository,
+    private val fakePushNotifier: FakePushNotifier,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
 ) : IntegrationTest({
@@ -607,10 +614,12 @@ class AnalysisServiceTest(
             }
         }
 
-        Given("UPLOADING 상태의 분석을 취소할 때") {
+        Given("완료 알림을 신청해둔 UPLOADING 상태의 분석을 취소할 때") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val photoGroups = photoUploadGroups()
             val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoGroups))
+            deviceTokenRepository.upsert(board.userId, "device-1", DevicePlatform.IOS, "fcm-token-1")
+            analysisNotificationRepository.markRequested(created.analysisId, Instant.now())
 
             When("분석을 취소하면") {
                 analysisService.cancelAnalysis(board.userId, created.analysisId)
@@ -635,6 +644,10 @@ class AnalysisServiceTest(
                 Then("같은 사용자가 새로운 분석을 다시 생성할 수 있다") {
                     val result = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoGroups))
                     result.analysisId.shouldNotBeNull()
+                }
+
+                Then("알림을 신청했어도 본인이 취소한 것이므로 실패 알림을 보내지 않는다") {
+                    fakePushNotifier.sentMessages.shouldBeEmpty()
                 }
             }
         }

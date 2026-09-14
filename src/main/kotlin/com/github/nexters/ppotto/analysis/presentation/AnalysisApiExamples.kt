@@ -38,6 +38,7 @@ private val ANALYZING_STATUS =
         failedReason = null,
         startedAt = STARTED_AT,
         completedAt = null,
+        notificationRequested = false,
     )
 
 private val CREATE_ANALYSIS_REQUEST =
@@ -225,6 +226,12 @@ private val CANCEL_NOT_ALLOWED =
         summary = "UPLOADING이 아닌 분석은 취소 불가",
     )
 
+private val NOTIFICATION_REQUEST_NOT_ALLOWED =
+    ApiExamples.errorExample(
+        errorCode = AnalysisErrorCode.NOTIFICATION_REQUEST_NOT_ALLOWED,
+        summary = "진행 중이 아닌 분석",
+    )
+
 private val ANALYSIS_NOT_FOUND_RESPONSE =
     listOf(
         ApiExamples.errorExample(
@@ -283,6 +290,15 @@ class AnalysisApiExamples : ApiExampleProvider {
                             "200" to
                                 listOf(ANALYZING_DETAIL_RESPONSE, COMPLETED_STATUS_RESPONSE, FAILED_STATUS_RESPONSE),
                             "404" to ANALYSIS_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            AnalysisApi::requestCompletionNotification to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to ApiExamples.EMPTY_SUCCESS,
+                            "404" to ANALYSIS_NOT_FOUND_RESPONSE,
+                            "409" to listOf(NOTIFICATION_REQUEST_NOT_ALLOWED),
                         ),
                 ),
             AnalysisApi::cancel to

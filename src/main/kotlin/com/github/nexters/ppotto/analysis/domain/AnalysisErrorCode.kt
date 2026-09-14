@@ -32,4 +32,9 @@ enum class AnalysisErrorCode(
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "ANALYSIS-015", "분석 처리 중 오류가 발생했습니다."),
     ANALYSIS_CANCELED(HttpStatus.CONFLICT, "ANALYSIS-016", "분석을 취소했습니다."),
     CLASSIFICATION_FAILED(HttpStatus.BAD_GATEWAY, "ANALYSIS-017", "사진 분석에 실패했습니다."),
+    NOTIFICATION_REQUEST_NOT_ALLOWED(
+        HttpStatus.CONFLICT,
+        "ANALYSIS-018",
+        "진행 중인 분석에만 결과 알림을 신청할 수 있습니다.",
+    ),
 }

@@ -16,6 +16,7 @@ data class Analysis(
     val failedReason: String?,
     val startedAt: Instant?,
     val completedAt: Instant?,
+    val notificationRequestedAt: Instant?,
     val createdAt: Instant,
     val updatedAt: Instant,
 ) {

@@ -68,4 +68,13 @@ annotation class AnalysisStartConflictApiResponse
 )
 annotation class AnalysisCancelNotAllowedApiResponse
 
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.RUNTIME)
+@ApiResponse(
+    responseCode = "409",
+    description = "알림을 신청할 수 없는 분석 상태 (ANALYSIS-018)",
+    content = [Content(mediaType = MEDIA_TYPE_JSON, schema = Schema(implementation = ApiErrorResponse::class))],
+)
+annotation class AnalysisNotificationRequestNotAllowedApiResponse
+
 private const val MEDIA_TYPE_JSON = "application/json"
