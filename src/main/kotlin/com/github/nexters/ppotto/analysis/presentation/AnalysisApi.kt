@@ -133,6 +133,27 @@ interface AnalysisApi {
         analysisId: AnalysisId,
     ): ApiResponse<Unit>
 
+    @DeleteMapping("/{analysisId}/notifications")
+    @Operation(
+        operationId = "cancelAnalysisCompletionNotification",
+        summary = "분석 완료 알림 신청 취소",
+        description = "현재 진행 중인 분석의 완료 또는 실패 결과 알림 신청을 분석별로 취소합니다. 같은 분석에 대한 재취소 요청도 동일하게 성공합니다.",
+        parameters = [
+            Parameter(
+                name = "analysisId",
+                description = ANALYSIS_ID_DESCRIPTION,
+                example = ANALYSIS_ID_EXAMPLE,
+            ),
+        ],
+    )
+    @EmptySuccessApiResponse
+    @AnalysisNotFoundApiResponse
+    @AnalysisNotificationRequestNotAllowedApiResponse
+    fun cancelCompletionNotification(
+        userId: UserId,
+        analysisId: AnalysisId,
+    ): ApiResponse<Unit>
+
     @DeleteMapping("/{analysisId}")
     @Operation(
         summary = "분석 취소",

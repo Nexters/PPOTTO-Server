@@ -37,6 +37,22 @@ class AnalysisNotificationService(
         analysisNotificationRepository.markRequested(analysisId, Instant.now())
     }
 
+    @Transactional
+    fun cancelCompletionNotification(
+        userId: UserId,
+        analysisId: AnalysisId,
+    ) {
+        val analysis = analysisRepository.findByIdForUpdate(analysisId)
+        if (analysis == null || analysis.userId != userId) {
+            throw NotFoundException(AnalysisErrorCode.ANALYSIS_NOT_FOUND)
+        }
+        if (analysis.status !in AnalysisStatus.ACTIVE) {
+            throw ConflictException(AnalysisErrorCode.NOTIFICATION_REQUEST_NOT_ALLOWED)
+        }
+
+        analysisNotificationRepository.clearRequested(analysisId)
+    }
+
     fun notifyFailureIfRequested(analysisId: AnalysisId) {
         val analysis = checkNotNull(analysisRepository.findById(analysisId)) { "분석을 찾을 수 없습니다: $analysisId" }
         if (analysis.status != AnalysisStatus.FAILED || analysis.notificationRequestedAt == null) return

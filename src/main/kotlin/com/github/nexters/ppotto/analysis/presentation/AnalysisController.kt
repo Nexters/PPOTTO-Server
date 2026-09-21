@@ -75,6 +75,14 @@ class AnalysisController(
         return ApiResponse.success()
     }
 
+    override fun cancelCompletionNotification(
+        @AuthenticatedUser userId: UserId,
+        @PathVariable analysisId: AnalysisId,
+    ): ApiResponse<Unit> {
+        analysisNotificationService.cancelCompletionNotification(userId, analysisId)
+        return ApiResponse.success()
+    }
+
     override fun cancel(
         @AuthenticatedUser userId: UserId,
         @PathVariable analysisId: AnalysisId,

@@ -84,6 +84,7 @@
 | analysis | POST | /analysis/{analysisId}/start | 업로드 완료 통보 + 분석 시작 | 202 | 401, 404, 409 | Y |
 | analysis | GET | /analysis/{analysisId} | 분석 상태 조회 (로딩 화면 폴링) | 200 | 401, 404 | Y |
 | analysis | POST | /analysis/{analysisId}/notifications | 분석 완료 알림 신청 | 200 | 401, 404, 409 | Y |
+| analysis | DELETE | /analysis/{analysisId}/notifications | 분석 완료 알림 신청 취소 | 200 | 401, 404, 409 | Y |
 | analysis | DELETE | /analysis/{analysisId} | 분석 취소 (업로드 중 이탈) | 200 | 401, 404, 409 | Y |
 
 ## 4. auth API
@@ -2953,6 +2954,44 @@ Request example:
 - 같은 분석에 대한 중복 요청은 성공하며 최초 신청 시각을 유지한다.
 - OS 알림 권한 및 FCM 디바이스 토큰 등록은 별도 `POST /device-tokens` 계약이다.
 - 분석 완료 처리와 신청 요청은 같은 분석 행 잠금으로 직렬화한다. 완료가 먼저 확정된 경우 `ANALYSIS-018`을 반환하며 클라이언트는 상태 조회 결과를 반영한다.
+
+### DELETE /analysis/{analysisId}/notifications
+
+- Operation ID: `cancelAnalysisCompletionNotification`
+- Summary: 분석 완료 알림 신청 취소
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | analysisId | Y | `string` | 01983f2f-1a2b-7c3d-8e4f-5a6b7c8d9e0f | 알림 신청을 취소할 분석 ID |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 분석별 완료·실패 알림 신청 취소 완료 | `null` |
+
+200 example:
+```json
+{
+  "success": true
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | 인증 헤더 누락 또는 access token 만료 |
+| 404 | ANALYSIS-005 | 분석을 찾을 수 없습니다. | 분석 없음 또는 소유자 불일치 |
+| 409 | ANALYSIS-018 | 진행 중인 분석에만 결과 알림을 신청할 수 있습니다. | 분석 상태가 COMPLETED 또는 FAILED |
+
+#### Notes
+- 알림 신청 취소는 분석 작업 자체를 취소하지 않는다.
+- UPLOADING/ANALYZING 상태에서 취소할 수 있으며, 같은 분석에 대한 중복 취소 요청은 성공한다.
+- 분석 완료 처리와 취소 요청은 같은 분석 행 잠금으로 직렬화한다. 완료가 먼저 확정된 경우 `ANALYSIS-018`을 반환한다.
 
 ### DELETE /analysis/{analysisId}
 
