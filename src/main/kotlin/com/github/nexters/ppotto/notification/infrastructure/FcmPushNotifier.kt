@@ -2,6 +2,8 @@ package com.github.nexters.ppotto.notification.infrastructure
 
 import com.github.nexters.ppotto.notification.application.port.PushNotifier
 import com.github.nexters.ppotto.notification.application.port.PushSendResult
+import com.google.firebase.messaging.AndroidConfig
+import com.google.firebase.messaging.AndroidNotification
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
@@ -27,9 +29,18 @@ class FcmPushNotifier(
                 .setNotification(
                     Notification
                         .builder()
-                        .setTitle(title)
                         .setBody(body)
                         .build(),
+                ).setAndroidConfig(
+                    AndroidConfig
+                        .builder()
+                        .setNotification(
+                            AndroidNotification
+                                .builder()
+                                .setTitle(title)
+                                .setBody(body)
+                                .build(),
+                        ).build(),
                 ).putAllData(data)
                 .build()
 
