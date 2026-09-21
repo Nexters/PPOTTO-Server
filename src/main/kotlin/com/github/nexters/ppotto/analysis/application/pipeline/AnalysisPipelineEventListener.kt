@@ -195,7 +195,7 @@ class AnalysisPipelineEventListener(
         private const val ANALYSIS_RESULT_SAVE_STEP = "analysis-result-save"
 
         private val NOTIFICATION_COMPLETED =
-            PipelineNotification("스티커 생성 완료", "요청하신 스티커가 모두 준비됐어요", "ANALYSIS_COMPLETED")
+            PipelineNotification("테마 스티커 완성", "테마 스티커 생성이 완료되었습니다.", "ANALYSIS_COMPLETED")
 
         private val log = LoggerFactory.getLogger(AnalysisPipelineEventListener::class.java)
     }

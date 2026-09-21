@@ -301,6 +301,15 @@ class AnalysisApiExamples : ApiExampleProvider {
                             "409" to listOf(NOTIFICATION_REQUEST_NOT_ALLOWED),
                         ),
                 ),
+            AnalysisApi::cancelCompletionNotification to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to ApiExamples.EMPTY_SUCCESS,
+                            "404" to ANALYSIS_NOT_FOUND_RESPONSE,
+                            "409" to listOf(NOTIFICATION_REQUEST_NOT_ALLOWED),
+                        ),
+                ),
             AnalysisApi::cancel to
                 OperationExamples(
                     responses =

@@ -109,7 +109,11 @@ class AnalysisPipelineEventListenerTest(
                 Then("완료 알림이 등록된 디바이스 토큰으로 발송된다") {
                     val completedMessages = fakePushNotifier.messagesFor(analysisId, "ANALYSIS_COMPLETED")
                     completedMessages shouldHaveSize 1
-                    completedMessages.single().tokens shouldBe listOf("fcm-token-1")
+                    completedMessages.single().let {
+                        it.tokens shouldBe listOf("fcm-token-1")
+                        it.title shouldBe "테마 스티커 완성"
+                        it.body shouldBe "테마 스티커 생성이 완료되었습니다."
+                    }
                 }
             }
 

@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.beans.factory.annotation.Autowired
@@ -14,6 +15,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
@@ -151,6 +153,109 @@ class AnalysisNotificationControllerTest(
                     response
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
+                }
+            }
+        }
+
+        Given("완료 알림을 신청한 ANALYZING 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            analysisRepository.markAnalyzing(analysis.id, Instant.now())
+            mockMvc.perform(post("/analysis/${analysis.id}/notifications").authenticatedAs(board.userId))
+
+            When("완료 알림 신청을 취소하면") {
+                val response =
+                    mockMvc.perform(
+                        delete("/analysis/${analysis.id}/notifications").authenticatedAs(board.userId),
+                    )
+
+                Then("200 응답을 반환하고 신청 시각을 제거한다") {
+                    response
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data").doesNotExist())
+
+                    analysisRepository
+                        .findById(analysis.id)
+                        ?.notificationRequestedAt
+                        .shouldBeNull()
+
+                    mockMvc
+                        .perform(get("/analysis/${analysis.id}").authenticatedAs(board.userId))
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.notificationRequested").value(false))
+                }
+            }
+        }
+
+        Given("완료 알림을 신청하지 않은 UPLOADING 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+
+            When("완료 알림 신청을 취소하면") {
+                val response =
+                    mockMvc.perform(
+                        delete("/analysis/${analysis.id}/notifications").authenticatedAs(board.userId),
+                    )
+
+                Then("동일하게 성공하고 신청하지 않은 상태를 유지한다") {
+                    response.andExpect(status().isOk)
+                    analysisRepository
+                        .findById(analysis.id)
+                        ?.notificationRequestedAt
+                        .shouldBeNull()
+                }
+            }
+        }
+
+        Given("완료된 분석이 있을 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            analysisRepository.markAnalyzing(analysis.id, Instant.now())
+            analysisRepository.markCompleted(analysis.id, Instant.now())
+
+            When("완료 알림 신청을 취소하면") {
+                val response =
+                    mockMvc.perform(
+                        delete("/analysis/${analysis.id}/notifications").authenticatedAs(board.userId),
+                    )
+
+                Then("409 응답과 ANALYSIS-018을 반환한다") {
+                    response
+                        .andExpect(status().isConflict)
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-018"))
+                }
+            }
+        }
+
+        Given("다른 사용자의 알림 신청 분석이 있을 때") {
+            val ownerBoard = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(ownerBoard.userId, ownerBoard.id)
+            analysisRepository.markAnalyzing(analysis.id, Instant.now())
+            val otherUserId = userRepository.saveTestUser().id
+
+            When("완료 알림 신청을 취소하면") {
+                val response =
+                    mockMvc.perform(
+                        delete("/analysis/${analysis.id}/notifications").authenticatedAs(otherUserId),
+                    )
+
+                Then("404 응답과 ANALYSIS-005를 반환한다") {
+                    response
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("ANALYSIS-005"))
+                }
+            }
+        }
+
+        Given("인증하지 않은 사용자가 알림 신청을 취소할 때") {
+            When("완료 알림 신청을 취소하면") {
+                val response = mockMvc.perform(delete("/analysis/${UUID.randomUUID()}/notifications"))
+
+                Then("401 응답과 COMMON-004를 반환한다") {
+                    response
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
                 }
             }
         }

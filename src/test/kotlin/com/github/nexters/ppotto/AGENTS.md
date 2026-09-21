@@ -73,7 +73,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/application/BoardAnalysisDeletionConcurrencyTest.kt` | Both delete/analysis-create interleavings: create after delete yields `BOARD-002`, delete after create yields `BOARD-005`. The blocking sticker port resets its latches in `beforeTest` so every leaf gets fresh ones |
 | `board/infrastructure/BoardRepositoryTest.kt` | Board persistence and active lookup integration tests |
 | `analysis/infrastructure/persistence/AnalysisRepositoryTest.kt` | Analysis save, status transition, and active-analysis lookup integration tests, plus idempotent persistence of the first per-analysis notification request timestamp |
-| `analysis/presentation/AnalysisNotificationControllerTest.kt` | Analysis-scoped completion notification request API integration tests: success, idempotency, ANALYZING-only state restriction, ownership concealment, authentication, and the request flag round-tripping through the status query |
+| `analysis/presentation/AnalysisNotificationControllerTest.kt` | Analysis-scoped completion notification request/cancel API integration tests: success, idempotency, active-state restriction, ownership concealment, authentication, and the request flag round-tripping through the status query |
 | `board/infrastructure/DrawingRepositoryTest.kt` | Drawing upsert and soft-delete integration tests, plus the text round trip and the stroke/text type switch on the same id |
 | `board/infrastructure/BoardExternalPortFallbackConfigurationTest.kt` | Standalone missing-adapter fail-closed contract tests |
 | `board/presentation/BoardControllerTest.kt` | Authenticated CRUD response and ownership integration tests across the v1 and v2 detail controllers |

@@ -20,4 +20,12 @@ class AnalysisNotificationRepository(
             .where(ANALYSIS.ID.eq(analysisId))
             .and(ANALYSIS.NOTIFICATION_REQUESTED_AT.isNull)
             .execute()
+
+    fun clearRequested(analysisId: AnalysisId): Int =
+        dslContext
+            .update(ANALYSIS)
+            .setNull(ANALYSIS.NOTIFICATION_REQUESTED_AT)
+            .where(ANALYSIS.ID.eq(analysisId))
+            .and(ANALYSIS.NOTIFICATION_REQUESTED_AT.isNotNull)
+            .execute()
 }

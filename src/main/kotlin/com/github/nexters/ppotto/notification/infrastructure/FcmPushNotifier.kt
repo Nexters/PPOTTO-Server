@@ -2,6 +2,8 @@ package com.github.nexters.ppotto.notification.infrastructure
 
 import com.github.nexters.ppotto.notification.application.port.PushNotifier
 import com.github.nexters.ppotto.notification.application.port.PushSendResult
+import com.google.firebase.messaging.AndroidConfig
+import com.google.firebase.messaging.AndroidNotification
 import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
@@ -27,9 +29,21 @@ class FcmPushNotifier(
                 .setNotification(
                     Notification
                         .builder()
-                        .setTitle(title)
                         .setBody(body)
                         .build(),
+                ).setAndroidConfig(
+                    AndroidConfig
+                        .builder()
+                        .setPriority(AndroidConfig.Priority.HIGH)
+                        .setNotification(
+                            AndroidNotification
+                                .builder()
+                                .setTitle(title)
+                                .setBody(body)
+                                .setChannelId(ANALYSIS_RESULT_CHANNEL_ID)
+                                .setSound(DEFAULT_SOUND)
+                                .build(),
+                        ).build(),
                 ).putAllData(data)
                 .build()
 
@@ -44,6 +58,11 @@ class FcmPushNotifier(
                         .marksTokenInvalid(),
             )
         }
+    }
+
+    companion object {
+        private const val ANALYSIS_RESULT_CHANNEL_ID = "analysis-result"
+        private const val DEFAULT_SOUND = "default"
     }
 }
 
