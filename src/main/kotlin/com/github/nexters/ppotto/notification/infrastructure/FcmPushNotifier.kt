@@ -34,11 +34,14 @@ class FcmPushNotifier(
                 ).setAndroidConfig(
                     AndroidConfig
                         .builder()
+                        .setPriority(AndroidConfig.Priority.HIGH)
                         .setNotification(
                             AndroidNotification
                                 .builder()
                                 .setTitle(title)
                                 .setBody(body)
+                                .setChannelId(ANALYSIS_RESULT_CHANNEL_ID)
+                                .setSound(DEFAULT_SOUND)
                                 .build(),
                         ).build(),
                 ).putAllData(data)
@@ -55,6 +58,11 @@ class FcmPushNotifier(
                         .marksTokenInvalid(),
             )
         }
+    }
+
+    companion object {
+        private const val ANALYSIS_RESULT_CHANNEL_ID = "analysis-result"
+        private const val DEFAULT_SOUND = "default"
     }
 }
 
