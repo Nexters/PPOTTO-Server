@@ -27,6 +27,7 @@ import com.github.nexters.ppotto.global.openapi.ApiExampleProvider
 import com.github.nexters.ppotto.global.openapi.ApiExamples
 import com.github.nexters.ppotto.global.openapi.OperationExamples
 import com.github.nexters.ppotto.global.web.ApiResponse
+import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import org.springframework.stereotype.Component
 import java.util.UUID
 import kotlin.reflect.KFunction
@@ -331,6 +332,18 @@ private val LAST_BOARD_CANNOT_BE_DELETED =
         summary = "마지막 보드는 삭제 불가",
     )
 
+private val UNDELETABLE_STICKER =
+    ApiExamples.errorExample(
+        errorCode = StickerErrorCode.UNDELETABLE_STICKER,
+        summary = "보드의 스티커 중 이미 삭제되었거나 다른 보드로 옮겨진 스티커가 있음",
+    )
+
+private val UNEDITABLE_STICKER =
+    ApiExamples.errorExample(
+        errorCode = StickerErrorCode.UNEDITABLE_STICKER,
+        summary = "저장 대상 스티커 중 이미 삭제되었거나 이 보드에 속하지 않는 스티커가 있음",
+    )
+
 private val ACTIVE_ANALYSIS_EXISTS =
     ApiExamples.errorExample(
         errorCode = BoardErrorCode.ACTIVE_ANALYSIS_EXISTS,
@@ -381,6 +394,7 @@ class BoardApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to ApiExamples.EMPTY_SUCCESS,
+                            "400" to listOf(UNDELETABLE_STICKER),
                             "404" to listOf(BOARD_NOT_FOUND),
                             "409" to listOf(LAST_BOARD_CANNOT_BE_DELETED, ACTIVE_ANALYSIS_EXISTS),
                         ),
@@ -396,6 +410,7 @@ class BoardApiExamples : ApiExampleProvider {
                                 listOf(
                                     ApiExamples.INVALID_INPUT.copy(summary = "필드 형식 오류 (제목 15자 초과 등)"),
                                     INVALID_LAYOUT,
+                                    UNEDITABLE_STICKER,
                                 ),
                             "404" to listOf(BOARD_NOT_FOUND),
                         ),
@@ -423,6 +438,7 @@ class BoardApiExamples : ApiExampleProvider {
                                 listOf(
                                     ApiExamples.INVALID_INPUT.copy(summary = "필드 형식 오류 (문구 32자 초과, 색상 형식 오류 등)"),
                                     INVALID_LAYOUT,
+                                    UNEDITABLE_STICKER,
                                 ),
                             "404" to listOf(BOARD_NOT_FOUND),
                         ),

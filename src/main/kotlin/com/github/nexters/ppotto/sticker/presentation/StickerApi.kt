@@ -105,6 +105,7 @@ interface StickerApi {
         useReturnTypeSchema = true,
         description = "발급된 공유 정보",
     )
+    @InvalidInputApiResponse
     @StickerNotFoundApiResponse
     fun share(
         userId: UserId,
@@ -241,6 +242,7 @@ interface StickerApi {
     @NotRegeneratableStickerApiResponse
     @StickerNotFoundApiResponse
     @StickerRegenerationInProgressApiResponse
+    @StickerBackgroundRemovalFailedApiResponse
     fun regenerate(
         userId: UserId,
         stickerId: StickerId,

@@ -182,6 +182,15 @@ private val UNEDITABLE_RECAP_COMMENT_RESPONSE =
             summary = "코멘트 id 중복, 키워드 칩 id, 다른 스티커 소속 id, 유한하지 않은 좌표",
         )
 
+private val STICKER_BACKGROUND_REMOVAL_FAILED_RESPONSE =
+    listOf(
+        ApiExamples.crossDomainErrorExample(
+            code = "ANALYSIS-011",
+            summary = "원본 사진 읽기 또는 배경 제거·크롭 실패",
+            message = "스티커 배경 제거에 실패했습니다.",
+        ),
+    )
+
 private val NOT_REGENERATABLE_STICKER_RESPONSE =
     listOf(
         ApiExamples.errorExample(
@@ -220,6 +229,7 @@ class StickerApiExamples : ApiExampleProvider {
                     responses =
                         mapOf(
                             "200" to listOf(SHARE_RECAP_RESPONSE),
+                            "400" to listOf(ApiExamples.INVALID_INPUT),
                             "404" to STICKER_NOT_FOUND_RESPONSE,
                         ),
                 ),
@@ -259,6 +269,7 @@ class StickerApiExamples : ApiExampleProvider {
                             "400" to NOT_REGENERATABLE_STICKER_RESPONSE,
                             "404" to STICKER_NOT_FOUND_RESPONSE,
                             "409" to STICKER_REGENERATION_IN_PROGRESS_RESPONSE,
+                            "502" to STICKER_BACKGROUND_REMOVAL_FAILED_RESPONSE,
                         ),
                 ),
             StickerApi::delete to

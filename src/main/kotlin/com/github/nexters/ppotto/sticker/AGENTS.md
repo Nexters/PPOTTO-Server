@@ -25,9 +25,9 @@ Sticker and recap domain. A sticker is the aggregate root; recap photo links and
 | `application/port/SinglePort.kt` | `List<T>.singlePort(name)` — the one place that resolves a collected port list to its single adapter and fails fast when absent or duplicated |
 | `presentation/StickerApi.kt` | Version 1 sticker and recap mapping and Swagger contract |
 | `presentation/StickerController.kt` | Sticker API implementation with request binding and typed user injection: `@AuthenticatedUser` on every endpoint except `getSharedRecap`, which takes no user at all and is addressed by share token instead of sticker id |
-| `presentation/StickerApiExamples.kt` | `ApiExampleProvider` implementation. Defines the recap detail (one-line summary, 3 speech bubbles, 9 keyword chips), title update, comment position update request/response, and the `STICKER-001`, `STICKER-002`, `STICKER-004`, `STICKER-005`, `STICKER-006` failure examples as real DTO instances, plus the share request/response |
+| `presentation/StickerApiExamples.kt` | `ApiExampleProvider` implementation. Defines the recap detail (one-line summary, 3 speech bubbles, 9 keyword chips), title update, comment position update request/response, and the `STICKER-001`, `STICKER-002`, `STICKER-004`, `STICKER-005`, `STICKER-006` failure examples as real DTO instances, plus the share request/response. The regenerate 502 `ANALYSIS-011` example uses `crossDomainErrorExample` because sticker must not import `analysis.domain` |
 | `presentation/dto/` | Swagger-described sticker and recap request and response schemas. Every response type maps from its application result through a `from` companion with named arguments |
-| `presentation/StickerApiResponses.kt` | Composed response annotations shared by the sticker endpoints: 404 `STICKER-001`, 400 `STICKER-004`, 400 `STICKER-005`/`STICKER-006`, and 409 `STICKER-002` |
+| `presentation/StickerApiResponses.kt` | Composed response annotations shared by the sticker endpoints: 404 `STICKER-001`, 400 `STICKER-004`, 400 `STICKER-005`/`STICKER-006`, 409 `STICKER-002`, and 502 `ANALYSIS-011` (background removal failure surfaced by regenerate) |
 
 ## Rules
 
