@@ -56,6 +56,122 @@ class OpenApiDocumentationTest(
                         )
                 }
 
+                Then("value class 필드를 맹글링 접미사 없이 원래 JSON 이름과 required로 노출한다") {
+                    val document =
+                        objectMapper.readTree(
+                            result
+                                .andReturn()
+                                .response.contentAsString,
+                        )
+                    val mangled =
+                        document
+                            .path("components")
+                            .path("schemas")
+                            .properties()
+                            .flatMap { (schemaName, schema) ->
+                                schema
+                                    .path("properties")
+                                    .properties()
+                                    .map { it.key }
+                                    .filter { '-' in it }
+                                    .map { "$schemaName.$it" }
+                            }
+                    mangled shouldBe emptyList()
+                    result
+                        .andExpect(
+                            jsonPath("$['components']['schemas']['AnalysisStatusResponse']['required']")
+                                .value(hasItems("id", "boardId")),
+                        ).andExpect(
+                            jsonPath("$['components']['schemas']['AnalysisStatusResponse']['properties']['id']['format']")
+                                .value("uuid"),
+                        ).andExpect(
+                            jsonPath("$['components']['schemas']['CreateAnalysisResponse']['required']")
+                                .value(hasItems("analysisId", "uploads")),
+                        ).andExpect(
+                            jsonPath("$['components']['schemas']['PhotoUploadUrlResponse']['required']")
+                                .value(hasItems("photoId", "uploadUrl")),
+                        )
+                }
+
+                Then("다형 그림 스키마를 판별자 union과 평탄한 멤버 스키마로 노출한다") {
+                    mapOf(
+                        "DrawingV2Response" to listOf("DrawingStrokeResponse", "DrawingTextResponse"),
+                        "DrawingCreateV2Request" to listOf("DrawingCreateStrokeRequest", "DrawingCreateTextRequest"),
+                    ).forEach { (parent, members) ->
+                        val parentPath = "$['components']['schemas']['$parent']"
+                        result
+                            .andExpect(jsonPath("$parentPath['oneOf']").value(hasSize<Any>(2)))
+                            .andExpect(jsonPath("$parentPath['properties']").doesNotExist())
+                            .andExpect(jsonPath("$parentPath['discriminator']['propertyName']").value("type"))
+                            .andExpect(
+                                jsonPath("$parentPath['discriminator']['mapping']['STROKE']")
+                                    .value("#/components/schemas/${members[0]}"),
+                            ).andExpect(
+                                jsonPath("$parentPath['discriminator']['mapping']['TEXT']")
+                                    .value("#/components/schemas/${members[1]}"),
+                            )
+                        members.zip(listOf("STROKE", "TEXT")).forEach { (member, discriminator) ->
+                            val memberPath = "$['components']['schemas']['$member']"
+                            result
+                                .andExpect(jsonPath("$memberPath['allOf']").doesNotExist())
+                                .andExpect(jsonPath("$memberPath['properties']['type']['enum']").value(hasItem(discriminator)))
+                                .andExpect(
+                                    jsonPath("$memberPath['required']")
+                                        .value(hasItems("type", "id", "scope", "color", "zIndex")),
+                                )
+                        }
+                    }
+                }
+
+                Then("operationId를 value class 파라미터의 JVM 맹글링 없이 노출한다") {
+                    val document =
+                        objectMapper.readTree(
+                            result
+                                .andReturn()
+                                .response.contentAsString,
+                        )
+                    val mangled =
+                        document.path("paths").properties().flatMap { (path, operations) ->
+                            operations
+                                .properties()
+                                .map {
+                                    it.value
+                                        .path("operationId")
+                                        .asString()
+                                }.filter { '-' in it }
+                                .map { "$path $it" }
+                        }
+                    mangled shouldBe emptyList()
+                    result
+                        .andExpect(jsonPath("$['paths']['/analysis']['post']['operationId']").value("createAnalysis"))
+                        .andExpect(jsonPath("$['paths']['/analysis/active']['get']['operationId']").value("getActiveAnalysis"))
+                }
+
+                Then("코드가 실제로 던지는 실패 응답 코드를 모두 문서화한다") {
+                    result
+                        .andExpect(
+                            jsonPath(
+                                "$['paths']['/stickers/{stickerId}/regenerate']['post']['responses']['502']" +
+                                    "['content']['application/json']['examples']['ANALYSIS-011']['value']['error']['code']",
+                            ).value("ANALYSIS-011"),
+                        ).andExpect(
+                            jsonPath(
+                                "$['paths']['/boards/{boardId}']['delete']['responses']['400']" +
+                                    "['content']['application/json']['examples']['STICKER-007']['value']['error']['code']",
+                            ).value("STICKER-007"),
+                        ).andExpect(
+                            jsonPath(
+                                "$['paths']['/boards/{boardId}/layout']['patch']['responses']['400']" +
+                                    "['content']['application/json']['examples']['STICKER-008']['value']['error']['code']",
+                            ).value("STICKER-008"),
+                        ).andExpect(
+                            jsonPath(
+                                "$['paths']['/stickers/{stickerId}/share']['post']['responses']['400']" +
+                                    "['content']['application/json']['examples']['COMMON-001']['value']['error']['code']",
+                            ).value("COMMON-001"),
+                        )
+                }
+
                 Then("API 버전 헤더를 operation마다 하나만 노출한다") {
                     result
                         .andExpect(
@@ -191,7 +307,7 @@ class OpenApiDocumentationTest(
                     result
                         .andExpect(
                             jsonPath("$['paths']['/analysis']['post']['responses']['400']['description']")
-                                .value("요청 값이 올바르지 않음 (COMMON-001, ANALYSIS-001, ANALYSIS-009)"),
+                                .value("요청 값이 올바르지 않음 (COMMON-001, ANALYSIS-001, ANALYSIS-009, ANALYSIS-010)"),
                         ).andExpect(
                             jsonPath("$['paths']['/analysis']['post']['responses']['404']['description']")
                                 .value("보드를 찾을 수 없음 (BOARD-002)"),
@@ -454,7 +570,7 @@ class OpenApiDocumentationTest(
                             jsonPath("$['components']['schemas']['DrawingCreateTextRequest']['required']")
                                 .value(hasItems("content", "fontSize", "posX", "posY", "maxWidth")),
                         ).andExpect(
-                            jsonPath("$['components']['schemas']['DrawingTextResponse']['allOf'][1]['properties']")
+                            jsonPath("$['components']['schemas']['DrawingTextResponse']['properties']")
                                 .value(hasKey("content")),
                         )
                 }

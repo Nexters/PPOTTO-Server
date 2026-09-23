@@ -78,7 +78,7 @@
 | stickers | DELETE | /stickers/{stickerId} | 스티커 묶음 삭제 | 200 | 401, 404 | Y |
 | stickers | POST | /stickers/{stickerId}/regenerate | 스티커 이미지 재생성 | 200 | 400, 401, 404, 409, 502 | Y |
 | stickers | POST | /stickers/{stickerId}/view | 리캡 열람 처리 (빨간 점 제거) | 200 | 401, 404 | Y |
-| analysis | POST | /analysis | 분석 생성 + 업로드 URL 일괄 발급 | 200 | 400, 401, 404, 409, 429 | Y |
+| analysis | POST | /analysis | 분석 생성 + 업로드 URL 일괄 발급 | 200 | 400, 401, 404, 409 | Y |
 | analysis | GET | /analysis/active | 진행 중 분석 조회 (앱 재진입 복구) | 200 | 401 | Y |
 | analysis | POST | /analysis/{analysisId}/reissue | 업로드 URL 재발급 | 200 | 401, 404, 409 | Y |
 | analysis | POST | /analysis/{analysisId}/start | 업로드 완료 통보 + 분석 시작 | 202 | 401, 404, 409 | Y |
@@ -86,6 +86,8 @@
 | analysis | POST | /analysis/{analysisId}/notifications | 분석 완료 알림 신청 | 200 | 401, 404, 409 | Y |
 | analysis | DELETE | /analysis/{analysisId}/notifications | 분석 완료 알림 신청 취소 | 200 | 401, 404, 409 | Y |
 | analysis | DELETE | /analysis/{analysisId} | 분석 취소 (업로드 중 이탈) | 200 | 401, 404, 409 | Y |
+| device-tokens | POST | /device-tokens | FCM 디바이스 토큰 등록/갱신 | 200 | 400, 401 | Y |
+| device-tokens | DELETE | /device-tokens | FCM 디바이스 토큰 해제 | 200 | 400, 401 | Y |
 
 ## 4. auth API
 
@@ -187,7 +189,7 @@ Request example (애플 재로그인 (refresh token 보관 중이면 교환 생�
 | 400 | AUTH-006 | 가입에 필요한 이름이 전달되지 않았습니다. | 애플 신규 가입인데 name 미전달. 최초 인가에서 받은 이름을 함께 보내야 합니다. |
 | 400 | AUTH-007 | 가입에 필요한 이메일을 확인할 수 없습니다. 다시 로그인해 주세요. | 애플 신규 가입인데 identity token과 code 교환 id_token 어디에도 email이 없습니다. 애플 설정에서 앱 연동을 해제한 뒤 다시 로그인해야 합니다. |
 | 401 | AUTH-001 | 소셜 로그인 검증에 실패했습니다. | provider 토큰 검증 실패 (만료, 위조, aud/app_id 불일치, nonce 불일치) |
-| 401 | AUTH-003 | 스웨거 예시 없음 | 애플 authorization code 교환 실패 (만료 또는 재사용, 최초 로그인만 치명) |
+| 401 | AUTH-003 | 애플 인증 코드 교환에 실패했습니다. 다시 로그인해 주세요. | 애플 authorization code 교환 실패 (만료 또는 재사용, 최초 로그인만 치명) |
 | 403 | AUTH-004 | 이메일 제공에 동의해야 가입할 수 있습니다. | 카카오 이메일 동의 필요. 클라이언트는 account_email 추가 동의 후 재시도합니다. |
 | 403 | AUTH-005 | 닉네임 제공에 동의해야 가입할 수 있습니다. | 카카오 닉네임 동의 필요. 클라이언트는 profile_nickname 추가 동의 후 재시도합니다. |
 
@@ -688,6 +690,7 @@ Request example:
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
+| 400 | COMMON-001 | 잘못된 입력입니다. | termIds 누락 또는 형식 오류 |
 | 400 | TERM-001 | 필수 약관에 동의해야 합니다. | 필수 약관 미포함 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 
@@ -820,7 +823,7 @@ Request example:
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | COMMON-001 | 스웨거 예시 없음 | 이름 형식 오류 (10자 초과 등) |
+| 400 | COMMON-001 | 잘못된 입력입니다. | 이름 형식 오류 (10자 초과 등) |
 | 400 | BOARD-003 | 보드는 최대 100개까지 만들 수 있습니다. | 보드 개수 제한(100개) 초과 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 
@@ -1154,7 +1157,7 @@ Request example:
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드 없음 또는 소유자 불일치 |
 | 409 | BOARD-004 | 마지막 보드는 삭제할 수 없습니다. | 마지막 보드는 삭제 불가 |
-| 409 | BOARD-005 | 스웨거 예시 없음 | 진행 중인 분석이 이 보드를 대상으로 함 |
+| 409 | BOARD-005 | 분석이 진행 중인 보드는 삭제할 수 없습니다. | 진행 중인 분석이 이 보드를 대상으로 함 |
 
 401 COMMON-004 example:
 ```json
@@ -1344,7 +1347,7 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
-| 400 | COMMON-001 | 스웨거 예시 없음 | 필드 형식 오류 (제목 15자 초과 등) |
+| 400 | COMMON-001 | 잘못된 입력입니다. | 필드 형식 오류 (제목 15자 초과 등) |
 | 400 | BOARD-001 | 편집할 수 없는 항목이 포함되어 있습니다. | 소유하지 않은 항목 포함 |
 | 400 | STICKER-008 | 편집할 수 없는 스티커가 포함되어 있습니다. | 저장 대상 스티커 중 이미 삭제되었거나 이 보드에 속하지 않는 스티커가 있음 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
@@ -2418,12 +2421,13 @@ Request example:
 #### Failure Spec
 | Status | Error Code | Message | 발생 조건 |
 | --- | --- | --- | --- |
+| 400 | COMMON-001 | 잘못된 입력입니다. | 요청 바디 검증 실패 (필수 필드 누락, contentType·takenAt 형식 오류) |
 | 400 | ANALYSIS-001 | 사진은 90장에서 100장 사이여야 합니다. | 사진 수 정책 위반 (90~100) |
 | 400 | ANALYSIS-009 | 연사 그룹은 대표 사진을 정확히 1장 포함해야 합니다. | 연사 그룹의 대표 사진이 0장 또는 2장 이상 |
+| 400 | ANALYSIS-010 | 그룹당 사진은 최대 10장까지 가능합니다. | 연사 그룹 하나에 사진이 10장을 초과함 |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드 없음 또는 소유자 불일치 |
 | 409 | ANALYSIS-002 | 이미 진행 중인 분석이 있습니다. | 진행 중인 분석 존재 |
-| 429 | ANALYSIS-006 | 오늘 분석 가능 횟수를 모두 사용했습니다. | 일일 분석 횟수 초과 |
 
 400 ANALYSIS-001 example:
 ```json
@@ -2495,14 +2499,28 @@ Request example:
 }
 ```
 
-429 ANALYSIS-006 example:
+400 COMMON-001 example:
 ```json
 {
   "success": false,
   "data": null,
   "error": {
-    "code": "ANALYSIS-006",
-    "message": "오늘 분석 가능 횟수를 모두 사용했습니다.",
+    "code": "COMMON-001",
+    "message": "잘못된 입력입니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+400 ANALYSIS-010 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "ANALYSIS-010",
+    "message": "그룹당 사진은 최대 10장까지 가능합니다.",
     "fieldErrors": [],
     "timestamp": "2026-07-27T05:02:11Z"
   }
@@ -2517,7 +2535,6 @@ Request example:
 - `photos`는 사진 그룹 배열입니다. 그룹 원소 1개는 단독 사진, 2개 이상은 연사 그룹입니다.
 - `burstGroupId`는 클라이언트가 보내지 않고 서버가 연사 그룹마다 발급합니다.
 - 단독 사진은 항상 대표 사진으로 처리됩니다. 연사 그룹은 그룹 안에서 정확히 1장만 `isRepresentative=true`여야 합니다.
-- 분석은 사용자당 하루 5회로 제한됩니다 (운영 설정값). 초과 시 429 ANALYSIS-006.
 - 진행 중인 분석이 있으면 409가 반환됩니다 (보드와 무관하게 유저당 1개). `/analysis/active`로 복귀하거나 취소 후 다시 시도합니다.
 - 아래 예시는 지면상 3장만 표기했지만 실제 요청은 펼친 사진 수 기준 90~100장입니다.
 
@@ -2952,7 +2969,7 @@ Request example:
 - 알림 신청은 사용자 전체 설정이 아니라 `analysisId`별 일회성 신청이다.
 - 업로드 중(로딩 화면 진입 직후)부터 신청할 수 있으며, 분석이 완료·실패로 종료된 뒤에는 신청할 수 없다.
 - 같은 분석에 대한 중복 요청은 성공하며 최초 신청 시각을 유지한다.
-- OS 알림 권한 및 FCM 디바이스 토큰 등록은 별도 `POST /device-tokens` 계약이다.
+- OS 알림 권한 및 FCM 디바이스 토큰 등록은 `POST /device-tokens`(10장 device-tokens API)에서 다룬다.
 - 분석 완료 처리와 신청 요청은 같은 분석 행 잠금으로 직렬화한다. 완료가 먼저 확정된 경우 `ANALYSIS-018`을 반환하며 클라이언트는 상태 조회 결과를 반영한다.
 
 ### DELETE /analysis/{analysisId}/notifications
@@ -3073,7 +3090,139 @@ Request example:
 - start 이후에는 취소할 수 없고 `ANALYSIS-004`를 반환합니다.
 - 장기 미갱신 분석은 서버 배치가 정리합니다. `updated_at`이 `ANALYSIS_STALE_CLEANUP_TIMEOUT_MINUTES`(기본 60분)보다 오래된 UPLOADING/ANALYZING 분석을 `FAILED`, `failedCode=ANALYSIS-015`, `failedReason=EXPIRED`로 마감하여 점유를 해제합니다. 만료 시 푸시는 보내지 않습니다.
 
-## 10. 공통 모델
+## 10. device-tokens API
+
+### POST /device-tokens
+
+- Operation ID: `register`
+- Summary: 디바이스 토큰 등록/갱신
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+- Body schema: deviceId(필수, `string`), platform(필수, `string`), fcmToken(필수, `string`)
+
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| deviceId | Y | `string` | - | 클라이언트가 생성해 로컬에 영속시키는 기기 식별자. 공백 불가. FCM 토큰이 회전돼도 같은 값을 보낸다 |
+| platform | Y | `string` | `IOS`, `ANDROID` | 기기 플랫폼 |
+| fcmToken | Y | `string` | - | FCM 등록 토큰. 공백 불가 |
+
+Request example:
+```json
+{
+  "deviceId": "3F2504E0-4F89-11D3-9A0C-0305E82C3301",
+  "platform": "IOS",
+  "fcmToken": "dGhpcyBpcyBhIGRlbW8gZmNtIHRva2Vu"
+}
+```
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 등록 또는 갱신 완료 | `null` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | COMMON-001 | 잘못된 입력입니다. | 필수 필드 누락, 공백 문자열, platform enum 외 값 |
+| 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
+
+400 COMMON-001 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "COMMON-001",
+    "message": "잘못된 입력입니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+401 COMMON-004 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "COMMON-004",
+    "message": "인증이 필요합니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- `(userId, deviceId)` 기준 upsert입니다. 같은 `deviceId`로 다시 보내면 새 행을 만들지 않고 기존 기기의 토큰과 플랫폼을 갱신합니다.
+- 로그인 직후와 FCM 토큰 갱신 콜백마다 호출합니다. 분석 완료 푸시(`POST /analysis/{analysisId}/notifications`)는 여기에 등록된 토큰으로만 발송됩니다.
+
+### DELETE /device-tokens
+
+- Operation ID: `unregister`
+- Summary: 디바이스 토큰 해제
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+- Query:
+
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| deviceId | Y | `string` | - | 해제할 기기 식별자 |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 해제 완료 | `null` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | COMMON-001 | 잘못된 입력입니다. | `deviceId` 쿼리 누락 |
+| 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
+
+401 COMMON-004 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "COMMON-004",
+    "message": "인증이 필요합니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 로그아웃 등으로 더 이상 알림을 받지 않을 기기의 토큰을 삭제합니다. 등록되지 않은 `deviceId`를 보내도 200으로 응답합니다 (멱등).
+
+## 11. 공통 모델
 
 ### ApiResponse
 | Field | Required | Type | Enum | Description |

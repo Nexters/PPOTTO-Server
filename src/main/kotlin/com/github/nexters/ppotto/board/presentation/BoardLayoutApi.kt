@@ -45,7 +45,7 @@ interface BoardLayoutApi {
     @EmptySuccessApiResponse
     @OpenApiResponse(
         responseCode = "400",
-        description = "요청 값이 올바르지 않음 (COMMON-001, BOARD-001)",
+        description = "요청 값이 올바르지 않음 (COMMON-001, BOARD-001, STICKER-008)",
         content = [
             Content(
                 mediaType = "application/json",

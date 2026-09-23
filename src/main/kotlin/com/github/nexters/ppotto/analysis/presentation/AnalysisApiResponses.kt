@@ -18,7 +18,7 @@ annotation class AnalysisNotFoundApiResponse
 @Retention(AnnotationRetention.RUNTIME)
 @ApiResponse(
     responseCode = "400",
-    description = "요청 값이 올바르지 않음 (COMMON-001, ANALYSIS-001, ANALYSIS-009)",
+    description = "요청 값이 올바르지 않음 (COMMON-001, ANALYSIS-001, ANALYSIS-009, ANALYSIS-010)",
     content = [Content(mediaType = MEDIA_TYPE_JSON, schema = Schema(implementation = ApiErrorResponse::class))],
 )
 annotation class CreateAnalysisInvalidInputApiResponse

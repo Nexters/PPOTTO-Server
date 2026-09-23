@@ -43,7 +43,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/dto/BoardLayoutV2Request.kt` | Swagger-described **v2** layout request. `DrawingCreateV2Request` is a `type`-discriminated union so jakarta validation runs per variant; colours are constrained to `#RRGGBB` here, which v1 never enforced |
 | `presentation/dto/DrawingLegacyZIndex.kt` | The v1 `zIndex`-in-`stroke`-JSON shim: `internal` `legacyZIndex`, `withoutLegacyZIndex`, `withLegacyZIndex` |
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
-| `presentation/BoardApiExamples.kt` | `ApiExampleProvider` implementation. Defines board list/detail/create/rename responses, per-edit-mode layout requests, and `BOARD-001`~`BOARD-005` failure examples as real DTO instances, each declared as a bare `ApiExample` and wrapped with `listOf` at the registration site. Holds the examples for both `BoardApi` and `BoardLayoutApi` |
+| `presentation/BoardApiExamples.kt` | `ApiExampleProvider` implementation. Defines board list/detail/create/rename responses, per-edit-mode layout requests, and `BOARD-001`~`BOARD-005` failure examples as real DTO instances, each declared as a bare `ApiExample` and wrapped with `listOf` at the registration site, plus the `STICKER-007` (delete) and `STICKER-008` (layout v1/v2) examples that `StickerCommandService` raises through the board endpoints. Holds the examples for both `BoardApi` and `BoardLayoutApi` |
 | `presentation/BoardNotFoundApiResponse.kt` | Composed annotation for the 404 `BOARD-002` response shared by the four board endpoints |
 
 ## Rules

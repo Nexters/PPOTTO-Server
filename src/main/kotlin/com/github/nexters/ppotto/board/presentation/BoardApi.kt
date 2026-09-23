@@ -123,6 +123,16 @@ interface BoardApi {
         ],
     )
     @EmptySuccessApiResponse
+    @OpenApiResponse(
+        responseCode = "400",
+        description = "삭제할 수 없는 스티커가 포함됨 (STICKER-007)",
+        content = [
+            Content(
+                mediaType = "application/json",
+                schema = Schema(implementation = ApiErrorResponse::class),
+            ),
+        ],
+    )
     @BoardNotFoundApiResponse
     @OpenApiResponse(
         responseCode = "409",

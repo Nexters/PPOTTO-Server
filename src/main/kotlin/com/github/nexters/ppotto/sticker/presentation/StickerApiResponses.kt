@@ -60,3 +60,17 @@ annotation class NotRegeneratableStickerApiResponse
     ],
 )
 annotation class StickerRegenerationInProgressApiResponse
+
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.RUNTIME)
+@ApiResponse(
+    responseCode = "502",
+    description = "원본 사진 읽기 또는 배경 제거·크롭 실패 (ANALYSIS-011)",
+    content = [
+        Content(
+            mediaType = "application/json",
+            schema = Schema(implementation = ApiErrorResponse::class),
+        ),
+    ],
+)
+annotation class StickerBackgroundRemovalFailedApiResponse
