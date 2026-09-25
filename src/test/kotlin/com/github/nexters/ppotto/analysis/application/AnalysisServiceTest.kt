@@ -14,8 +14,10 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisNot
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.analysis.infrastructure.storage.PhotoObjectKeys
+import com.github.nexters.ppotto.analysis.infrastructure.storage.StickerObjectKeys
 import com.github.nexters.ppotto.analysis.support.DEFAULT_PHOTO_GROUP_COUNT
 import com.github.nexters.ppotto.analysis.support.FakePhotoStorage
+import com.github.nexters.ppotto.analysis.support.FakeStickerStorage
 import com.github.nexters.ppotto.analysis.support.FakeThemeClassifier
 import com.github.nexters.ppotto.analysis.support.asGroups
 import com.github.nexters.ppotto.analysis.support.burstPhotoUploadGroups
@@ -61,6 +63,7 @@ class AnalysisServiceTest(
     private val analysisNotificationRepository: AnalysisNotificationRepository,
     private val photoRepository: PhotoRepository,
     private val photoStorage: FakePhotoStorage,
+    private val stickerStorage: FakeStickerStorage,
     private val themeClassifier: FakeThemeClassifier,
     private val dslContext: DSLContext,
     private val stickerRepository: StickerRepository,
@@ -620,6 +623,8 @@ class AnalysisServiceTest(
             val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoGroups))
             deviceTokenRepository.upsert(board.userId, "device-1", DevicePlatform.IOS, "fcm-token-1")
             analysisNotificationRepository.markRequested(created.analysisId, Instant.now())
+            val sourcePhotoId = photoRepository.findAllByAnalysisId(created.analysisId).first().id
+            stickerStorage.upload(StickerObjectKeys.keyFor(created.analysisId, 0, sourcePhotoId), byteArrayOf(1))
 
             When("분석을 취소하면") {
                 analysisService.cancelAnalysis(board.userId, created.analysisId)
@@ -637,8 +642,10 @@ class AnalysisServiceTest(
                         .toSet() shouldBe setOf(UploadStatus.FAILED)
                 }
 
-                Then("커밋 후 동기적으로 해당 분석의 사진 오브젝트가 정리된다") {
+                Then("커밋 후 해당 분석의 사진과 스티커 오브젝트가 정리된다") {
                     photoStorage.deletedAnalysisIds shouldContainExactly listOf(created.analysisId)
+                    stickerStorage.deletedAnalysisIds shouldContainExactly listOf(created.analysisId)
+                    stickerStorage.uploaded shouldBe emptyMap()
                 }
 
                 Then("같은 사용자가 새로운 분석을 다시 생성할 수 있다") {
@@ -657,6 +664,8 @@ class AnalysisServiceTest(
             val photoGroups = photoUploadGroups()
             val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoGroups))
             photoStorage.deleteAllFailure = IllegalStateException("오브젝트 삭제 실패")
+            val sourcePhotoId = photoRepository.findAllByAnalysisId(created.analysisId).first().id
+            stickerStorage.upload(StickerObjectKeys.keyFor(created.analysisId, 0, sourcePhotoId), byteArrayOf(1))
 
             When("분석을 취소하면") {
                 analysisService.cancelAnalysis(board.userId, created.analysisId)
@@ -666,6 +675,11 @@ class AnalysisServiceTest(
                     analysis.shouldNotBeNull()
                     analysis.status shouldBe AnalysisStatus.FAILED
                     analysis.failedReason shouldBe "CANCELED"
+                }
+
+                Then("사진 정리가 실패해도 스티커 오브젝트는 정리된다") {
+                    stickerStorage.deletedAnalysisIds shouldContainExactly listOf(created.analysisId)
+                    stickerStorage.uploaded shouldBe emptyMap()
                 }
 
                 Then("정리에 실패해도 같은 사용자가 새로운 분석을 다시 생성할 수 있다") {
@@ -694,6 +708,29 @@ class AnalysisServiceTest(
                         .findAllByAnalysisId(created.analysisId)
                         .map { it.uploadStatus }
                         .toSet() shouldBe setOf(UploadStatus.FAILED)
+                }
+            }
+        }
+
+        Given("스티커 오브젝트 정리가 실패하는 UPLOADING 분석에서") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoUploadGroups()))
+            markAllUploaded(created.analysisId)
+            stickerStorage.deleteAllFailure = IllegalStateException("스티커 오브젝트 삭제 실패")
+
+            When("분석을 취소하면") {
+                analysisService.cancelAnalysis(board.userId, created.analysisId)
+
+                Then("스티커 정리가 실패해도 사진 오브젝트는 정리된다") {
+                    photoStorage.deletedAnalysisIds shouldContainExactly listOf(created.analysisId)
+                    photoStorage.uploadedObjectCount() shouldBe 0
+                }
+
+                Then("정리 실패는 로그로만 남고 취소는 그대로 커밋된다") {
+                    val analysis = analysisRepository.findById(created.analysisId)
+                    analysis.shouldNotBeNull()
+                    analysis.status shouldBe AnalysisStatus.FAILED
+                    analysis.failedReason shouldBe "CANCELED"
                 }
             }
         }

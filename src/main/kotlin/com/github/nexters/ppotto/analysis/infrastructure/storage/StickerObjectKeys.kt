@@ -10,11 +10,13 @@ object StickerObjectKeys {
     private const val NAMESPACE = "stickers"
     private val objectKeyGenerator = ObjectKeyGenerator()
 
+    fun prefixFor(analysisId: AnalysisId): String = objectKeyGenerator.prefix(NAMESPACE, analysisId.toString())
+
     fun keyFor(
         analysisId: AnalysisId,
         themeIndex: Int,
         sourcePhotoId: PhotoId,
-    ): String = "${objectKeyGenerator.prefix(NAMESPACE, analysisId.toString())}$themeIndex-$sourcePhotoId.png"
+    ): String = "${prefixFor(analysisId)}$themeIndex-$sourcePhotoId.png"
 
     fun keyForRegeneration(
         stickerId: StickerId,

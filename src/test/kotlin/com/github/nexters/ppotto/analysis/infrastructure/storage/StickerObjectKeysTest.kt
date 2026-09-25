@@ -76,6 +76,18 @@ class StickerObjectKeysTest :
             }
         }
 
+        Given("분석의 초기 생성 스티커를 일괄 정리할 때") {
+            When("분석별 prefix를 만들면") {
+                val prefix = StickerObjectKeys.prefixFor(analysisId)
+
+                Then("해당 분석의 스티커 키만 포함하는 prefix를 반환한다") {
+                    prefix shouldBe "stickers/$analysisId/"
+                    StickerObjectKeys.keyFor(analysisId, 0, sourcePhotoId) shouldStartWith prefix
+                    StickerObjectKeys.keyFor(otherAnalysisId, 0, sourcePhotoId).startsWith(prefix) shouldBe false
+                }
+            }
+        }
+
         Given("같은 스티커와 원본 사진, 같은 재생성 식별자로") {
             val stickerId = StickerId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
             val regenerationId = UUID.fromString("550e8400-e29b-41d4-a716-446655440002")
