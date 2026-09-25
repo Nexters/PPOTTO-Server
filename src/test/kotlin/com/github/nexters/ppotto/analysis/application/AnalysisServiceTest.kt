@@ -623,7 +623,11 @@ class AnalysisServiceTest(
             val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoGroups))
             deviceTokenRepository.upsert(board.userId, "device-1", DevicePlatform.IOS, "fcm-token-1")
             analysisNotificationRepository.markRequested(created.analysisId, Instant.now())
-            val sourcePhotoId = photoRepository.findAllByAnalysisId(created.analysisId).first().id
+            val sourcePhotoId =
+                photoRepository
+                    .findAllByAnalysisId(created.analysisId)
+                    .first()
+                    .id
             stickerStorage.upload(StickerObjectKeys.keyFor(created.analysisId, 0, sourcePhotoId), byteArrayOf(1))
 
             When("분석을 취소하면") {
@@ -664,7 +668,11 @@ class AnalysisServiceTest(
             val photoGroups = photoUploadGroups()
             val created = analysisService.createAnalysis(board.userId, board.id, CreateAnalysisCommand(photoGroups))
             photoStorage.deleteAllFailure = IllegalStateException("오브젝트 삭제 실패")
-            val sourcePhotoId = photoRepository.findAllByAnalysisId(created.analysisId).first().id
+            val sourcePhotoId =
+                photoRepository
+                    .findAllByAnalysisId(created.analysisId)
+                    .first()
+                    .id
             stickerStorage.upload(StickerObjectKeys.keyFor(created.analysisId, 0, sourcePhotoId), byteArrayOf(1))
 
             When("분석을 취소하면") {

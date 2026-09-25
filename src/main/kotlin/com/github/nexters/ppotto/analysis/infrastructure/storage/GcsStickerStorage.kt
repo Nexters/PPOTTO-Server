@@ -27,6 +27,5 @@ class GcsStickerStorage(
         storage.create(blobInfo, bytes)
     }
 
-    override fun deleteAll(analysisId: AnalysisId): Int =
-        objectStorageCleaner.deleteByPrefix(StickerObjectKeys.prefixFor(analysisId))
+    override fun deleteAll(analysisId: AnalysisId): Int = objectStorageCleaner.deleteByPrefix(StickerObjectKeys.prefixFor(analysisId))
 }
