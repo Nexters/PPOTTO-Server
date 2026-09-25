@@ -79,7 +79,7 @@ class AnalysisService(
     ) {
         val locked = analysisRepository.findByIdForUpdate(analysisId)
         if (locked == null || locked.userId != userId) throw NotFoundException(AnalysisErrorCode.ANALYSIS_NOT_FOUND)
-        if (locked.status != AnalysisStatus.UPLOADING) {
+        if (locked.status !in AnalysisStatus.ACTIVE) {
             throw ConflictException(AnalysisErrorCode.CANCEL_NOT_ALLOWED)
         }
 

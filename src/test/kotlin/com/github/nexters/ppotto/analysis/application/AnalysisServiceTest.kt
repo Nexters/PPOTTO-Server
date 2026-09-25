@@ -681,12 +681,19 @@ class AnalysisServiceTest(
             transitionTo(created.analysisId, AnalysisStatus.ANALYZING)
 
             When("분석을 취소하면") {
-                Then("ConflictException(ANALYSIS-004)이 발생한다") {
-                    val exception =
-                        shouldThrow<ConflictException> {
-                            analysisService.cancelAnalysis(board.userId, created.analysisId)
-                        }
-                    exception.errorCode.code shouldBe "ANALYSIS-004"
+                analysisService.cancelAnalysis(board.userId, created.analysisId)
+
+                Then("analysis는 FAILED/CANCELED로 닫히고 모든 photo는 FAILED가 된다") {
+                    val analysis = analysisRepository.findById(created.analysisId)
+                    analysis.shouldNotBeNull()
+                    analysis.status shouldBe AnalysisStatus.FAILED
+                    analysis.failedReason shouldBe "CANCELED"
+                    analysis.failedCode shouldBe AnalysisErrorCode.ANALYSIS_CANCELED
+
+                    photoRepository
+                        .findAllByAnalysisId(created.analysisId)
+                        .map { it.uploadStatus }
+                        .toSet() shouldBe setOf(UploadStatus.FAILED)
                 }
             }
         }
