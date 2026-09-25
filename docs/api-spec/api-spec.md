@@ -85,7 +85,7 @@
 | analysis | GET | /analysis/{analysisId} | 분석 상태 조회 (로딩 화면 폴링) | 200 | 401, 404 | Y |
 | analysis | POST | /analysis/{analysisId}/notifications | 분석 완료 알림 신청 | 200 | 401, 404, 409 | Y |
 | analysis | DELETE | /analysis/{analysisId}/notifications | 분석 완료 알림 신청 취소 | 200 | 401, 404, 409 | Y |
-| analysis | DELETE | /analysis/{analysisId} | 분석 취소 (업로드 중 이탈) | 200 | 401, 404, 409 | Y |
+| analysis | DELETE | /analysis/{analysisId} | 분석 취소 (진행 중 이탈) | 200 | 401, 404, 409 | Y |
 | device-tokens | POST | /device-tokens | FCM 디바이스 토큰 등록/갱신 | 200 | 400, 401 | Y |
 | device-tokens | DELETE | /device-tokens | FCM 디바이스 토큰 해제 | 200 | 400, 401 | Y |
 
@@ -3013,7 +3013,7 @@ Request example:
 ### DELETE /analysis/{analysisId}
 
 - Operation ID: `cancelAnalysis`
-- Summary: 분석 취소 (업로드 중 이탈)
+- Summary: 분석 취소 (진행 중 이탈)
 
 #### Request Spec
 - 인증: 필요 (`Authorization: Bearer {accessToken}`)
@@ -3041,7 +3041,7 @@ Request example:
 | --- | --- | --- | --- |
 | 401 | COMMON-004 | 인증이 필요합니다. | 인증 필요 (Authorization 헤더 누락 또는 accessToken 만료) |
 | 404 | ANALYSIS-005 | 분석을 찾을 수 없습니다. | 분석 없음 또는 소유자 불일치 |
-| 409 | ANALYSIS-004 | 분석이 시작되어 취소할 수 없습니다. | 이미 분석이 시작된 세션 |
+| 409 | ANALYSIS-004 | 이미 완료되었거나 실패한 분석은 취소할 수 없습니다. | 분석 상태가 COMPLETED 또는 FAILED |
 
 401 COMMON-004 example:
 ```json
@@ -3078,7 +3078,7 @@ Request example:
   "data": null,
   "error": {
     "code": "ANALYSIS-004",
-    "message": "분석이 시작되어 취소할 수 없습니다.",
+    "message": "이미 완료되었거나 실패한 분석은 취소할 수 없습니다.",
     "fieldErrors": [],
     "timestamp": "2026-07-27T05:02:11Z"
   }
@@ -3086,8 +3086,9 @@ Request example:
 ```
 
 #### Notes
-- UPLOADING 상태에서만 취소할 수 있습니다. `FAILED`, `failedCode=ANALYSIS-016`, `failedReason=CANCELED`로 기록되어 진행 중 분석 점유가 풀립니다. 취소 응답 자체는 HTTP 200이며 취소 결과 코드는 이후 상태 조회에서 확인할 수 있습니다.
-- start 이후에는 취소할 수 없고 `ANALYSIS-004`를 반환합니다.
+- UPLOADING·ANALYZING(진행 중) 상태에서 취소할 수 있습니다. `FAILED`, `failedCode=ANALYSIS-016`, `failedReason=CANCELED`로 기록되어 진행 중 분석 점유가 풀립니다. 취소 응답 자체는 HTTP 200이며 취소 결과 코드는 이후 상태 조회에서 확인할 수 있습니다.
+- ANALYZING 도중 취소하면 파이프라인이 남은 처리를 중단하고, 이미 업로드된 스티커 이미지도 정리합니다.
+- 이미 `COMPLETED`·`FAILED`로 종료된 분석은 취소할 수 없고 `ANALYSIS-004`를 반환합니다.
 - 장기 미갱신 분석은 서버 배치가 정리합니다. `updated_at`이 `ANALYSIS_STALE_CLEANUP_TIMEOUT_MINUTES`(기본 60분)보다 오래된 UPLOADING/ANALYZING 분석을 `FAILED`, `failedCode=ANALYSIS-015`, `failedReason=EXPIRED`로 마감하여 점유를 해제합니다. 만료 시 푸시는 보내지 않습니다.
 
 ## 10. device-tokens API
