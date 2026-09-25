@@ -73,6 +73,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/application/BoardAnalysisDeletionConcurrencyTest.kt` | Both delete/analysis-create interleavings: create after delete yields `BOARD-002`, delete after create yields `BOARD-005`. The blocking sticker port resets its latches in `beforeTest` so every leaf gets fresh ones |
 | `board/infrastructure/BoardRepositoryTest.kt` | Board persistence and active lookup integration tests |
 | `analysis/infrastructure/persistence/AnalysisRepositoryTest.kt` | Analysis save, status transition, and active-analysis lookup integration tests, plus idempotent persistence of the first per-analysis notification request timestamp |
+| `analysis/support/FakeStickerStorage.kt` | Resettable fake recording the analysis pipeline's sticker uploads and per-analysis prefix deletions in memory. Upload and delete failures can be injected independently, and `onUpload` provides the race seam for canceling after the last active-state check but before the object is stored. |
 | `analysis/presentation/AnalysisNotificationControllerTest.kt` | Analysis-scoped completion notification request/cancel API integration tests: success, idempotency, active-state restriction, ownership concealment, authentication, and the request flag round-tripping through the status query |
 | `board/infrastructure/DrawingRepositoryTest.kt` | Drawing upsert and soft-delete integration tests, plus the text round trip and the stroke/text type switch on the same id |
 | `board/infrastructure/BoardExternalPortFallbackConfigurationTest.kt` | Standalone missing-adapter fail-closed contract tests |
@@ -107,6 +108,7 @@ class PhotoServiceTest(
 - A fake that stands in for paid, external, or destructive work (GCS, Gemini, Pixian, FCM, Apple/Kakao revoke) is promoted onto `IntegrationTest`, so forgetting an import can never hit the real service (CLAUDE.md 6.3). A spec that needs to observe such a path asserts on the fake (`FakePhotoStorage.deletedPrefixes`, `FakePushNotifier.sentMessages`, `FakeSocialAccountRevoker.revocations`), never through the production adapter.
 - **The shared fakes are programmable, not always-successful.** Set the knob in the `Given`, and `IntegrationTest` clears it before the next leaf:
   - `FakePhotoStorage`: `issueUploadUrlsFailure`, `deleteAllFailure`.
+  - `FakeStickerStorage`: `uploadFailure`, `deleteAllFailure`.
   - `FakePushNotifier`: `invalidTokens`, `failedTokens` (per-token results) and `failure` (the whole call throws).
   - `FakeSocialAccountRevoker`: `failure`.
 - **`FakePhotoStorage.issueUploadUrls` does not upload.** It only hands back a URL, exactly like the real signed-URL flow. A photo counts as uploaded only after `markUploaded(photo)` / `markUploaded(photos)`, so any spec that starts an analysis must mark its photos first or `POST /analysis/{id}/start` answers `ANALYSIS-008`. That asymmetry is the point: it is what makes the no-uploaded-photos path testable at all.

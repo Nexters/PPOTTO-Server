@@ -644,6 +644,35 @@ class AnalysisControllerTest(
             When("취소를 요청하면") {
                 val response = mockMvc.perform(delete("/analysis/${analysis.id}").authenticatedAs(board.userId))
 
+                Then("200 응답과 null data를 반환한다") {
+                    response
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                        .andExpect(jsonPath("$.data").doesNotExist())
+                }
+
+                Then("분석은 FAILED/CANCELED로 닫힌다") {
+                    val canceled = analysisRepository.findById(analysis.id)
+                    canceled.shouldNotBeNull()
+                    canceled.status shouldBe AnalysisStatus.FAILED
+                    canceled.failedCode shouldBe AnalysisErrorCode.ANALYSIS_CANCELED
+                    canceled.failedReason shouldBe "CANCELED"
+                }
+            }
+        }
+
+        Given("COMPLETED 상태로 전이된 분석을 취소할 때") {
+            val board = boardRepository.save(userRepository.saveTestUser().id)
+            val analysis = analysisRepository.save(board.userId, board.id)
+            dslContext
+                .update(ANALYSIS)
+                .set(ANALYSIS.STATUS, AnalysisStatus.COMPLETED.name)
+                .where(ANALYSIS.ID.eq(analysis.id))
+                .execute()
+
+            When("취소를 요청하면") {
+                val response = mockMvc.perform(delete("/analysis/${analysis.id}").authenticatedAs(board.userId))
+
                 Then("409 응답과 ANALYSIS-004를 반환한다") {
                     response
                         .andExpect(status().isConflict)

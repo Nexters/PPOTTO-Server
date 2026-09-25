@@ -16,6 +16,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRep
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.analysis.support.FakeStickerGenerator
+import com.github.nexters.ppotto.analysis.support.FakeStickerStorage
 import com.github.nexters.ppotto.analysis.support.FakeThemeClassifier
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.BusinessException
@@ -61,6 +62,7 @@ class AnalysisPipelineEventListenerTest(
     private val deviceTokenRepository: DeviceTokenRepository,
     private val themeClassifier: FakeThemeClassifier,
     private val stickerGenerator: FakeStickerGenerator,
+    private val stickerStorage: FakeStickerStorage,
     private val fakePushNotifier: FakePushNotifier,
     private val eventPublisher: ApplicationEventPublisher,
     private val transactionTemplate: TransactionTemplate,
@@ -277,6 +279,53 @@ class AnalysisPipelineEventListenerTest(
             }
         }
 
+        Given("분류 직후 취소된 분석에서") {
+            val (analysisId, photoRefs) = analyzingAnalysis(notificationRequested = true)
+            themeClassifier.onClassify = { photos ->
+                analysisRepository.markFailed(
+                    analysisId,
+                    AnalysisRepository.FAILED_REASON_CANCELED,
+                    AnalysisErrorCode.ANALYSIS_CANCELED,
+                )
+                listOf(FakeThemeClassifier.defaultTheme(photos))
+            }
+
+            When("파이프라인이 취소 상태를 확인하면") {
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("스티커 생성을 시작하지 않고 취소 상태를 유지한다") {
+                    stickerGenerator.requestedTargetSubjects.shouldBeEmpty()
+                    analysisRepository.findById(analysisId)!!.failedCode shouldBe AnalysisErrorCode.ANALYSIS_CANCELED
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_COMPLETED").shouldBeEmpty()
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_FAILED").shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("스티커 업로드와 취소가 경합하는 분석에서") {
+            val (analysisId, photoRefs) = analyzingAnalysis(notificationRequested = true)
+            stickerStorage.onUpload = {
+                analysisRepository.markFailed(
+                    analysisId,
+                    AnalysisRepository.FAILED_REASON_CANCELED,
+                    AnalysisErrorCode.ANALYSIS_CANCELED,
+                )
+            }
+
+            When("상태 확인 직후 취소되고 스티커가 늦게 업로드되면") {
+                analysisPipelineEventListener.handle(AnalysisStartRequestedEvent(analysisId, photoRefs))
+
+                Then("파이프라인 종료 후 지연 업로드된 스티커를 다시 정리한다") {
+                    analysisRepository.findById(analysisId)!!.failedCode shouldBe AnalysisErrorCode.ANALYSIS_CANCELED
+                    stickerStorage.uploaded shouldBe emptyMap()
+                    stickerStorage.deletedAnalysisIds shouldBe listOf(analysisId)
+                    stickerRepository.findAllByAnalysisId(analysisId).shouldBeEmpty()
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_COMPLETED").shouldBeEmpty()
+                    fakePushNotifier.messagesFor(analysisId, "ANALYSIS_FAILED").shouldBeEmpty()
+                }
+            }
+        }
+
         Given("동시 실행을 한 건으로 제한한 리스너에서") {
             val (firstAnalysisId, firstPhotoRefs) = analyzingAnalysis()
             val (secondAnalysisId, secondPhotoRefs) = analyzingAnalysis()
@@ -285,6 +334,7 @@ class AnalysisPipelineEventListenerTest(
                     analysisPipelineService,
                     analysisRepository,
                     analysisResultSaveService,
+                    stickerStorage,
                     analysisNotificationService,
                     eventPublisher,
                     transactionTemplate,
@@ -335,6 +385,7 @@ class AnalysisPipelineEventListenerTest(
                     analysisPipelineService,
                     analysisRepository,
                     analysisResultSaveService,
+                    stickerStorage,
                     analysisNotificationService,
                     ApplicationEventPublisher { throw IllegalStateException("푸시 이벤트 발행 실패") },
                     transactionTemplate,
@@ -359,6 +410,7 @@ class AnalysisPipelineEventListenerTest(
                     analysisPipelineService,
                     analysisRepository,
                     analysisResultSaveService,
+                    stickerStorage,
                     analysisNotificationService,
                     eventPublisher,
                     transactionTemplate,

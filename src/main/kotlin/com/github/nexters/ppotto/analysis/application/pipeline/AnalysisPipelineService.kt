@@ -30,14 +30,16 @@ class AnalysisPipelineService(
     fun run(
         pipelineRun: PipelineRun,
         photos: List<PhotoRef>,
+        isActive: () -> Boolean = { true },
         onProgress: (Int) -> Unit = {},
     ): AnalysisPipelineResult {
         val photoRefById = photos.associateBy { it.photoId }
         val representativePhotos = photos.filter { it.isRepresentative }
         val classifications = expandWithBurstSiblings(classify(pipelineRun, representativePhotos, onProgress), photos)
+        ensureActive(isActive)
         onProgress(CLASSIFICATION_COMPLETED_PROGRESS)
 
-        val themes = processThemes(pipelineRun, classifications, photoRefById, onProgress)
+        val themes = processThemes(pipelineRun, classifications, photoRefById, onProgress, isActive)
         if (themes.none { it.stickerImageKey != null }) {
             val failedCode =
                 if (themes.isNotEmpty() && themes.all { it.failedCode == AnalysisErrorCode.NO_STICKER_SUBJECT }) {
@@ -97,6 +99,7 @@ class AnalysisPipelineService(
         classifications: List<ThemeClassification>,
         photoRefById: Map<PhotoId, PhotoRef>,
         onProgress: (Int) -> Unit,
+        isActive: () -> Boolean,
     ): List<ThemeAnalysisResult> {
         if (classifications.isEmpty()) return emptyList()
 
@@ -106,7 +109,10 @@ class AnalysisPipelineService(
                 val tasks =
                     classifications.mapIndexed { themeIndex, classification ->
                         val context = ThemeContext(pipelineRun, themeIndex, classification, photoRefById)
-                        Callable { processTheme(context, executor, progressEmitter) }
+                        Callable {
+                            ensureActive(isActive)
+                            processTheme(context, executor, progressEmitter, isActive)
+                        }
                     }
                 executor.invokeAll(tasks).map { it.getOrThrow() }
             }
@@ -117,6 +123,7 @@ class AnalysisPipelineService(
         context: ThemeContext,
         executor: ExecutorService,
         progressEmitter: ThemeProgressEmitter,
+        isActive: () -> Boolean,
     ): ThemeAnalysisResult =
         context.degrade(
             step = THEME_STEP,
@@ -142,7 +149,7 @@ class AnalysisPipelineService(
                 }
             onLocalProgress(THEME_COMPLETED_PROGRESS)
 
-            val stickerImageKey = uploadedStickerKey(context, sourcePhoto, stickerImage, verifiedSubject)
+            val stickerImageKey = uploadedStickerKey(context, sourcePhoto, stickerImage, verifiedSubject, isActive)
             context.classification.toThemeResult(
                 sourcePhoto.photoId,
                 stickerImageKey,
@@ -182,6 +189,7 @@ class AnalysisPipelineService(
         sourcePhoto: PhotoRef,
         stickerImage: ByteArray?,
         verifiedSubject: StickerSubjectVerification?,
+        isActive: () -> Boolean,
     ): String? {
         if (stickerImage == null) return null
         if (verifiedSubject == null) {
@@ -194,6 +202,7 @@ class AnalysisPipelineService(
             return null
         }
 
+        ensureActive(isActive)
         return context.degrade(step = STICKER_UPLOAD_STEP, fallback = { null }) {
             val objectKey = StickerObjectKeys.keyFor(context.pipelineRun.analysisId, context.themeIndex, sourcePhoto.photoId)
             stickerStorage.upload(objectKey, stickerImage)
@@ -252,6 +261,10 @@ class AnalysisPipelineService(
         private const val STICKER_UPLOAD_STEP = "sticker-upload"
 
         private val log = LoggerFactory.getLogger(AnalysisPipelineService::class.java)
+
+        private fun ensureActive(isActive: () -> Boolean) {
+            if (!isActive()) throw AnalysisPipelineCanceledException()
+        }
 
         private fun stickerProgress(
             completedThemeProgress: Int,
