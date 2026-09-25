@@ -26,6 +26,7 @@ class PipelineRun(
             .onSuccess {
                 log.info("analysis pipeline step completed: analysisId={}, step={}, elapsedMs={}", analysisId, step, elapsedMs(startedAt))
             }.onFailure {
+                if (it is AnalysisPipelineCanceledException) return@onFailure
                 log.error("analysis pipeline step failed: analysisId={}, step={}, elapsedMs={}", analysisId, step, elapsedMs(startedAt), it)
                 if (failedStep == null) {
                     failedStep = step
@@ -46,6 +47,7 @@ class PipelineRun(
     ): T {
         val startedAt = System.nanoTime()
         return runCatching(block).getOrElse {
+            if (it is AnalysisPipelineCanceledException) throw it
             log.error(
                 "analysis pipeline step degraded: analysisId={}, step={}, themeIndex={}, theme={}, elapsedMs={}",
                 analysisId,
@@ -101,3 +103,5 @@ class PipelineRun(
         private fun elapsedMs(startedAt: Long): Long = (System.nanoTime() - startedAt) / 1_000_000
     }
 }
+
+internal class AnalysisPipelineCanceledException : RuntimeException()

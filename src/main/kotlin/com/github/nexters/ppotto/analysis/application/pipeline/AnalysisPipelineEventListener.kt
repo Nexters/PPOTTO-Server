@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.application.pipeline
 
 import com.github.nexters.ppotto.analysis.application.AnalysisNotificationService
 import com.github.nexters.ppotto.analysis.application.model.ThemeAnalysisResult
+import com.github.nexters.ppotto.analysis.application.port.StickerStorage
 import com.github.nexters.ppotto.analysis.domain.Analysis
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
 import com.github.nexters.ppotto.analysis.domain.AnalysisStartRequestedEvent
@@ -35,6 +36,7 @@ class AnalysisPipelineEventListener(
     private val analysisPipelineService: AnalysisPipelineService,
     private val analysisRepository: AnalysisRepository,
     private val analysisResultSaveService: AnalysisResultSaveService,
+    private val stickerStorage: StickerStorage,
     private val analysisNotificationService: AnalysisNotificationService,
     private val eventPublisher: ApplicationEventPublisher,
     private val transactionTemplate: TransactionTemplate,
@@ -56,10 +58,14 @@ class AnalysisPipelineEventListener(
         val pipelineRun = PipelineRun(analysisId)
         try {
             withPipelineSlot(analysisId) { runPipeline(pipelineRun, event) }
+        } catch (_: AnalysisPipelineCanceledException) {
+            log.info("analysis pipeline canceled: analysisId={}", analysisId)
         } catch (_: Throwable) {
             if (analysisRepository.markFailed(analysisId, pipelineRun.failureReason(), pipelineRun.failedCode) > 0) {
                 notifyFailureBestEffort(analysisId)
             }
+        } finally {
+            cleanupCanceledStickersBestEffort(analysisId)
         }
     }
 
@@ -70,9 +76,12 @@ class AnalysisPipelineEventListener(
         val analysisId = event.analysisId
         val pipelineResult =
             pipelineRun.measured(PIPELINE_RUN_STEP) {
-                analysisPipelineService.run(pipelineRun, event.photos) { progress ->
-                    updateProgressBestEffort(analysisId, progress)
-                }
+                analysisPipelineService.run(
+                    pipelineRun = pipelineRun,
+                    photos = event.photos,
+                    onProgress = { progress -> updateProgressBestEffort(analysisId, progress) },
+                    isActive = { analysisRepository.findById(analysisId)?.status == AnalysisStatus.ANALYZING },
+                )
             }
         val analysis =
             pipelineRun.measured(ANALYSIS_LOAD_STEP) {
@@ -128,6 +137,15 @@ class AnalysisPipelineEventListener(
     private fun notifyFailureBestEffort(analysisId: AnalysisId) {
         bestEffort(log, "분석 실패 푸시 알림 발행(analysisId=$analysisId)") {
             analysisNotificationService.notifyFailureIfRequested(analysisId)
+        }
+    }
+
+    private fun cleanupCanceledStickersBestEffort(analysisId: AnalysisId) {
+        val analysis = analysisRepository.findById(analysisId) ?: return
+        if (analysis.failedCode != AnalysisErrorCode.ANALYSIS_CANCELED) return
+
+        bestEffort(log, "취소된 분석의 지연 생성 스티커 정리(analysisId=$analysisId)") {
+            stickerStorage.deleteAll(analysisId)
         }
     }
 

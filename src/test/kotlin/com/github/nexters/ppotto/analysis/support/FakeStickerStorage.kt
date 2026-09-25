@@ -15,12 +15,14 @@ class FakeStickerStorage :
 
     var uploadFailure: Throwable? = null
     var deleteAllFailure: Throwable? = null
+    var onUpload: ((String) -> Unit)? = null
 
     override fun upload(
         objectKey: String,
         bytes: ByteArray,
     ) {
         uploadFailure?.let { throw it }
+        onUpload?.invoke(objectKey)
         uploaded[objectKey] = bytes
     }
 
@@ -37,5 +39,6 @@ class FakeStickerStorage :
         deletedAnalysisIds.clear()
         uploadFailure = null
         deleteAllFailure = null
+        onUpload = null
     }
 }
