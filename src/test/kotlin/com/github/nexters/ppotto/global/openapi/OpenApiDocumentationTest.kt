@@ -614,7 +614,29 @@ class OpenApiDocumentationTest(
                         ).andExpect(
                             jsonPath("$['components']['schemas']['BoardSummaryV2Response']['properties']['analysisStatus']['enum']")
                                 .value(hasItems("UPLOADING", "ANALYZING")),
+                        ).andExpect(
+                            jsonPath("$['components']['schemas']['BoardSummaryV2Response']['required']")
+                                .value(not(hasItem("mainColor"))),
+                        ).andExpect(
+                            jsonPath("$['components']['schemas']['BoardSummaryV2Response']['required']")
+                                .value(not(hasItem("analysisStatus"))),
                         )
+
+                    val properties =
+                        objectMapper
+                            .readTree(
+                                v2
+                                    .andReturn()
+                                    .response.contentAsString,
+                            ).path("components")
+                            .path("schemas")
+                            .path("BoardSummaryV2Response")
+                            .path("properties")
+                    listOf("mainColor", "analysisStatus").forEach { name ->
+                        val schema = properties.path(name)
+                        val type = schema.path("type")
+                        (schema.path("nullable").asBoolean(false) || (type.isArray && type.any { it.asString() == "null" })) shouldBe true
+                    }
                 }
 
                 Then("v1 문서는 스티커나 인증처럼 바뀌지 않은 엔드포인트도 그대로 담는다") {

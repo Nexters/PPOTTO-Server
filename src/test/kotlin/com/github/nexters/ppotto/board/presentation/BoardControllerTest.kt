@@ -2,12 +2,16 @@ package com.github.nexters.ppotto.board.presentation
 
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.BoardTestConfig
 import com.github.nexters.ppotto.board.support.addBoardMember
+import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldMatch
 import org.hamcrest.Matchers.hasItem
@@ -33,6 +37,7 @@ private const val TOO_LONG_NAME_LENGTH = Board.MAX_NAME_LENGTH + 1
 class BoardControllerTest(
     mockMvc: MockMvc,
     boardRepository: BoardRepository,
+    drawingRepository: DrawingRepository,
     userRepository: UserRepository,
     dslContext: DSLContext,
     objectMapper: ObjectMapper,
@@ -313,6 +318,45 @@ class BoardControllerTest(
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("BOARD-002"))
                     boardRepository.findById(board.id)?.name shouldBe "공동 보드"
+                }
+            }
+
+            When("그 보드를 삭제하면") {
+                val result =
+                    mockMvc.perform(
+                        delete("/boards/${board.id}")
+                            .with(authentication(memberPrincipal))
+                            .header("X-API-Version", "1"),
+                    )
+
+                Then("쓰기는 방장 전용이라 BOARD-002로 404를 응답하고 보드를 지우지 않는다") {
+                    result
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("BOARD-002"))
+                    boardRepository.findById(board.id).shouldNotBeNull()
+                }
+            }
+
+            When("v2로 그 보드의 레이아웃을 저장하면") {
+                val result =
+                    mockMvc.perform(
+                        patch("/boards/${board.id}/layout")
+                            .with(authentication(memberPrincipal))
+                            .header("X-API-Version", "2")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(
+                                """
+                                {"drawings":{"created":[{"type":"STROKE","id":"${uuidV7()}","scope":"BOARD","color":"#FFD400",
+                                "zIndex":3,"stroke":{"points":[[10.5,22]]},"strokeWidth":4}]}}
+                                """.trimIndent(),
+                            ),
+                    )
+
+                Then("쓰기는 방장 전용이라 BOARD-002로 404를 응답하고 그림을 저장하지 않는다") {
+                    result
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("BOARD-002"))
+                    drawingRepository.findByBoardId(board.id).shouldBeEmpty()
                 }
             }
         }
