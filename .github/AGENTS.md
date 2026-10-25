@@ -6,7 +6,7 @@ CI workflow and GitHub templates. All user-facing text in Korean.
 
 | File | Description |
 |------|-------------|
-| `workflows/ci.yml` | CI: Gradle build, tests, lint, and Kover XML on PR/push to `production`; posts a coverage comment on PRs via mi-kas/kover-report |
+| `workflows/ci.yml` | CI: Gradle build, tests, lint, and Kover XML on PR/push to `production`; posts a coverage comment on PRs via mi-kas/kover-report. A passing PR run records the tested merge tree hash as a `verified-tree` commit status on the PR head. A push run skips the Gradle build when the pushed tree equals the `verified-tree` of the PR that produced the commit, so a squash merge of an up-to-date PR deploys without rebuilding. Direct pushes and merges whose base moved after the PR run still build in full |
 | `workflows/cd.yml` | CD: after a successful push CI on `production`, builds and pushes an immutable SHA-tagged registry image, deploys it with `compose.production.yaml` over pinned-host-key SSH through the `production` GitHub Environment, then checks Actuator health |
 | `PULL_REQUEST_TEMPLATE.md` | PR template (Korean) |
 | `ISSUE_TEMPLATE/bug_report.yml` | Bug report form, auto-labels `버그` |
