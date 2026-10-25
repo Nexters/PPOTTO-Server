@@ -27,6 +27,34 @@ class BoardExternalPortFallbackConfigurationTest :
             }
         }
 
+        Given("진행 중 분석 조회 adapter가 없는 standalone 구성에서") {
+            val activeAnalysisPort = configuration.boardActiveAnalysisPort()
+
+            When("보드 목록용 진행 중 분석을 조회해도") {
+                Then("연동 누락 오류를 던진다") {
+                    val exception =
+                        shouldThrow<IllegalStateException> {
+                            activeAnalysisPort.findByUserId(UserId(UUID.randomUUID()))
+                        }
+                    exception.message shouldBe "AnalysisQueryService 연동이 필요합니다."
+                }
+            }
+        }
+
+        Given("스티커 요약 adapter가 없는 standalone 구성에서") {
+            val summaryPort = configuration.boardStickerSummaryPort()
+
+            When("빈 보드 목록의 스티커 요약을 조회해도") {
+                Then("연동 누락 오류를 던진다") {
+                    val exception =
+                        shouldThrow<IllegalStateException> {
+                            summaryPort.getByBoardIds(emptySet(), 4)
+                        }
+                    exception.message shouldBe "StickerQueryService 연동이 필요합니다."
+                }
+            }
+        }
+
         Given("스티커 조회 adapter가 없는 standalone 구성에서") {
             val queryPort = configuration.boardStickerQueryPort()
 

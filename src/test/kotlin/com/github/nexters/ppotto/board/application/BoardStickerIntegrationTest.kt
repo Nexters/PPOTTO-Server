@@ -3,10 +3,12 @@ package com.github.nexters.ppotto.board.application
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
+import com.github.nexters.ppotto.board.application.port.BoardActiveAnalysisPort
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
+import com.github.nexters.ppotto.board.application.port.BoardStickerSummaryPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
@@ -64,6 +66,8 @@ class BoardStickerIntegrationTest(
                 Then("순환 참조 없이 정확히 하나의 production port로 스티커와 드로잉을 조합한다") {
                     applicationContext.getBeansOfType(BoardAnalysisActivityPort::class.java) shouldHaveSize 1
                     applicationContext.getBeansOfType(BoardStickerQueryPort::class.java) shouldHaveSize 1
+                    applicationContext.getBeansOfType(BoardActiveAnalysisPort::class.java) shouldHaveSize 1
+                    applicationContext.getBeansOfType(BoardStickerSummaryPort::class.java) shouldHaveSize 1
                     applicationContext.getBeansOfType(BoardStickerCommandPort::class.java) shouldHaveSize 1
                     applicationContext.getBeansOfType(StickerDrawingCommandPort::class.java) shouldHaveSize 1
                     detail.id shouldBe board.id

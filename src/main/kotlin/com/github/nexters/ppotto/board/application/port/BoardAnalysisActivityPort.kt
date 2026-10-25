@@ -9,3 +9,17 @@ fun interface BoardAnalysisActivityPort {
         userId: UserId,
     ): Boolean
 }
+
+fun interface BoardActiveAnalysisPort {
+    fun findByUserId(userId: UserId): BoardActiveAnalysis?
+}
+
+data class BoardActiveAnalysis(
+    val boardId: BoardId,
+    val status: BoardAnalysisStatus,
+)
+
+enum class BoardAnalysisStatus {
+    UPLOADING,
+    ANALYZING,
+}

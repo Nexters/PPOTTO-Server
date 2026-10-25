@@ -5,9 +5,17 @@ import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import java.time.Instant
 
 fun interface BoardStickerQueryPort {
     fun getByBoardId(boardId: BoardId): List<BoardStickerItem>
+}
+
+fun interface BoardStickerSummaryPort {
+    fun getByBoardIds(
+        boardIds: Set<BoardId>,
+        previewImageCount: Int,
+    ): Map<BoardId, BoardStickerSummary>
 }
 
 interface BoardStickerCommandPort {
@@ -39,6 +47,13 @@ data class BoardStickerItem(
     val badgeOffsetX: Double,
     val badgeOffsetY: Double,
     val badgeRotation: Double,
+)
+
+data class BoardStickerSummary(
+    val stickerCount: Int,
+    val previewImageUrls: List<String>,
+    val mainColor: String?,
+    val lastChangedAt: Instant,
 )
 
 data class BoardStickerLayoutCommand(
