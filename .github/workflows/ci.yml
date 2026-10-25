@@ -15,14 +15,33 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     steps:
       - uses: actions/checkout@v6
+      - name: PR에서 검증한 트리인지 확인
+        id: verified
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tree=$(git rev-parse 'HEAD^{tree}')
+          head=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" -q '.[0].head.sha // empty')
+          if [ -z "$head" ]; then exit 0; fi
+          verified=$(gh api "repos/${{ github.repository }}/commits/$head/statuses" \
+            -q '[.[] | select(.context == "verified-tree" and .state == "success")][0].description // empty')
+          if [ "$verified" = "$tree" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "PR head $head 에서 검증한 트리 $tree 와 같아 빌드를 건너뜀" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/setup-java@v5
+        if: steps.verified.outputs.skip != 'true'
         with:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@v6
+        if: steps.verified.outputs.skip != 'true'
       - run: ./gradlew build koverXmlReport
+        if: steps.verified.outputs.skip != 'true'
       - uses: mi-kas/kover-report@v2.5
         if: github.event_name == 'pull_request'
         with:
@@ -30,3 +49,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           title: 커버리지
           update-comment: true
+      - name: 검증한 트리 기록
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}" \
+            -f state=success -f context=verified-tree \
+            -f description="$(git rev-parse 'HEAD^{tree}')"
