@@ -149,12 +149,18 @@ class BoardRepository(
         )
 }
 
+private val OWNED_BOARDS = BOARDS.`as`("owned_boards")
+
 private fun ownedOrJoinedBy(userId: UserId): Condition =
-    BOARDS.USER_ID.eq(userId).or(
-        BOARDS.ID.`in`(
-            DSL
-                .select(BOARD_MEMBERS.BOARD_ID)
-                .from(BOARD_MEMBERS)
-                .where(BOARD_MEMBERS.USER_ID.eq(userId)),
-        ),
+    BOARDS.ID.`in`(
+        DSL
+            .select(BOARD_MEMBERS.BOARD_ID)
+            .from(BOARD_MEMBERS)
+            .where(BOARD_MEMBERS.USER_ID.eq(userId))
+            .unionAll(
+                DSL
+                    .select(OWNED_BOARDS.ID)
+                    .from(OWNED_BOARDS)
+                    .where(OWNED_BOARDS.USER_ID.eq(userId)),
+            ),
     )
