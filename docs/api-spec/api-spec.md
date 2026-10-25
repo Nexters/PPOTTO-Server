@@ -8,7 +8,7 @@
 ## 1. 공통 규칙
 
 - API 버전은 `X-API-Version` 요청 헤더로 지정한다. 헤더가 없으면 서버 기본값 `1`로 처리한다.
-- 현재 지원 버전은 `1`과 `2`다. 버전이 다르게 동작하는 엔드포인트는 `GET /boards`, `GET /boards/{boardId}`, `PATCH /boards/{boardId}/layout` 셋뿐이고, 나머지 엔드포인트는 두 버전에서 같은 응답을 준다. 따라서 v2 클라이언트는 모든 요청에 `X-API-Version: 2`를 붙이면 된다.
+- 현재 지원 버전은 `1`과 `2`다. 버전이 다르게 동작하는 엔드포인트는 `GET /boards`, `GET /boards/{boardId}`, `PATCH /boards/{boardId}/layout` 셋뿐이고, 나머지 엔드포인트는 두 버전에서 같은 응답을 준다. v2 클라이언트가 모든 요청에 `X-API-Version: 2`를 붙이면 `GET /boards`는 v1의 `{id, name}` 배열이 아니라 홈 카드 응답(`{counts, boards}`)을 받는다. 보드 선택 드롭다운처럼 v1 배열이 필요한 화면은 그 요청에만 `X-API-Version: 1`을 붙이거나 헤더를 생략한다.
 - 지원하지 않는 버전을 보내면 `400 COMMON-001`로 응답한다.
 - URL 경로에는 `/api` 프리픽스와 버전 세그먼트를 붙이지 않는다.
 - 보호 API는 `Authorization: Bearer {accessToken}` 헤더가 필요하다.
