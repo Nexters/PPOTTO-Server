@@ -204,10 +204,10 @@ data class BoardSummaryV2Response(
     @field:Schema(description = "보드 이름", example = "여름 휴가")
     val name: String,
 
-    @field:Schema(description = "보드 종류. 참여자가 한 명이라도 있으면 SHARED", example = "SHARED")
+    @field:Schema(description = "보드 종류. 참여자가 한 명이라도 있으면 SHARED", example = "SHARED", enumAsRef = true)
     val kind: BoardKind,
 
-    @field:Schema(description = "요청한 사용자의 역할. 방장이면 OWNER, 참여자면 MEMBER", example = "OWNER")
+    @field:Schema(description = "요청한 사용자의 역할. 방장이면 OWNER, 참여자면 MEMBER", example = "OWNER", enumAsRef = true)
     val role: BoardRole,
 
     @field:Schema(description = "삭제되지 않은 스티커 수. 이미지형과 텍스트형을 모두 센다", example = "12")
