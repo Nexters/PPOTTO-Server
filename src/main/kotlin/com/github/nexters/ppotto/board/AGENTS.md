@@ -86,4 +86,32 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 - Withdrawal hard deletion is the only path that ignores `deleted_at`; every other query stays soft-delete aware. It runs after the sticker domain has removed its rows, because `stickers.board_id` is a real FK.
 - `getDetail` must not be wrapped in `@Transactional`: the sticker query port signs V4 read URLs (local RSA, CPU-bound) and a surrounding transaction would pin a pooled connection through that work on the board-entry hot path. Read access still resolves first through `BoardAccessService.getReadableById` (owner or member), which is a single non-transactional `SELECT`, and READ_COMMITTED per-statement snapshots make a wrapping transaction add no consistency.
 
+## 공동 보드 인계 메모 (T02 생성·이름변경·삭제, T03 초대·참여·나가기)
+
+T01(보드 홈·목록)에서 정한 것과 남겨 둔 것이다. 남겨 둔 항목은 해당 티켓이 결정하고, 결정하면 이 절을 규칙으로 옮긴다.
+
+**T01에서 정한 것**
+
+- `board_members`에는 참여자만 담는다. 방장은 `boards.user_id`가 유일한 원천이고 방장 행은 넣지 않는다(백필도 없다). 방장 행을 넣으면 `BoardKind.of`가 개인 보드를 공동으로 판정하고 `participantCount`가 한 명씩 부풀어 오른다.
+- 공동 보드는 참여 행이 하나 이상인 보드다(`BoardKind.of`). 마지막 참여자가 빠지면 별도 처리 없이 개인 보드로 돌아간다.
+- `(board_id, user_id)`는 `uk_board_members_board_user`로 유니크다. 참여 API는 `ON CONFLICT DO NOTHING`으로 재시도 멱등을 얻으면 된다. 방장이 자기 보드에 참여하는 요청은 유니크로 막히지 않으므로 서비스에서 거부해야 한다.
+- `user_id`는 `boards.user_id`처럼 FK가 없고, `board_id`는 `ON DELETE CASCADE` FK다. 보드 soft delete는 참여 행을 지우지 않는다. 목록과 상세가 `boards.deleted_at`으로 거르므로 보이지 않을 뿐이다.
+- 읽기(`GET /boards` v2, `GET /boards/{boardId}` v1·v2)는 방장 또는 참여자, 쓰기는 전부 방장 전용이다. 참여 여부 판정은 `BoardRepository`의 `ownedOrJoinedBy` 한 곳뿐이고 "행이 있으면 참여 중"을 전제로 한다.
+- 탈퇴 정리는 구현돼 있다. 탈퇴자의 참여 행은 `BoardWithdrawalRepository.hardDeleteMembershipsByUserId`가, 탈퇴자 보드에 달린 참여 행은 보드 하드 삭제의 CASCADE가 지운다.
+
+**T03이 결정할 것**
+
+- 나가기·내보내기·재참여 차단. 지금은 행 삭제 말고는 표현할 수단이 없어 내보낸 사용자를 다시 막을 수 없다. 상태 컬럼(`left_at`, `kicked_at` 등)을 추가하면 `ownedOrJoinedBy`와 `findAccessibleByUserId`의 참여자 수 서브쿼리를 같은 조건으로 함께 바꿔야 하고, 행이 수정되기 시작하므로 `updated_at`과 `set_updated_at` 트리거도 그때 추가한다.
+- 참여자 쓰기 권한(레이아웃, 드로잉, 스티커 수정·삭제, 분석 생성). 지금은 모두 `getOwnedById`/`getOwnedByIdForUpdate`라 참여자는 `BOARD-002`를 받는다. 넓힐 때 주의할 점이 둘 있다. (1) 레이아웃 저장의 advisory lock 키가 `board-user:{userId}`라 서로 다른 사용자의 동시 저장은 직렬화되지 않는다. 공동 편집을 허용하면 보드 단위 키가 필요하다. (2) 보드 삭제의 진행 중 분석 검사 `hasActiveAnalysis(boardId, userId)`는 방장 본인의 분석만 본다. 참여자가 분석할 수 있게 되면 보드 기준으로 바꿔야 진행 중인 분석의 대상 보드가 지워지지 않는다.
+- 참여자의 스티커 열람 상태. `isNew`/`viewed_at`은 스티커당 하나라 참여자가 상세를 열면 방장의 빨간 점이 그대로 보인다. 리캡 상세와 열람 처리(`GET /stickers/{id}`, `POST /stickers/{id}/view`)는 `StickerAccessService.getOwned` 기준이라 참여자에게 `STICKER-001`이다.
+- 참여 인원 상한. 지금은 없다.
+- 보드 100개 제한에 참여 보드를 셀지. `countByUserId`는 `boards.user_id`만 세므로 지금은 참여 보드가 제한과 마지막 보드 삭제 금지(`BOARD-004`) 계산 모두에서 빠진다.
+- 초대 링크·코드와 참여 API 자체. 이 티켓에는 참여 행을 쓰는 운영 코드가 없고, 테스트는 `board/support/BoardTestFixtures.kt`의 `addBoardMember`로 행을 직접 넣는다.
+
+**T02가 확인할 것**
+
+- 새 보드는 참여 행 없이 생성되므로 항상 `PERSONAL`로 시작한다.
+- 이름 변경과 삭제는 방장 전용을 유지한다. 공동 보드를 방장이 삭제하면 참여자 목록에서도 즉시 사라진다(soft delete 필터). 삭제 전에 참여자에게 알리는 정책이 필요하면 T02에서 정한다.
+- v1 `GET /boards`(보드 선택 드롭다운)는 소유 보드만 준다. 드롭다운에 참여 보드를 넣으려면 v1을 바꾸지 말고 새 버전으로 내야 한다.
+
 Update this file when layers are added to this domain.
