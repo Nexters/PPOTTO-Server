@@ -6,6 +6,7 @@ package com.github.nexters.ppotto.jooq.tables.references
 
 
 import com.github.nexters.ppotto.jooq.tables.Analysis
+import com.github.nexters.ppotto.jooq.tables.BoardMembers
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
@@ -23,6 +24,11 @@ import com.github.nexters.ppotto.jooq.tables.Users
  * The table <code>public.analysis</code>.
  */
 val ANALYSIS: Analysis = Analysis.ANALYSIS
+
+/**
+ * The table <code>public.board_members</code>.
+ */
+val BOARD_MEMBERS: BoardMembers = BoardMembers.BOARD_MEMBERS
 
 /**
  * The table <code>public.boards</code>.

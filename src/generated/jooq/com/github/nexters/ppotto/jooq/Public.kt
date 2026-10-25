@@ -5,6 +5,7 @@ package com.github.nexters.ppotto.jooq
 
 
 import com.github.nexters.ppotto.jooq.tables.Analysis
+import com.github.nexters.ppotto.jooq.tables.BoardMembers
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
@@ -41,6 +42,11 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
      * The table <code>public.analysis</code>.
      */
     val ANALYSIS: Analysis get() = Analysis.ANALYSIS
+
+    /**
+     * The table <code>public.board_members</code>.
+     */
+    val BOARD_MEMBERS: BoardMembers get() = BoardMembers.BOARD_MEMBERS
 
     /**
      * The table <code>public.boards</code>.
@@ -96,6 +102,7 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
 
     override fun getTables(): List<Table<*>> = listOf(
         Analysis.ANALYSIS,
+        BoardMembers.BOARD_MEMBERS,
         Boards.BOARDS,
         Drawings.DRAWINGS,
         Photos.PHOTOS,
