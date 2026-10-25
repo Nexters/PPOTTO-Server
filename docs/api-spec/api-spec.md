@@ -1430,7 +1430,7 @@ v1은 보드 선택 드롭다운용으로 내가 만든 보드의 `id`, `name` �
 | boards[].participantCount | int | 참여 인원. 방장 1명 + 참여자 수 |
 | boards[].previewImageUrls | string[] | 최근 이미지형 스티커의 읽기용 signed URL. 최신순 최대 4개, 없으면 빈 배열 (만료 1시간) |
 | boards[].mainColor | string \| null | 가장 최근 이미지형 스티커의 `main_color`(`#RRGGBB`). 이미지형 스티커가 없으면 `null` |
-| boards[].lastActivityAt | string (ISO-8601 UTC) | 삭제되지 않은 스티커의 최근 생성·수정 시각. 스티커가 없으면 보드 생성 시각 |
+| boards[].lastActivityAt | string (ISO-8601 UTC) | 삭제되지 않은 스티커 중 가장 최근에 보드에 추가된 스티커의 생성 시각. 스티커가 없으면 보드 생성 시각 |
 | boards[].analysisStatus | `UPLOADING` \| `ANALYZING` \| null | 이 보드에서 진행 중인 **내** 분석의 상태. 다른 참여자의 분석은 보이지 않는다. 없으면 `null` |
 
 200 data example:
@@ -1492,7 +1492,7 @@ v1과 같다 (401 `COMMON-004`).
 - 내가 만든 보드와 참여한 보드만 내려간다. 삭제된 보드와 참여하지 않은 다른 사용자의 보드는 절대 내려가지 않는다.
 - 정렬은 `lastActivityAt` 내림차순, 같으면 `id` 내림차순이다. 페이지네이션 없이 전부 준다.
 - 서버는 null 필드를 생략하는 것이 기본이지만 이 응답의 `mainColor`, `analysisStatus`는 값이 없을 때도 키를 생략하지 않고 `null`을 명시한다. OpenAPI 스키마에서는 두 필드가 `required`가 아니다.
-- `lastActivityAt`은 스티커 행이 바뀐 시각(`updated_at`)을 따르므로 배치·제목 변경·재생성뿐 아니라 리캡 열람(`viewedAt`)과 공유 설정 변경도 활동으로 잡힌다.
+- `lastActivityAt`은 스티커가 보드에 추가된 시각(`created_at`)만 따른다. 리캡 열람(`isNew` 해제), 공유 설정 변경, 배치·제목 변경, 재생성은 순서를 바꾸지 않는다. 가장 최근 스티커가 삭제되면 남은 스티커 중 가장 최근 것의 시각으로 돌아간다.
 - `previewImageUrls`는 만료가 있으므로 홈에 진입할 때마다 새로 조회한다.
 - 참여한 보드는 `GET /boards/{boardId}`(v1, v2)로 열 수 있다. 이름 변경, 삭제, 레이아웃 저장은 방장만 할 수 있다.
 

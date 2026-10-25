@@ -28,7 +28,7 @@ data class StickerBoardSummaryResult(
     val stickerCount: Int,
     val previewImageUrls: List<String>,
     val mainColor: String?,
-    val lastChangedAt: Instant,
+    val lastAddedAt: Instant,
 )
 
 data class StickerRecapResult(

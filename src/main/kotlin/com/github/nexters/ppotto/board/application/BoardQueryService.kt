@@ -46,7 +46,7 @@ class BoardQueryService(
                     participantCount = memberCount + 1,
                     previewImageUrls = sticker?.previewImageUrls.orEmpty(),
                     mainColor = sticker?.mainColor,
-                    lastActivityAt = sticker?.lastChangedAt ?: board.createdAt,
+                    lastActivityAt = sticker?.lastAddedAt ?: board.createdAt,
                     analysisStatus = activeAnalysis?.takeIf { it.boardId == board.id }?.status,
                 )
             }.sortedWith(compareByDescending<BoardSummary> { it.lastActivityAt }.thenByDescending { it.id.toString() })

@@ -40,7 +40,7 @@ class BoardStickerAdapter(
                     stickerCount = summary.stickerCount,
                     previewImageUrls = summary.previewImageUrls,
                     mainColor = summary.mainColor,
-                    lastChangedAt = summary.lastChangedAt,
+                    lastAddedAt = summary.lastAddedAt,
                 )
             }
 

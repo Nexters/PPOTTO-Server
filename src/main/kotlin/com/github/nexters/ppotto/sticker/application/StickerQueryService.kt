@@ -54,7 +54,7 @@ class StickerQueryService(
                     stickerCount = stats.stickerCount,
                     previewImageUrls = previews.map { imageUrls[it.imageKey] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
                     mainColor = previews.firstOrNull()?.mainColor,
-                    lastChangedAt = stats.lastChangedAt,
+                    lastAddedAt = stats.lastAddedAt,
                 )
         }
     }

@@ -21,7 +21,7 @@ data class StickerDeletionTarget(
 data class StickerBoardStats(
     val boardId: BoardId,
     val stickerCount: Int,
-    val lastChangedAt: Instant,
+    val lastAddedAt: Instant,
 )
 
 data class StickerBoardPreview(
@@ -92,7 +92,7 @@ class StickerRepository(
 
     fun findStatsByBoardIds(boardIds: Collection<BoardId>): List<StickerBoardStats> =
         dslContext
-            .select(STICKERS.BOARD_ID, DSL.count(), DSL.max(STICKERS.UPDATED_AT))
+            .select(STICKERS.BOARD_ID, DSL.count(), DSL.max(STICKERS.CREATED_AT))
             .from(STICKERS)
             .where(STICKERS.BOARD_ID.`in`(boardIds))
             .and(STICKERS.DELETED_AT.isNull)

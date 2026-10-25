@@ -22,6 +22,8 @@ import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
+import com.github.nexters.ppotto.sticker.application.RecapShareService
+import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.support.imageStickerCreation
@@ -32,7 +34,9 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldStartWith
 import org.jooq.DSLContext
@@ -51,6 +55,8 @@ class BoardQueryServiceTest(
     stickerCommandRepository: StickerCommandRepository,
     analysisRepository: AnalysisRepository,
     photoRepository: PhotoRepository,
+    stickerCommandService: StickerCommandService,
+    recapShareService: RecapShareService,
 ) : IntegrationTest({
         Given("스티커와 드로잉이 있는 보드를 소유한 사용자가") {
             val user = userRepository.saveTestUser()
@@ -182,7 +188,7 @@ class BoardQueryServiceTest(
                         url shouldStartWith "https://storage.googleapis.com/ppotto-test-bucket/stickers/image-$index.png?"
                     }
                     summary.mainColor shouldBe "#000005"
-                    summary.lastActivityAt shouldBe (imageStickers + textSticker).maxOf { it.updatedAt }
+                    summary.lastActivityAt shouldBe (imageStickers + textSticker).maxOf { it.createdAt }
                 }
 
                 Then("이미지형 스티커가 없으면 미리보기는 비고 메인 컬러는 null이다") {
@@ -190,7 +196,7 @@ class BoardQueryServiceTest(
                     summary.stickerCount shouldBe 1
                     summary.previewImageUrls.shouldBeEmpty()
                     summary.mainColor.shouldBeNull()
-                    summary.lastActivityAt shouldBe joinedSticker.updatedAt
+                    summary.lastActivityAt shouldBe joinedSticker.createdAt
                 }
 
                 Then("스티커가 없는 보드는 보드 생성 시각을 마지막 활동 시각으로 쓴다") {
@@ -228,6 +234,40 @@ class BoardQueryServiceTest(
 
                 Then("내가 만든 보드만 생성순으로 반환한다") {
                     boards.map { it.id } shouldContainExactly listOf(personal.id, myShared.id)
+                }
+            }
+        }
+
+        Given("먼저 스티커가 붙은 보드와 나중에 스티커가 붙은 보드가 있을 때") {
+            val user = userRepository.saveTestUser()
+            val older = boardRepository.save(user.id, "먼저")
+            val newer = boardRepository.save(user.id, "나중")
+            val olderAnalysis = analysisRepository.save(user.id, older.id)
+            dslContext.changeAnalysisStatus(olderAnalysis.id, AnalysisStatus.COMPLETED)
+            val olderSticker = stickerRepository.save(olderAnalysis.id, older.id, textStickerCreation())
+            val newerAnalysis = analysisRepository.save(user.id, newer.id)
+            dslContext.changeAnalysisStatus(newerAnalysis.id, AnalysisStatus.COMPLETED)
+            val newerSticker = stickerRepository.save(newerAnalysis.id, newer.id, textStickerCreation())
+
+            When("먼저 붙은 스티커의 리캡을 열람하고 공유를 켰다 끄면") {
+                stickerCommandService.markViewed(user.id, olderSticker.id)
+                recapShareService.share(user.id, olderSticker.id, includePhotos = true)
+                recapShareService.unshare(user.id, olderSticker.id)
+                val boards = boardQueryService.listSummaries(user.id)
+
+                Then("스티커 행은 수정되었다") {
+                    val touched = stickerRepository.findById(olderSticker.id).shouldNotBeNull()
+                    touched.viewedAt.shouldNotBeNull()
+                    touched.updatedAt shouldBeGreaterThan olderSticker.createdAt
+                }
+
+                Then("마지막 활동 시각과 순서는 스티커가 추가된 시각 그대로다") {
+                    boards.map { it.id } shouldContainExactly listOf(newer.id, older.id)
+                    boards.associate { it.id to it.lastActivityAt } shouldBe
+                        mapOf(
+                            newer.id to newerSticker.createdAt,
+                            older.id to olderSticker.createdAt,
+                        )
                 }
             }
         }

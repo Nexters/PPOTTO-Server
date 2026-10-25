@@ -224,7 +224,7 @@ data class BoardSummaryV2Response(
     val mainColor: String?,
 
     @field:Schema(
-        description = "마지막 활동 시각. 삭제되지 않은 스티커의 최근 생성·수정 시각이며 스티커가 없으면 보드 생성 시각",
+        description = "마지막 활동 시각. 삭제되지 않은 스티커 중 가장 최근에 보드에 추가된 스티커의 생성 시각이며, 스티커가 없으면 보드 생성 시각. 리캡 열람이나 공유 설정 변경으로는 바뀌지 않음",
         example = "2026-10-20T12:40:05Z",
     )
     val lastActivityAt: Instant,

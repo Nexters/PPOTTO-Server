@@ -53,7 +53,7 @@ data class BoardStickerSummary(
     val stickerCount: Int,
     val previewImageUrls: List<String>,
     val mainColor: String?,
-    val lastChangedAt: Instant,
+    val lastAddedAt: Instant,
 )
 
 data class BoardStickerLayoutCommand(
