@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.BoardTestConfig
 import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -17,6 +18,7 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
+import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
 
 @Import(BoardTestConfig::class)
@@ -26,6 +28,7 @@ class BoardQueryServiceTest(
     drawingRepository: DrawingRepository,
     userRepository: UserRepository,
     stickerPort: FakeBoardStickerPort,
+    dslContext: DSLContext,
 ) : IntegrationTest({
         Given("스티커와 드로잉이 있는 보드를 소유한 사용자가") {
             val user = userRepository.saveTestUser()
@@ -62,6 +65,34 @@ class BoardQueryServiceTest(
                             boardQueryService.getDetail(board.id, userRepository.saveTestUser().id)
                         }
                     exception.errorCode shouldBe BoardErrorCode.NOT_FOUND
+                }
+            }
+
+            When("참여자로 등록된 사용자가 조회하면") {
+                val member = userRepository.saveTestUser()
+                dslContext.addBoardMember(board.id, member.id)
+                val detail = boardQueryService.getDetail(board.id, member.id)
+
+                Then("방장과 같은 보드 상세를 반환한다") {
+                    detail.id shouldBe board.id
+                    detail.stickers.map { it.id } shouldContainExactly listOf(sticker.id)
+                    detail.drawings.map { it.id } shouldContainExactly listOf(drawing.id)
+                }
+            }
+        }
+
+        Given("다른 사용자가 참여했던 보드가 삭제된 경우") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            dslContext.addBoardMember(board.id, member.id)
+            boardRepository.softDelete(board.id, owner.id)
+
+            When("참여자가 조회하면") {
+                Then("BOARD-002 오류가 발생한다") {
+                    shouldThrow<NotFoundException> {
+                        boardQueryService.getDetail(board.id, member.id)
+                    }.errorCode shouldBe BoardErrorCode.NOT_FOUND
                 }
             }
         }

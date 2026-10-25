@@ -5,7 +5,10 @@ import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
+import com.github.nexters.ppotto.jooq.tables.references.BOARD_MEMBERS
+import org.jooq.Condition
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 import java.time.Instant
 
@@ -40,6 +43,18 @@ class BoardRepository(
             .selectFrom(BOARDS)
             .where(BOARDS.ID.eq(id))
             .and(BOARDS.USER_ID.eq(userId))
+            .and(BOARDS.DELETED_AT.isNull)
+            .fetchOne()
+            ?.toDomain()
+
+    fun findReadableById(
+        id: BoardId,
+        userId: UserId,
+    ): Board? =
+        dslContext
+            .selectFrom(BOARDS)
+            .where(BOARDS.ID.eq(id))
+            .and(ownedOrJoinedBy(userId))
             .and(BOARDS.DELETED_AT.isNull)
             .fetchOne()
             ?.toDomain()
@@ -102,6 +117,16 @@ class BoardRepository(
             .and(BOARDS.USER_ID.eq(userId))
             .and(BOARDS.DELETED_AT.isNull)
             .execute() == 1
+
+    private fun ownedOrJoinedBy(userId: UserId): Condition =
+        BOARDS.USER_ID.eq(userId).or(
+            BOARDS.ID.`in`(
+                DSL
+                    .select(BOARD_MEMBERS.BOARD_ID)
+                    .from(BOARD_MEMBERS)
+                    .where(BOARD_MEMBERS.USER_ID.eq(userId)),
+            ),
+        )
 
     private fun BoardsRecord.toDomain() =
         Board(

@@ -25,6 +25,13 @@ class BoardAccessService(
         boardRepository.findOwnedById(boardId, userId)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
+    fun getReadableById(
+        boardId: BoardId,
+        userId: UserId,
+    ): Board =
+        boardRepository.findReadableById(boardId, userId)
+            ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
+
     @Transactional(propagation = Propagation.MANDATORY)
     fun getOwnedByIdForUpdate(
         boardId: BoardId,

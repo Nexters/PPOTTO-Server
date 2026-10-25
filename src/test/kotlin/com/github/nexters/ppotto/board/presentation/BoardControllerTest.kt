@@ -3,12 +3,14 @@ package com.github.nexters.ppotto.board.presentation
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.support.BoardTestConfig
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import org.hamcrest.Matchers.hasItem
+import org.jooq.DSLContext
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
@@ -30,6 +32,7 @@ class BoardControllerTest(
     mockMvc: MockMvc,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    dslContext: DSLContext,
 ) : IntegrationTest({
         Given("보드를 하나 만든 인증된 사용자가") {
             val user = userRepository.saveTestUser()
@@ -263,6 +266,50 @@ class BoardControllerTest(
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("BOARD-002"))
                     boardRepository.findById(board.id)?.name shouldBe board.name
+                }
+            }
+        }
+
+        Given("다른 사용자의 보드에 참여자로 등록된 사용자가") {
+            val owner = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id, "공동 보드")
+            val member = userRepository.saveTestUser()
+            dslContext.addBoardMember(board.id, member.id)
+            val memberPrincipal = UsernamePasswordAuthenticationToken.authenticated(member.id.value, null, emptyList())
+
+            listOf("1", "2").forEach { version ->
+                When("v$version 로 그 보드 상세를 조회하면") {
+                    val result =
+                        mockMvc.perform(
+                            get("/boards/${board.id}")
+                                .with(authentication(memberPrincipal))
+                                .header("X-API-Version", version),
+                        )
+
+                    Then("200으로 보드를 반환한다") {
+                        result
+                            .andExpect(status().isOk)
+                            .andExpect(jsonPath("$.data.id").value(board.id.toString()))
+                            .andExpect(jsonPath("$.data.name").value("공동 보드"))
+                    }
+                }
+            }
+
+            When("그 보드의 이름을 바꾸면") {
+                val result =
+                    mockMvc.perform(
+                        patch("/boards/${board.id}")
+                            .with(authentication(memberPrincipal))
+                            .header("X-API-Version", "1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"name":"참여자 변경"}"""),
+                    )
+
+                Then("쓰기는 방장 전용이라 BOARD-002로 404를 응답하고 이름을 바꾸지 않는다") {
+                    result
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("BOARD-002"))
+                    boardRepository.findById(board.id)?.name shouldBe "공동 보드"
                 }
             }
         }

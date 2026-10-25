@@ -22,7 +22,7 @@ class BoardQueryService(
         boardId: BoardId,
         userId: UserId,
     ): BoardDetail {
-        val board = boardAccessService.getOwnedById(boardId, userId)
+        val board = boardAccessService.getReadableById(boardId, userId)
         return BoardDetail(
             id = board.id,
             name = board.name,

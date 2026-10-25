@@ -7,6 +7,9 @@ import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.jooq.tables.references.BOARD_MEMBERS
+import org.jooq.DSLContext
 import java.util.UUID
 
 fun uuidV7(): UUID {
@@ -79,3 +82,12 @@ fun boardStickerItem(id: StickerId = StickerId(UUID.randomUUID())): BoardSticker
         badgeOffsetY = 0.0,
         badgeRotation = 0.0,
     )
+
+fun DSLContext.addBoardMember(
+    boardId: BoardId,
+    userId: UserId,
+) {
+    insertInto(BOARD_MEMBERS, BOARD_MEMBERS.BOARD_ID, BOARD_MEMBERS.USER_ID)
+        .values(boardId, userId)
+        .execute()
+}
