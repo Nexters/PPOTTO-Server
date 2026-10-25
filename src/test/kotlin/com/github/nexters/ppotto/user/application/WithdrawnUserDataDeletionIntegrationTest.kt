@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -18,6 +19,7 @@ import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
+import com.github.nexters.ppotto.jooq.tables.references.BOARD_MEMBERS
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
 import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
 import com.github.nexters.ppotto.jooq.tables.references.RECAP_COMMENTS
@@ -198,6 +200,27 @@ class WithdrawnUserDataDeletionIntegrationTest(
                         USER_DEVICE_TOKENS,
                         USER_DEVICE_TOKENS.USER_ID.eq(fixture.userId),
                     ) shouldBe true
+                }
+            }
+        }
+
+        Given("다른 사용자의 보드에 참여했고 자기 보드에도 참여자가 있는 탈퇴 사용자가 유예기간을 지났을 때") {
+            val fixture = withdrawUserWithAllDomainData()
+            val other = userRepository.saveTestUser()
+            val otherBoard = boardRepository.save(other.id)
+            dslContext.addBoardMember(otherBoard.id, fixture.userId)
+            dslContext.addBoardMember(fixture.boardId, other.id)
+
+            When("탈퇴 사용자 정리 배치를 실행하면") {
+                cleanupService.cleanup(deletedBefore = DELETED_BEFORE, batchSize = 10)
+
+                Then("탈퇴 사용자의 참여 기록과 그의 보드에 달린 참여 기록을 모두 지운다") {
+                    dslContext.fetchExists(BOARD_MEMBERS, BOARD_MEMBERS.USER_ID.eq(fixture.userId)) shouldBe false
+                    dslContext.fetchExists(BOARD_MEMBERS, BOARD_MEMBERS.BOARD_ID.eq(fixture.boardId)) shouldBe false
+                }
+
+                Then("탈퇴 사용자가 참여했던 다른 사용자의 보드는 남긴다") {
+                    dslContext.fetchExists(BOARDS, BOARDS.ID.eq(otherBoard.id)) shouldBe true
                 }
             }
         }

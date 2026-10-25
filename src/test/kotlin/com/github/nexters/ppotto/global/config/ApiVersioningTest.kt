@@ -18,6 +18,7 @@ private val APPLICATION_PACKAGE: String = PpottoApplication::class.java.packageN
 private val FROZEN_V1_HANDLERS =
     listOf(
         "BoardDetailController#get",
+        "BoardListController#list",
         "BoardLayoutController#update",
     )
 

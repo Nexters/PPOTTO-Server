@@ -24,6 +24,13 @@ data class StickerItemResult(
     val badgeRotation: Double,
 )
 
+data class StickerBoardSummaryResult(
+    val stickerCount: Int,
+    val previewImageUrls: List<String>,
+    val mainColor: String?,
+    val lastAddedAt: Instant,
+)
+
 data class StickerRecapResult(
     val sticker: StickerItemResult,
     val summary: String,

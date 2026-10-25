@@ -38,6 +38,9 @@ class BoardAnalysisDependencyTest :
                         .shouldContainExactlyInAnyOrder(
                             "com.github.nexters.ppotto.board.application.BoardAccessService",
                             "com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort",
+                            "com.github.nexters.ppotto.board.application.port.BoardActiveAnalysisPort",
+                            "com.github.nexters.ppotto.board.application.port.BoardActiveAnalysis",
+                            "com.github.nexters.ppotto.board.application.port.BoardAnalysisStatus",
                         )
                 }
             }

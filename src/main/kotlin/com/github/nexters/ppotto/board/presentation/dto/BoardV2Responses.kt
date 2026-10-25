@@ -1,15 +1,21 @@
 package com.github.nexters.ppotto.board.presentation.dto
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.github.nexters.ppotto.board.application.model.BoardDetail
+import com.github.nexters.ppotto.board.application.model.BoardSummary
+import com.github.nexters.ppotto.board.application.port.BoardAnalysisStatus
+import com.github.nexters.ppotto.board.domain.BoardKind
+import com.github.nexters.ppotto.board.domain.BoardRole
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import io.swagger.v3.oas.annotations.media.Schema
+import java.time.Instant
 
 @Schema(description = "보드와 배치된 스티커, 선, 텍스트 (v2)")
 data class BoardDetailV2Response(
@@ -152,5 +158,94 @@ sealed interface DrawingV2Response {
                         rotation = drawing.rotation,
                     )
             }
+    }
+}
+
+@Schema(description = "홈 보드 목록과 탭별 개수 (v2)")
+data class BoardListV2Response(
+    @field:Schema(description = "탭별 보드 개수")
+    val counts: BoardCountsResponse,
+
+    @field:Schema(description = "보드 카드 목록. lastActivityAt 내림차순, 같으면 id 내림차순")
+    val boards: List<BoardSummaryV2Response>,
+) {
+    companion object {
+        fun from(boards: List<BoardSummary>): BoardListV2Response =
+            BoardListV2Response(
+                counts =
+                    BoardCountsResponse(
+                        all = boards.size,
+                        personal = boards.count { it.kind == BoardKind.PERSONAL },
+                        shared = boards.count { it.kind == BoardKind.SHARED },
+                    ),
+                boards = boards.map(BoardSummaryV2Response::from),
+            )
+    }
+}
+
+@Schema(description = "탭별 보드 개수")
+data class BoardCountsResponse(
+    @field:Schema(description = "전체 탭. personal + shared", example = "3")
+    val all: Int,
+
+    @field:Schema(description = "개인 탭", example = "2")
+    val personal: Int,
+
+    @field:Schema(description = "공동 탭", example = "1")
+    val shared: Int,
+)
+
+@Schema(description = "홈 보드 카드 (v2)")
+data class BoardSummaryV2Response(
+    @get:Schema(description = "보드 ID (uuidv7)", example = "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b")
+    @get:JsonProperty("id")
+    val id: BoardId,
+
+    @field:Schema(description = "보드 이름", example = "여름 휴가")
+    val name: String,
+
+    @field:Schema(description = "보드 종류. 참여자가 한 명이라도 있으면 SHARED", example = "SHARED", enumAsRef = true)
+    val kind: BoardKind,
+
+    @field:Schema(description = "요청한 사용자의 역할. 방장이면 OWNER, 참여자면 MEMBER", example = "OWNER", enumAsRef = true)
+    val role: BoardRole,
+
+    @field:Schema(description = "삭제되지 않은 스티커 수. 이미지형과 텍스트형을 모두 센다", example = "12")
+    val stickerCount: Int,
+
+    @field:Schema(description = "참여 인원. 방장 1명 + 참여자 수", example = "3")
+    val participantCount: Int,
+
+    @field:Schema(description = "최근 이미지형 스티커의 읽기용 signed URL. 최신순 최대 4개이며 없으면 빈 배열 (만료 1시간)")
+    val previewImageUrls: List<String>,
+
+    @get:JsonInclude(JsonInclude.Include.ALWAYS)
+    @field:Schema(description = "가장 최근 이미지형 스티커의 메인 컬러. 이미지형 스티커가 없으면 null", example = "#FF6B6B")
+    val mainColor: String?,
+
+    @field:Schema(
+        description = "마지막 활동 시각. 삭제되지 않은 스티커 중 가장 최근에 보드에 추가된 스티커의 생성 시각이며, 스티커가 없으면 보드 생성 시각. 리캡 열람이나 공유 설정 변경으로는 바뀌지 않음",
+        example = "2026-10-20T12:40:05Z",
+    )
+    val lastActivityAt: Instant,
+
+    @get:JsonInclude(JsonInclude.Include.ALWAYS)
+    @field:Schema(description = "이 보드에서 진행 중인 내 분석의 상태. 다른 참여자의 분석은 보이지 않으며 없으면 null", example = "ANALYZING")
+    val analysisStatus: BoardAnalysisStatus?,
+) {
+    companion object {
+        fun from(board: BoardSummary): BoardSummaryV2Response =
+            BoardSummaryV2Response(
+                id = board.id,
+                name = board.name,
+                kind = board.kind,
+                role = board.role,
+                stickerCount = board.stickerCount,
+                participantCount = board.participantCount,
+                previewImageUrls = board.previewImageUrls,
+                mainColor = board.mainColor,
+                lastActivityAt = board.lastActivityAt,
+                analysisStatus = board.analysisStatus,
+            )
     }
 }

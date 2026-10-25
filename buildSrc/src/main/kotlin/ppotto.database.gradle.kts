@@ -57,13 +57,13 @@ jooq {
                     }
                     forcedType {
                         includeTypes = "(?i)UUID"
-                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id|user_device_tokens\\.user_id"
+                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id|user_device_tokens\\.user_id|board_members\\.user_id"
                         userType = "com.github.nexters.ppotto.global.identifier.UserId"
                         converter = "com.github.nexters.ppotto.global.jooq.UserIdConverter"
                     }
                     forcedType {
                         includeTypes = "(?i)UUID"
-                        includeExpression = "boards\\.id|analysis\\.board_id|photos\\.board_id|stickers\\.board_id|drawings\\.board_id"
+                        includeExpression = "boards\\.id|analysis\\.board_id|photos\\.board_id|stickers\\.board_id|drawings\\.board_id|board_members\\.board_id"
                         userType = "com.github.nexters.ppotto.global.identifier.BoardId"
                         converter = "com.github.nexters.ppotto.global.jooq.BoardIdConverter"
                     }

@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.sticker.application.model.RecapCommentResult
 import com.github.nexters.ppotto.sticker.application.model.RecapGroupPhotoResult
 import com.github.nexters.ppotto.sticker.application.model.RecapPhotoResult
 import com.github.nexters.ppotto.sticker.application.model.RecapShareResult
+import com.github.nexters.ppotto.sticker.application.model.StickerBoardSummaryResult
 import com.github.nexters.ppotto.sticker.application.model.StickerItemResult
 import com.github.nexters.ppotto.sticker.application.model.StickerRecapResult
 import com.github.nexters.ppotto.sticker.application.port.RecapPhotoMetadata
@@ -30,6 +31,33 @@ class StickerQueryService(
     private val stickerImageStoragePorts: List<StickerImageStoragePort>,
 ) {
     fun getByBoardId(boardId: BoardId): List<StickerItemResult> = toResults(stickerRepository.findAllByBoardId(boardId))
+
+    fun getBoardSummaries(
+        boardIds: Set<BoardId>,
+        previewImageCount: Int,
+    ): Map<BoardId, StickerBoardSummaryResult> {
+        val previewsByBoardId =
+            stickerRepository
+                .findRecentImagesByBoardIds(boardIds, previewImageCount)
+                .groupBy { it.boardId }
+        val imageUrls =
+            issueReadUrls(
+                previewsByBoardId.values
+                    .flatten()
+                    .map { it.imageKey },
+            )
+
+        return stickerRepository.findStatsByBoardIds(boardIds).associate { stats ->
+            val previews = previewsByBoardId[stats.boardId].orEmpty()
+            stats.boardId to
+                StickerBoardSummaryResult(
+                    stickerCount = stats.stickerCount,
+                    previewImageUrls = previews.map { imageUrls[it.imageKey] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
+                    mainColor = previews.firstOrNull()?.mainColor,
+                    lastAddedAt = stats.lastAddedAt,
+                )
+        }
+    }
 
     fun getRecap(
         userId: UserId,
@@ -110,17 +138,18 @@ class StickerQueryService(
             }
     }
 
+    private fun issueReadUrls(imageKeys: Collection<String>): Map<String, String> =
+        imageKeys
+            .toSet()
+            .takeIf { it.isNotEmpty() }
+            ?.let { stickerImageStoragePorts.singlePort("스티커 이미지 저장소").issueReadUrls(it) }
+            ?: emptyMap()
+
     private fun toResults(
         stickers: List<Sticker>,
         isOwner: Boolean = true,
     ): List<StickerItemResult> {
-        val imageUrls =
-            stickers
-                .mapNotNull { it.imageKey }
-                .toSet()
-                .takeIf { it.isNotEmpty() }
-                ?.let { stickerImageStoragePorts.singlePort("스티커 이미지 저장소").issueReadUrls(it) }
-                ?: emptyMap()
+        val imageUrls = issueReadUrls(stickers.mapNotNull { it.imageKey })
 
         return stickers.map { sticker ->
             StickerItemResult(

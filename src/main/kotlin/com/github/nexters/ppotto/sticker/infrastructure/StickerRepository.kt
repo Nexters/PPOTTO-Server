@@ -9,11 +9,25 @@ import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
+import java.time.Instant
 
 data class StickerDeletionTarget(
     val id: StickerId,
     val imageKey: String?,
+)
+
+data class StickerBoardStats(
+    val boardId: BoardId,
+    val stickerCount: Int,
+    val lastAddedAt: Instant,
+)
+
+data class StickerBoardPreview(
+    val boardId: BoardId,
+    val imageKey: String,
+    val mainColor: String,
 )
 
 @Repository
@@ -75,6 +89,41 @@ class StickerRepository(
             .orderBy(STICKERS.Z_INDEX.asc(), STICKERS.ID.asc())
             .fetch()
             .map { it.toDomain() }
+
+    fun findStatsByBoardIds(boardIds: Collection<BoardId>): List<StickerBoardStats> =
+        dslContext
+            .select(STICKERS.BOARD_ID, DSL.count(), DSL.max(STICKERS.CREATED_AT))
+            .from(STICKERS)
+            .where(STICKERS.BOARD_ID.`in`(boardIds))
+            .and(STICKERS.DELETED_AT.isNull)
+            .groupBy(STICKERS.BOARD_ID)
+            .fetch { StickerBoardStats(it.value1()!!, it.value2(), it.value3()!!) }
+
+    fun findRecentImagesByBoardIds(
+        boardIds: Collection<BoardId>,
+        countPerBoard: Int,
+    ): List<StickerBoardPreview> {
+        val recency =
+            DSL
+                .rowNumber()
+                .over(DSL.partitionBy(STICKERS.BOARD_ID).orderBy(STICKERS.ID.desc()))
+                .`as`("recency")
+        val ranked =
+            dslContext
+                .select(STICKERS.BOARD_ID, STICKERS.IMAGE_KEY, STICKERS.MAIN_COLOR, recency)
+                .from(STICKERS)
+                .where(STICKERS.BOARD_ID.`in`(boardIds))
+                .and(STICKERS.TYPE.eq(StickerType.IMAGE.name))
+                .and(STICKERS.DELETED_AT.isNull)
+                .asTable("ranked_images")
+        val rankedRecency = ranked.field(recency)!!
+        return dslContext
+            .select(ranked.field(STICKERS.BOARD_ID), ranked.field(STICKERS.IMAGE_KEY), ranked.field(STICKERS.MAIN_COLOR))
+            .from(ranked)
+            .where(rankedRecency.le(countPerBoard))
+            .orderBy(rankedRecency)
+            .fetch { StickerBoardPreview(it.value1()!!, it.value2()!!, it.value3()!!) }
+    }
 
     fun findAllByAnalysisId(analysisId: AnalysisId): List<Sticker> =
         dslContext

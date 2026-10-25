@@ -1,9 +1,11 @@
 package com.github.nexters.ppotto.board.infrastructure.config
 
+import com.github.nexters.ppotto.board.application.port.BoardActiveAnalysisPort
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
+import com.github.nexters.ppotto.board.application.port.BoardStickerSummaryPort
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -16,6 +18,14 @@ class BoardExternalPortFallbackConfiguration {
     @ConditionalOnMissingBean
     fun boardAnalysisActivityPort(): BoardAnalysisActivityPort =
         BoardAnalysisActivityPort { _, _ -> error("AnalysisQueryService 연동이 필요합니다.") }
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun boardActiveAnalysisPort(): BoardActiveAnalysisPort = BoardActiveAnalysisPort { error("AnalysisQueryService 연동이 필요합니다.") }
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun boardStickerSummaryPort(): BoardStickerSummaryPort = BoardStickerSummaryPort { _, _ -> error("StickerQueryService 연동이 필요합니다.") }
 
     @Bean
     @ConditionalOnMissingBean

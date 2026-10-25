@@ -4,6 +4,8 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
+import com.github.nexters.ppotto.board.application.port.BoardStickerSummary
+import com.github.nexters.ppotto.board.application.port.BoardStickerSummaryPort
 import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
@@ -20,11 +22,27 @@ class BoardStickerAdapter(
     private val stickerQueryService: StickerQueryService,
     private val stickerCommandService: StickerCommandService,
 ) : BoardStickerQueryPort,
+    BoardStickerSummaryPort,
     BoardStickerCommandPort {
     override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> =
         stickerQueryService
             .getByBoardId(boardId)
             .map { it.toBoardItem() }
+
+    override fun getByBoardIds(
+        boardIds: Set<BoardId>,
+        previewImageCount: Int,
+    ): Map<BoardId, BoardStickerSummary> =
+        stickerQueryService
+            .getBoardSummaries(boardIds, previewImageCount)
+            .mapValues { (_, summary) ->
+                BoardStickerSummary(
+                    stickerCount = summary.stickerCount,
+                    previewImageUrls = summary.previewImageUrls,
+                    mainColor = summary.mainColor,
+                    lastAddedAt = summary.lastAddedAt,
+                )
+            }
 
     override fun ownsAll(
         boardId: BoardId,
