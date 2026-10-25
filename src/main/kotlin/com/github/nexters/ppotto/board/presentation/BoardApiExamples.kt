@@ -1,14 +1,20 @@
 package com.github.nexters.ppotto.board.presentation
 
+import com.github.nexters.ppotto.board.application.port.BoardAnalysisStatus
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
+import com.github.nexters.ppotto.board.domain.BoardKind
+import com.github.nexters.ppotto.board.domain.BoardRole
 import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.domain.DrawingScope
+import com.github.nexters.ppotto.board.presentation.dto.BoardCountsResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardDetailResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardDetailV2Response
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutRequest
 import com.github.nexters.ppotto.board.presentation.dto.BoardLayoutV2Request
+import com.github.nexters.ppotto.board.presentation.dto.BoardListV2Response
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardStickerResponse
+import com.github.nexters.ppotto.board.presentation.dto.BoardSummaryV2Response
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.DrawingChangesRequest
 import com.github.nexters.ppotto.board.presentation.dto.DrawingChangesV2Request
@@ -29,6 +35,7 @@ import com.github.nexters.ppotto.global.openapi.OperationExamples
 import com.github.nexters.ppotto.global.web.ApiResponse
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import org.springframework.stereotype.Component
+import java.time.Instant
 import java.util.UUID
 import kotlin.reflect.KFunction
 
@@ -122,6 +129,60 @@ private val BOARD_LIST_RESPONSE =
                 listOf(
                     BoardResponse(id = BOARD_ID, name = "Board 7"),
                     BoardResponse(id = CREATED_BOARD_ID, name = "여름 휴가"),
+                ),
+            ),
+    )
+
+private fun previewImageUrl(stickerKey: String) =
+    "https://storage.googleapis.com/ppotto-stickers/$stickerKey.png?X-Goog-Expires=3600&X-Goog-Signature=sample"
+
+private val BOARD_LIST_V2_RESPONSE =
+    ApiExample(
+        name = "내 보드와 참여한 보드",
+        summary = "참여 보드는 role=MEMBER. 분석 상태는 내가 진행 중인 분석만 보이고, 이미지형 스티커가 없는 보드의 mainColor는 null",
+        value =
+            ApiResponse.success(
+                BoardListV2Response(
+                    counts = BoardCountsResponse(all = 3, personal = 1, shared = 2),
+                    boards =
+                        listOf(
+                            BoardSummaryV2Response(
+                                id = BOARD_ID,
+                                name = "여름 휴가",
+                                kind = BoardKind.SHARED,
+                                role = BoardRole.OWNER,
+                                stickerCount = 12,
+                                participantCount = 3,
+                                previewImageUrls = listOf("01983f2b", "01983f2a", "01983f29", "01983f28").map(::previewImageUrl),
+                                mainColor = "#FF6B6B",
+                                lastActivityAt = Instant.parse("2026-10-20T12:40:05Z"),
+                                analysisStatus = BoardAnalysisStatus.ANALYZING,
+                            ),
+                            BoardSummaryV2Response(
+                                id = BoardId(UUID.fromString("01983f2a-5e6f-7a8b-9c0d-1e2f3a4b5c6d")),
+                                name = "동아리",
+                                kind = BoardKind.SHARED,
+                                role = BoardRole.MEMBER,
+                                stickerCount = 5,
+                                participantCount = 2,
+                                previewImageUrls = listOf(previewImageUrl("01983f27")),
+                                mainColor = "#6BCB77",
+                                lastActivityAt = Instant.parse("2026-10-18T09:12:33Z"),
+                                analysisStatus = null,
+                            ),
+                            BoardSummaryV2Response(
+                                id = CREATED_BOARD_ID,
+                                name = "Board 1",
+                                kind = BoardKind.PERSONAL,
+                                role = BoardRole.OWNER,
+                                stickerCount = 0,
+                                participantCount = 1,
+                                previewImageUrls = emptyList(),
+                                mainColor = null,
+                                lastActivityAt = Instant.parse("2026-10-01T03:00:00Z"),
+                                analysisStatus = null,
+                            ),
+                        ),
                 ),
             ),
     )
@@ -354,7 +415,8 @@ private val ACTIVE_ANALYSIS_EXISTS =
 class BoardApiExamples : ApiExampleProvider {
     override val examples: Map<KFunction<*>, OperationExamples> =
         mapOf(
-            BoardApi::list to OperationExamples(responses = mapOf("200" to listOf(BOARD_LIST_RESPONSE))),
+            BoardListApi::list to OperationExamples(responses = mapOf("200" to listOf(BOARD_LIST_RESPONSE))),
+            BoardListV2Api::list to OperationExamples(responses = mapOf("200" to listOf(BOARD_LIST_V2_RESPONSE))),
             BoardApi::create to
                 OperationExamples(
                     request = listOf(CREATE_BOARD_REQUEST),

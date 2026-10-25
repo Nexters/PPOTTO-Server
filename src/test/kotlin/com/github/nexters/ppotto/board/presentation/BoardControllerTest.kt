@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldMatch
 import org.hamcrest.Matchers.hasItem
 import org.jooq.DSLContext
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -23,6 +24,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import tools.jackson.databind.ObjectMapper
 
 private const val TOO_LONG_NAME_LENGTH = Board.MAX_NAME_LENGTH + 1
 
@@ -33,6 +35,7 @@ class BoardControllerTest(
     boardRepository: BoardRepository,
     userRepository: UserRepository,
     dslContext: DSLContext,
+    objectMapper: ObjectMapper,
 ) : IntegrationTest({
         Given("보드를 하나 만든 인증된 사용자가") {
             val user = userRepository.saveTestUser()
@@ -310,6 +313,90 @@ class BoardControllerTest(
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("BOARD-002"))
                     boardRepository.findById(board.id)?.name shouldBe "공동 보드"
+                }
+            }
+        }
+
+        Given("개인 보드 하나를 만들고 다른 사용자의 보드에 참여한 사용자가") {
+            val me = userRepository.saveTestUser()
+            val owner = userRepository.saveTestUser()
+            val mine = boardRepository.save(me.id, "개인")
+            val joined = boardRepository.save(owner.id, "참여 보드")
+            dslContext.addBoardMember(joined.id, me.id)
+            boardRepository.save(owner.id, "남의 보드")
+            val principal = UsernamePasswordAuthenticationToken.authenticated(me.id.value, null, emptyList())
+
+            When("v2로 보드 목록을 조회하면") {
+                val body =
+                    mockMvc
+                        .perform(
+                            get("/boards")
+                                .with(authentication(principal))
+                                .header("X-API-Version", "2"),
+                        ).andExpect(status().isOk)
+                        .andReturn()
+                        .response.contentAsString
+                val data = objectMapper.readTree(body)["data"]
+
+                Then("탭별 개수와 함께 내 보드와 참여한 보드만 반환한다") {
+                    data["counts"]["all"].asInt() shouldBe 2
+                    data["counts"]["personal"].asInt() shouldBe 1
+                    data["counts"]["shared"].asInt() shouldBe 1
+                    listOf(data["boards"][0]["id"].asString(), data["boards"][1]["id"].asString()) shouldBe
+                        listOf(joined.id.toString(), mine.id.toString())
+                    data["boards"].size() shouldBe 2
+                }
+
+                Then("카드마다 계약된 필드를 모두 내려주고 값이 없으면 null을 명시한다") {
+                    val card = data["boards"][0]
+                    card.propertyNames().toList() shouldBe
+                        listOf(
+                            "id",
+                            "name",
+                            "kind",
+                            "role",
+                            "stickerCount",
+                            "participantCount",
+                            "previewImageUrls",
+                            "mainColor",
+                            "lastActivityAt",
+                            "analysisStatus",
+                        )
+                    card["name"].asString() shouldBe "참여 보드"
+                    card["kind"].asString() shouldBe "SHARED"
+                    card["role"].asString() shouldBe "MEMBER"
+                    card["stickerCount"].asInt() shouldBe 0
+                    card["participantCount"].asInt() shouldBe 2
+                    card["previewImageUrls"].isArray shouldBe true
+                    card["previewImageUrls"].size() shouldBe 0
+                    card["mainColor"].isNull shouldBe true
+                    card["analysisStatus"].isNull shouldBe true
+                    card["lastActivityAt"].asString() shouldMatch Regex("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z")
+                }
+
+                Then("내 개인 보드는 PERSONAL이고 내 역할은 OWNER다") {
+                    val card = data["boards"][1]
+                    card["kind"].asString() shouldBe "PERSONAL"
+                    card["role"].asString() shouldBe "OWNER"
+                    card["participantCount"].asInt() shouldBe 1
+                }
+            }
+
+            When("v1로 보드 목록을 조회하면") {
+                val result =
+                    mockMvc.perform(
+                        get("/boards")
+                            .with(authentication(principal))
+                            .header("X-API-Version", "1"),
+                    )
+
+                Then("기존처럼 내가 만든 보드의 id와 name만 배열로 반환한다") {
+                    result
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.length()").value(1))
+                        .andExpect(jsonPath("$.data[0].id").value(mine.id.toString()))
+                        .andExpect(jsonPath("$.data[0].name").value("개인"))
+                        .andExpect(jsonPath("$.data[0].kind").doesNotExist())
                 }
             }
         }

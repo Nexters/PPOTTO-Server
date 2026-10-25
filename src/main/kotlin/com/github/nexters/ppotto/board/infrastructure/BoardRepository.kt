@@ -12,6 +12,11 @@ import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 import java.time.Instant
 
+data class BoardWithMemberCount(
+    val board: Board,
+    val memberCount: Int,
+)
+
 @Repository
 class BoardRepository(
     private val dslContext: DSLContext,
@@ -81,6 +86,22 @@ class BoardRepository(
             .fetch()
             .map { it.toDomain() }
 
+    fun findAccessibleByUserId(userId: UserId): List<BoardWithMemberCount> {
+        val memberCount =
+            DSL.field(
+                DSL
+                    .selectCount()
+                    .from(BOARD_MEMBERS)
+                    .where(BOARD_MEMBERS.BOARD_ID.eq(BOARDS.ID)),
+            )
+        return dslContext
+            .select(BOARDS, memberCount)
+            .from(BOARDS)
+            .where(ownedOrJoinedBy(userId))
+            .and(BOARDS.DELETED_AT.isNull)
+            .fetch { BoardWithMemberCount(it.value1().toDomain(), it.value2()) }
+    }
+
     fun countByUserId(userId: UserId): Int =
         dslContext
             .fetchCount(
@@ -118,16 +139,6 @@ class BoardRepository(
             .and(BOARDS.DELETED_AT.isNull)
             .execute() == 1
 
-    private fun ownedOrJoinedBy(userId: UserId): Condition =
-        BOARDS.USER_ID.eq(userId).or(
-            BOARDS.ID.`in`(
-                DSL
-                    .select(BOARD_MEMBERS.BOARD_ID)
-                    .from(BOARD_MEMBERS)
-                    .where(BOARD_MEMBERS.USER_ID.eq(userId)),
-            ),
-        )
-
     private fun BoardsRecord.toDomain() =
         Board(
             id = id!!,
@@ -137,3 +148,13 @@ class BoardRepository(
             updatedAt = updatedAt!!,
         )
 }
+
+private fun ownedOrJoinedBy(userId: UserId): Condition =
+    BOARDS.USER_ID.eq(userId).or(
+        BOARDS.ID.`in`(
+            DSL
+                .select(BOARD_MEMBERS.BOARD_ID)
+                .from(BOARD_MEMBERS)
+                .where(BOARD_MEMBERS.USER_ID.eq(userId)),
+        ),
+    )

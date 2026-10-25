@@ -15,7 +15,6 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -25,19 +24,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 @RequestMapping("/boards", version = "1+")
 @Tag(name = "보드", description = "보드 조회와 관리")
 interface BoardApi {
-    @GetMapping
-    @Operation(
-        operationId = "list",
-        summary = "내 보드 목록 조회",
-        description = "보드 선택 드롭다운에 사용할 활성 보드 목록을 반환함. id(uuidv7) 오름차순이 생성순",
-    )
-    @OpenApiResponse(
-        responseCode = "200",
-        useReturnTypeSchema = true,
-        description = "보드 목록",
-    )
-    fun list(userId: UserId): ApiResponse<List<BoardResponse>>
-
     @PostMapping
     @Operation(
         operationId = "create",

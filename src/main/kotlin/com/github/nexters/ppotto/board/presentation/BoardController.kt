@@ -1,7 +1,6 @@
 package com.github.nexters.ppotto.board.presentation
 
 import com.github.nexters.ppotto.board.application.BoardCommandService
-import com.github.nexters.ppotto.board.application.BoardQueryService
 import com.github.nexters.ppotto.board.presentation.dto.BoardResponse
 import com.github.nexters.ppotto.board.presentation.dto.CreateBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
@@ -17,16 +16,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class BoardController(
     private val boardCommandService: BoardCommandService,
-    private val boardQueryService: BoardQueryService,
 ) : BoardApi {
-    override fun list(
-        @AuthenticatedUser userId: UserId,
-    ): ApiResponse<List<BoardResponse>> =
-        boardQueryService
-            .list(userId)
-            .map(BoardResponse::from)
-            .let { ApiResponse.success(it) }
-
     override fun create(
         @AuthenticatedUser userId: UserId,
         @Valid @RequestBody request: CreateBoardRequest,

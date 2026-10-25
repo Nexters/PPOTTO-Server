@@ -8,7 +8,7 @@
 ## 1. 공통 규칙
 
 - API 버전은 `X-API-Version` 요청 헤더로 지정한다. 헤더가 없으면 서버 기본값 `1`로 처리한다.
-- 현재 지원 버전은 `1`과 `2`다. 버전이 다르게 동작하는 엔드포인트는 `GET /boards/{boardId}`와 `PATCH /boards/{boardId}/layout` 둘뿐이고, 나머지 엔드포인트는 두 버전에서 같은 응답을 준다. 따라서 v2 클라이언트는 모든 요청에 `X-API-Version: 2`를 붙이면 된다.
+- 현재 지원 버전은 `1`과 `2`다. 버전이 다르게 동작하는 엔드포인트는 `GET /boards`, `GET /boards/{boardId}`, `PATCH /boards/{boardId}/layout` 셋뿐이고, 나머지 엔드포인트는 두 버전에서 같은 응답을 준다. 따라서 v2 클라이언트는 모든 요청에 `X-API-Version: 2`를 붙이면 된다.
 - 지원하지 않는 버전을 보내면 `400 COMMON-001`로 응답한다.
 - URL 경로에는 `/api` 프리픽스와 버전 세그먼트를 붙이지 않는다.
 - 보호 API는 `Authorization: Bearer {accessToken}` 헤더가 필요하다.
@@ -67,6 +67,7 @@
 | boards | PATCH | /boards/{boardId} | 보드 이름 변경 | 200 | 400, 401, 404 | Y |
 | boards | DELETE | /boards/{boardId} | 보드 삭제 | 200 | 400, 401, 404, 409 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 (편집 모드 종료 시) | 200 | 400, 401, 404 | Y |
+| boards | GET | /boards | 홈 보드 목록 — v2 (내 보드 + 참여 보드, 탭별 개수) | 200 | 401 | Y |
 | boards | GET | /boards/{boardId} | 보드 상세 조회 — v2 (선 + 텍스트) | 200 | 401, 404 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 — v2 (선 + 텍스트) | 200 | 400, 401, 404 | Y |
 | stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 (본인만) | 200 | 401, 404 | Y |
@@ -780,7 +781,7 @@ Request example:
 ```
 
 #### Notes
-- 상단 타이틀 드롭다운의 보드 전환 목록입니다. id(uuidv7) 오름차순 = 생성순입니다.
+- 상단 타이틀 드롭다운의 보드 전환 목록입니다. id(uuidv7) 오름차순 = 생성순입니다. 내가 만든 보드만 내려가고 참여한 보드는 포함하지 않습니다. 홈 화면 카드 목록은 `X-API-Version: 2`를 쓰세요.
 
 ### POST /boards
 
@@ -1398,6 +1399,102 @@ Request example (드로잉 모드 종료 (생성 2건, 삭제 1건)):
 
 #### Notes
 - 편집 모드를 끌 때 해당 모드에서 바뀐 것만 보냅니다. 모든 필드는 선택입니다.  | 편집 모드 | 보내는 필드 | |---|---| | 스티커 이동 | `stickers` (배치) | | 텍스트 | `stickers` (제목 + 뱃지 배치) | | 드로잉 | `drawings.created` / `drawings.deletedIds` |  드로잉 id는 클라이언트가 uuidv7로 생성해 보내고 서버는 upsert합니다. 타임아웃 후 재시도해도 중복 저장되지 않습니다 (멱등). 본인 소유가 아닌 id가 섞여 있으면 `BOARD-001`로 전체 거부됩니다 (부분 저장 없음).
+
+### GET /boards (X-API-Version: 2)
+
+- Operation ID: `listV2`
+- Summary: 홈 보드 목록 (카드 + 탭별 개수)
+
+v1은 보드 선택 드롭다운용으로 내가 만든 보드의 `id`, `name` 배열만 그대로 준다. v2는 홈 화면 카드용이며 내가 만든 보드와 참여한 보드를 함께 준다.
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+- 헤더: `X-API-Version: 2`
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 보드 목록과 탭별 개수 | `counts`, `boards` |
+
+| Field | Type | Description |
+| --- | --- | --- |
+| counts.all | int | 전체 탭 개수. `personal + shared` |
+| counts.personal | int | 개인 탭 개수 |
+| counts.shared | int | 공동 탭 개수 |
+| boards[].id | string (uuid) | 보드 ID |
+| boards[].name | string | 보드 이름 |
+| boards[].kind | `PERSONAL` \| `SHARED` | 참여자(`board_members`)가 한 명이라도 있으면 `SHARED` |
+| boards[].role | `OWNER` \| `MEMBER` | 요청한 사용자의 역할. 방장은 `boards.user_id`, 참여자는 `board_members` |
+| boards[].stickerCount | int | 삭제되지 않은 스티커 수. 이미지형과 텍스트형을 모두 센다 |
+| boards[].participantCount | int | 참여 인원. 방장 1명 + 참여자 수 |
+| boards[].previewImageUrls | string[] | 최근 이미지형 스티커의 읽기용 signed URL. 최신순 최대 4개, 없으면 빈 배열 (만료 1시간) |
+| boards[].mainColor | string \| null | 가장 최근 이미지형 스티커의 `main_color`(`#RRGGBB`). 이미지형 스티커가 없으면 `null` |
+| boards[].lastActivityAt | string (ISO-8601 UTC) | 삭제되지 않은 스티커의 최근 생성·수정 시각. 스티커가 없으면 보드 생성 시각 |
+| boards[].analysisStatus | `UPLOADING` \| `ANALYZING` \| null | 이 보드에서 진행 중인 **내** 분석의 상태. 다른 참여자의 분석은 보이지 않는다. 없으면 `null` |
+
+200 data example:
+```json
+{
+  "counts": { "all": 3, "personal": 1, "shared": 2 },
+  "boards": [
+    {
+      "id": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+      "name": "여름 휴가",
+      "kind": "SHARED",
+      "role": "OWNER",
+      "stickerCount": 12,
+      "participantCount": 3,
+      "previewImageUrls": [
+        "https://storage.googleapis.com/ppotto-stickers/01983f2b.png?X-Goog-Expires=3600&X-Goog-Signature=sample",
+        "https://storage.googleapis.com/ppotto-stickers/01983f2a.png?X-Goog-Expires=3600&X-Goog-Signature=sample",
+        "https://storage.googleapis.com/ppotto-stickers/01983f29.png?X-Goog-Expires=3600&X-Goog-Signature=sample",
+        "https://storage.googleapis.com/ppotto-stickers/01983f28.png?X-Goog-Expires=3600&X-Goog-Signature=sample"
+      ],
+      "mainColor": "#FF6B6B",
+      "lastActivityAt": "2026-10-20T12:40:05Z",
+      "analysisStatus": "ANALYZING"
+    },
+    {
+      "id": "01983f2a-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+      "name": "동아리",
+      "kind": "SHARED",
+      "role": "MEMBER",
+      "stickerCount": 5,
+      "participantCount": 2,
+      "previewImageUrls": [
+        "https://storage.googleapis.com/ppotto-stickers/01983f27.png?X-Goog-Expires=3600&X-Goog-Signature=sample"
+      ],
+      "mainColor": "#6BCB77",
+      "lastActivityAt": "2026-10-18T09:12:33Z",
+      "analysisStatus": null
+    },
+    {
+      "id": "01983f2a-4d5e-7f6a-b7c8-9d0e1f2a3b4c",
+      "name": "Board 1",
+      "kind": "PERSONAL",
+      "role": "OWNER",
+      "stickerCount": 0,
+      "participantCount": 1,
+      "previewImageUrls": [],
+      "mainColor": null,
+      "lastActivityAt": "2026-10-01T03:00:00Z",
+      "analysisStatus": null
+    }
+  ]
+}
+```
+
+#### Failure Spec
+v1과 같다 (401 `COMMON-004`).
+
+#### Notes
+- 내가 만든 보드와 참여한 보드만 내려간다. 삭제된 보드와 참여하지 않은 다른 사용자의 보드는 절대 내려가지 않는다.
+- 정렬은 `lastActivityAt` 내림차순, 같으면 `id` 내림차순이다. 페이지네이션 없이 전부 준다.
+- 서버는 null 필드를 생략하는 것이 기본이지만 이 응답의 `mainColor`, `analysisStatus`는 값이 없을 때도 키를 생략하지 않고 `null`을 명시한다. OpenAPI 스키마에서는 두 필드가 `required`가 아니다.
+- `lastActivityAt`은 스티커 행이 바뀐 시각(`updated_at`)을 따르므로 배치·제목 변경·재생성뿐 아니라 리캡 열람(`viewedAt`)과 공유 설정 변경도 활동으로 잡힌다.
+- `previewImageUrls`는 만료가 있으므로 홈에 진입할 때마다 새로 조회한다.
+- 참여한 보드는 `GET /boards/{boardId}`(v1, v2)로 열 수 있다. 이름 변경, 삭제, 레이아웃 저장은 방장만 할 수 있다.
 
 ### GET /boards/{boardId} (X-API-Version: 2)
 
