@@ -12,8 +12,10 @@ import com.github.nexters.ppotto.global.jooq.UserIdConverter
 import com.github.nexters.ppotto.jooq.Public
 import com.github.nexters.ppotto.jooq.indexes.IX_BOARD_USER_CREATED
 import com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY
+import com.github.nexters.ppotto.jooq.keys.BOARD_INVITATIONS__FK_BOARD_INVITATIONS_BOARD
 import com.github.nexters.ppotto.jooq.keys.BOARD_MEMBERS__FK_BOARD_MEMBERS_BOARD
 import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_BOARD
+import com.github.nexters.ppotto.jooq.tables.BoardInvitations.BoardInvitationsPath
 import com.github.nexters.ppotto.jooq.tables.BoardMembers.BoardMembersPath
 import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
@@ -149,6 +151,22 @@ open class Boards(
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
     override fun getIndexes(): List<Index> = listOf(IX_BOARD_USER_CREATED)
     override fun getPrimaryKey(): UniqueKey<BoardsRecord> = BOARDS_PKEY
+
+    private lateinit var _boardInvitations: BoardInvitationsPath
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.board_invitations</code> table
+     */
+    fun boardInvitations(): BoardInvitationsPath {
+        if (!this::_boardInvitations.isInitialized)
+            _boardInvitations = BoardInvitationsPath(this, null, BOARD_INVITATIONS__FK_BOARD_INVITATIONS_BOARD.inverseKey)
+
+        return _boardInvitations;
+    }
+
+    val boardInvitations: BoardInvitationsPath
+        get(): BoardInvitationsPath = boardInvitations()
 
     private lateinit var _boardMembers: BoardMembersPath
 

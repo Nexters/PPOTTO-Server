@@ -198,8 +198,6 @@ Table board_invitations {
   inviter_user_id uuid       [not null, note: '초대 발급자. board_members.user_id와 같은 탈퇴 정리 정책을 따르며 FK 없음']
   code           varchar(6)  [not null, note: '0, 1, I, O를 제외한 영문 대문자·숫자 6자리 보안 난수']
   expires_at     timestamptz [not null, note: '발급 시점부터 30일. 유효한 초대를 재조회해도 연장하지 않음']
-  revoked_at     timestamptz [null, note: '발급자가 보드에서 나가거나 명시적으로 무효화하면 기록']
-
   preview_image_key text [null, note: '서버가 검증·업로드한 WebP object key. 공개 API에는 signed URL만 노출']
 
   ~timestamps
@@ -207,22 +205,23 @@ Table board_invitations {
   Note: '''
   방장과 참여자 모두 자기 이름으로 초대를 발급할 수 있다.
   (board_id, inviter_user_id)당 한 행을 유지한다. 유효기간 안에는 code와 expires_at을
-  재사용한다. 만료되거나 철회된 초대를 다시 발급하면 같은 행의 code와 expires_at을
-  교체하고 revoked_at과 preview_image_key를 비운다. 두 유니크 제약이 코드 충돌과
+  재사용한다. 만료된 초대를 다시 발급하면 같은 행의 code와 expires_at을 교체하고
+  preview_image_key를 비운다. 두 유니크 제약이 코드 충돌과
   같은 사용자의 동시 중복 발급을 막는 최종 방어선이다.
+
+  발급자의 보드 나가기는 초대를 만료시키지 않는다. 발급자가 회원 탈퇴하면 초대 조회에서
+  즉시 제외하고, 탈퇴 사용자를 하드 삭제할 때 해당 사용자가 발급한 초대도 먼저 삭제한다.
 
   미리보기 교체는 초대 행을 잠근 뒤 요청 code와 현재 code가 같은지 확인하고
   preview_image_key를 갱신한다. DB 반영 실패 시 새 object를, 성공 시 이전 object를
   best-effort로 정리한다.
 
-  발급자가 보드에서 나가거나 탈퇴할 때는 revoked_at을 먼저 기록하고 미리보기 object를
-  정리한다. 방장 보드가 하드 삭제되면 이 행은 board_id FK의 CASCADE로 삭제된다.
   '''
 
   indexes {
     code [unique, name: 'uk_board_invitations_code']
     (board_id, inviter_user_id) [unique, name: 'uk_board_invitations_board_inviter']
-    inviter_user_id [name: 'ix_board_invitations_inviter', note: '탈퇴·나가기 시 초대 철회/정리용']
+    inviter_user_id [name: 'ix_board_invitations_inviter', note: '탈퇴 사용자 하드 삭제 시 초대 정리용']
   }
 }
 

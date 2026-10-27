@@ -2,7 +2,7 @@
 
 # identifier
 
-`@JvmInline value class` typed identifiers (`UserId`, `BoardId`, `StickerId`, `AnalysisId`, `PhotoId`, `DrawingId`, `TermId`) wrapping `UUID`, each overriding `toString()` for log interpolation.
+`@JvmInline value class` typed identifiers (`UserId`, `BoardId`, `BoardInvitationId`, `StickerId`, `AnalysisId`, `PhotoId`, `DrawingId`, `TermId`) wrapping `UUID`, each overriding `toString()` for log interpolation.
 
 ## Rules
 

@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.support
 
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
+import com.github.nexters.ppotto.jooq.tables.references.BOARD_INVITATIONS
 import com.github.nexters.ppotto.jooq.tables.references.BOARD_MEMBERS
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
 import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
@@ -37,6 +38,7 @@ class DatabaseCleaner(
                 STICKERS,
                 PHOTOS,
                 ANALYSIS,
+                BOARD_INVITATIONS,
                 BOARD_MEMBERS,
                 BOARDS,
                 USER_DEVICE_TOKENS,

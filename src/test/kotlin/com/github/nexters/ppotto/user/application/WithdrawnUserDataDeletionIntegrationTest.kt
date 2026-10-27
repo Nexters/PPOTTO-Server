@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoReposi
 import com.github.nexters.ppotto.analysis.support.FakePhotoStorage
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
+import com.github.nexters.ppotto.board.infrastructure.BoardInvitationRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.addBoardMember
@@ -19,6 +20,7 @@ import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
+import com.github.nexters.ppotto.jooq.tables.references.BOARD_INVITATIONS
 import com.github.nexters.ppotto.jooq.tables.references.BOARD_MEMBERS
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
 import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
@@ -73,6 +75,7 @@ class WithdrawnUserDataDeletionIntegrationTest(
     termsService: TermsService,
     userRepository: UserRepository,
     boardRepository: BoardRepository,
+    boardInvitationRepository: BoardInvitationRepository,
     drawingRepository: DrawingRepository,
     analysisRepository: AnalysisRepository,
     photoRepository: PhotoRepository,
@@ -210,11 +213,19 @@ class WithdrawnUserDataDeletionIntegrationTest(
             val otherBoard = boardRepository.save(other.id)
             dslContext.addBoardMember(otherBoard.id, fixture.userId)
             dslContext.addBoardMember(fixture.boardId, other.id)
+            val issuedInvitation =
+                boardInvitationRepository.save(
+                    otherBoard.id,
+                    fixture.userId,
+                    "K7P2QX",
+                    Instant.now().plusSeconds(30 * 24 * 60 * 60L),
+                )
 
             When("탈퇴 사용자 정리 배치를 실행하면") {
                 cleanupService.cleanup(deletedBefore = DELETED_BEFORE, batchSize = 10)
 
                 Then("탈퇴 사용자의 참여 기록과 그의 보드에 달린 참여 기록을 모두 지운다") {
+                    dslContext.fetchExists(BOARD_INVITATIONS, BOARD_INVITATIONS.ID.eq(issuedInvitation.id)) shouldBe false
                     dslContext.fetchExists(BOARD_MEMBERS, BOARD_MEMBERS.USER_ID.eq(fixture.userId)) shouldBe false
                     dslContext.fetchExists(BOARD_MEMBERS, BOARD_MEMBERS.BOARD_ID.eq(fixture.boardId)) shouldBe false
                 }
