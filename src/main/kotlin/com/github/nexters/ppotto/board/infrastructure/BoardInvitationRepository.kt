@@ -57,6 +57,21 @@ class BoardInvitationRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun reissue(
+        id: BoardInvitationId,
+        code: String,
+        expiresAt: Instant,
+    ): BoardInvitation =
+        dslContext
+            .update(BOARD_INVITATIONS)
+            .set(BOARD_INVITATIONS.CODE, code)
+            .set(BOARD_INVITATIONS.EXPIRES_AT, expiresAt)
+            .setNull(BOARD_INVITATIONS.PREVIEW_IMAGE_KEY)
+            .where(BOARD_INVITATIONS.ID.eq(id))
+            .returning()
+            .fetchOne()!!
+            .toDomain()
+
     private fun BoardInvitationsRecord.toDomain() =
         BoardInvitation(
             id = id!!,

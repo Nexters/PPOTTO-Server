@@ -77,6 +77,19 @@ class BoardRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun findReadableByIdForUpdate(
+        id: BoardId,
+        userId: UserId,
+    ): Board? =
+        dslContext
+            .selectFrom(BOARDS)
+            .where(BOARDS.ID.eq(id))
+            .and(ownedOrJoinedBy(userId))
+            .and(BOARDS.DELETED_AT.isNull)
+            .forUpdate()
+            .fetchOne()
+            ?.toDomain()
+
     fun findByUserId(userId: UserId): List<Board> =
         dslContext
             .selectFrom(BOARDS)
