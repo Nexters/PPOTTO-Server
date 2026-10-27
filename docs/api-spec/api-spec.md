@@ -70,6 +70,9 @@
 | boards | GET | /boards | 홈 보드 목록 — v2 (내 보드 + 참여 보드, 탭별 개수) | 200 | 401 | Y |
 | boards | GET | /boards/{boardId} | 보드 상세 조회 — v2 (선 + 텍스트) | 200 | 401, 404 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 — v2 (선 + 텍스트) | 200 | 400, 401, 404 | Y |
+| board-invitations | POST | /boards/{boardId}/invitations | 내 초대 코드 발급·재사용 | 200 | 401, 404 | Y |
+| board-invitations | PUT | /board-invitations/{invitationId}/preview | 초대 미리보기 업로드·교체 | 200 | 400, 401, 404, 409 | Y |
+| board-invitations | GET | /board-invitations/{code} | 초대 대상 보드 조회 | 200 | 401, 404 | 선택 |
 | stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 (본인만) | 200 | 401, 404 | Y |
 | stickers | GET | /stickers/shared/{shareToken} | 공유된 리캡 조회 | 200 | 404 | N |
 | stickers | POST | /stickers/{stickerId}/share | 리캡 공유 시작 | 200 | 400, 401, 404 | Y |
@@ -1614,6 +1617,234 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 - `content`의 줄바꿈은 클라이언트가 실측해 넣은 그대로 저장하고 서버는 다시 감싸지 않습니다. `maxWidth`는 그 줄바꿈 기준이 된 편집창 폭이며 렌더 폭 보존용입니다.
 - `zIndex`는 스티커의 `zIndex`와 같은 숫자 공간을 씁니다.
 - v1에서는 `color`가 공백만 아니면 통과했지만 v2는 `#RRGGBB`를 강제합니다.
+
+### POST /boards/{boardId}/invitations
+
+- Operation ID: `issueBoardInvitation`
+- Summary: 내 초대 코드 발급·재사용
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | boardId | Y | `string` | 01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b | 초대할 보드 ID |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 초대 코드와 미리보기 필요 여부 | `invitationId`, `code`, `expiresAt`, `previewRequired` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "invitationId": "019a268d-15c8-7d31-8f42-90ad72d627f5",
+    "code": "K7P2QX",
+    "expiresAt": "2026-11-26T09:30:00Z",
+    "previewRequired": true
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더 누락 또는 accessToken 만료 |
+| 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드가 없거나 요청 사용자가 방장·참여자가 아님 |
+
+404 BOARD-002 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-002",
+    "message": "보드를 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 보드의 방장과 참여자 모두 초대를 발급할 수 있습니다.
+- 초대는 `(boardId, inviterUserId)`별 한 개입니다. 유효기간 안의 재호출과 동시 호출은 같은 `invitationId`, `code`, `expiresAt`을 반환합니다.
+- 유효기간은 최초 발급부터 30일이며 재호출로 연장되지 않습니다. 만료 후 재발급하면 코드와 만료 시각을 교체하고 이전 미리보기는 더 이상 조회하지 않습니다.
+- `previewRequired`는 현재 코드에 연결된 미리보기가 없으면 `true`입니다. 최초 발급, 이전 업로드 실패, 만료 후 코드 교체가 이에 해당합니다. 유효한 코드와 미리보기가 모두 있으면 `false`이며 클라이언트는 이미지를 다시 만들지 않습니다.
+- 코드는 혼동하기 쉬운 `0`, `1`, `I`, `O`를 제외한 영문 대문자와 숫자 6자리입니다.
+- 서버는 초대 코드만 반환하며, 딥링크·웹 링크(`/invite/{code}`) 조합은 클라이언트가 담당합니다.
+
+### PUT /board-invitations/{invitationId}/preview
+
+- Operation ID: `uploadBoardInvitationPreview`
+- Summary: 초대 미리보기 업로드·교체
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | invitationId | Y | `string` | 019a268d-15c8-7d31-8f42-90ad72d627f5 | 초대 ID |
+
+- Content-Type: `multipart/form-data`
+
+| Field | Required | Type | Description |
+| --- | --- | --- | --- |
+| code | Y | `string` | 발급 응답에서 받은 6자리 코드. 만료 후 교체된 새 코드에 이전 미리보기가 붙는 것을 방지 |
+| file | Y | `string(binary)` | 클라이언트가 생성한 WebP 미리보기. 최대 1 MiB, 가로 최대 624px, 세로 최대 540px |
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 미리보기 저장 및 교체 완료 | `previewImageUrl` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "previewImageUrl": "https://storage.googleapis.com/ppotto-board-invitations/...?X-Goog-Expires=3600&X-Goog-Signature=sample"
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | BOARD-007 | 초대 미리보기 이미지가 올바르지 않습니다. | 파일이 비었거나 실제 WebP가 아님, 1 MiB 초과, 이미지 크기가 유효하지 않거나 최대 624×540 초과 |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더 누락 또는 accessToken 만료 |
+| 404 | BOARD-006 | 초대를 찾을 수 없습니다. | 초대가 없거나 요청 사용자가 발급자가 아님, 초대가 만료·철회됨, 발급자가 더 이상 해당 보드의 방장·참여자가 아님 |
+| 409 | BOARD-008 | 초대 코드가 갱신되었습니다. | 이미지 생성 중 초대가 만료되어 현재 코드가 요청의 코드와 달라짐 |
+
+404 BOARD-006 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-006",
+    "message": "초대를 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+400 BOARD-007 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-007",
+    "message": "초대 미리보기 이미지가 올바르지 않습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+409 BOARD-008 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-008",
+    "message": "초대 코드가 갱신되었습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 같은 코드로 여러 업로드가 동시에 성공하면 마지막으로 반영된 이미지를 사용하며, 실패한 업로드는 기존 미리보기를 변경하지 않습니다.
+- 업로드가 실패해도 초대 코드 자체는 유지됩니다. 다음 발급 응답은 `previewRequired: true`를 반환해 같은 초대에 다시 업로드할 수 있게 합니다.
+
+### GET /board-invitations/{code}
+
+- Operation ID: `getBoardInvitation`
+- Summary: 초대 대상 보드 조회
+
+#### Request Spec
+- 인증: 선택. 유효한 `Authorization: Bearer {accessToken}`을 보내면 `viewerStatus`를 계산하고, 헤더가 없으면 공개 정보만 반환합니다. 잘못되었거나 만료된 토큰을 보내면 `401 COMMON-004`입니다.
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | code | Y | `string` | K7P2QX | 초대 코드. 서버는 대문자로 정규화해 조회 |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 초대자와 대상 보드 공개 정보 | `code`, `boardId`, `boardName`, `inviterName`, `participantCount`, `maxParticipantCount`, `stickerCount`, `previewImageUrl`, `expiresAt`, `viewerStatus` |
+
+| Field | Type | Description |
+| --- | --- | --- |
+| code | string | 정규화된 6자리 초대 코드 |
+| boardId | string (uuid) | 대상 보드 ID |
+| boardName | string | 현재 보드 이름 |
+| inviterName | string | 이 초대를 발급한 현재 사용자 이름 |
+| participantCount | int | 현재 참여 인원. 방장 1명 + 참여자 수 |
+| maxParticipantCount | int | 참여 정원. 현재 정책은 항상 `8`이며 클라이언트 사전 표시에 사용 |
+| stickerCount | int | 현재 삭제되지 않은 스티커 수 |
+| previewImageUrl | string (optional) | 가장 최근에 완료된 정적 미리보기 signed GET URL. 없으면 필드 생략 |
+| expiresAt | string (ISO-8601 UTC) | 초대 만료 시각 |
+| viewerStatus | `OWNER` \| `MEMBER` \| `NOT_JOINED` (optional) | 인증 사용자의 현재 상태. 비인증 조회는 필드 생략 |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "code": "K7P2QX",
+    "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+    "boardName": "제주 여행",
+    "inviterName": "김용희",
+    "participantCount": 2,
+    "maxParticipantCount": 8,
+    "stickerCount": 9,
+    "previewImageUrl": "https://storage.googleapis.com/ppotto-board-invitations/...?X-Goog-Expires=3600&X-Goog-Signature=sample",
+    "expiresAt": "2026-11-26T09:30:00Z",
+    "viewerStatus": "NOT_JOINED"
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더가 있으나 토큰이 잘못되었거나 만료됨 |
+| 404 | BOARD-006 | 초대를 찾을 수 없습니다. | 코드 형식 오류, 코드 없음, 만료·철회됨, 보드 삭제됨, 발급자가 탈퇴했거나 더 이상 해당 보드의 방장·참여자가 아님 |
+
+404 BOARD-006 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-006",
+    "message": "초대를 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 공개 응답에는 참여자 명단·프로필, 개별 스티커 정보·좌표, 저장소 object key를 포함하지 않습니다.
+- `boardName`, `inviterName`, `participantCount`, `stickerCount`는 조회 시점의 최신 값이고, `previewImageUrl`의 이미지는 현재 코드 발급 시점의 정적 스냅샷입니다.
+- `maxParticipantCount`는 사전 안내용이며 참여 성공을 보장하지 않습니다. 실제 참여 API가 요청 시점의 최신 정원을 다시 확인합니다.
+- 이 API는 조회만 수행하며 실제 참여·나가기는 처리하지 않습니다.
 
 ## 8. stickers API
 
@@ -3398,6 +3629,28 @@ Request example:
 | name | Y | `string` | - | - |
 | stickers | Y | `object`[] | - | - |
 | drawings | Y | `object`[] | - | - |
+
+### BoardInvitationIssueResult
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| invitationId | Y | `string` | - | 초대 ID |
+| code | Y | `string` | - | 초대 코드 |
+| expiresAt | Y | `string` | - | UTC ISO-8601 만료 시각 |
+| previewRequired | Y | `boolean` | - | 현재 코드에 연결된 미리보기가 없으면 `true` |
+
+### BoardInvitationDetail
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| code | Y | `string` | - | 초대 코드 |
+| boardId | Y | `string` | - | 보드 ID |
+| boardName | Y | `string` | - | 현재 보드 이름 |
+| inviterName | Y | `string` | - | 초대 발급자 이름 |
+| participantCount | Y | `integer` | - | 현재 참여 인원 |
+| maxParticipantCount | Y | `integer` | - | 현재 정책 `8` |
+| stickerCount | Y | `integer` | - | 현재 활성 스티커 수 |
+| previewImageUrl | N | `string` | - | 완료된 미리보기 signed URL. 없으면 생략 |
+| expiresAt | Y | `string` | - | UTC ISO-8601 만료 시각 |
+| viewerStatus | N | `string` | OWNER, MEMBER, NOT_JOINED | 비인증 조회는 생략 |
 
 ### Sticker
 | Field | Required | Type | Enum | Description |

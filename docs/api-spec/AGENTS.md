@@ -6,7 +6,7 @@ API contract source documents.
 
 | File | Description |
 |------|---------|
-| `api-spec.md` | Source API contract for spec-driven development, including terms, boards, stickers/recaps, analysis, auth, user, and report APIs. Board list, board detail, and board layout are documented per `X-API-Version` because only those three endpoints differ between v1 and v2; the v2 board list is the home-card contract (owned + joined boards, per-tab counts). Analysis photo upload accepts JPEG/PNG/WEBP for new requests; HEIC is intentionally excluded from the public upload contract. Also covers the per-analysis completion notification request/cancel API, the optional `failedCode`, the partial-success/full-failure/cancellation distinction, the stale-analysis expiration policy, and the FCM device-token register/unregister API (section 10). |
+| `api-spec.md` | Source API contract for spec-driven development, including terms, boards, per-user board invitation issue/preview upload/public lookup, stickers/recaps, analysis, auth, user, and report APIs. Board list, board detail, and board layout are documented per `X-API-Version` because only those three endpoints differ between v1 and v2; the v2 board list is the home-card contract (owned + joined boards, per-tab counts). Analysis photo upload accepts JPEG/PNG/WEBP for new requests; HEIC is intentionally excluded from the public upload contract. Also covers the per-analysis completion notification request/cancel API, the optional `failedCode`, the partial-success/full-failure/cancellation distinction, the stale-analysis expiration policy, and the FCM device-token register/unregister API (section 10). |
 
 ## Rules
 
