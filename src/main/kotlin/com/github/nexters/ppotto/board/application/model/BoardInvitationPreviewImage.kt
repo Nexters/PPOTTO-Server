@@ -29,33 +29,48 @@ private data class WebpSize(
     val height: Int,
 ) {
     companion object {
-        fun read(bytes: ByteArray): WebpSize? {
-            if (bytes.size < RIFF_HEADER_SIZE || bytes.ascii(0, 4) != "RIFF" || bytes.ascii(8, 4) != "WEBP") return null
-            val riffSize = bytes.uint32LittleEndian(4)
-            if (riffSize < MIN_RIFF_SIZE || riffSize + RIFF_SIZE_FIELD_END != bytes.size.toLong()) return null
-            val riffEnd = (riffSize + RIFF_SIZE_FIELD_END).toInt()
+        fun read(bytes: ByteArray): WebpSize? = readRiffEnd(bytes)?.let { readImageSize(bytes, it) }
 
+        private fun readRiffEnd(bytes: ByteArray): Int? {
+            if (!bytes.hasWebpHeader()) return null
+            val riffSize = bytes.uint32LittleEndian(4)
+            val riffEnd = riffSize + RIFF_SIZE_FIELD_END
+            return riffEnd
+                .takeIf { riffSize >= MIN_RIFF_SIZE && it == bytes.size.toLong() }
+                ?.toInt()
+        }
+
+        private fun readImageSize(
+            bytes: ByteArray,
+            riffEnd: Int,
+        ): WebpSize? {
             var offset = RIFF_HEADER_SIZE
             var extendedSize: WebpSize? = null
-            while (offset + CHUNK_HEADER_SIZE <= riffEnd) {
-                val chunkType = bytes.ascii(offset, 4)
-                val chunkSize = bytes.uint32LittleEndian(offset + 4)
-                val dataOffset = offset + CHUNK_HEADER_SIZE
-                if (chunkSize > Int.MAX_VALUE || dataOffset.toLong() + chunkSize > riffEnd.toLong()) return null
-                when (chunkType) {
-                    "VP8X" -> extendedSize = readVp8x(bytes, dataOffset, chunkSize.toInt()) ?: return null
+            var encodedSize: WebpSize? = null
+            var valid = true
+            while (valid && encodedSize == null && offset + CHUNK_HEADER_SIZE <= riffEnd) {
+                val chunk = readChunk(bytes, offset, riffEnd)
+                if (chunk == null) {
+                    valid = false
+                    continue
+                }
+                when (chunk.type) {
+                    "VP8X" -> {
+                        extendedSize = readVp8x(bytes, chunk.dataOffset, chunk.size)
+                        valid = extendedSize != null
+                    }
                     "VP8L" -> {
-                        val encodedSize = readVp8l(bytes, dataOffset, chunkSize.toInt()) ?: return null
-                        return extendedSize ?: encodedSize
+                        encodedSize = readVp8l(bytes, chunk.dataOffset, chunk.size)
+                        valid = encodedSize != null
                     }
                     "VP8 " -> {
-                        val encodedSize = readVp8(bytes, dataOffset, chunkSize.toInt()) ?: return null
-                        return extendedSize ?: encodedSize
+                        encodedSize = readVp8(bytes, chunk.dataOffset, chunk.size)
+                        valid = encodedSize != null
                     }
                 }
-                offset = dataOffset + chunkSize.toInt() + (chunkSize.toInt() and 1)
+                offset = chunk.nextOffset
             }
-            return null
+            return encodedSize?.takeIf { valid }?.let { extendedSize ?: it }
         }
 
         private fun readVp8x(
@@ -92,12 +107,7 @@ private data class WebpSize(
             offset: Int,
             size: Int,
         ): WebpSize? {
-            if (
-                size < VP8_HEADER_SIZE ||
-                bytes[offset + 3].toUnsignedInt() != VP8_SIGNATURE_FIRST ||
-                bytes[offset + 4].toUnsignedInt() != VP8_SIGNATURE_SECOND ||
-                bytes[offset + 5].toUnsignedInt() != VP8_SIGNATURE_THIRD
-            ) {
+            if (size < VP8_HEADER_SIZE || !bytes.hasVp8Signature(offset)) {
                 return null
             }
             val width = bytes.uint16LittleEndian(offset + 6) and VP8_DIMENSION_MASK
@@ -106,6 +116,40 @@ private data class WebpSize(
         }
     }
 }
+
+private data class WebpChunk(
+    val type: String,
+    val dataOffset: Int,
+    val size: Int,
+    val nextOffset: Int,
+)
+
+private fun readChunk(
+    bytes: ByteArray,
+    offset: Int,
+    riffEnd: Int,
+): WebpChunk? {
+    val chunkSize = bytes.uint32LittleEndian(offset + 4)
+    val dataOffset = offset + CHUNK_HEADER_SIZE
+    if (chunkSize > Int.MAX_VALUE || dataOffset.toLong() + chunkSize > riffEnd.toLong()) return null
+    val size = chunkSize.toInt()
+    return WebpChunk(
+        type = bytes.ascii(offset, 4),
+        dataOffset = dataOffset,
+        size = size,
+        nextOffset = dataOffset + size + (size and 1),
+    )
+}
+
+private fun ByteArray.hasWebpHeader(): Boolean =
+    size >= RIFF_HEADER_SIZE &&
+        ascii(0, 4) == "RIFF" &&
+        ascii(8, 4) == "WEBP"
+
+private fun ByteArray.hasVp8Signature(offset: Int): Boolean =
+    this[offset + 3].toUnsignedInt() == VP8_SIGNATURE_FIRST &&
+        this[offset + 4].toUnsignedInt() == VP8_SIGNATURE_SECOND &&
+        this[offset + 5].toUnsignedInt() == VP8_SIGNATURE_THIRD
 
 private fun ByteArray.ascii(
     offset: Int,

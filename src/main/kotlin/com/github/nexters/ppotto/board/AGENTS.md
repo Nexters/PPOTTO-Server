@@ -15,7 +15,8 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `domain/BoardRole.kt` | The caller's role on a board: `OWNER` (`boards.user_id`) or `MEMBER` (`board_members`). Pure Kotlin; named `BoardRole` component via `enumAsRef = true` on `BoardSummaryV2Response.role` |
 | `domain/BoardStickerType.kt` | Sticker form as this domain sees it: `IMAGE` or `TEXT`. Board owns the port contract, so it declares its own type instead of importing `sticker.domain.StickerType` — the adapter lives in sticker and referencing sticker types here would make board depend back on sticker and close the cycle. `BoardStickerAdapter` maps the two with an exhaustive `when`, so a new `StickerType` constant fails to compile until board decides how to expose it |
 | `domain/BoardErrorCode.kt` | `BOARD-001` through `BOARD-008` API errors |
-| `infrastructure/BoardRepository.kt` | Active-board CRUD, ownership filtering, owner-or-member read filtering (`findReadableById`, one file-level `ownedOrJoinedBy` condition shared with the list: `boards.id IN (member board ids UNION ALL owned board ids)`, written this way so each branch uses its own index — `ix_board_members_user` and `ix_board_user_created` — where `user_id = ? OR id IN (...)` forced a sequential scan of `boards`), the v2 list query (`findAccessibleByUserId`: owned or joined active boards with a correlated member-count subquery, returned as `BoardWithMemberCount`), ordered member-id lookup for invitation details, owner/readable row locking, and soft deletion |
+| `infrastructure/BoardRepository.kt` | Active-board CRUD, owner filtering and locking, count, rename, and soft deletion |
+| `infrastructure/BoardMembershipRepository.kt` | Owner-or-member read filtering and row locking, the v2 accessible-board list with member counts, and ordered member-id lookup. Its shared `ownedOrJoinedBy` condition uses member and owner index-friendly union branches |
 | `infrastructure/BoardInvitationRepository.kt` | Board invitation insert, expiry-based reissue, preview-key update, and locked/unlocked lookup by typed id, code, or the unique board/inviter pair. Reuse and preview replacement policies stay in the application layer |
 | `infrastructure/BoardInvitationPreviewObjectKeys.kt` | Invitation preview key convention: `board-invitations/{invitationId}/{uploadId}.webp`, with a unique upload id so concurrent replacements never overwrite one another |
 | `infrastructure/GcsBoardInvitationPreviewStorage.kt` | GCS adapter for WebP upload, shared read-URL issuing, and single-object deletion |
@@ -116,7 +117,7 @@ T01(보드 홈·목록)에서 정한 것과 남겨 둔 것이다. 남겨 둔 항
 - 공동 보드는 참여 행이 하나 이상인 보드다(`BoardKind.of`). 마지막 참여자가 빠지면 별도 처리 없이 개인 보드로 돌아간다.
 - `(board_id, user_id)`는 `uk_board_members_board_user`로 유니크다. 참여 API는 `ON CONFLICT DO NOTHING`으로 재시도 멱등을 얻으면 된다. 방장이 자기 보드에 참여하는 요청은 유니크로 막히지 않으므로 서비스에서 거부해야 한다.
 - `user_id`는 `boards.user_id`처럼 FK가 없고, `board_id`는 `ON DELETE CASCADE` FK다. 보드 soft delete는 참여 행을 지우지 않는다. 목록과 상세가 `boards.deleted_at`으로 거르므로 보이지 않을 뿐이다.
-- 읽기(`GET /boards` v2, `GET /boards/{boardId}` v1·v2)는 방장 또는 참여자, 쓰기는 전부 방장 전용이다. 참여 여부 판정은 `BoardRepository`의 `ownedOrJoinedBy` 한 곳뿐이고 "행이 있으면 참여 중"을 전제로 한다.
+- 읽기(`GET /boards` v2, `GET /boards/{boardId}` v1·v2)는 방장 또는 참여자, 쓰기는 전부 방장 전용이다. 참여 여부 판정은 `BoardMembershipRepository`의 `ownedOrJoinedBy` 한 곳뿐이고 "행이 있으면 참여 중"을 전제로 한다.
 - 탈퇴 정리는 구현돼 있다. 탈퇴자의 참여 행은 `BoardWithdrawalRepository.hardDeleteMembershipsByUserId`가, 탈퇴자 보드에 달린 참여 행은 보드 하드 삭제의 CASCADE가 지운다.
 
 **T03이 결정할 것**

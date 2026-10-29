@@ -4,8 +4,8 @@ import com.github.nexters.ppotto.board.application.model.BoardInvitationIssueRes
 import com.github.nexters.ppotto.board.application.model.BoardInvitationPreviewImage
 import com.github.nexters.ppotto.board.application.model.BoardInvitationPreviewUploadResult
 import com.github.nexters.ppotto.board.application.port.BoardInvitationPreviewStorage
-import com.github.nexters.ppotto.board.domain.BoardInvitation
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
+import com.github.nexters.ppotto.board.domain.BoardInvitation
 import com.github.nexters.ppotto.board.infrastructure.BoardInvitationRepository
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -67,6 +67,7 @@ class BoardInvitationService(
     ): BoardInvitationPreviewUploadResult {
         validateUploadTarget(boardInvitationRepository.findById(invitationId), userId, code)
         var uploadedObjectKey: String? = null
+        var linkedToInvitation = false
         try {
             val objectKey = previewStorage.upload(invitationId, image.bytes)
             uploadedObjectKey = objectKey
@@ -80,19 +81,19 @@ class BoardInvitationService(
                         BoardInvitationPreviewReplacement(invitation?.previewImageKey)
                     },
                 ).previousObjectKey
+            linkedToInvitation = true
             previousObjectKey?.let { previous ->
                 bestEffort(log, "교체된 보드 초대 미리보기 정리(objectKey=$previous)") {
                     previewStorage.delete(previous)
                 }
             }
             return BoardInvitationPreviewUploadResult(previewImageUrl)
-        } catch (failure: Exception) {
-            uploadedObjectKey?.let { objectKey ->
+        } finally {
+            uploadedObjectKey?.takeUnless { linkedToInvitation }?.let { objectKey ->
                 bestEffort(log, "반영되지 않은 보드 초대 미리보기 정리(objectKey=$objectKey)") {
                     previewStorage.delete(objectKey)
                 }
             }
-            throw failure
         }
     }
 

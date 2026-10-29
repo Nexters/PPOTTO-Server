@@ -154,10 +154,12 @@ class BoardInvitationControllerTest(
                 val result = mockMvc.perform(get("/board-invitations/$code"))
 
                 Then("공개 정보만 반환한다") {
+                    val expectedBoardId = board.id.value.toString()
+
                     result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.code").value(code))
-                        .andExpect(jsonPath("$.data.boardId").value(board.id.value.toString()))
+                        .andExpect(jsonPath("$.data.boardId").value(expectedBoardId))
                         .andExpect(jsonPath("$.data.boardName").value("제주 여행"))
                         .andExpect(jsonPath("$.data.inviterName").value("김용희"))
                         .andExpect(jsonPath("$.data.participantCount").value(2))

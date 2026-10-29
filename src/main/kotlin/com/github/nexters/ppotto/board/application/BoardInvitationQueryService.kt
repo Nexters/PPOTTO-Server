@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardRole
 import com.github.nexters.ppotto.board.infrastructure.BoardInvitationRepository
+import com.github.nexters.ppotto.board.infrastructure.BoardMembershipRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.UserId
@@ -20,6 +21,7 @@ import java.util.Locale
 @Service
 class BoardInvitationQueryService(
     private val boardInvitationRepository: BoardInvitationRepository,
+    private val boardMembershipRepository: BoardMembershipRepository,
     private val boardRepository: BoardRepository,
     private val stickerSummaryPort: BoardStickerSummaryPort,
     private val previewStorage: BoardInvitationPreviewStorage,
@@ -31,12 +33,13 @@ class BoardInvitationQueryService(
     ): BoardInvitationDetail {
         val normalizedCode = code.uppercase(Locale.ROOT)
         val invitation =
-            boardInvitationRepository.findByCode(normalizedCode)
+            boardInvitationRepository
+                .findByCode(normalizedCode)
                 ?.takeIf { it.expiresAt.isAfter(Instant.now()) }
                 ?: invitationNotFound()
         val board = boardRepository.findById(invitation.boardId) ?: invitationNotFound()
         val inviterName = userService.findActiveName(invitation.inviterUserId) ?: invitationNotFound()
-        val memberUserIds = boardRepository.findMemberUserIds(board.id)
+        val memberUserIds = boardMembershipRepository.findMemberUserIds(board.id)
         val participantUserIds = listOf(board.userId) + memberUserIds
         val stickerCount =
             stickerSummaryPort
