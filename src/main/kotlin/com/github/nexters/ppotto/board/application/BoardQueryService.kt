@@ -8,6 +8,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerSummaryPort
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardKind
 import com.github.nexters.ppotto.board.domain.BoardRole
+import com.github.nexters.ppotto.board.infrastructure.BoardMembershipRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service
 @Service
 class BoardQueryService(
     private val boardAccessService: BoardAccessService,
+    private val boardMembershipRepository: BoardMembershipRepository,
     private val boardRepository: BoardRepository,
     private val drawingRepository: DrawingRepository,
     private val stickerQueryPort: BoardStickerQueryPort,
@@ -26,7 +28,7 @@ class BoardQueryService(
     fun list(userId: UserId): List<Board> = boardRepository.findByUserId(userId)
 
     fun listSummaries(userId: UserId): List<BoardSummary> {
-        val boards = boardRepository.findAccessibleByUserId(userId)
+        val boards = boardMembershipRepository.findAccessibleByUserId(userId)
         val stickers =
             stickerSummaryPort.getByBoardIds(
                 boards.map { it.board.id }.toSet(),

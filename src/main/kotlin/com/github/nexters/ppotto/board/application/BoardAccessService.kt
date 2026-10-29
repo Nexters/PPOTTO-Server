@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
+import com.github.nexters.ppotto.board.infrastructure.BoardMembershipRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional
 
 @Service
 class BoardAccessService(
+    private val boardMembershipRepository: BoardMembershipRepository,
     private val boardRepository: BoardRepository,
 ) {
     fun getById(id: BoardId): Board =
@@ -29,7 +31,7 @@ class BoardAccessService(
         boardId: BoardId,
         userId: UserId,
     ): Board =
-        boardRepository.findReadableById(boardId, userId)
+        boardMembershipRepository.findReadableById(boardId, userId)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -38,5 +40,13 @@ class BoardAccessService(
         userId: UserId,
     ): Board =
         boardRepository.findOwnedByIdForUpdate(boardId, userId)
+            ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    fun getReadableByIdForUpdate(
+        boardId: BoardId,
+        userId: UserId,
+    ): Board =
+        boardMembershipRepository.findReadableByIdForUpdate(boardId, userId)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 }

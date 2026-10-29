@@ -57,15 +57,21 @@ jooq {
                     }
                     forcedType {
                         includeTypes = "(?i)UUID"
-                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id|user_device_tokens\\.user_id|board_members\\.user_id"
+                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id|user_device_tokens\\.user_id|board_members\\.user_id|board_invitations\\.inviter_user_id"
                         userType = "com.github.nexters.ppotto.global.identifier.UserId"
                         converter = "com.github.nexters.ppotto.global.jooq.UserIdConverter"
                     }
                     forcedType {
                         includeTypes = "(?i)UUID"
-                        includeExpression = "boards\\.id|analysis\\.board_id|photos\\.board_id|stickers\\.board_id|drawings\\.board_id|board_members\\.board_id"
+                        includeExpression = "boards\\.id|analysis\\.board_id|photos\\.board_id|stickers\\.board_id|drawings\\.board_id|board_members\\.board_id|board_invitations\\.board_id"
                         userType = "com.github.nexters.ppotto.global.identifier.BoardId"
                         converter = "com.github.nexters.ppotto.global.jooq.BoardIdConverter"
+                    }
+                    forcedType {
+                        includeTypes = "(?i)UUID"
+                        includeExpression = "board_invitations\\.id"
+                        userType = "com.github.nexters.ppotto.global.identifier.BoardInvitationId"
+                        converter = "com.github.nexters.ppotto.global.jooq.BoardInvitationIdConverter"
                     }
                     forcedType {
                         includeTypes = "(?i)UUID"

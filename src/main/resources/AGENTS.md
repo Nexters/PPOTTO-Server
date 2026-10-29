@@ -28,6 +28,7 @@ Configuration and database migrations.
 | `db/migration/V20260911120000__add_analysis_failed_code.sql` | `analysis.failed_code VARCHAR(20)` nullable 열을 추가한다. 기존 실패 기록은 사유로 코드를 추정하지 않고 null을 유지한다. |
 | `db/migration/V20260914120000__add_analysis_notification_requested_at.sql` | 분석별 완료·실패 알림 신청 시각을 저장하는 nullable `analysis.notification_requested_at`을 추가한다. |
 | `db/migration/V20261025120000__create_board_members.sql` | 보드 참여자 테이블 `board_members`를 만든다. 참여자만 담고 방장은 `boards.user_id`에 둔다. `(board_id, user_id)` 유니크, 참여 보드 조회용 `user_id` 인덱스, 보드 하드 삭제에 따라 지워지는 `board_id` FK(`ON DELETE CASCADE`)를 둔다. `user_id`는 `boards.user_id`처럼 FK가 없다. |
+| `db/migration/V20261028120000__create_board_invitations.sql` | 사용자별 보드 초대 상태를 저장하는 `board_invitations`를 만든다. 코드와 `(board_id, inviter_user_id)` 유니크 제약, 6자리 코드 형식 CHECK, 발급자 정리용 인덱스, 보드 하드 삭제 CASCADE, `updated_at` 트리거를 둔다. `inviter_user_id`는 사용자 식별자 정책에 따라 FK가 없다. |
 
 ## Rules
 

@@ -17,6 +17,13 @@ value class BoardId(
 }
 
 @JvmInline
+value class BoardInvitationId(
+    val value: UUID,
+) {
+    override fun toString() = value.toString()
+}
+
+@JvmInline
 value class StickerId(
     val value: UUID,
 ) {
