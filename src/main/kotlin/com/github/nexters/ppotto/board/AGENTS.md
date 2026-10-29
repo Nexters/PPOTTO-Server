@@ -69,6 +69,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/dto/DrawingLegacyZIndex.kt` | The v1 `zIndex`-in-`stroke`-JSON shim: `internal` `legacyZIndex`, `withoutLegacyZIndex`, `withLegacyZIndex` |
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
 | `presentation/BoardApiExamples.kt` | `ApiExampleProvider` implementation. Defines board list/detail/create/rename responses, per-edit-mode layout requests, and `BOARD-001`~`BOARD-005` failure examples as real DTO instances, each declared as a bare `ApiExample` and wrapped with `listOf` at the registration site, plus the `STICKER-007` (delete) and `STICKER-008` (layout v1/v2) examples that `StickerCommandService` raises through the board endpoints. Holds the examples for `BoardApi`, `BoardListApi`, `BoardListV2Api`, and `BoardLayoutApi` |
+| `presentation/BoardInvitationApiExamples.kt` | Type-safe success and domain-error examples for invitation issue, preview upload, and optional-auth detail lookup, including authenticated and anonymous detail variants |
 | `presentation/BoardNotFoundApiResponse.kt` | Composed annotation for the 404 `BOARD-002` response shared by the four board endpoints |
 
 ## Rules
