@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.board.presentation.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.board.application.model.BoardInvitationIssueResult
+import com.github.nexters.ppotto.board.application.model.BoardInvitationPreviewUploadResult
 import com.github.nexters.ppotto.global.identifier.BoardInvitationId
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.Instant
@@ -29,5 +30,19 @@ data class BoardInvitationIssueResponse(
                 expiresAt = result.expiresAt,
                 previewRequired = result.previewRequired,
             )
+    }
+}
+
+@Schema(description = "보드 초대 미리보기 업로드 결과")
+data class BoardInvitationPreviewUploadResponse(
+    @field:Schema(
+        description = "미리보기 읽기용 signed URL",
+        example = "https://storage.googleapis.com/ppotto-board-invitations/...?X-Goog-Signature=sample",
+    )
+    val previewImageUrl: String,
+) {
+    companion object {
+        fun from(result: BoardInvitationPreviewUploadResult): BoardInvitationPreviewUploadResponse =
+            BoardInvitationPreviewUploadResponse(result.previewImageUrl)
     }
 }

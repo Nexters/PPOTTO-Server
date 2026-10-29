@@ -2,15 +2,19 @@ package com.github.nexters.ppotto.board.presentation
 
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.support.addBoardMember
+import com.github.nexters.ppotto.board.support.validWebp
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import com.jayway.jsonpath.JsonPath
 import org.hamcrest.Matchers.matchesPattern
 import org.jooq.DSLContext
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -74,6 +78,66 @@ class BoardInvitationControllerTest(
                     result
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("BOARD-002"))
+                }
+            }
+
+            When("방장이 WebP 미리보기를 업로드하면") {
+                val principal = UsernamePasswordAuthenticationToken.authenticated(owner.id.value, null, emptyList())
+                val issued =
+                    mockMvc
+                        .perform(
+                            post("/boards/${board.id}/invitations")
+                                .with(authentication(principal)),
+                        ).andReturn()
+                val invitationId = JsonPath.read<String>(issued.response.contentAsString, "$.data.invitationId")
+                val code = JsonPath.read<String>(issued.response.contentAsString, "$.data.code")
+                val file = MockMultipartFile("file", "preview.webp", "image/webp", validWebp())
+                val codePart = MockMultipartFile("code", "", "text/plain", code.toByteArray())
+                val result =
+                    mockMvc.perform(
+                        multipart("/board-invitations/$invitationId/preview")
+                            .file(file)
+                            .file(codePart)
+                            .with { request ->
+                                request.method = "PUT"
+                                request
+                            }.with(authentication(principal)),
+                    )
+
+                Then("미리보기 읽기 URL을 반환한다") {
+                    result
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.previewImageUrl").value(matchesPattern("https://preview.test/.+\\.webp")))
+                }
+            }
+
+            When("WebP가 아닌 파일을 업로드하면") {
+                val principal = UsernamePasswordAuthenticationToken.authenticated(owner.id.value, null, emptyList())
+                val issued =
+                    mockMvc
+                        .perform(
+                            post("/boards/${board.id}/invitations")
+                                .with(authentication(principal)),
+                        ).andReturn()
+                val invitationId = JsonPath.read<String>(issued.response.contentAsString, "$.data.invitationId")
+                val code = JsonPath.read<String>(issued.response.contentAsString, "$.data.code")
+                val file = MockMultipartFile("file", "preview.webp", "image/webp", byteArrayOf(1, 2, 3))
+                val codePart = MockMultipartFile("code", "", "text/plain", code.toByteArray())
+                val result =
+                    mockMvc.perform(
+                        multipart("/board-invitations/$invitationId/preview")
+                            .file(file)
+                            .file(codePart)
+                            .with { request ->
+                                request.method = "PUT"
+                                request
+                            }.with(authentication(principal)),
+                    )
+
+                Then("BOARD-007로 거부한다") {
+                    result
+                        .andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("BOARD-007"))
                 }
             }
         }

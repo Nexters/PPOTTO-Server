@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.support
 
 import com.github.nexters.ppotto.analysis.support.AnalysisTestConfig
+import com.github.nexters.ppotto.board.support.BoardInvitationTestConfig
 import com.github.nexters.ppotto.notification.support.NotificationTestConfig
 import com.github.nexters.ppotto.user.support.UserTestConfig
 import io.kotest.core.spec.IsolationMode
@@ -16,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles
     TestcontainersConfiguration::class,
     ObjectStorageTestConfiguration::class,
     AnalysisTestConfig::class,
+    BoardInvitationTestConfig::class,
     NotificationTestConfig::class,
     UserTestConfig::class,
 )
