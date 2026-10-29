@@ -154,7 +154,9 @@ class BoardInvitationControllerTest(
                 val result = mockMvc.perform(get("/board-invitations/$code"))
 
                 Then("공개 정보만 반환한다") {
-                    val expectedBoardId = board.id.value.toString()
+                    val expectedBoardId =
+                        board.id.value
+                            .toString()
 
                     result
                         .andExpect(status().isOk)
