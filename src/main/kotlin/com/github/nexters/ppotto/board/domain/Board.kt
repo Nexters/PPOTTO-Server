@@ -14,6 +14,7 @@ data class Board(
     companion object {
         const val MAX_COUNT = 100
         const val MAX_NAME_LENGTH = 10
+        const val MAX_PARTICIPANT_COUNT = 8
 
         fun defaultName(sequence: Int): String = "Board $sequence"
     }

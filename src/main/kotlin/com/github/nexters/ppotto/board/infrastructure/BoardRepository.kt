@@ -115,6 +115,14 @@ class BoardRepository(
             .fetch { BoardWithMemberCount(it.value1().toDomain(), it.value2()) }
     }
 
+    fun findMemberUserIds(boardId: BoardId): List<UserId> =
+        dslContext
+            .select(BOARD_MEMBERS.USER_ID)
+            .from(BOARD_MEMBERS)
+            .where(BOARD_MEMBERS.BOARD_ID.eq(boardId))
+            .orderBy(BOARD_MEMBERS.CREATED_AT, BOARD_MEMBERS.ID)
+            .fetch { requireNotNull(it[BOARD_MEMBERS.USER_ID]) }
+
     fun countByUserId(userId: UserId): Int =
         dslContext
             .fetchCount(

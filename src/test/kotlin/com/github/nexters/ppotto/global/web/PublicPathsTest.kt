@@ -25,6 +25,7 @@ private val PATHS =
         "/stickers/0198c0f0-0000-7000-8000-000000000000",
         "/stickers/0198c0f0-0000-7000-8000-000000000000/view",
         "/stickers/shared/01983f30-0000-7000-8000-000000000000",
+        "/board-invitations/K7P2QX",
         "/boards",
         "/users/me",
     )
@@ -74,11 +75,13 @@ class PublicPathsTest :
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/terms") shouldBe true
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
                         .matches("/stickers/shared/01983f30-0000-7000-8000-000000000000") shouldBe true
+                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/board-invitations/K7P2QX") shouldBe true
                 }
 
                 Then("토큰을 해석해야 하므로 Bearer 필터는 건너뛰지 않는다") {
                     PublicPaths.isPublicApi("/terms") shouldBe false
                     PublicPaths.isPublicApi("/stickers/shared/01983f30-0000-7000-8000-000000000000") shouldBe false
+                    PublicPaths.isPublicApi("/board-invitations/K7P2QX") shouldBe false
                 }
 
                 Then("리캡 상세와 약관 동의, 스티커 조회 기록은 익명 허용 대상이 아니다") {

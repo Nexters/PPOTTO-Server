@@ -63,6 +63,16 @@ class UserRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun findNamesByIds(ids: Collection<UserId>): Map<UserId, String> {
+        if (ids.isEmpty()) return emptyMap()
+        return dslContext
+            .select(USERS.ID, USERS.NAME)
+            .from(USERS)
+            .where(USERS.ID.`in`(ids))
+            .fetch()
+            .associate { requireNotNull(it[USERS.ID]) to requireNotNull(it[USERS.NAME]) }
+    }
+
     fun findBySocialAccount(
         provider: OAuthProvider,
         providerUserId: String,

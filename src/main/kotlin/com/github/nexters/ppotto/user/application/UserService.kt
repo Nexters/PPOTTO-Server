@@ -42,6 +42,10 @@ class UserService(
 
     fun isActive(id: UserId): Boolean = userRepository.findById(id) != null
 
+    fun findActiveName(id: UserId): String? = userRepository.findById(id)?.name
+
+    fun findDisplayNames(ids: Collection<UserId>): Map<UserId, String> = userRepository.findNamesByIds(ids)
+
     fun withdraw(
         id: UserId,
         withdrawnAt: Instant = Instant.now(),

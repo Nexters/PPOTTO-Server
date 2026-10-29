@@ -1774,7 +1774,7 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 - Summary: 초대 대상 보드 조회
 
 #### Request Spec
-- 인증: 선택. 유효한 `Authorization: Bearer {accessToken}`을 보내면 `viewerStatus`를 계산하고, 헤더가 없으면 공개 정보만 반환합니다. 잘못되었거나 만료된 토큰을 보내면 `401 COMMON-004`입니다.
+- 인증: 선택. 유효한 `Authorization: Bearer {accessToken}`을 보내면 `viewerStatus`와 `participants`를 반환하고, 헤더가 없으면 공개 정보만 반환합니다. 잘못되었거나 만료된 토큰을 보내면 `401 COMMON-004`입니다.
 
 | In | Name | Required | Type | Example | Description |
 | --- | --- | --- | --- | --- | --- |
@@ -1785,7 +1785,7 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 #### Success Spec
 | Status | Description | Data |
 | --- | --- | --- |
-| 200 | 초대자와 대상 보드 공개 정보 | `code`, `boardId`, `boardName`, `inviterName`, `participantCount`, `maxParticipantCount`, `stickerCount`, `previewImageUrl`, `expiresAt`, `viewerStatus` |
+| 200 | 초대자와 대상 보드 정보 | `code`, `boardId`, `boardName`, `inviterName`, `participantCount`, `maxParticipantCount`, `stickerCount`, `previewImageUrl`, `expiresAt`, `viewerStatus`, `participants` |
 
 | Field | Type | Description |
 | --- | --- | --- |
@@ -1799,6 +1799,9 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 | previewImageUrl | string (optional) | 가장 최근에 완료된 정적 미리보기 signed GET URL. 없으면 필드 생략 |
 | expiresAt | string (ISO-8601 UTC) | 초대 만료 시각 |
 | viewerStatus | `OWNER` \| `MEMBER` \| `NOT_JOINED` (optional) | 인증 사용자의 현재 상태. 비인증 조회는 필드 생략 |
+| participants | object[] (optional) | 현재 참여자 목록. 방장 우선, 이후 참여 순서이며 비인증 조회는 필드 생략 |
+| participants[].name | string | 현재 사용자 이름 |
+| participants[].role | `OWNER` \| `MEMBER` | 보드 역할 |
 
 200 example:
 ```json
@@ -1814,7 +1817,17 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
     "stickerCount": 9,
     "previewImageUrl": "https://storage.googleapis.com/ppotto-board-invitations/...?X-Goog-Expires=3600&X-Goog-Signature=sample",
     "expiresAt": "2026-11-26T09:30:00Z",
-    "viewerStatus": "NOT_JOINED"
+    "viewerStatus": "NOT_JOINED",
+    "participants": [
+      {
+        "name": "김용희",
+        "role": "OWNER"
+      },
+      {
+        "name": "이수민",
+        "role": "MEMBER"
+      }
+    ]
   },
   "error": null
 }
@@ -1841,7 +1854,7 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 ```
 
 #### Notes
-- 공개 응답에는 참여자 명단·프로필, 개별 스티커 정보·좌표, 저장소 object key를 포함하지 않습니다.
+- 비인증 공개 응답에는 `viewerStatus`와 참여자 명단을 포함하지 않습니다. 인증 응답의 참여자 명단에는 이름과 역할만 포함하며 프로필, 개별 스티커 정보·좌표, 저장소 object key는 포함하지 않습니다.
 - `boardName`, `inviterName`, `participantCount`, `stickerCount`는 조회 시점의 최신 값이고, `previewImageUrl`의 이미지는 현재 코드 발급 시점의 정적 스냅샷입니다.
 - 정원 8명에 도달해도 이 API는 200과 보드 정보를 반환합니다. 클라이언트는 `participantCount >= maxParticipantCount`이면 참여 불가 상태를 표시하고, 실제 참여 API는 요청 시점의 최신 정원을 다시 확인합니다.
 - 초대는 보드에 귀속되므로 발급자가 보드에서 나가도 만료 시각까지 유효합니다. 단, 발급자가 회원 탈퇴하면 즉시 조회할 수 없습니다.
@@ -3652,6 +3665,13 @@ Request example:
 | previewImageUrl | N | `string` | - | 완료된 미리보기 signed URL. 없으면 생략 |
 | expiresAt | Y | `string` | - | UTC ISO-8601 만료 시각 |
 | viewerStatus | N | `string` | OWNER, MEMBER, NOT_JOINED | 비인증 조회는 생략 |
+| participants | N | `object`[] | - | 인증 조회에서만 반환. 방장 우선, 이후 참여 순서 |
+
+### BoardInvitationParticipant
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| name | Y | `string` | - | 현재 사용자 이름 |
+| role | Y | `string` | OWNER, MEMBER | 보드 역할 |
 
 ### Sticker
 | Field | Required | Type | Enum | Description |
