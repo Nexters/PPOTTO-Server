@@ -64,6 +64,7 @@
 | boards | GET | /boards | 내 보드 목록 (드롭다운) | 200 | 401 | Y |
 | boards | POST | /boards | 보드 생성 | 200 | 400, 401 | Y |
 | boards | GET | /boards/{boardId} | 보드 상세 조회 (보드 렌더링) | 200 | 401, 404 | Y |
+| boards | GET | /boards/{boardId}/participants | 보드 참여자 목록 조회 | 200 | 401, 404 | Y |
 | boards | PATCH | /boards/{boardId} | 보드 이름 변경 | 200 | 400, 401, 404 | Y |
 | boards | DELETE | /boards/{boardId} | 보드 삭제 | 200 | 400, 401, 404, 409 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 (편집 모드 종료 시) | 200 | 400, 401, 404 | Y |
@@ -1545,6 +1546,59 @@ v1과 다른 점은 `drawings` 배열뿐이다. `id`, `name`, `stickers`는 v1�
 
 #### Failure Spec
 v1과 같다 (401 `COMMON-004`, 404 `BOARD-002`).
+
+### GET /boards/{boardId}/participants
+
+- Operation ID: `getBoardParticipants`
+- Summary: 보드 참여자 목록 조회
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | boardId | Y | `string` | 01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b | 조회할 보드 ID |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 현재 참여자 목록 | `participantCount`, `maxParticipantCount`, `participants` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "participantCount": 2,
+    "maxParticipantCount": 8,
+    "participants": [
+      {
+        "userId": "01983f20-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+        "name": "김용희",
+        "role": "OWNER"
+      },
+      {
+        "userId": "01983f21-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
+        "name": "이수민",
+        "role": "MEMBER"
+      }
+    ]
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더 누락 또는 accessToken 만료 |
+| 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드가 없거나 요청 사용자가 방장·참여자가 아님 |
+
+#### Notes
+- 방장을 첫 번째로 반환하고, 참여자는 참여 시각과 ID 순서로 반환한다.
+- `participantCount`는 방장을 포함하며 `maxParticipantCount`는 현재 정책인 `8`이다.
 
 ### PATCH /boards/{boardId}/layout (X-API-Version: 2)
 
@@ -3670,6 +3724,20 @@ Request example:
 ### BoardInvitationParticipant
 | Field | Required | Type | Enum | Description |
 | --- | --- | --- | --- | --- |
+| name | Y | `string` | - | 현재 사용자 이름 |
+| role | Y | `string` | OWNER, MEMBER | 보드 역할 |
+
+### BoardParticipants
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| participantCount | Y | `integer` | - | 방장을 포함한 현재 참여 인원 |
+| maxParticipantCount | Y | `integer` | - | 현재 정책 `8` |
+| participants | Y | `object`[] | - | 방장 우선, 이후 참여 순서 |
+
+### BoardParticipant
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| userId | Y | `string` | - | 사용자 ID |
 | name | Y | `string` | - | 현재 사용자 이름 |
 | role | Y | `string` | OWNER, MEMBER | 보드 역할 |
 

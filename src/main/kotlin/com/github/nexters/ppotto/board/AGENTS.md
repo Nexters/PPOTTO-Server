@@ -28,8 +28,10 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardCommandService.kt` | Default/create/rename/delete use cases and board policies as plain statements. Only `create` and `delete` open a transaction; `rename` is a single `UPDATE ... RETURNING` |
 | `application/BoardAccessService.kt` | Port-free board existence, ownership, owner-or-member read access (`getReadableById`), and `MANDATORY`-propagation owner/readable row-locking lookup boundary for cross-domain services |
 | `application/BoardInvitationService.kt` | Per-user invitation issue/reuse and issuer-only preview replacement. It revalidates the invitation code under a row lock after storage I/O, then best-effort deletes uncommitted, replaced, or expired preview objects outside the transaction |
-| `application/BoardInvitationQueryService.kt` | Public invitation detail composition from the current board, inviter, member, sticker-count, and static preview state; authenticated callers additionally receive their role and the ordered participant names |
-| `application/model/BoardInvitationDetail.kt` | Invitation lookup read model, optional authenticated-viewer state, and participant name/role summaries |
+| `application/BoardInvitationQueryService.kt` | Public invitation detail composition from the current board, inviter, shared participant query, sticker-count, and static preview state; authenticated callers additionally receive their role and the ordered participant names |
+| `application/BoardParticipantQueryService.kt` | Owner-or-member participant lookup and shared owner-first participant composition from ordered membership ids and batched display names |
+| `application/model/BoardParticipants.kt` | Participant-list read model containing the current/max counts and typed user id, name, and board role for each participant |
+| `application/model/BoardInvitationDetail.kt` | Invitation lookup read model with optional authenticated-viewer state and shared participant summaries |
 | `application/model/BoardInvitationIssueResult.kt` | Invitation issue result containing the invitation id, code, expiry, and whether the current code needs a preview |
 | `application/model/BoardInvitationPreviewImage.kt` | Validated preview upload value: an actual RIFF/WebP payload no larger than 1 MiB and 624×540 |
 | `application/model/BoardInvitationPreviewUploadResult.kt` | Read URL returned after a preview is stored and linked to the invitation |
@@ -49,6 +51,8 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/BoardInvitationPreviewController.kt` | HTTP adapter that validates the multipart file and delegates preview replacement with the supplied invitation code |
 | `presentation/BoardInvitationQueryApi.kt` | Optional-auth baseline OpenAPI contract for `GET /board-invitations/{code}` |
 | `presentation/BoardInvitationQueryController.kt` | HTTP adapter that passes the optional current user into invitation detail lookup |
+| `presentation/BoardParticipantApi.kt` | Baseline OpenAPI contract for authenticated `GET /boards/{boardId}/participants` |
+| `presentation/BoardParticipantController.kt` | HTTP adapter that returns the current participant list to an owner or member |
 | `presentation/BoardListApi.kt` | `GET /boards` pinned to `version = "1"` (operationId `list`), split out of `BoardApi` the same way as `BoardDetailApi` so only the list is frozen at v1. Owned boards only, `{id, name}` |
 | `presentation/BoardListV2Api.kt` | `GET /boards` at `version = "2+"` (operationId `listV2`), the home-card list with per-tab counts |
 | `presentation/BoardListController.kt` | v1 list implementation |
@@ -65,13 +69,15 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/dto/BoardRequests.kt` | Swagger-described create and rename validation DTOs. Both names carry the same constraints — `@Size(min = 1, max = Board.MAX_NAME_LENGTH)` plus `BOARD_NAME_PATTERN`, so a whitespace-only name is a 400 at the DTO and no service-side name check is needed |
 | `presentation/dto/BoardResponses.kt` | Swagger-described **v1** board list/detail, sticker (`BoardStickerResponse`, named apart from `sticker.presentation.dto.StickerResponse`), and drawing response DTOs. Detail drops `Drawing.Text` and folds `zIndex` back into the `stroke` JSON |
 | `presentation/dto/BoardInvitationResponses.kt` | Invitation issue, preview-upload, and optional-auth detail response DTOs |
+| `presentation/dto/BoardParticipantResponses.kt` | Board participant-list response DTOs with typed user ids, names, and roles |
 | `presentation/dto/BoardV2Responses.kt` | Swagger-described **v2** detail and list responses. `DrawingV2Response` is a `type`-discriminated union of `Stroke` and `Text` with `zIndex` as a real field. `BoardListV2Response` derives `BoardCountsResponse` from the card list it returns, so counts and cards can never disagree. `BoardSummaryV2Response.mainColor` and `analysisStatus` carry `@get:JsonInclude(ALWAYS)`, overriding the global `non_null` so the client receives an explicit `null` as the contract states |
 | `presentation/dto/BoardLayoutV2Request.kt` | Swagger-described **v2** layout request. `DrawingCreateV2Request` is a `type`-discriminated union so jakarta validation runs per variant; colours are constrained to `#RRGGBB` here, which v1 never enforced |
 | `presentation/dto/DrawingLegacyZIndex.kt` | The v1 `zIndex`-in-`stroke`-JSON shim: `internal` `legacyZIndex`, `withoutLegacyZIndex`, `withLegacyZIndex` |
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
 | `presentation/BoardApiExamples.kt` | `ApiExampleProvider` implementation. Defines board list/detail/create/rename responses, per-edit-mode layout requests, and `BOARD-001`~`BOARD-005` failure examples as real DTO instances, each declared as a bare `ApiExample` and wrapped with `listOf` at the registration site, plus the `STICKER-007` (delete) and `STICKER-008` (layout v1/v2) examples that `StickerCommandService` raises through the board endpoints. Holds the examples for `BoardApi`, `BoardListApi`, `BoardListV2Api`, and `BoardLayoutApi` |
 | `presentation/BoardInvitationApiExamples.kt` | Type-safe success and domain-error examples for invitation issue, preview upload, and optional-auth detail lookup, including authenticated and anonymous detail variants |
-| `presentation/BoardNotFoundApiResponse.kt` | Composed annotation for the 404 `BOARD-002` response shared by the four board endpoints |
+| `presentation/BoardParticipantApiExamples.kt` | Type-safe success and hidden-board error examples for participant-list lookup |
+| `presentation/BoardNotFoundApiResponse.kt` | Composed annotation for the 404 `BOARD-002` response shared by board endpoints |
 
 ## Rules
 
