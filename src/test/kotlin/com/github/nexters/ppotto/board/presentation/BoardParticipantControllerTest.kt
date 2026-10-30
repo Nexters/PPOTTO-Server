@@ -38,14 +38,21 @@ class BoardParticipantControllerTest(
                     )
 
                 Then("참여자 식별자와 이름, 역할을 순서대로 반환한다") {
+                    val ownerId =
+                        owner.id.value
+                            .toString()
+                    val memberId =
+                        member.id.value
+                            .toString()
+
                     result
                         .andExpect(status().isOk)
                         .andExpect(jsonPath("$.data.participantCount").value(2))
                         .andExpect(jsonPath("$.data.maxParticipantCount").value(8))
-                        .andExpect(jsonPath("$.data.participants[0].userId").value(owner.id.value.toString()))
+                        .andExpect(jsonPath("$.data.participants[0].userId").value(ownerId))
                         .andExpect(jsonPath("$.data.participants[0].name").value("김용희"))
                         .andExpect(jsonPath("$.data.participants[0].role").value("OWNER"))
-                        .andExpect(jsonPath("$.data.participants[1].userId").value(member.id.value.toString()))
+                        .andExpect(jsonPath("$.data.participants[1].userId").value(memberId))
                         .andExpect(jsonPath("$.data.participants[1].name").value("이수민"))
                         .andExpect(jsonPath("$.data.participants[1].role").value("MEMBER"))
                 }
