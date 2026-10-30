@@ -3,9 +3,9 @@ package com.github.nexters.ppotto.board.presentation.dto
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.nexters.ppotto.board.application.model.BoardInvitationDetail
 import com.github.nexters.ppotto.board.application.model.BoardInvitationIssueResult
-import com.github.nexters.ppotto.board.application.model.BoardInvitationParticipant
 import com.github.nexters.ppotto.board.application.model.BoardInvitationPreviewUploadResult
 import com.github.nexters.ppotto.board.application.model.BoardInvitationViewerStatus
+import com.github.nexters.ppotto.board.application.model.BoardParticipant
 import com.github.nexters.ppotto.board.domain.BoardRole
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.BoardInvitationId
@@ -119,7 +119,7 @@ data class BoardInvitationParticipantResponse(
     val role: BoardRole,
 ) {
     companion object {
-        fun from(participant: BoardInvitationParticipant): BoardInvitationParticipantResponse =
+        fun from(participant: BoardParticipant): BoardInvitationParticipantResponse =
             BoardInvitationParticipantResponse(
                 name = participant.name,
                 role = participant.role,

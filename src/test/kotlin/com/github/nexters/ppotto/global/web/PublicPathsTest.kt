@@ -26,6 +26,7 @@ private val PATHS =
         "/stickers/0198c0f0-0000-7000-8000-000000000000/view",
         "/stickers/shared/01983f30-0000-7000-8000-000000000000",
         "/board-invitations/K7P2QX",
+        "/board-invitations/K7P2QX/join",
         "/boards",
         "/users/me",
     )
@@ -90,6 +91,7 @@ class PublicPathsTest :
                         .matches("/stickers/0198c0f0-0000-7000-8000-000000000000") shouldBe false
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
                         .matches("/stickers/0198c0f0-0000-7000-8000-000000000000/view") shouldBe false
+                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/board-invitations/K7P2QX/join") shouldBe false
                 }
             }
         }

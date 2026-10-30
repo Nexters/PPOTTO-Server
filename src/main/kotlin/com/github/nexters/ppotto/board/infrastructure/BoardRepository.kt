@@ -32,6 +32,15 @@ class BoardRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun findByIdForUpdate(id: BoardId): Board? =
+        dslContext
+            .selectFrom(BOARDS)
+            .where(BOARDS.ID.eq(id))
+            .and(BOARDS.DELETED_AT.isNull)
+            .forUpdate()
+            .fetchOne()
+            ?.toDomain()
+
     fun findOwnedById(
         id: BoardId,
         userId: UserId,

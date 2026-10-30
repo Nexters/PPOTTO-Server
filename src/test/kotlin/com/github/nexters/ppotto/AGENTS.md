@@ -71,6 +71,9 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/application/BoardCommandServiceTest.kt` | Board count, deletion guards, and cascade command integration tests |
 | `board/application/BoardCommandConcurrencyTest.kt` | User-scoped create/delete serialization and max/last-board concurrency regression tests |
 | `board/application/BoardQueryServiceTest.kt` | Owned board detail composition integration tests |
+| `board/application/BoardParticipantQueryServiceTest.kt` | Owner/member participant-list access, owner-first joined-order mapping, counts, roles, and hidden-board integration tests |
+| `board/application/BoardParticipationServiceTest.kt` | New, existing-member, owner, full-board, invalid-invitation, and inactive-user invitation-join integration tests |
+| `board/application/BoardParticipationConcurrencyTest.kt` | Last-seat race proving board-row serialization admits exactly one user and caps total participants at eight |
 | `board/application/BoardLayoutServiceTest.kt` | Idempotent layout, atomic ownership validation, and text content length rejection integration tests |
 | `board/application/BoardLayoutConcurrencyTest.kt` | Layout/delete serialization regression test preventing drawing reinsertion after board deletion |
 | `board/application/BoardStickerIntegrationTest.kt` | Production analysis/sticker port wiring, active-analysis deletion guard, detail/layout mapping, and cascade integration tests |
@@ -84,6 +87,8 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/infrastructure/DrawingRepositoryTest.kt` | Drawing upsert and soft-delete integration tests, plus the text round trip and the stroke/text type switch on the same id |
 | `board/infrastructure/BoardExternalPortFallbackConfigurationTest.kt` | Standalone missing-adapter fail-closed contract tests |
 | `board/presentation/BoardControllerTest.kt` | Authenticated CRUD response and ownership integration tests across the v1 and v2 detail controllers, the v1/v2 board list (v2 card fields, explicit nulls, counts; v1 still owned-only `{id, name}`), and member access: members read detail at v1 and v2 but get `BOARD-002` on rename, delete, and v2 layout |
+| `board/presentation/BoardParticipantControllerTest.kt` | Authenticated participant-list response, baseline-version compatibility, member access, hidden-board, and missing-auth HTTP integration tests |
+| `board/presentation/BoardParticipationControllerTest.kt` | Invitation join HTTP integration tests for lowercase codes, authenticated success, missing authentication, baseline-version compatibility, and full-board conflict |
 | `board/presentation/BoardListOpenApiTest.kt` | v2 board list OpenAPI contract the client generates against: `list`/`listV2` operation ids per group, required fields of `BoardListV2Response`/`BoardCountsResponse`/`BoardSummaryV2Response`, `BoardKind`/`BoardRole` as named enum components, and `mainColor`/`analysisStatus` optional and nullable |
 | `board/presentation/dto/BoardDetailResponseTest.kt` | v1/v2 response mapping contract unit test: v1 drops texts and folds `zIndex` back into the `stroke` JSON, v2 exposes both variants with `zIndex` as a field, and a v1 request's `stroke.zIndex` moves to the command |
 | `board/support/BoardTestConfig.kt` | Primary fake analysis/sticker application ports for board integration tests |

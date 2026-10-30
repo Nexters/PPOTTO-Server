@@ -1,6 +1,5 @@
 package com.github.nexters.ppotto.board.application.model
 
-import com.github.nexters.ppotto.board.domain.BoardRole
 import com.github.nexters.ppotto.global.identifier.BoardId
 import java.time.Instant
 
@@ -15,12 +14,7 @@ data class BoardInvitationDetail(
     val previewImageUrl: String?,
     val expiresAt: Instant,
     val viewerStatus: BoardInvitationViewerStatus?,
-    val participants: List<BoardInvitationParticipant>?,
-)
-
-data class BoardInvitationParticipant(
-    val name: String,
-    val role: BoardRole,
+    val participants: List<BoardParticipant>?,
 )
 
 enum class BoardInvitationViewerStatus {

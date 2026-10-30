@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import io.swagger.v3.oas.annotations.responses.ApiResponse as OpenApiResponse
 
 @RequestMapping("/board-invitations/{code}", version = "1+")
-@Tag(name = "보드 초대", description = "보드 초대 코드 발급과 조회")
+@Tag(name = "보드 초대", description = "보드 초대 조회와 관리")
 interface BoardInvitationQueryApi {
     @GetMapping
     @Operation(

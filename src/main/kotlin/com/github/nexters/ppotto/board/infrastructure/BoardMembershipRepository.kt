@@ -53,6 +53,34 @@ class BoardMembershipRepository(
             .orderBy(BOARD_MEMBERS.CREATED_AT, BOARD_MEMBERS.ID)
             .fetch { requireNotNull(it[BOARD_MEMBERS.USER_ID]) }
 
+    fun exists(
+        boardId: BoardId,
+        userId: UserId,
+    ): Boolean =
+        dslContext.fetchExists(
+            BOARD_MEMBERS,
+            BOARD_MEMBERS.BOARD_ID
+                .eq(boardId)
+                .and(BOARD_MEMBERS.USER_ID.eq(userId)),
+        )
+
+    fun countMembersByBoardId(boardId: BoardId): Int =
+        dslContext.fetchCount(
+            BOARD_MEMBERS,
+            BOARD_MEMBERS.BOARD_ID.eq(boardId),
+        )
+
+    fun saveIfAbsent(
+        boardId: BoardId,
+        userId: UserId,
+    ): Boolean =
+        dslContext
+            .insertInto(BOARD_MEMBERS, BOARD_MEMBERS.BOARD_ID, BOARD_MEMBERS.USER_ID)
+            .values(boardId, userId)
+            .onConflict(BOARD_MEMBERS.BOARD_ID, BOARD_MEMBERS.USER_ID)
+            .doNothing()
+            .execute() == 1
+
     private fun findReadableById(
         id: BoardId,
         userId: UserId,
