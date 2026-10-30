@@ -74,6 +74,7 @@
 | board-invitations | POST | /boards/{boardId}/invitations | 내 초대 코드 발급·재사용 | 200 | 401, 404 | Y |
 | board-invitations | PUT | /board-invitations/{invitationId}/preview | 초대 미리보기 업로드·교체 | 200 | 400, 401, 404, 409 | Y |
 | board-invitations | GET | /board-invitations/{code} | 초대 대상 보드 조회 | 200 | 401, 404 | 선택 |
+| board-invitations | POST | /board-invitations/{code}/join | 초대를 통한 보드 참여 | 200 | 401, 404, 409 | Y |
 | stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 (본인만) | 200 | 401, 404 | Y |
 | stickers | GET | /stickers/shared/{shareToken} | 공유된 리캡 조회 | 200 | 404 | N |
 | stickers | POST | /stickers/{stickerId}/share | 리캡 공유 시작 | 200 | 400, 401, 404 | Y |
@@ -1910,9 +1911,88 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 #### Notes
 - 비인증 공개 응답에는 `viewerStatus`와 참여자 명단을 포함하지 않습니다. 인증 응답의 참여자 명단에는 이름과 역할만 포함하며 프로필, 개별 스티커 정보·좌표, 저장소 object key는 포함하지 않습니다.
 - `boardName`, `inviterName`, `participantCount`, `stickerCount`는 조회 시점의 최신 값이고, `previewImageUrl`의 이미지는 현재 코드 발급 시점의 정적 스냅샷입니다.
-- 정원 8명에 도달해도 이 API는 200과 보드 정보를 반환합니다. 클라이언트는 `participantCount >= maxParticipantCount`이면 참여 불가 상태를 표시하고, 실제 참여 API는 요청 시점의 최신 정원을 다시 확인합니다.
+- 정원 8명에 도달해도 이 API는 200과 보드 정보를 반환합니다. 인증 조회에서 `viewerStatus`가 `NOT_JOINED`이고 `participantCount >= maxParticipantCount`이면 클라이언트는 참여 불가 상태를 표시하고 참여 API를 호출하지 않습니다. 비인증 웹은 사용자가 기존 방장·참여자인지 알 수 없으므로 앱 열기 버튼을 유지하며, 앱에서 호출한 참여 API가 최종 상태를 판단합니다.
 - 초대는 보드에 귀속되므로 발급자가 보드에서 나가도 만료 시각까지 유효합니다. 단, 발급자가 회원 탈퇴하면 즉시 조회할 수 없습니다.
 - 이 API는 조회만 수행하며 실제 참여·나가기는 처리하지 않습니다.
+
+### POST /board-invitations/{code}/join
+
+- Operation ID: `joinBoardByInvitation`
+- Summary: 초대를 통한 보드 참여
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | code | Y | `string` | K7P2QX | 초대 코드. 서버는 대문자로 정규화해 처리 |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 보드 참여 또는 기존 참여 상태 확인 | `boardId`, `boardName`, `role` |
+
+| Field | Type | Description |
+| --- | --- | --- |
+| boardId | string (uuid) | 참여한 보드 ID |
+| boardName | string | 현재 보드 이름 |
+| role | `OWNER` \| `MEMBER` | 요청 사용자의 현재 보드 역할 |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "boardId": "01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
+    "boardName": "제주 여행",
+    "role": "MEMBER"
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더 누락 또는 accessToken 만료 |
+| 404 | BOARD-006 | 초대를 찾을 수 없습니다. | 코드 형식 오류, 코드 없음, 만료됨, 보드 삭제됨 또는 발급자 회원 탈퇴 |
+| 409 | BOARD-009 | 보드 참여 인원이 가득 찼습니다. | 방장과 참여자를 합한 현재 인원이 8명이고 요청 사용자가 미참여자임 |
+
+404 BOARD-006 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-006",
+    "message": "초대를 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+409 BOARD-009 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-009",
+    "message": "보드 참여 인원이 가득 찼습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 신규 사용자는 `board_members`에 `MEMBER`로 추가합니다. 방장은 `boards.user_id`가 유일한 원천이므로 `board_members`에 추가하지 않습니다.
+- 방장과 기존 참여자의 재요청은 행과 인원수를 변경하지 않고 현재 역할로 성공합니다. 같은 사용자의 중복 클릭·재시도도 동일한 결과를 반환합니다.
+- 정원은 방장을 포함해 8명입니다. 신규 참여의 정원 확인과 멤버 추가는 보드 단위로 직렬화해 동시에 요청되어도 8명을 초과하지 않습니다.
+- 웹 초대 화면의 앱 열기와 앱의 코드 입력은 이 API를 공유합니다. 성공한 클라이언트는 응답의 `boardId`로 이동합니다.
 
 ## 8. stickers API
 
@@ -3726,6 +3806,13 @@ Request example:
 | --- | --- | --- | --- | --- |
 | name | Y | `string` | - | 현재 사용자 이름 |
 | role | Y | `string` | OWNER, MEMBER | 보드 역할 |
+
+### BoardJoinResult
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| boardId | Y | `string` | - | 참여한 보드 ID |
+| boardName | Y | `string` | - | 현재 보드 이름 |
+| role | Y | `string` | OWNER, MEMBER | 요청 사용자의 현재 보드 역할 |
 
 ### BoardParticipants
 | Field | Required | Type | Enum | Description |
