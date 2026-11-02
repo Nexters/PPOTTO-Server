@@ -75,6 +75,9 @@
 | board-invitations | PUT | /board-invitations/{invitationId}/preview | 초대 미리보기 업로드·교체 | 200 | 400, 401, 404, 409 | Y |
 | board-invitations | GET | /board-invitations/{code} | 초대 대상 보드 조회 | 200 | 401, 404 | 선택 |
 | board-invitations | POST | /board-invitations/{code}/join | 초대를 통한 보드 참여 | 200 | 401, 404, 409 | Y |
+| board-shares | POST | /boards/{boardId}/share | 내 보드 공유 링크 발급·범위 변경 | 200 | 400, 401, 404 | Y |
+| board-shares | GET | /boards/shared/{shareToken} | 공유된 보드 조회 | 200 | 404 | N |
+| board-shares | GET | /boards/shared/{shareToken}/stickers/{stickerId} | 공유된 보드의 스티커 리캡 조회 | 200 | 404 | N |
 | stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 (본인만) | 200 | 401, 404 | Y |
 | stickers | GET | /stickers/shared/{shareToken} | 공유된 리캡 조회 | 200 | 404 | N |
 | stickers | POST | /stickers/{stickerId}/share | 리캡 공유 시작 | 200 | 400, 401, 404 | Y |
@@ -1994,6 +1997,196 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 - 정원은 방장을 포함해 8명입니다. 신규 참여의 정원 확인과 멤버 추가는 보드 단위로 직렬화해 동시에 요청되어도 8명을 초과하지 않습니다.
 - 웹 초대 화면의 앱 열기와 앱의 코드 입력은 이 API를 공유합니다. 성공한 클라이언트는 응답의 `boardId`로 이동합니다.
 
+### POST /boards/{boardId}/share
+
+- Operation ID: `shareBoard`
+- Summary: 내 보드 공유 링크 발급·범위 변경
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | boardId | Y | `string` | 01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b | 공유할 보드 ID |
+| body | scope | Y | `BOARD` \| `RECAP` \| `PHOTOS` | RECAP | 공유 링크로 열람할 수 있는 범위 |
+
+| scope | 화면 표기 | 링크로 열람 가능한 콘텐츠 |
+| --- | --- | --- |
+| `BOARD` | 보드만 | 보드 이름, 스티커와 그림 배치 |
+| `RECAP` | 리캡까지 | `BOARD` + 스티커별 리캡(한 줄 요약, 코멘트). 사진은 빈 배열 |
+| `PHOTOS` | 테마 속 사진까지 | `RECAP` + 리캡의 테마 속 사진 |
+
+요청 example:
+```json
+{
+  "scope": "RECAP"
+}
+```
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 내 공유 링크 정보 | `shareToken`, `scope` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "shareToken": "4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b",
+    "scope": "RECAP"
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 400 | COMMON-001 | 요청 값이 올바르지 않습니다. | `scope` 누락 또는 허용되지 않는 값 |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더 누락 또는 accessToken 만료 |
+| 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드가 없거나 요청 사용자가 방장·참여자가 아님 |
+
+#### Notes
+- 개인 보드와 공동 보드 모두 공유할 수 있고, 방장과 참여자 모두 공유할 수 있습니다.
+- 공유 링크는 `(boardId, sharerUserId)`별 한 개입니다. 같은 보드라도 참여자마다 자기 링크와 범위를 따로 가지며, 다른 참여자가 범위를 바꿔도 내 링크에는 영향이 없습니다.
+- **멱등입니다.** 이미 공유했다면 같은 `shareToken`을 그대로 반환하고 `scope`만 갱신합니다. 바뀐 범위는 이미 전달한 링크에 즉시 반영됩니다. 동시 호출도 같은 `shareToken`을 반환합니다.
+- 공유 링크에는 만료가 없습니다. 공유 해제 API는 아직 제공하지 않습니다.
+- 서버는 `shareToken`만 반환하며, 웹 링크(`/share/board/{shareToken}`) 조합은 클라이언트가 담당합니다.
+
+### GET /boards/shared/{shareToken}
+
+- Operation ID: `getSharedBoard`
+- Summary: 공유된 보드 조회
+
+#### Request Spec
+- 인증: 불필요. 토큰을 보내면 검증은 하지만 응답은 달라지지 않습니다.
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | shareToken | Y | `string` | 4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b | `POST /boards/{boardId}/share`가 발급한 토큰 |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 공유된 보드 | `boardName`, `sharerName`, `scope`, `stickers`, `drawings` |
+
+| Field | Type | Description |
+| --- | --- | --- |
+| boardName | string | 현재 보드 이름 |
+| sharerName | string | 이 링크를 공유한 현재 사용자 이름 |
+| scope | `BOARD` \| `RECAP` \| `PHOTOS` | 이 링크의 현재 공유 범위. 클라이언트는 `BOARD`이면 스티커를 눌러도 리캡을 열지 않음 |
+| stickers | object[] | `GET /boards/{boardId}` (v2)의 `stickers`와 같은 스키마. 보드의 모든 참여자 스티커를 포함 |
+| drawings | object[] | `GET /boards/{boardId}` (v2)의 `drawings`와 같은 스키마 |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": {
+    "boardName": "제주 여행",
+    "sharerName": "김용희",
+    "scope": "RECAP",
+    "stickers": [
+      {
+        "id": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+        "title": "동물 밈 짤줍",
+        "isNew": false,
+        "type": "IMAGE",
+        "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-1a2b.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=8f3a...",
+        "textContent": null,
+        "posX": 62.5,
+        "posY": 318,
+        "scale": 0.8,
+        "rotation": -12,
+        "zIndex": 3,
+        "badgeOffsetX": -24,
+        "badgeOffsetY": 96,
+        "badgeRotation": 0
+      }
+    ],
+    "drawings": []
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 404 | BOARD-010 | 공유된 보드를 찾을 수 없습니다. | 없는 토큰, 보드 삭제됨, 공유자가 회원 탈퇴했거나 더 이상 보드의 방장·참여자가 아님 |
+
+404 BOARD-010 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-010",
+    "message": "공유된 보드를 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 보드 이름, 스티커와 그림 배치, 공유 범위는 조회 시점의 최신 값입니다.
+- 공동 보드는 공유자가 아닌 참여자의 스티커도 포함합니다.
+- `stickers[].isNew`는 항상 `false`입니다. 읽음 상태는 보드 참여자 개인의 상태이기 때문입니다.
+- 스티커 수는 `stickers` 배열 길이로 계산합니다. 스티커가 없으면 빈 배열로 200을 반환합니다.
+- 스티커 이미지 URL의 만료(1시간)는 그대로입니다. 공유 링크 자체에는 만료가 없습니다.
+- 이 API는 조회만 수행하며 보드 참여 관계를 만들지 않습니다.
+
+### GET /boards/shared/{shareToken}/stickers/{stickerId}
+
+- Operation ID: `getSharedBoardRecap`
+- Summary: 공유된 보드의 스티커 리캡 조회
+
+#### Request Spec
+- 인증: 불필요. 토큰을 보내면 검증은 하지만 응답은 달라지지 않습니다.
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | shareToken | Y | `string` | 4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b | `POST /boards/{boardId}/share`가 발급한 토큰 |
+| path | stickerId | Y | `string` | 01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f | 공유된 보드에 있는 스티커 ID |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 스티커 리캡 상세 | `GET /stickers/shared/{shareToken}`과 같은 스키마 (`sticker`, `summary`, `comments`, `photos`) |
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 404 | BOARD-010 | 공유된 보드를 찾을 수 없습니다. | `GET /boards/shared/{shareToken}`의 404와 같은 조건 |
+| 404 | BOARD-011 | 공유된 리캡을 찾을 수 없습니다. | 공유 범위가 `BOARD`이거나, 스티커가 없거나 삭제되었거나, 이 보드의 스티커가 아님 |
+
+404 BOARD-011 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-011",
+    "message": "공유된 리캡을 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- **공유 범위는 UI뿐 아니라 이 API에서도 강제합니다.** `BOARD` 범위 링크로 직접 호출해도 404를 반환합니다.
+- `RECAP` 범위이면 `photos`는 항상 빈 배열입니다. 서버가 사진 읽기 URL 자체를 발급하지 않습니다.
+- 공유 범위는 공동 보드의 모든 스티커에 똑같이 적용합니다. 공유자가 아닌 참여자의 스티커도 같은 범위로 리캡과 사진을 반환합니다.
+- `sticker.isNew`는 항상 `false`입니다.
+- 사진 URL의 만료(1시간)는 그대로입니다.
+
 ## 8. stickers API
 
 ### GET /stickers/{stickerId}
@@ -3827,6 +4020,26 @@ Request example:
 | userId | Y | `string` | - | 사용자 ID |
 | name | Y | `string` | - | 현재 사용자 이름 |
 | role | Y | `string` | OWNER, MEMBER | 보드 역할 |
+
+### BoardShareRequest
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| scope | Y | `string` | BOARD, RECAP, PHOTOS | 공유 링크로 열람할 수 있는 범위 |
+
+### BoardShareResult
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| shareToken | Y | `string` | - | 요청 사용자의 보드 공유 토큰. 재공유해도 유지 |
+| scope | Y | `string` | BOARD, RECAP, PHOTOS | 현재 공유 범위 |
+
+### SharedBoard
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| boardName | Y | `string` | - | 현재 보드 이름 |
+| sharerName | Y | `string` | - | 링크를 공유한 현재 사용자 이름 |
+| scope | Y | `string` | BOARD, RECAP, PHOTOS | 현재 공유 범위 |
+| stickers | Y | `object`[] | - | `Sticker`. `isNew`는 항상 `false` |
+| drawings | Y | `object`[] | - | `DrawingStroke` (v2) 또는 `DrawingText` (v2) |
 
 ### Sticker
 | Field | Required | Type | Enum | Description |
