@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import com.github.nexters.ppotto.jooq.tables.references.BOARD_INVITATIONS
 import com.github.nexters.ppotto.jooq.tables.references.BOARD_MEMBERS
+import com.github.nexters.ppotto.jooq.tables.references.BOARD_SHARES
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
 import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
 import com.github.nexters.ppotto.jooq.tables.references.RECAP_COMMENTS
@@ -39,6 +40,7 @@ class DatabaseCleaner(
                 PHOTOS,
                 ANALYSIS,
                 BOARD_INVITATIONS,
+                BOARD_SHARES,
                 BOARD_MEMBERS,
                 BOARDS,
                 USER_DEVICE_TOKENS,

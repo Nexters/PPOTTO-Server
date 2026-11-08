@@ -15,6 +15,6 @@ Precompiled convention plugin for database tooling.
 - `jooqCodegen` is on-demand only; it is never wired into `compileKotlin` (only `mustRunAfter` ordering).
 - Generated code excludes `flyway_schema_history`.
 - The jOOQ runtime version is aligned via `extra["jooq.version"]` in the root build script; keep plugin and runtime versions identical.
-- Id-column `forcedType` entries match exact `table.column` regexes and pair a `userType` from `global/identifier/` with a converter from `global/jooq/`. Purely internal row ids (`term_agreements.id`, `sticker_photos.id`, `recap_comments.id`) stay `UUID` on purpose; add a mapping only when the id crosses a method boundary.
+- Id-column `forcedType` entries match exact `table.column` regexes and pair a `userType` from `global/identifier/` with a converter from `global/jooq/`. Purely internal row ids (`term_agreements.id`, `sticker_photos.id`, `recap_comments.id`, `board_shares.id`) stay `UUID` on purpose; add a mapping only when the id crosses a method boundary.
 
 Update this file when build logic in this directory changes.
