@@ -28,6 +28,9 @@ private val PATHS =
         "/board-invitations/K7P2QX",
         "/board-invitations/K7P2QX/join",
         "/boards",
+        "/boards/shared/4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b",
+        "/boards/0198c0f0-0000-7000-8000-000000000000/share",
+        "/boards/0198c0f0-0000-7000-8000-000000000000/participants",
         "/users/me",
     )
 
@@ -77,12 +80,15 @@ class PublicPathsTest :
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
                         .matches("/stickers/shared/01983f30-0000-7000-8000-000000000000") shouldBe true
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/board-invitations/K7P2QX") shouldBe true
+                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
+                        .matches("/boards/shared/4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b") shouldBe true
                 }
 
                 Then("토큰을 해석해야 하므로 Bearer 필터는 건너뛰지 않는다") {
                     PublicPaths.isPublicApi("/terms") shouldBe false
                     PublicPaths.isPublicApi("/stickers/shared/01983f30-0000-7000-8000-000000000000") shouldBe false
                     PublicPaths.isPublicApi("/board-invitations/K7P2QX") shouldBe false
+                    PublicPaths.isPublicApi("/boards/shared/4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b") shouldBe false
                 }
 
                 Then("리캡 상세와 약관 동의, 스티커 조회 기록은 익명 허용 대상이 아니다") {
@@ -92,6 +98,9 @@ class PublicPathsTest :
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
                         .matches("/stickers/0198c0f0-0000-7000-8000-000000000000/view") shouldBe false
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/board-invitations/K7P2QX/join") shouldBe false
+                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/boards") shouldBe false
+                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
+                        .matches("/boards/0198c0f0-0000-7000-8000-000000000000/participants") shouldBe false
                 }
             }
         }

@@ -5,12 +5,14 @@ import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
+import com.jayway.jsonpath.JsonPath
 import org.jooq.DSLContext
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -110,6 +112,55 @@ class BoardShareControllerTest(
                     result
                         .andExpect(status().isUnauthorized)
                         .andExpect(jsonPath("$.error.code").value("COMMON-004"))
+                }
+            }
+        }
+
+        Given("방장이 보드를 공유했을 때") {
+            val owner = userRepository.saveTestUser("김용희")
+            val board = boardRepository.save(owner.id, "제주 여행")
+            val shareToken =
+                mockMvc
+                    .perform(
+                        post("/boards/${board.id}/share")
+                            .with(authentication(UsernamePasswordAuthenticationToken.authenticated(owner.id.value, null, emptyList())))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"scope":"RECAP"}"""),
+                    ).andReturn()
+                    .response.contentAsString
+                    .let { JsonPath.read<String>(it, "$.data.shareToken") }
+
+            When("로그인하지 않은 사용자가 공유 토큰으로 조회하면") {
+                val result = mockMvc.perform(get("/boards/shared/$shareToken"))
+
+                Then("공유된 보드를 반환한다") {
+                    result
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.boardName").value("제주 여행"))
+                        .andExpect(jsonPath("$.data.sharerName").value("김용희"))
+                        .andExpect(jsonPath("$.data.scope").value("RECAP"))
+                        .andExpect(jsonPath("$.data.stickers").isArray)
+                        .andExpect(jsonPath("$.data.drawings").isArray)
+                }
+            }
+
+            When("최신 API 버전으로 조회하면") {
+                val result = mockMvc.perform(get("/boards/shared/$shareToken").header("X-API-Version", "2"))
+
+                Then("같은 응답을 반환한다") {
+                    result
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.data.boardName").value("제주 여행"))
+                }
+            }
+
+            When("발급된 적 없는 토큰으로 조회하면") {
+                val result = mockMvc.perform(get("/boards/shared/unknown-token"))
+
+                Then("공유된 보드를 찾을 수 없다") {
+                    result
+                        .andExpect(status().isNotFound)
+                        .andExpect(jsonPath("$.error.code").value("BOARD-010"))
                 }
             }
         }
