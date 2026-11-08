@@ -8,6 +8,7 @@ package com.github.nexters.ppotto.jooq.keys
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.BoardInvitations
 import com.github.nexters.ppotto.jooq.tables.BoardMembers
+import com.github.nexters.ppotto.jooq.tables.BoardShares
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
@@ -21,6 +22,7 @@ import com.github.nexters.ppotto.jooq.tables.Users
 import com.github.nexters.ppotto.jooq.tables.records.AnalysisRecord
 import com.github.nexters.ppotto.jooq.tables.records.BoardInvitationsRecord
 import com.github.nexters.ppotto.jooq.tables.records.BoardMembersRecord
+import com.github.nexters.ppotto.jooq.tables.records.BoardSharesRecord
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 import com.github.nexters.ppotto.jooq.tables.records.DrawingsRecord
 import com.github.nexters.ppotto.jooq.tables.records.PhotosRecord
@@ -47,6 +49,7 @@ import org.jooq.impl.QOM.ForeignKeyRule
 val ANALYSIS_PKEY: UniqueKey<AnalysisRecord> = Internal.createUniqueKey(Analysis.ANALYSIS, DSL.name("analysis_pkey"), arrayOf(Analysis.ANALYSIS.ID), true)
 val BOARD_INVITATIONS_PKEY: UniqueKey<BoardInvitationsRecord> = Internal.createUniqueKey(BoardInvitations.BOARD_INVITATIONS, DSL.name("board_invitations_pkey"), arrayOf(BoardInvitations.BOARD_INVITATIONS.ID), true)
 val BOARD_MEMBERS_PKEY: UniqueKey<BoardMembersRecord> = Internal.createUniqueKey(BoardMembers.BOARD_MEMBERS, DSL.name("board_members_pkey"), arrayOf(BoardMembers.BOARD_MEMBERS.ID), true)
+val BOARD_SHARES_PKEY: UniqueKey<BoardSharesRecord> = Internal.createUniqueKey(BoardShares.BOARD_SHARES, DSL.name("board_shares_pkey"), arrayOf(BoardShares.BOARD_SHARES.ID), true)
 val BOARDS_PKEY: UniqueKey<BoardsRecord> = Internal.createUniqueKey(Boards.BOARDS, DSL.name("boards_pkey"), arrayOf(Boards.BOARDS.ID), true)
 val DRAWINGS_PKEY: UniqueKey<DrawingsRecord> = Internal.createUniqueKey(Drawings.DRAWINGS, DSL.name("drawings_pkey"), arrayOf(Drawings.DRAWINGS.ID), true)
 val PHOTOS_PKEY: UniqueKey<PhotosRecord> = Internal.createUniqueKey(Photos.PHOTOS, DSL.name("photos_pkey"), arrayOf(Photos.PHOTOS.ID), true)
@@ -67,6 +70,7 @@ val USERS_PKEY: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, D
 
 val BOARD_INVITATIONS__FK_BOARD_INVITATIONS_BOARD: ForeignKey<BoardInvitationsRecord, BoardsRecord> = Internal.createForeignKey(BoardInvitations.BOARD_INVITATIONS, DSL.name("fk_board_invitations_board"), arrayOf(BoardInvitations.BOARD_INVITATIONS.BOARD_ID), com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY, arrayOf(Boards.BOARDS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
 val BOARD_MEMBERS__FK_BOARD_MEMBERS_BOARD: ForeignKey<BoardMembersRecord, BoardsRecord> = Internal.createForeignKey(BoardMembers.BOARD_MEMBERS, DSL.name("fk_board_members_board"), arrayOf(BoardMembers.BOARD_MEMBERS.BOARD_ID), com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY, arrayOf(Boards.BOARDS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val BOARD_SHARES__FK_BOARD_SHARES_BOARD: ForeignKey<BoardSharesRecord, BoardsRecord> = Internal.createForeignKey(BoardShares.BOARD_SHARES, DSL.name("fk_board_shares_board"), arrayOf(BoardShares.BOARD_SHARES.BOARD_ID), com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY, arrayOf(Boards.BOARDS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
 val RECAP_COMMENTS__FK_RECAP_COMMENTS_STICKER: ForeignKey<RecapCommentsRecord, StickersRecord> = Internal.createForeignKey(RecapComments.RECAP_COMMENTS, DSL.name("fk_recap_comments_sticker"), arrayOf(RecapComments.RECAP_COMMENTS.STICKER_ID), com.github.nexters.ppotto.jooq.keys.STICKERS_PKEY, arrayOf(Stickers.STICKERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
 val STICKER_PHOTOS__FK_STICKER_PHOTOS_PHOTO: ForeignKey<StickerPhotosRecord, PhotosRecord> = Internal.createForeignKey(StickerPhotos.STICKER_PHOTOS, DSL.name("fk_sticker_photos_photo"), arrayOf(StickerPhotos.STICKER_PHOTOS.PHOTO_ID), com.github.nexters.ppotto.jooq.keys.PHOTOS_PKEY, arrayOf(Photos.PHOTOS.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
 val STICKER_PHOTOS__FK_STICKER_PHOTOS_STICKER: ForeignKey<StickerPhotosRecord, StickersRecord> = Internal.createForeignKey(StickerPhotos.STICKER_PHOTOS, DSL.name("fk_sticker_photos_sticker"), arrayOf(StickerPhotos.STICKER_PHOTOS.STICKER_ID), com.github.nexters.ppotto.jooq.keys.STICKERS_PKEY, arrayOf(Stickers.STICKERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)

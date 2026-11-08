@@ -14,9 +14,11 @@ import com.github.nexters.ppotto.jooq.indexes.IX_BOARD_USER_CREATED
 import com.github.nexters.ppotto.jooq.keys.BOARDS_PKEY
 import com.github.nexters.ppotto.jooq.keys.BOARD_INVITATIONS__FK_BOARD_INVITATIONS_BOARD
 import com.github.nexters.ppotto.jooq.keys.BOARD_MEMBERS__FK_BOARD_MEMBERS_BOARD
+import com.github.nexters.ppotto.jooq.keys.BOARD_SHARES__FK_BOARD_SHARES_BOARD
 import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_BOARD
 import com.github.nexters.ppotto.jooq.tables.BoardInvitations.BoardInvitationsPath
 import com.github.nexters.ppotto.jooq.tables.BoardMembers.BoardMembersPath
+import com.github.nexters.ppotto.jooq.tables.BoardShares.BoardSharesPath
 import com.github.nexters.ppotto.jooq.tables.Stickers.StickersPath
 import com.github.nexters.ppotto.jooq.tables.records.BoardsRecord
 
@@ -183,6 +185,22 @@ open class Boards(
 
     val boardMembers: BoardMembersPath
         get(): BoardMembersPath = boardMembers()
+
+    private lateinit var _boardShares: BoardSharesPath
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.board_shares</code> table
+     */
+    fun boardShares(): BoardSharesPath {
+        if (!this::_boardShares.isInitialized)
+            _boardShares = BoardSharesPath(this, null, BOARD_SHARES__FK_BOARD_SHARES_BOARD.inverseKey)
+
+        return _boardShares;
+    }
+
+    val boardShares: BoardSharesPath
+        get(): BoardSharesPath = boardShares()
 
     private lateinit var _stickers: StickersPath
 

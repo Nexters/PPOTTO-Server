@@ -72,6 +72,16 @@ class StickerQueryService(
         return buildRecap(sticker, isOwner = false, includePhotos = sticker.sharePhotos)
     }
 
+    fun findRecapInBoard(
+        boardId: BoardId,
+        stickerId: StickerId,
+        includePhotos: Boolean,
+    ): StickerRecapResult? =
+        stickerRepository
+            .findById(stickerId)
+            ?.takeIf { it.boardId == boardId }
+            ?.let { buildRecap(it, isOwner = false, includePhotos = includePhotos) }
+
     private fun buildRecap(
         sticker: Sticker,
         isOwner: Boolean,

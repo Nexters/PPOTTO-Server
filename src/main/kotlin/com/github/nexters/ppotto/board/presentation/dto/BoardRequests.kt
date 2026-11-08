@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.presentation.dto
 
 import com.github.nexters.ppotto.board.domain.Board
+import com.github.nexters.ppotto.board.domain.BoardShareScope
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
@@ -21,4 +22,14 @@ data class RenameBoardRequest(
     @field:Pattern(regexp = BOARD_NAME_PATTERN)
     @field:Schema(description = "새 보드 이름. 공백만으로는 바꿀 수 없고 최대 10자", example = "뽀또의 보드")
     val name: String,
+)
+
+@Schema(description = "보드 공유 요청")
+data class BoardShareRequest(
+    @field:Schema(
+        description = "공유 링크로 열람할 수 있는 범위. BOARD는 보드만, RECAP은 리캡까지, PHOTOS는 테마 속 사진까지",
+        example = "RECAP",
+        enumAsRef = true,
+    )
+    val scope: BoardShareScope,
 )

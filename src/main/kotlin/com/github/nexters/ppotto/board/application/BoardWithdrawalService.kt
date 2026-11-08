@@ -19,6 +19,7 @@ class BoardWithdrawalService(
         val boardIds = boardWithdrawalRepository.findAllIdsByUserId(userId)
         drawingRepository.hardDeleteAllByBoardIds(boardIds)
         boardWithdrawalRepository.hardDeleteInvitationsByInviterUserId(userId)
+        boardWithdrawalRepository.hardDeleteSharesBySharerUserId(userId)
         boardWithdrawalRepository.hardDeleteMembershipsByUserId(userId)
         boardWithdrawalRepository.hardDeleteAllByUserId(userId)
     }

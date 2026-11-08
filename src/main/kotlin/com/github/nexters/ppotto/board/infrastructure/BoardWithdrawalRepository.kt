@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.BOARDS
 import com.github.nexters.ppotto.jooq.tables.references.BOARD_INVITATIONS
 import com.github.nexters.ppotto.jooq.tables.references.BOARD_MEMBERS
+import com.github.nexters.ppotto.jooq.tables.references.BOARD_SHARES
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 
@@ -31,6 +32,12 @@ class BoardWithdrawalRepository(
         dslContext
             .deleteFrom(BOARD_INVITATIONS)
             .where(BOARD_INVITATIONS.INVITER_USER_ID.eq(userId))
+            .execute()
+
+    fun hardDeleteSharesBySharerUserId(userId: UserId): Int =
+        dslContext
+            .deleteFrom(BOARD_SHARES)
+            .where(BOARD_SHARES.SHARER_USER_ID.eq(userId))
             .execute()
 
     fun hardDeleteAllByUserId(userId: UserId): Int =

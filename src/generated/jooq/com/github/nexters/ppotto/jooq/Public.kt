@@ -7,6 +7,7 @@ package com.github.nexters.ppotto.jooq
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.BoardInvitations
 import com.github.nexters.ppotto.jooq.tables.BoardMembers
+import com.github.nexters.ppotto.jooq.tables.BoardShares
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
@@ -53,6 +54,11 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
      * The table <code>public.board_members</code>.
      */
     val BOARD_MEMBERS: BoardMembers get() = BoardMembers.BOARD_MEMBERS
+
+    /**
+     * The table <code>public.board_shares</code>.
+     */
+    val BOARD_SHARES: BoardShares get() = BoardShares.BOARD_SHARES
 
     /**
      * The table <code>public.boards</code>.
@@ -110,6 +116,7 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
         Analysis.ANALYSIS,
         BoardInvitations.BOARD_INVITATIONS,
         BoardMembers.BOARD_MEMBERS,
+        BoardShares.BOARD_SHARES,
         Boards.BOARDS,
         Drawings.DRAWINGS,
         Photos.PHOTOS,

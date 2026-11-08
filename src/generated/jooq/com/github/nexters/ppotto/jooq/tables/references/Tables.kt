@@ -8,6 +8,7 @@ package com.github.nexters.ppotto.jooq.tables.references
 import com.github.nexters.ppotto.jooq.tables.Analysis
 import com.github.nexters.ppotto.jooq.tables.BoardInvitations
 import com.github.nexters.ppotto.jooq.tables.BoardMembers
+import com.github.nexters.ppotto.jooq.tables.BoardShares
 import com.github.nexters.ppotto.jooq.tables.Boards
 import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
@@ -35,6 +36,11 @@ val BOARD_INVITATIONS: BoardInvitations = BoardInvitations.BOARD_INVITATIONS
  * The table <code>public.board_members</code>.
  */
 val BOARD_MEMBERS: BoardMembers = BoardMembers.BOARD_MEMBERS
+
+/**
+ * The table <code>public.board_shares</code>.
+ */
+val BOARD_SHARES: BoardShares = BoardShares.BOARD_SHARES
 
 /**
  * The table <code>public.boards</code>.

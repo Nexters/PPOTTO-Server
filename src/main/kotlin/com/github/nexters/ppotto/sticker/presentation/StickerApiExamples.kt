@@ -203,6 +203,20 @@ private val NOT_REGENERATABLE_STICKER_RESPONSE =
         ),
     )
 
+private val SHARED_BOARD_RECAP_NOT_FOUND_RESPONSE =
+    listOf(
+        ApiExamples.crossDomainErrorExample(
+            code = "BOARD-010",
+            summary = "없는 토큰, 보드 삭제, 공유자 탈퇴 또는 보드 나가기",
+            message = "공유된 보드를 찾을 수 없습니다.",
+        ),
+        ApiExamples.crossDomainErrorExample(
+            code = "BOARD-011",
+            summary = "공유 범위가 BOARD이거나 이 보드에 없는 스티커",
+            message = "공유된 리캡을 찾을 수 없습니다.",
+        ),
+    )
+
 @Component
 class StickerApiExamples : ApiExampleProvider {
     override val examples: Map<KFunction<*>, OperationExamples> =
@@ -221,6 +235,14 @@ class StickerApiExamples : ApiExampleProvider {
                         mapOf(
                             "200" to listOf(RECAP_DETAIL_RESPONSE),
                             "404" to STICKER_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            SharedBoardRecapApi::get to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to listOf(RECAP_DETAIL_RESPONSE),
+                            "404" to SHARED_BOARD_RECAP_NOT_FOUND_RESPONSE,
                         ),
                 ),
             StickerApi::share to

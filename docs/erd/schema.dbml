@@ -16,6 +16,7 @@ Project ppotto {
     recap_comments: (pos_x IS NULL) = (pos_y IS NULL)
     analysis: progress BETWEEN 0 AND 100 (실제 마이그레이션은 DDL 인라인 CHECK 로 반영됨)
     board_invitations: code ~ '^[A-HJ-NP-Z2-9]{6}$'
+    board_shares: scope IN ('BOARD', 'RECAP', 'PHOTOS')
   '''
 }
 
@@ -51,6 +52,12 @@ Enum drawing_scope {
 Enum drawing_type {
   STROKE [note: '선. stroke/stroke_width 를 채운다']
   TEXT   [note: '텍스트. content/font_size/pos_x/pos_y/max_width 를 채운다']
+}
+
+Enum board_share_scope {
+  BOARD  [note: '보드만. 보드 이름과 스티커·그림 배치']
+  RECAP  [note: '리캡까지. 스티커별 한 줄 요약과 코멘트']
+  PHOTOS [note: '테마 속 사진까지. 리캡의 사진 포함']
 }
 
 // ── 공통 조각 ─────────────────────────────
@@ -222,6 +229,36 @@ Table board_invitations {
     code [unique, name: 'uk_board_invitations_code']
     (board_id, inviter_user_id) [unique, name: 'uk_board_invitations_board_inviter']
     inviter_user_id [name: 'ix_board_invitations_inviter', note: '탈퇴 사용자 하드 삭제 시 초대 정리용']
+  }
+}
+
+Table board_shares {
+  ~base_id
+  board_id       uuid              [not null, ref: > boards.id, note: 'ON DELETE CASCADE. 보드가 하드 삭제되면 공유 링크도 함께 지운다']
+  sharer_user_id uuid              [not null, note: '공유한 사용자. board_members.user_id와 같은 탈퇴 정리 정책을 따르며 FK 없음']
+  share_token    text              [not null, note: '공개 링크 토큰. 추측할 수 없는 난수 UUID 문자열']
+  scope          board_share_scope [not null, note: 'VARCHAR(20) + CHECK로 저장. 조회 시점마다 이 값으로 열람 범위를 제한']
+
+  ~timestamps
+
+  Note: '''
+  방장과 참여자 모두 자기 이름으로 보드 공유 링크를 발급할 수 있고, 개인 보드와 공동 보드 모두 대상이다.
+  (board_id, sharer_user_id)당 한 행을 유지한다. 재공유하면 share_token은 그대로 두고 scope만 갱신하므로
+  이미 전달한 링크가 끊기지 않고 범위 변경이 즉시 반영된다. 참여자마다 행이 따로라
+  다른 참여자의 범위 변경이 내 링크에 영향을 주지 않는다.
+
+  공유 링크에는 만료가 없고 해제 기능은 아직 없다. 공개 조회는 공유자가 현재도 보드의
+  방장·참여자일 때만 성공한다. 공유자가 보드에서 나가거나 회원 탈퇴하면 행은 남아 있어도
+  링크는 즉시 조회되지 않는다. 탈퇴 사용자를 하드 삭제할 때 해당 사용자의 공유 링크도 먼저 삭제한다.
+
+  scope는 공동 보드의 모든 스티커에 똑같이 적용한다. 공유자가 아닌 참여자의 스티커도
+  같은 범위로 리캡과 사진을 반환한다.
+  '''
+
+  indexes {
+    share_token [unique, name: 'uk_board_shares_share_token']
+    (board_id, sharer_user_id) [unique, name: 'uk_board_shares_board_sharer']
+    sharer_user_id [name: 'ix_board_shares_sharer', note: '탈퇴 사용자 하드 삭제 시 공유 링크 정리용']
   }
 }
 
