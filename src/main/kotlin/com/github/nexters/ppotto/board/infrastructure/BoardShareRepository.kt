@@ -38,6 +38,17 @@ class BoardShareRepository(
             .fetchOne()
             ?.toDomain()
 
+    fun findByBoardIdAndSharerUserId(
+        boardId: BoardId,
+        sharerUserId: UserId,
+    ): BoardShare? =
+        dslContext
+            .selectFrom(BOARD_SHARES)
+            .where(BOARD_SHARES.BOARD_ID.eq(boardId))
+            .and(BOARD_SHARES.SHARER_USER_ID.eq(sharerUserId))
+            .fetchOne()
+            ?.toDomain()
+
     fun findByBoardIdAndSharerUserIdForUpdate(
         boardId: BoardId,
         sharerUserId: UserId,

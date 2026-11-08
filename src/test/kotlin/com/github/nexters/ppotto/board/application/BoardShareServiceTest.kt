@@ -88,10 +88,54 @@ class BoardShareServiceTest(
             }
         }
 
+        Given("공유 상태를 조회하는 방장과 참여자가 있을 때") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id, "제주 여행")
+            dslContext.addBoardMember(board.id, member.id)
+
+            When("공유한 적이 없으면") {
+                val status = boardShareService.getStatus(board.id, owner.id)
+
+                Then("토큰 없이 기본 범위를 반환하고 링크를 만들지 않는다") {
+                    status.shareToken shouldBe null
+                    status.scope shouldBe BoardShareScope.DEFAULT
+                    dslContext.fetchCount(BOARD_SHARES, BOARD_SHARES.BOARD_ID.eq(board.id)) shouldBe 0
+                }
+            }
+
+            When("범위를 바꿔 공유한 뒤 조회하면") {
+                val share = boardShareService.share(board.id, owner.id, BoardShareScope.PHOTOS)
+                val status = boardShareService.getStatus(board.id, owner.id)
+
+                Then("내 토큰과 저장된 범위를 반환한다") {
+                    status.shareToken shouldBe share.shareToken
+                    status.scope shouldBe BoardShareScope.PHOTOS
+                }
+            }
+
+            When("방장만 공유한 공동 보드에서 참여자가 조회하면") {
+                boardShareService.share(board.id, owner.id, BoardShareScope.PHOTOS)
+                val status = boardShareService.getStatus(board.id, member.id)
+
+                Then("방장의 링크가 아니라 참여자 본인의 상태를 반환한다") {
+                    status.shareToken shouldBe null
+                    status.scope shouldBe BoardShareScope.DEFAULT
+                }
+            }
+        }
+
         Given("보드와 무관한 사용자가") {
             val owner = userRepository.saveTestUser()
             val stranger = userRepository.saveTestUser()
             val board = boardRepository.save(owner.id, "제주 여행")
+
+            When("공유 상태를 조회하면") {
+                Then("보드 존재를 노출하지 않고 404로 거부한다") {
+                    val exception = shouldThrow<NotFoundException> { boardShareService.getStatus(board.id, stranger.id) }
+                    exception.errorCode shouldBe BoardErrorCode.NOT_FOUND
+                }
+            }
 
             When("공유하면") {
                 Then("보드 존재를 노출하지 않고 404로 거부한다") {

@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.presentation.dto.BoardShareRequest
 import com.github.nexters.ppotto.board.presentation.dto.BoardShareResponse
+import com.github.nexters.ppotto.board.presentation.dto.BoardShareStatusResponse
 import com.github.nexters.ppotto.board.presentation.dto.BoardStickerResponse
 import com.github.nexters.ppotto.board.presentation.dto.DrawingV2Response
 import com.github.nexters.ppotto.board.presentation.dto.SharedBoardResponse
@@ -29,6 +30,21 @@ private val SHARE_BOARD_RESPONSE =
     ApiExample(
         name = "공유 링크 발급",
         value = ApiResponse.success(BoardShareResponse(shareToken = SHARE_TOKEN, scope = BoardShareScope.RECAP)),
+    )
+
+private val SHARED_STATUS_RESPONSE =
+    ApiExample(
+        name = "공유한 적 있음",
+        value =
+            ApiResponse.success(
+                BoardShareStatusResponse(shareToken = SHARE_TOKEN, scope = BoardShareScope.PHOTOS),
+            ),
+    )
+
+private val NOT_SHARED_STATUS_RESPONSE =
+    ApiExample(
+        name = "공유한 적 없음",
+        value = ApiResponse.success(BoardShareStatusResponse(shareToken = null, scope = BoardShareScope.DEFAULT)),
     )
 
 private val SHARED_BOARD_RESPONSE =
@@ -97,6 +113,14 @@ private val BOARD_NOT_FOUND =
 class BoardShareApiExamples : ApiExampleProvider {
     override val examples: Map<KFunction<*>, OperationExamples> =
         mapOf(
+            BoardShareApi::getStatus to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to listOf(SHARED_STATUS_RESPONSE, NOT_SHARED_STATUS_RESPONSE),
+                            "404" to listOf(BOARD_NOT_FOUND),
+                        ),
+                ),
             BoardShareApi::share to
                 OperationExamples(
                     request = listOf(SHARE_BOARD_REQUEST),

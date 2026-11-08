@@ -1,6 +1,8 @@
 package com.github.nexters.ppotto.board.presentation.dto
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.github.nexters.ppotto.board.application.model.BoardShareResult
+import com.github.nexters.ppotto.board.application.model.BoardShareStatus
 import com.github.nexters.ppotto.board.application.model.SharedBoard
 import com.github.nexters.ppotto.board.domain.BoardShareScope
 import io.swagger.v3.oas.annotations.media.Schema
@@ -21,6 +23,27 @@ data class BoardShareResponse(
             BoardShareResponse(
                 shareToken = result.shareToken,
                 scope = result.scope,
+            )
+    }
+}
+
+@Schema(description = "내 보드 공유 상태")
+data class BoardShareStatusResponse(
+    @get:JsonInclude(JsonInclude.Include.ALWAYS)
+    @field:Schema(
+        description = "요청 사용자의 공유 링크 토큰. 공유한 적이 없으면 null",
+        example = "4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b",
+    )
+    val shareToken: String?,
+
+    @field:Schema(description = "현재 공유 범위. 공유한 적이 없으면 기본값 RECAP", example = "PHOTOS", enumAsRef = true)
+    val scope: BoardShareScope,
+) {
+    companion object {
+        fun from(status: BoardShareStatus): BoardShareStatusResponse =
+            BoardShareStatusResponse(
+                shareToken = status.shareToken,
+                scope = status.scope,
             )
     }
 }
