@@ -27,6 +27,7 @@ class BoardShareRepositoryTest(
 
             When("토큰, 보드와 공유자로 조회하면") {
                 val byToken = boardShareRepository.findByShareToken(saved.shareToken)
+                val byBoardAndSharerWithoutLock = boardShareRepository.findByBoardIdAndSharerUserId(board.id, user.id)
                 val byBoardAndSharer =
                     transactionTemplate.execute {
                         boardShareRepository.findByBoardIdAndSharerUserIdForUpdate(board.id, user.id)
@@ -34,6 +35,7 @@ class BoardShareRepositoryTest(
 
                 Then("같은 공유를 반환한다") {
                     byToken shouldBe saved
+                    byBoardAndSharerWithoutLock shouldBe saved
                     byBoardAndSharer shouldBe saved
                 }
             }

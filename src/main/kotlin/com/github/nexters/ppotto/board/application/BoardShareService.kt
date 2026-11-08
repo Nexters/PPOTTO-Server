@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.board.application.model.BoardShareResult
+import com.github.nexters.ppotto.board.application.model.BoardShareStatus
 import com.github.nexters.ppotto.board.domain.BoardShare
 import com.github.nexters.ppotto.board.domain.BoardShareScope
 import com.github.nexters.ppotto.board.infrastructure.BoardShareRepository
@@ -30,6 +31,18 @@ class BoardShareService(
                 boardShareRepository.updateScope(boardId, userId, scope)
             }
         return share.toResult()
+    }
+
+    fun getStatus(
+        boardId: BoardId,
+        userId: UserId,
+    ): BoardShareStatus {
+        boardAccessService.getReadableById(boardId, userId)
+        val share = boardShareRepository.findByBoardIdAndSharerUserId(boardId, userId)
+        return BoardShareStatus(
+            shareToken = share?.shareToken,
+            scope = share?.scope ?: BoardShareScope.DEFAULT,
+        )
     }
 
     private fun BoardShare.toResult() = BoardShareResult(shareToken = shareToken, scope = scope)

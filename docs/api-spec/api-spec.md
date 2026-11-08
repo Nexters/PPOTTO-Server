@@ -76,6 +76,7 @@
 | board-invitations | GET | /board-invitations/{code} | 초대 대상 보드 조회 | 200 | 401, 404 | 선택 |
 | board-invitations | POST | /board-invitations/{code}/join | 초대를 통한 보드 참여 | 200 | 401, 404, 409 | Y |
 | board-shares | POST | /boards/{boardId}/share | 내 보드 공유 링크 발급·범위 변경 | 200 | 400, 401, 404 | Y |
+| board-shares | GET | /boards/{boardId}/share | 내 보드 공유 상태 조회 | 200 | 401, 404 | Y |
 | board-shares | GET | /boards/shared/{shareToken} | 공유된 보드 조회 | 200 | 404 | N |
 | board-shares | GET | /boards/shared/{shareToken}/stickers/{stickerId} | 공유된 보드의 스티커 리캡 조회 | 200 | 404 | N |
 | stickers | GET | /stickers/{stickerId} | 리캡 상세 조회 (본인만) | 200 | 401, 404 | Y |
@@ -2054,6 +2055,66 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 - 공유 링크에는 만료가 없습니다. 공유 해제 API는 아직 제공하지 않습니다.
 - 서버는 `shareToken`만 반환하며, 웹 링크(`/share/board/{shareToken}`) 조합은 클라이언트가 담당합니다.
 
+### GET /boards/{boardId}/share
+
+- Operation ID: `getMyBoardShare`
+- Summary: 내 보드 공유 상태 조회
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | boardId | Y | `string` | 01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b | 공유 상태를 확인할 보드 ID |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 요청 사용자의 공유 링크 상태 | `shareToken`, `scope` |
+
+| Field | Type | Description |
+| --- | --- | --- |
+| shareToken | string \| null | 요청 사용자가 이 보드를 공유했다면 그 토큰. 공유한 적이 없으면 `null` |
+| scope | `BOARD` \| `RECAP` \| `PHOTOS` | 현재 공유 범위. 공유한 적이 없으면 기본값 `RECAP` |
+
+200 example (공유한 적 있음):
+```json
+{
+  "success": true,
+  "data": {
+    "shareToken": "4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b",
+    "scope": "PHOTOS"
+  },
+  "error": null
+}
+```
+
+200 example (공유한 적 없음):
+```json
+{
+  "success": true,
+  "data": {
+    "shareToken": null,
+    "scope": "RECAP"
+  },
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더 누락 또는 accessToken 만료 |
+| 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드가 없거나 요청 사용자가 방장·참여자가 아님 |
+
+#### Notes
+- 공유 설정 화면을 열 때 현재 범위를 표시하는 용도입니다. 조회만 하며 링크를 발급하지 않습니다.
+- 공유 링크는 `(boardId, sharerUserId)`별이므로, 공동 보드에서도 요청 사용자 본인의 링크 상태만 반환합니다.
+- `shareToken`은 공유한 적이 없으면 필드를 생략하지 않고 `null`로 내려갑니다.
+- 기본 범위 `RECAP`은 `POST /boards/{boardId}/share`를 처음 호출하기 전까지 화면에 보여줄 값이며, 저장되지 않습니다.
+
 ### GET /boards/shared/{shareToken}
 
 - Operation ID: `getSharedBoard`
@@ -4031,6 +4092,12 @@ Request example:
 | --- | --- | --- | --- | --- |
 | shareToken | Y | `string` | - | 요청 사용자의 보드 공유 토큰. 재공유해도 유지 |
 | scope | Y | `string` | BOARD, RECAP, PHOTOS | 현재 공유 범위 |
+
+### BoardShareStatus
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| shareToken | Y | `string` \| `null` | - | 요청 사용자의 공유 토큰. 공유한 적이 없으면 `null` |
+| scope | Y | `string` | BOARD, RECAP, PHOTOS | 현재 공유 범위. 공유한 적이 없으면 `RECAP` |
 
 ### SharedBoard
 | Field | Required | Type | Enum | Description |
