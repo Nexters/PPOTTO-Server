@@ -33,6 +33,11 @@ class BoardShareQueryService(
         )
     }
 
+    fun <T : Any> getRecap(
+        shareToken: String,
+        findRecap: (SharedBoardRecapAccess) -> T?,
+    ): T = findRecap(getRecapAccess(shareToken)) ?: throw NotFoundException(BoardErrorCode.SHARED_RECAP_NOT_FOUND)
+
     fun getRecapAccess(shareToken: String): SharedBoardRecapAccess {
         val (share, board) = resolve(shareToken)
         if (!share.scope.includesRecap) {
