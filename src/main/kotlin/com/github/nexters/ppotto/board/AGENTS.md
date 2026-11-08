@@ -30,6 +30,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `infrastructure/config/BoardExternalPortFallbackConfiguration.kt` | Fail-closed standalone fallbacks that back off when integration adapters are registered |
 | `application/BoardCommandService.kt` | Default/create/rename/delete use cases and board policies as plain statements. Only `create` and `delete` open a transaction; `rename` is a single `UPDATE ... RETURNING` |
 | `application/BoardAccessService.kt` | Port-free board existence, ownership, owner-or-member read access (`getReadableById`), and `MANDATORY`-propagation owner/readable row-locking lookup boundary for cross-domain services |
+| `application/BoardShareService.kt` | Transactional per-user share link issue/scope update. Locks the readable board row so concurrent calls serialize, keeps the existing token on reshare, and otherwise stores a new random UUID token |
 | `application/BoardInvitationService.kt` | Per-user invitation issue/reuse and issuer-only preview replacement. It revalidates the invitation code under a row lock after storage I/O, then best-effort deletes uncommitted, replaced, or expired preview objects outside the transaction |
 | `application/BoardInvitationQueryService.kt` | Public invitation detail composition from the current board, inviter, shared participant query, sticker-count, and static preview state; authenticated callers additionally receive their role and the ordered participant names |
 | `application/BoardParticipationService.kt` | Transactional invitation join: locks the target board, revalidates the invitation, returns owner/member retries idempotently, and admits a new member only below the eight-person limit |
@@ -37,6 +38,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/model/BoardParticipants.kt` | Participant-list read model containing the current/max counts and typed user id, name, and board role for each participant |
 | `application/model/BoardJoinResult.kt` | Idempotent invitation-join result containing the board id, current name, and caller role |
 | `application/model/BoardInvitationDetail.kt` | Invitation lookup read model with optional authenticated-viewer state and shared participant summaries |
+| `application/model/BoardShareResult.kt` | Share issue result containing the caller's share token and current scope |
 | `application/model/BoardInvitationIssueResult.kt` | Invitation issue result containing the invitation id, code, expiry, and whether the current code needs a preview |
 | `application/model/BoardInvitationPreviewImage.kt` | Validated preview upload value: an actual RIFF/WebP payload no larger than 1 MiB and 624×540 |
 | `application/model/BoardInvitationPreviewUploadResult.kt` | Read URL returned after a preview is stored and linked to the invitation |
@@ -50,6 +52,8 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis contracts. `BoardAnalysisActivityPort` checks a board before deletion; `BoardActiveAnalysisPort` returns the caller's single active analysis (`BoardActiveAnalysis`: board id + `BoardAnalysisStatus`) for the v2 list. `BoardAnalysisStatus` (`UPLOADING`/`ANALYZING`) lives in this port file rather than `domain/` so `analysis` still references only board application/port contracts (`BoardAnalysisDependencyTest`) |
 | `application/port/BoardStickerPorts.kt` | Sticker query, batched per-board summary (`BoardStickerSummaryPort`: count, newest-first signed preview URLs, newest image's main colour, newest active sticker `created_at` — one call for the whole list), ownership validation, layout, and cascade-deletion contracts. `BoardStickerItem.type` is `BoardStickerType`, so the swagger enum on the board response comes from a type rather than a hand-written `allowableValues` list |
 | `presentation/BoardApi.kt` | `/boards` create/rename/delete mapping and Swagger contract. Baseline `version = "1+"` because none of it changed in v2 |
+| `presentation/BoardShareApi.kt` | Authenticated baseline OpenAPI contract for idempotent `POST /boards/{boardId}/share` |
+| `presentation/BoardShareController.kt` | HTTP adapter that validates the scope body and passes the authenticated user and board id to share issuing |
 | `presentation/BoardInvitationApi.kt` | `POST /boards/{boardId}/invitations` baseline API와 OpenAPI 계약 |
 | `presentation/BoardInvitationController.kt` | HTTP adapter that passes the authenticated user and board id to the invitation issue service |
 | `presentation/BoardInvitationPreviewApi.kt` | Baseline OpenAPI contract for multipart `PUT /board-invitations/{invitationId}/preview` |
@@ -73,8 +77,9 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/BoardLayoutV2Controller.kt` | v2 layout implementation |
 | `presentation/BoardLayoutApi.kt` | `PATCH /boards/{boardId}/layout` v1 mapping and Swagger contract |
 | `presentation/BoardLayoutController.kt` | Board layout API implementation with request binding and required typed user injection |
-| `presentation/dto/BoardRequests.kt` | Swagger-described create and rename validation DTOs. Both names carry the same constraints — `@Size(min = 1, max = Board.MAX_NAME_LENGTH)` plus `BOARD_NAME_PATTERN`, so a whitespace-only name is a 400 at the DTO and no service-side name check is needed |
+| `presentation/dto/BoardRequests.kt` | Swagger-described create, rename, and share-scope request DTOs. The share scope is the `BoardShareScope` domain enum exposed as a named component through `enumAsRef = true`. Both names carry the same constraints — `@Size(min = 1, max = Board.MAX_NAME_LENGTH)` plus `BOARD_NAME_PATTERN`, so a whitespace-only name is a 400 at the DTO and no service-side name check is needed |
 | `presentation/dto/BoardResponses.kt` | Swagger-described **v1** board list/detail, sticker (`BoardStickerResponse`, named apart from `sticker.presentation.dto.StickerResponse`), and drawing response DTOs. Detail drops `Drawing.Text` and folds `zIndex` back into the `stroke` JSON |
+| `presentation/dto/BoardShareResponse.kt` | Share issue response DTO with the share token and current scope |
 | `presentation/dto/BoardInvitationResponses.kt` | Invitation issue, preview-upload, and optional-auth detail response DTOs |
 | `presentation/dto/BoardJoinResponse.kt` | Invitation-join response DTO with the joined board and caller role |
 | `presentation/dto/BoardParticipantResponses.kt` | Board participant-list response DTOs with typed user ids, names, and roles |
@@ -84,6 +89,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/dto/BoardLayoutRequest.kt` | Swagger-described nested sticker and drawing layout request DTOs |
 | `presentation/BoardApiExamples.kt` | `ApiExampleProvider` implementation. Defines board list/detail/create/rename responses, per-edit-mode layout requests, and `BOARD-001`~`BOARD-005` failure examples as real DTO instances, each declared as a bare `ApiExample` and wrapped with `listOf` at the registration site, plus the `STICKER-007` (delete) and `STICKER-008` (layout v1/v2) examples that `StickerCommandService` raises through the board endpoints. Holds the examples for `BoardApi`, `BoardListApi`, `BoardListV2Api`, and `BoardLayoutApi` |
 | `presentation/BoardInvitationApiExamples.kt` | Type-safe success and domain-error examples for invitation issue, preview upload, and optional-auth detail lookup, including authenticated and anonymous detail variants |
+| `presentation/BoardShareApiExamples.kt` | Type-safe request, success, invalid-input, and hidden-board examples for share issuing |
 | `presentation/BoardParticipationApiExamples.kt` | Type-safe success, invalid-invitation, and full-board examples for invitation join |
 | `presentation/BoardParticipantApiExamples.kt` | Type-safe success and hidden-board error examples for participant-list lookup |
 | `presentation/BoardNotFoundApiResponse.kt` | Composed annotation for the 404 `BOARD-002` response shared by board endpoints |
