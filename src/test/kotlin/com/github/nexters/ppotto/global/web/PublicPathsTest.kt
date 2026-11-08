@@ -29,6 +29,7 @@ private val PATHS =
         "/board-invitations/K7P2QX/join",
         "/boards",
         "/boards/shared/4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b",
+        "/boards/shared/4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b/stickers/0198c0f0-0000-7000-8000-000000000000",
         "/boards/0198c0f0-0000-7000-8000-000000000000/share",
         "/boards/0198c0f0-0000-7000-8000-000000000000/participants",
         "/users/me",
@@ -82,6 +83,10 @@ class PublicPathsTest :
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS.matches("/board-invitations/K7P2QX") shouldBe true
                     PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
                         .matches("/boards/shared/4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b") shouldBe true
+                    PublicPaths.OPTIONAL_AUTH_GET_PATTERNS
+                        .matches(
+                            "/boards/shared/4f1c2b9e-7a3d-4e8f-9b6a-2c5d8e1f0a7b/stickers/0198c0f0-0000-7000-8000-000000000000",
+                        ) shouldBe true
                 }
 
                 Then("토큰을 해석해야 하므로 Bearer 필터는 건너뛰지 않는다") {

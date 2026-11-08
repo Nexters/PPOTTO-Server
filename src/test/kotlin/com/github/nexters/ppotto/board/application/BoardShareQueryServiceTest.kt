@@ -116,6 +116,39 @@ class BoardShareQueryServiceTest(
             }
         }
 
+        Given("리캡 열람 범위를 확인할 공유가 있을 때") {
+            val owner = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id, "제주 여행")
+
+            When("리캡까지 공유한 링크면") {
+                val share = boardShareService.share(board.id, owner.id, BoardShareScope.RECAP)
+                val access = boardShareQueryService.getRecapAccess(share.shareToken)
+
+                Then("보드와 함께 사진은 제외하라고 알려준다") {
+                    access.boardId shouldBe board.id
+                    access.includesPhotos shouldBe false
+                }
+            }
+
+            When("테마 속 사진까지 공유한 링크면") {
+                val share = boardShareService.share(board.id, owner.id, BoardShareScope.PHOTOS)
+                val access = boardShareQueryService.getRecapAccess(share.shareToken)
+
+                Then("사진까지 포함하라고 알려준다") {
+                    access.includesPhotos shouldBe true
+                }
+            }
+
+            When("보드만 공유한 링크면") {
+                val share = boardShareService.share(board.id, owner.id, BoardShareScope.BOARD)
+
+                Then("리캡을 열 수 없다") {
+                    val exception = shouldThrow<NotFoundException> { boardShareQueryService.getRecapAccess(share.shareToken) }
+                    exception.errorCode shouldBe BoardErrorCode.SHARED_RECAP_NOT_FOUND
+                }
+            }
+        }
+
         Given("스티커가 없는 보드를 공유했을 때") {
             val owner = userRepository.saveTestUser()
             val board = boardRepository.save(owner.id, "빈 보드")

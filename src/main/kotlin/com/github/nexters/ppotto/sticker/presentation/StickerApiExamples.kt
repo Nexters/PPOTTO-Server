@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.presentation
 
+import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.openapi.ApiExample
@@ -203,6 +204,18 @@ private val NOT_REGENERATABLE_STICKER_RESPONSE =
         ),
     )
 
+private val SHARED_BOARD_RECAP_NOT_FOUND_RESPONSE =
+    listOf(
+        ApiExamples.errorExample(
+            errorCode = BoardErrorCode.SHARE_NOT_FOUND,
+            summary = "없는 토큰, 보드 삭제, 공유자 탈퇴 또는 보드 나가기",
+        ),
+        ApiExamples.errorExample(
+            errorCode = BoardErrorCode.SHARED_RECAP_NOT_FOUND,
+            summary = "공유 범위가 BOARD이거나 이 보드에 없는 스티커",
+        ),
+    )
+
 @Component
 class StickerApiExamples : ApiExampleProvider {
     override val examples: Map<KFunction<*>, OperationExamples> =
@@ -221,6 +234,14 @@ class StickerApiExamples : ApiExampleProvider {
                         mapOf(
                             "200" to listOf(RECAP_DETAIL_RESPONSE),
                             "404" to STICKER_NOT_FOUND_RESPONSE,
+                        ),
+                ),
+            SharedBoardRecapApi::get to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to listOf(RECAP_DETAIL_RESPONSE),
+                            "404" to SHARED_BOARD_RECAP_NOT_FOUND_RESPONSE,
                         ),
                 ),
             StickerApi::share to
