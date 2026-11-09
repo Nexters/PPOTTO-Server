@@ -8,6 +8,7 @@ Project documentation for spec-driven development.
 |-----------|---------|
 | `api-spec/` | API contract documentation used as the source of truth before implementation (see `api-spec/AGENTS.md`) |
 | `erd/` | ERD and database design documents (see `erd/AGENTS.md`) |
+| `policy/` | Product policy ledgers per domain (`board.md`): each rule is tagged 확정 / 임시 결정 / 미정 and 확정·임시 rules name the regression test that pins them. Renaming or removing a cited test means updating the ledger in the same change; 미정 items are never pinned by tests |
 
 ## Rules
 

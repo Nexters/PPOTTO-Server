@@ -34,7 +34,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardShareQueryService.kt` | Anonymous shared-board lookup by token. The link resolves only while the sharer is still an active owner or member of the non-deleted board; otherwise every case is the same `BOARD-010`. Returns every participant's stickers through `BoardStickerQueryPort` with `isNew` forced to `false`, plus the board drawings and the sharer's current name from `UserService`. `getRecapAccess` applies the same link checks for the sticker domain's shared-recap endpoint, rejects `BOARD` scope with `BOARD-011`, and returns the board id plus whether photos may be exposed. `getRecap` wraps it for the sticker domain: the caller's lookup only reports a recap or `null`, and board alone turns `null` into `BOARD-011`, so no board exception is ever created outside board |
 | `application/BoardInvitationService.kt` | Per-user invitation issue/reuse and issuer-only preview replacement. It revalidates the invitation code under a row lock after storage I/O, then best-effort deletes uncommitted, replaced, or expired preview objects outside the transaction |
 | `application/BoardInvitationQueryService.kt` | Public invitation detail composition from the current board, inviter, shared participant query, sticker-count, and static preview state; authenticated callers additionally receive their role and the ordered participant names |
-| `application/BoardParticipationService.kt` | Transactional invitation join: locks the target board, revalidates the invitation, returns owner/member retries idempotently, and admits a new member only below the eight-person limit |
+| `application/BoardParticipationService.kt` | Transactional invitation join: locks the target board, revalidates the invitation, returns owner/member retries idempotently, and admits a new member only below the eight-person limit. `leave` locks the board row, rejects the owner with `BOARD-012`, and deletes only the caller's `board_members` row (non-member or deleted board is `BOARD-002`) |
 | `application/BoardParticipantQueryService.kt` | Owner-or-member participant lookup and shared owner-first participant composition from ordered membership ids and batched display names |
 | `application/model/BoardParticipants.kt` | Participant-list read model containing the current/max counts and typed user id, name, and board role for each participant |
 | `application/model/BoardJoinResult.kt` | Idempotent invitation-join result containing the board id, current name, and caller role |
@@ -68,6 +68,8 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/BoardInvitationQueryController.kt` | HTTP adapter that passes the optional current user into invitation detail lookup |
 | `presentation/BoardParticipationApi.kt` | Authenticated baseline OpenAPI contract for idempotent `POST /board-invitations/{code}/join` |
 | `presentation/BoardParticipationController.kt` | HTTP adapter that passes the authenticated user and invitation code to board participation |
+| `presentation/BoardLeaveApi.kt` | Authenticated baseline OpenAPI contract for `DELETE /boards/{boardId}/members/me` (leave a shared board) |
+| `presentation/BoardLeaveController.kt` | HTTP adapter that passes the authenticated user and board id to `BoardParticipationService.leave` |
 | `presentation/BoardParticipantApi.kt` | Baseline OpenAPI contract for authenticated `GET /boards/{boardId}/participants` |
 | `presentation/BoardParticipantController.kt` | HTTP adapter that returns the current participant list to an owner or member |
 | `presentation/BoardListApi.kt` | `GET /boards` pinned to `version = "1"` (operationId `list`), split out of `BoardApi` the same way as `BoardDetailApi` so only the list is frozen at v1. Owned boards only, `{id, name}` |
@@ -96,7 +98,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `presentation/BoardApiExamples.kt` | `ApiExampleProvider` implementation. Defines board list/detail/create/rename responses, per-edit-mode layout requests, and `BOARD-001`~`BOARD-005` failure examples as real DTO instances, each declared as a bare `ApiExample` and wrapped with `listOf` at the registration site, plus the `STICKER-007` (delete) and `STICKER-008` (layout v1/v2) examples that `StickerCommandService` raises through the board endpoints. Holds the examples for `BoardApi`, `BoardListApi`, `BoardListV2Api`, and `BoardLayoutApi` |
 | `presentation/BoardInvitationApiExamples.kt` | Type-safe success and domain-error examples for invitation issue, preview upload, and optional-auth detail lookup, including authenticated and anonymous detail variants |
 | `presentation/BoardShareApiExamples.kt` | Type-safe request, success, invalid-input, and hidden-board examples for share issuing, shared/unshared share-status examples, plus the shared-board success and `BOARD-010` examples |
-| `presentation/BoardParticipationApiExamples.kt` | Type-safe success, invalid-invitation, and full-board examples for invitation join |
+| `presentation/BoardParticipationApiExamples.kt` | Type-safe examples for invitation join (success, invalid invitation, full board) and board leave (empty success, not found, owner conflict) |
 | `presentation/BoardParticipantApiExamples.kt` | Type-safe success and hidden-board error examples for participant-list lookup |
 | `presentation/BoardNotFoundApiResponse.kt` | Composed annotation for the 404 `BOARD-002` response shared by board endpoints |
 
@@ -149,7 +151,8 @@ T01(보드 홈·목록)에서 정한 것과 남겨 둔 것이다. 남겨 둔 항
 
 **T03이 결정할 것**
 
-- 나가기·내보내기·재참여 차단. 지금은 행 삭제 말고는 표현할 수단이 없어 내보낸 사용자를 다시 막을 수 없다. 상태 컬럼(`left_at`, `kicked_at` 등)을 추가하면 `ownedOrJoinedBy`와 `findAccessibleByUserId`의 참여자 수 서브쿼리를 같은 조건으로 함께 바꿔야 하고, 행이 수정되기 시작하므로 `updated_at`과 `set_updated_at` 트리거도 그때 추가한다.
+- 나가기는 정했다(`DELETE /boards/{boardId}/members/me`): 참여 행만 삭제하고, 방장은 `BOARD-012`로 거부하며, 재참여는 막지 않는다. 나간 사용자의 공유 링크는 공유 조회가 공유자 참여 여부를 다시 확인하므로 즉시 죽고, 그 사용자가 발급한 초대 코드는 만료까지 유효하다. 참여자 스티커가 생기면 나가기 시 정리 범위를 함께 정해야 한다.
+- 내보내기·재참여 차단. 지금은 행 삭제 말고는 표현할 수단이 없어 내보낸 사용자를 다시 막을 수 없다. 상태 컬럼(`left_at`, `kicked_at` 등)을 추가하면 `ownedOrJoinedBy`와 `findAccessibleByUserId`의 참여자 수 서브쿼리를 같은 조건으로 함께 바꿔야 하고, 행이 수정되기 시작하므로 `updated_at`과 `set_updated_at` 트리거도 그때 추가한다.
 - 참여자 쓰기 권한(레이아웃, 드로잉, 스티커 수정·삭제, 분석 생성). 지금은 모두 `getOwnedById`/`getOwnedByIdForUpdate`라 참여자는 `BOARD-002`를 받는다. 넓힐 때 주의할 점이 둘 있다. (1) 레이아웃 저장의 advisory lock 키가 `board-user:{userId}`라 서로 다른 사용자의 동시 저장은 직렬화되지 않는다. 공동 편집을 허용하면 보드 단위 키가 필요하다. (2) 보드 삭제의 진행 중 분석 검사 `hasActiveAnalysis(boardId, userId)`는 방장 본인의 분석만 본다. 참여자가 분석할 수 있게 되면 보드 기준으로 바꿔야 진행 중인 분석의 대상 보드가 지워지지 않는다.
 - 참여자의 스티커 열람 상태. `isNew`/`viewed_at`은 스티커당 하나라 참여자가 상세를 열면 방장의 빨간 점이 그대로 보인다. 리캡 상세와 열람 처리(`GET /stickers/{id}`, `POST /stickers/{id}/view`)는 `StickerAccessService.getOwned` 기준이라 참여자에게 `STICKER-001`이다.
 - 참여 인원 상한. 지금은 없다. 상한을 정할 때 목록 v2 비용도 함께 본다. 미리보기 URL 서명(보드당 최대 4개, 로컬 RSA)은 사용자가 참여한 보드 수에 비례해 늘어나므로, 참여 보드 수 상한이 곧 홈 목록 한 번의 서명 상한이다.

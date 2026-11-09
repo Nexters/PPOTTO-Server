@@ -81,6 +81,16 @@ class BoardMembershipRepository(
             .doNothing()
             .execute() == 1
 
+    fun delete(
+        boardId: BoardId,
+        userId: UserId,
+    ): Boolean =
+        dslContext
+            .deleteFrom(BOARD_MEMBERS)
+            .where(BOARD_MEMBERS.BOARD_ID.eq(boardId))
+            .and(BOARD_MEMBERS.USER_ID.eq(userId))
+            .execute() == 1
+
     private fun findReadableById(
         id: BoardId,
         userId: UserId,

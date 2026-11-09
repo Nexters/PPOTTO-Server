@@ -40,6 +40,18 @@ private val PARTICIPANT_LIMIT_EXCEEDED =
         summary = "보드 참여 인원 8명 도달",
     )
 
+private val LEAVE_BOARD_NOT_FOUND =
+    ApiExamples.errorExample(
+        errorCode = BoardErrorCode.NOT_FOUND,
+        summary = "보드 없음, 보드 삭제 또는 참여자가 아님",
+    )
+
+private val OWNER_CANNOT_LEAVE =
+    ApiExamples.errorExample(
+        errorCode = BoardErrorCode.OWNER_CANNOT_LEAVE,
+        summary = "방장의 나가기 요청",
+    )
+
 @Component
 class BoardParticipationApiExamples : ApiExampleProvider {
     override val examples: Map<KFunction<*>, OperationExamples> =
@@ -51,6 +63,15 @@ class BoardParticipationApiExamples : ApiExampleProvider {
                             "200" to listOf(BOARD_JOIN_RESPONSE),
                             "404" to listOf(JOIN_INVITATION_NOT_FOUND),
                             "409" to listOf(PARTICIPANT_LIMIT_EXCEEDED),
+                        ),
+                ),
+            BoardLeaveApi::leave to
+                OperationExamples(
+                    responses =
+                        mapOf(
+                            "200" to ApiExamples.EMPTY_SUCCESS,
+                            "404" to listOf(LEAVE_BOARD_NOT_FOUND),
+                            "409" to listOf(OWNER_CANNOT_LEAVE),
                         ),
                 ),
         )

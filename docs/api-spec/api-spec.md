@@ -75,6 +75,7 @@
 | board-invitations | PUT | /board-invitations/{invitationId}/preview | 초대 미리보기 업로드·교체 | 200 | 400, 401, 404, 409 | Y |
 | board-invitations | GET | /board-invitations/{code} | 초대 대상 보드 조회 | 200 | 401, 404 | 선택 |
 | board-invitations | POST | /board-invitations/{code}/join | 초대를 통한 보드 참여 | 200 | 401, 404, 409 | Y |
+| board-invitations | DELETE | /boards/{boardId}/members/me | 보드 나가기 | 200 | 401, 404, 409 | Y |
 | board-shares | POST | /boards/{boardId}/share | 내 보드 공유 링크 발급·범위 변경 | 200 | 400, 401, 404 | Y |
 | board-shares | GET | /boards/{boardId}/share | 내 보드 공유 상태 조회 | 200 | 401, 404 | Y |
 | board-shares | GET | /boards/shared/{shareToken} | 공유된 보드 조회 | 200 | 404 | N |
@@ -1997,6 +1998,64 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 - 방장과 기존 참여자의 재요청은 행과 인원수를 변경하지 않고 현재 역할로 성공합니다. 같은 사용자의 중복 클릭·재시도도 동일한 결과를 반환합니다.
 - 정원은 방장을 포함해 8명입니다. 신규 참여의 정원 확인과 멤버 추가는 보드 단위로 직렬화해 동시에 요청되어도 8명을 초과하지 않습니다.
 - 웹 초대 화면의 앱 열기와 앱의 코드 입력은 이 API를 공유합니다. 성공한 클라이언트는 응답의 `boardId`로 이동합니다.
+
+### DELETE /boards/{boardId}/members/me
+
+- Operation ID: `leaveBoard`
+- Summary: 보드 나가기
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | boardId | Y | `string` | 01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b | 나갈 보드 ID |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Description | Data |
+| --- | --- | --- |
+| 200 | 나가기 완료 | `null` |
+
+200 example:
+```json
+{
+  "success": true,
+  "data": null,
+  "error": null
+}
+```
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더 누락 또는 accessToken 만료 |
+| 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드가 없거나 삭제되었거나, 요청 사용자가 참여자가 아님(이미 나간 경우 포함) |
+| 409 | BOARD-012 | 방장은 보드를 나갈 수 없습니다. | 요청 사용자가 보드 방장임 |
+
+409 BOARD-012 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-012",
+    "message": "방장은 보드를 나갈 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-07-27T05:02:11Z"
+  }
+}
+```
+
+#### Notes
+- 참여 관계(`board_members` 행)만 삭제합니다. 나간 즉시 홈 목록과 보드 조회에서 제외되고, 남은 참여자가 없으면 보드는 `PERSONAL`로 돌아갑니다.
+- 방장은 나갈 수 없습니다. 방장은 보드 삭제(`DELETE /boards/{boardId}`)를 사용합니다.
+- 나간 사용자의 외부 공유 링크(`GET /boards/shared/{shareToken}`)는 즉시 `BOARD-010`이 됩니다.
+- 나간 사용자가 발급한 초대 코드는 만료 시각까지 유효합니다.
+- 재참여를 막지 않습니다. 유효한 초대 코드로 다시 참여할 수 있습니다.
+- 멱등이 아닙니다. 이미 나간 뒤 다시 요청하면 `BOARD-002`입니다.
+- 참여자는 아직 스티커를 만들 수 없으므로 삭제할 스티커·리캡이 없습니다. 참여자 쓰기 권한이 열리면 나가기 시 해당 사용자의 스티커·리캡 정리를 함께 정해야 합니다.
 
 ### POST /boards/{boardId}/share
 
