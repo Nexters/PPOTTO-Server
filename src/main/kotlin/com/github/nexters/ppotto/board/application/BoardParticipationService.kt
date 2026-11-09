@@ -11,6 +11,7 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.user.application.UserService
 import org.springframework.stereotype.Service
@@ -40,6 +41,16 @@ class BoardParticipationService(
 
         val role = resolveRoleOrAddMember(board, userId)
         return board.toJoinResult(role)
+    }
+
+    @Transactional
+    fun leave(
+        boardId: BoardId,
+        userId: UserId,
+    ) {
+        val board = boardRepository.findByIdForUpdate(boardId) ?: boardNotFound()
+        if (board.userId == userId) throw ConflictException(BoardErrorCode.OWNER_CANNOT_LEAVE)
+        if (!boardMembershipRepository.delete(board.id, userId)) boardNotFound()
     }
 
     private fun resolveRoleOrAddMember(
@@ -78,6 +89,8 @@ class BoardParticipationService(
             boardName = name,
             role = role,
         )
+
+    private fun boardNotFound(): Nothing = throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
     private fun invitationNotFound(): Nothing = throw NotFoundException(BoardErrorCode.INVITATION_NOT_FOUND)
 }

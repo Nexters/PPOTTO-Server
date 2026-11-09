@@ -19,4 +19,5 @@ enum class BoardErrorCode(
     PARTICIPANT_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "BOARD-009", "보드 참여 인원이 가득 찼습니다."),
     SHARE_NOT_FOUND(HttpStatus.NOT_FOUND, "BOARD-010", "공유된 보드를 찾을 수 없습니다."),
     SHARED_RECAP_NOT_FOUND(HttpStatus.NOT_FOUND, "BOARD-011", "공유된 리캡을 찾을 수 없습니다."),
+    OWNER_CANNOT_LEAVE(HttpStatus.CONFLICT, "BOARD-012", "방장은 보드를 나갈 수 없습니다."),
 }

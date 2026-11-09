@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.board.application
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardRole
+import com.github.nexters.ppotto.board.domain.BoardShareScope
 import com.github.nexters.ppotto.board.infrastructure.BoardInvitationRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardMembershipRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
@@ -19,6 +20,8 @@ import java.time.Instant
 class BoardParticipationServiceTest(
     participationService: BoardParticipationService,
     invitationService: BoardInvitationService,
+    shareService: BoardShareService,
+    shareQueryService: BoardShareQueryService,
     invitationRepository: BoardInvitationRepository,
     membershipRepository: BoardMembershipRepository,
     boardRepository: BoardRepository,
@@ -123,6 +126,75 @@ class BoardParticipationServiceTest(
                 Then("초대를 찾을 수 없다") {
                     shouldThrow<NotFoundException> { participationService.join(invitation.code, newcomer.id) }
                         .errorCode shouldBe BoardErrorCode.INVITATION_NOT_FOUND
+                }
+            }
+        }
+
+        Given("참여자가 있는 공동 보드에서") {
+            val owner = userRepository.saveTestUser("김용희")
+            val member = userRepository.saveTestUser("이수민")
+            val stranger = userRepository.saveTestUser("박지훈")
+            val board = boardRepository.save(owner.id, "제주 여행")
+            membershipRepository.saveIfAbsent(board.id, member.id)
+
+            When("참여자가 나가면") {
+                val memberInvitation = invitationService.issue(board.id, member.id)
+                val memberShare = shareService.share(board.id, member.id, BoardShareScope.RECAP)
+                participationService.leave(board.id, member.id)
+
+                Then("참여 관계가 사라지고 보드 목록에서 빠진다") {
+                    membershipRepository.exists(board.id, member.id) shouldBe false
+                    membershipRepository.findAccessibleByUserId(member.id).none { it.board.id == board.id } shouldBe true
+                }
+
+                Then("마지막 참여자가 나가면 방장 목록에서 개인 보드로 돌아간다") {
+                    membershipRepository
+                        .findAccessibleByUserId(owner.id)
+                        .single { it.board.id == board.id }
+                        .memberCount shouldBe 0
+                }
+
+                Then("나간 참여자의 공유 링크는 더 이상 열리지 않는다") {
+                    shouldThrow<NotFoundException> { shareQueryService.getSharedBoard(memberShare.shareToken) }
+                        .errorCode shouldBe BoardErrorCode.SHARE_NOT_FOUND
+                }
+
+                Then("나간 참여자가 발급한 초대 코드는 만료 전까지 유효하다") {
+                    participationService.join(memberInvitation.code, stranger.id).role shouldBe BoardRole.MEMBER
+                }
+
+                Then("다시 나가기를 요청하면 보드를 찾을 수 없다") {
+                    shouldThrow<NotFoundException> { participationService.leave(board.id, member.id) }
+                        .errorCode shouldBe BoardErrorCode.NOT_FOUND
+                }
+
+                Then("초대 코드로 다시 참여할 수 있다") {
+                    val ownerInvitation = invitationService.issue(board.id, owner.id)
+                    participationService.join(ownerInvitation.code, member.id).role shouldBe BoardRole.MEMBER
+                }
+            }
+
+            When("방장이 나가려 하면") {
+                Then("방장은 나갈 수 없어 거부하고 참여 관계는 그대로다") {
+                    shouldThrow<ConflictException> { participationService.leave(board.id, owner.id) }
+                        .errorCode shouldBe BoardErrorCode.OWNER_CANNOT_LEAVE
+                    membershipRepository.exists(board.id, member.id) shouldBe true
+                }
+            }
+
+            When("참여하지 않은 사용자가 나가려 하면") {
+                Then("보드를 찾을 수 없다") {
+                    shouldThrow<NotFoundException> { participationService.leave(board.id, stranger.id) }
+                        .errorCode shouldBe BoardErrorCode.NOT_FOUND
+                }
+            }
+
+            When("보드가 삭제된 뒤 참여자가 나가려 하면") {
+                boardRepository.softDelete(board.id, owner.id)
+
+                Then("보드를 찾을 수 없다") {
+                    shouldThrow<NotFoundException> { participationService.leave(board.id, member.id) }
+                        .errorCode shouldBe BoardErrorCode.NOT_FOUND
                 }
             }
         }

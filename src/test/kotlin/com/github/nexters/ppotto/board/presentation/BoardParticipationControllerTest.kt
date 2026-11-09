@@ -11,6 +11,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -82,6 +83,52 @@ class BoardParticipationControllerTest(
                     result
                         .andExpect(status().isConflict)
                         .andExpect(jsonPath("$.error.code").value("BOARD-009"))
+                }
+            }
+        }
+
+        Given("참여자가 있는 공동 보드에서") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            membershipRepository.saveIfAbsent(board.id, member.id)
+
+            When("참여자가 나가기를 요청하면") {
+                val principal = UsernamePasswordAuthenticationToken.authenticated(member.id.value, null, emptyList())
+                val result =
+                    mockMvc.perform(
+                        delete("/boards/${board.id.value}/members/me")
+                            .with(authentication(principal))
+                            .header("X-API-Version", "2"),
+                    )
+
+                Then("빈 성공 응답을 반환한다") {
+                    result
+                        .andExpect(status().isOk)
+                        .andExpect(jsonPath("$.success").value(true))
+                }
+            }
+
+            When("방장이 나가기를 요청하면") {
+                val principal = UsernamePasswordAuthenticationToken.authenticated(owner.id.value, null, emptyList())
+                val result =
+                    mockMvc.perform(
+                        delete("/boards/${board.id.value}/members/me")
+                            .with(authentication(principal)),
+                    )
+
+                Then("BOARD-012를 반환한다") {
+                    result
+                        .andExpect(status().isConflict)
+                        .andExpect(jsonPath("$.error.code").value("BOARD-012"))
+                }
+            }
+
+            When("인증 없이 나가기를 요청하면") {
+                val result = mockMvc.perform(delete("/boards/${board.id.value}/members/me"))
+
+                Then("인증 오류를 반환한다") {
+                    result.andExpect(status().isUnauthorized)
                 }
             }
         }
