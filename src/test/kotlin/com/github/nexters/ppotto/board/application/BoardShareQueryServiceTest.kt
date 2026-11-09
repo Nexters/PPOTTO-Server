@@ -60,6 +60,10 @@ class BoardShareQueryServiceTest(
                         .map { it.isNew }
                         .distinct() shouldBe listOf(false)
                 }
+
+                Then("공유 링크 조회는 열람일 뿐 참여 관계를 만들지 않는다") {
+                    dslContext.fetchCount(BOARD_MEMBERS, BOARD_MEMBERS.BOARD_ID.eq(board.id)) shouldBe 1
+                }
             }
 
             When("공유자가 범위를 바꾼 뒤 같은 토큰으로 조회하면") {
