@@ -24,6 +24,7 @@ import com.github.nexters.ppotto.analysis.support.burstPhotoUploadGroups
 import com.github.nexters.ppotto.analysis.support.photoUploadGroups
 import com.github.nexters.ppotto.analysis.support.photoUploadItems
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -141,6 +142,38 @@ class AnalysisServiceTest(
 
                 Then("정상 생성된다") {
                     result.uploads shouldHaveSize 20
+                }
+            }
+        }
+
+        Given("공동 보드에 참여한 멤버가") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            dslContext.addBoardMember(board.id, member.id)
+
+            When("사진 분석 생성을 요청하면") {
+                val result = analysisService.createAnalysis(member.id, board.id, CreateAnalysisCommand(photoUploadGroups(20)))
+
+                Then("멤버 소유의 분석과 업로드 URL을 생성한다") {
+                    analysisRepository.findByIdAndUserId(result.analysisId, member.id)?.boardId shouldBe board.id
+                    result.uploads shouldHaveSize 20
+                }
+            }
+        }
+
+        Given("보드에 참여하지 않은 사용자가") {
+            val owner = userRepository.saveTestUser()
+            val stranger = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+
+            When("사진 분석 생성을 요청하면") {
+                Then("보드를 찾을 수 없는 것으로 처리한다") {
+                    val exception =
+                        shouldThrow<NotFoundException> {
+                            analysisService.createAnalysis(stranger.id, board.id, CreateAnalysisCommand(photoUploadGroups(20)))
+                        }
+                    exception.errorCode.code shouldBe "BOARD-002"
                 }
             }
         }

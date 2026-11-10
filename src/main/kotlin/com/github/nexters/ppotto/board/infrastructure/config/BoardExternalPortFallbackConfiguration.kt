@@ -17,7 +17,7 @@ class BoardExternalPortFallbackConfiguration {
     @Bean
     @ConditionalOnMissingBean
     fun boardAnalysisActivityPort(): BoardAnalysisActivityPort =
-        BoardAnalysisActivityPort { _, _ -> error("AnalysisQueryService 연동이 필요합니다.") }
+        BoardAnalysisActivityPort { error("AnalysisQueryService 연동이 필요합니다.") }
 
     @Bean
     @ConditionalOnMissingBean

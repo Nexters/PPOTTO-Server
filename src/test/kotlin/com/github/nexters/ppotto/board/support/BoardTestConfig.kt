@@ -7,7 +7,6 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutComman
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
-import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.support.ResettableFake
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -29,10 +28,7 @@ class FakeBoardAnalysisActivityPort :
     ResettableFake {
     val activeBoardIds = mutableSetOf<BoardId>()
 
-    override fun hasActiveAnalysis(
-        boardId: BoardId,
-        userId: UserId,
-    ): Boolean = boardId in activeBoardIds
+    override fun hasActiveAnalysis(boardId: BoardId): Boolean = boardId in activeBoardIds
 
     override fun reset() {
         activeBoardIds.clear()
