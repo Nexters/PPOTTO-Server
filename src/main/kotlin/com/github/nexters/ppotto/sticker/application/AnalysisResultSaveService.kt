@@ -54,7 +54,9 @@ class AnalysisResultSaveService(
 
     private fun validateOwnership(command: SaveAnalysisResultCommand) {
         val ownershipPort = ownershipPorts.singlePort("분석과 사진 소유권 검증")
-        if (boardAccessService.getById(command.boardId).userId != command.userId) {
+        try {
+            boardAccessService.getAccessibleById(command.boardId, command.userId)
+        } catch (_: NotFoundException) {
             throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
         }
 

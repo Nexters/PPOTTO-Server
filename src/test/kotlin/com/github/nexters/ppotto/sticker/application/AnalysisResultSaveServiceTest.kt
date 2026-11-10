@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.sticker.application.model.SaveAnalysisResultCommand
@@ -22,7 +23,9 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import org.jooq.DSLContext
 import org.springframework.dao.DataIntegrityViolationException
 import java.time.Instant
 
@@ -36,7 +39,41 @@ class AnalysisResultSaveServiceTest(
     boardAccessService: BoardAccessService,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    dslContext: DSLContext,
 ) : IntegrationTest({
+        Given("공동 보드 멤버의 분석 결과가 준비된 상태에서") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            dslContext.addBoardMember(board.id, member.id)
+            val analysis = analysisRepository.save(member.id, board.id)
+            val photo =
+                photoRepository
+                    .saveAll(
+                        analysis.id,
+                        board.id,
+                        listOf(PhotoCreate(PhotoContentType.JPEG, Instant.parse("2026-07-01T00:00:00Z"))),
+                    ).single()
+            photoRepository.markCompletedBatch(mapOf(photo.id to Instant.now()))
+
+            When("멤버가 소유한 사진으로 스티커와 리캡을 저장하면") {
+                val saved =
+                    service.save(
+                        SaveAnalysisResultCommand(
+                            member.id,
+                            analysis.id,
+                            board.id,
+                            listOf(imageStickerResult(photo.id)),
+                        ),
+                    )
+
+                Then("공동 보드에 분석 결과를 저장한다") {
+                    saved.stickerIds shouldHaveSize 1
+                    stickerRepository.findAllByBoardId(board.id).map { it.id } shouldContainExactly saved.stickerIds
+                }
+            }
+        }
+
         Given("분석 결과에 스티커와 리캡이 포함된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
