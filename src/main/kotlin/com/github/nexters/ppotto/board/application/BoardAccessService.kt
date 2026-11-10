@@ -27,11 +27,11 @@ class BoardAccessService(
         boardRepository.findOwnedById(boardId, userId)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
-    fun getReadableById(
+    fun getAccessibleById(
         boardId: BoardId,
         userId: UserId,
     ): Board =
-        boardMembershipRepository.findReadableById(boardId, userId)
+        boardMembershipRepository.findAccessibleById(boardId, userId)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -43,10 +43,10 @@ class BoardAccessService(
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 
     @Transactional(propagation = Propagation.MANDATORY)
-    fun getReadableByIdForUpdate(
+    fun getAccessibleByIdForUpdate(
         boardId: BoardId,
         userId: UserId,
     ): Board =
-        boardMembershipRepository.findReadableByIdForUpdate(boardId, userId)
+        boardMembershipRepository.findAccessibleByIdForUpdate(boardId, userId)
             ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
 }

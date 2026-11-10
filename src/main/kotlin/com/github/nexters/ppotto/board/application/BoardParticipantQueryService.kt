@@ -19,7 +19,7 @@ class BoardParticipantQueryService(
     fun get(
         boardId: BoardId,
         userId: UserId,
-    ): BoardParticipants = get(boardAccessService.getReadableById(boardId, userId))
+    ): BoardParticipants = get(boardAccessService.getAccessibleById(boardId, userId))
 
     internal fun get(board: Board): BoardParticipants {
         val memberUserIds = boardMembershipRepository.findMemberUserIds(board.id)

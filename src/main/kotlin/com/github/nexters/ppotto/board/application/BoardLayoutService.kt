@@ -8,7 +8,6 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.global.lock.AdvisoryLock
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -19,13 +18,12 @@ class BoardLayoutService(
     private val stickerCommandPort: BoardStickerCommandPort,
 ) {
     @Transactional
-    @AdvisoryLock(namespace = BOARD_USER_LOCK_NAMESPACE, key = "#userId")
     fun update(
         boardId: BoardId,
         userId: UserId,
         command: BoardLayoutUpdateCommand,
     ) {
-        boardAccessService.getOwnedById(boardId, userId)
+        boardAccessService.getAccessibleByIdForUpdate(boardId, userId)
         validateDrawingOwnership(boardId, command)
 
         if (!stickerCommandPort.ownsAll(boardId, referencedStickerIds(command))) {

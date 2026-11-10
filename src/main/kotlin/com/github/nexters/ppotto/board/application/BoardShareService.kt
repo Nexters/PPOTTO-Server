@@ -22,7 +22,7 @@ class BoardShareService(
         userId: UserId,
         scope: BoardShareScope,
     ): BoardShareResult {
-        boardAccessService.getReadableByIdForUpdate(boardId, userId)
+        boardAccessService.getAccessibleByIdForUpdate(boardId, userId)
         val existing = boardShareRepository.findByBoardIdAndSharerUserIdForUpdate(boardId, userId)
         val share =
             if (existing == null) {
@@ -37,7 +37,7 @@ class BoardShareService(
         boardId: BoardId,
         userId: UserId,
     ): BoardShareStatus {
-        boardAccessService.getReadableById(boardId, userId)
+        boardAccessService.getAccessibleById(boardId, userId)
         val share = boardShareRepository.findByBoardIdAndSharerUserId(boardId, userId)
         return BoardShareStatus(
             shareToken = share?.shareToken,

@@ -313,7 +313,7 @@ class BoardControllerTest(
                             .content("""{"name":"참여자 변경"}"""),
                     )
 
-                Then("쓰기는 방장 전용이라 BOARD-002로 404를 응답하고 이름을 바꾸지 않는다") {
+                Then("보드 관리는 방장 전용이라 BOARD-002로 404를 응답하고 이름을 바꾸지 않는다") {
                     result
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("BOARD-002"))
@@ -329,7 +329,7 @@ class BoardControllerTest(
                             .header("X-API-Version", "1"),
                     )
 
-                Then("쓰기는 방장 전용이라 BOARD-002로 404를 응답하고 보드를 지우지 않는다") {
+                Then("보드 관리는 방장 전용이라 BOARD-002로 404를 응답하고 보드를 지우지 않는다") {
                     result
                         .andExpect(status().isNotFound)
                         .andExpect(jsonPath("$.error.code").value("BOARD-002"))
@@ -352,11 +352,9 @@ class BoardControllerTest(
                             ),
                     )
 
-                Then("쓰기는 방장 전용이라 BOARD-002로 404를 응답하고 그림을 저장하지 않는다") {
-                    result
-                        .andExpect(status().isNotFound)
-                        .andExpect(jsonPath("$.error.code").value("BOARD-002"))
-                    drawingRepository.findByBoardId(board.id).shouldBeEmpty()
+                Then("200으로 응답하고 공동 보드에 그림을 저장한다") {
+                    result.andExpect(status().isOk)
+                    drawingRepository.findByBoardId(board.id) shouldHaveSize 1
                 }
             }
         }

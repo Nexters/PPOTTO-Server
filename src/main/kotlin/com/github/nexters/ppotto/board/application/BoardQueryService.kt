@@ -58,7 +58,7 @@ class BoardQueryService(
         boardId: BoardId,
         userId: UserId,
     ): BoardDetail {
-        val board = boardAccessService.getReadableById(boardId, userId)
+        val board = boardAccessService.getAccessibleById(boardId, userId)
         return BoardDetail(
             id = board.id,
             name = board.name,

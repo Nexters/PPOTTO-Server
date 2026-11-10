@@ -10,12 +10,14 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.BoardTestConfig
 import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.board.support.boardStickerItem
 import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.board.support.newTextDrawing
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
+import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -27,6 +29,7 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
 
 @Import(BoardTestConfig::class)
@@ -36,7 +39,61 @@ class BoardLayoutServiceTest(
     drawingRepository: DrawingRepository,
     userRepository: UserRepository,
     stickerPort: FakeBoardStickerPort,
+    dslContext: DSLContext,
 ) : IntegrationTest({
+        Given("공동 보드에 참여한 사용자가") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            dslContext.addBoardMember(board.id, member.id)
+            val sticker = boardStickerItem()
+            stickerPort.stickersByBoardId[board.id] = listOf(sticker)
+
+            When("스티커 배치와 그림, 텍스트를 함께 저장하면") {
+                boardLayoutService.update(
+                    board.id,
+                    member.id,
+                    BoardLayoutUpdateCommand(
+                        stickers = listOf(stickerLayout(sticker.id)),
+                        createdDrawings =
+                            listOf(
+                                newDrawing(boardId = board.id),
+                                newTextDrawing(boardId = board.id),
+                            ),
+                        deletedDrawingIds = emptyList(),
+                    ),
+                )
+
+                Then("공동 편집 내용을 모두 저장한다") {
+                    stickerPort.updatedLayouts.single().map { it.id } shouldContainExactly listOf(sticker.id)
+                    drawingRepository.findByBoardId(board.id) shouldHaveSize 2
+                }
+            }
+        }
+
+        Given("공동 보드에 참여하지 않은 사용자가") {
+            val owner = userRepository.saveTestUser()
+            val stranger = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+
+            When("레이아웃 저장을 요청하면") {
+                Then("BOARD-002로 거부한다") {
+                    shouldThrow<NotFoundException> {
+                        boardLayoutService.update(
+                            board.id,
+                            stranger.id,
+                            BoardLayoutUpdateCommand(
+                                stickers = emptyList(),
+                                createdDrawings = listOf(newDrawing(boardId = board.id)),
+                                deletedDrawingIds = emptyList(),
+                            ),
+                        )
+                    }.errorCode shouldBe BoardErrorCode.NOT_FOUND
+                    drawingRepository.findByBoardId(board.id).shouldBeEmpty()
+                }
+            }
+        }
+
         Given("보드 배경 드로잉을 저장한 사용자가") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
