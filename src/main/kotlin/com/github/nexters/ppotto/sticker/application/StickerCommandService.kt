@@ -45,7 +45,7 @@ class StickerCommandService(
         stickerId: StickerId,
         title: String,
     ): StickerTitleResult {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         sticker.rename(title)
 
         if (!stickerCommandRepository.updateTitle(sticker.id, sticker.title)) {
@@ -59,7 +59,7 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         if (sticker.viewedAt != null) {
             return
         }
@@ -75,7 +75,7 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         val drawingCommandPort = drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME)
         sticker.delete(Instant.now())
 
@@ -90,7 +90,7 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         val photoIds = validateRegeneratable(sticker)
         val previousSourcePhotoId = checkNotNull(sticker.sourcePhotoId) { "이미지형 스티커의 소스 사진이 비어 있습니다." }
         val previousImageKey = sticker.imageKey

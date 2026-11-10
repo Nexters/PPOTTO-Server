@@ -62,14 +62,15 @@ class StickerQueryService(
     fun getRecap(
         userId: UserId,
         stickerId: StickerId,
-    ): StickerRecapResult = buildRecap(stickerAccessService.getOwned(userId, stickerId), isOwner = true, includePhotos = true)
+    ): StickerRecapResult =
+        buildRecap(stickerAccessService.getAccessible(userId, stickerId), isParticipant = true, includePhotos = true)
 
     fun getSharedRecap(shareToken: String): StickerRecapResult {
         val sticker =
             stickerRepository.findByShareToken(shareToken)
                 ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
 
-        return buildRecap(sticker, isOwner = false, includePhotos = sticker.sharePhotos)
+        return buildRecap(sticker, isParticipant = false, includePhotos = sticker.sharePhotos)
     }
 
     fun findRecapInBoard(
@@ -80,11 +81,11 @@ class StickerQueryService(
         stickerRepository
             .findById(stickerId)
             ?.takeIf { it.boardId == boardId }
-            ?.let { buildRecap(it, isOwner = false, includePhotos = includePhotos) }
+            ?.let { buildRecap(it, isParticipant = false, includePhotos = includePhotos) }
 
     private fun buildRecap(
         sticker: Sticker,
-        isOwner: Boolean,
+        isParticipant: Boolean,
         includePhotos: Boolean,
     ): StickerRecapResult {
         val comments =
@@ -103,9 +104,9 @@ class StickerQueryService(
             }
 
         return StickerRecapResult(
-            sticker = toResults(listOf(sticker), isOwner).single(),
+            sticker = toResults(listOf(sticker), isParticipant).single(),
             summary = sticker.summary,
-            share = if (isOwner && sticker.shareToken != null) RecapShareResult(sticker.sharePhotos) else null,
+            share = if (isParticipant && sticker.shareToken != null) RecapShareResult(sticker.sharePhotos) else null,
             comments = comments,
             photos = photos,
         )
@@ -157,7 +158,7 @@ class StickerQueryService(
 
     private fun toResults(
         stickers: List<Sticker>,
-        isOwner: Boolean = true,
+        isParticipant: Boolean = true,
     ): List<StickerItemResult> {
         val imageUrls = issueReadUrls(stickers.mapNotNull { it.imageKey })
 
@@ -165,7 +166,7 @@ class StickerQueryService(
             StickerItemResult(
                 id = sticker.id,
                 title = sticker.title,
-                isNew = isOwner && sticker.viewedAt == null,
+                isNew = isParticipant && sticker.viewedAt == null,
                 type = sticker.type,
                 imageUrl = sticker.imageKey?.let { imageUrls[it] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
                 textContent = sticker.textContent,

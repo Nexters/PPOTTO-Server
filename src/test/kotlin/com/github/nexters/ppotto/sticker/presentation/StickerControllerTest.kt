@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRep
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
@@ -15,6 +16,7 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import com.jayway.jsonpath.JsonPath
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import org.jooq.DSLContext
 import org.hamcrest.Matchers.containsString
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -41,12 +43,15 @@ class StickerControllerTest(
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    dslContext: DSLContext,
 ) : IntegrationTest({
         fun MockHttpServletRequestBuilder.authenticatedAs(userId: UUID): MockHttpServletRequestBuilder =
             with(authentication(UsernamePasswordAuthenticationToken.authenticated(userId, null, emptyList())))
 
         Given("사용자 보드에 이미지 스티커와 리캡이 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
+            val member = userRepository.saveTestUser()
+            dslContext.addBoardMember(board.id, member.id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photo =
                 photoRepository
@@ -77,6 +82,45 @@ class StickerControllerTest(
                 )
             val bubbleComment = comments.first { it.content == "말풍선" }
             val chipComment = comments.first { it.content == "키워드" }
+
+            When("공동 보드 참여자가 스티커와 리캡의 조회·편집·공유·삭제를 요청하면") {
+                val recapResult = mockMvc.perform(get("/stickers/${sticker.id}").authenticatedAs(member.id.value))
+                val renameResult =
+                    mockMvc.perform(
+                        patch("/stickers/${sticker.id}")
+                            .authenticatedAs(member.id.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"title":"참여자 제목"}""),
+                    )
+                val viewResult = mockMvc.perform(post("/stickers/${sticker.id}/view").authenticatedAs(member.id.value))
+                val commentResult =
+                    mockMvc.perform(
+                        patch("/stickers/${sticker.id}/comments")
+                            .authenticatedAs(member.id.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"comments":[{"id":"${bubbleComment.id}","posX":7.0,"posY":8.0}]}"""),
+                    )
+                val shareResult =
+                    mockMvc.perform(
+                        post("/stickers/${sticker.id}/share")
+                            .authenticatedAs(member.id.value)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""{"includePhotos":true}"""),
+                    )
+                val unshareResult =
+                    mockMvc.perform(delete("/stickers/${sticker.id}/share").authenticatedAs(member.id.value))
+                val deleteResult = mockMvc.perform(delete("/stickers/${sticker.id}").authenticatedAs(member.id.value))
+
+                Then("조회·수정·열람·공유·삭제를 모두 허용한다") {
+                    recapResult.andExpect(status().isOk)
+                    renameResult.andExpect(status().isOk)
+                    viewResult.andExpect(status().isOk)
+                    commentResult.andExpect(status().isOk)
+                    shareResult.andExpect(status().isOk)
+                    unshareResult.andExpect(status().isOk)
+                    deleteResult.andExpect(status().isOk)
+                }
+            }
 
             When("리캡 상세를 요청하면") {
                 val result = mockMvc.perform(get("/stickers/${sticker.id}").authenticatedAs(board.userId.value))

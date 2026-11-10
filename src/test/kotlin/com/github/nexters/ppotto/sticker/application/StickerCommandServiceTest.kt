@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoReposi
 import com.github.nexters.ppotto.analysis.support.FakeStickerStorage
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.ConflictException
@@ -175,6 +176,8 @@ class StickerCommandServiceTest(
 
         Given("이미지 스티커와 사진 구성이 있는 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
+            val member = userRepository.saveTestUser()
+            dslContext.addBoardMember(board.id, member.id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val photos =
                 photoRepository.saveAll(
@@ -194,6 +197,14 @@ class StickerCommandServiceTest(
                     imageStickerCreation(sourcePhotoId = photoIds.first()),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photoIds)
+
+            When("공동 보드 참여자가 재생성을 요청하면") {
+                service.regenerate(member.id, sticker.id)
+
+                Then("새 이미지로 교체한다") {
+                    imageKeyOf(sticker.id) shouldNotBe "stickers/original.png"
+                }
+            }
 
             When("재생성을 요청하면") {
                 service.regenerate(board.userId, sticker.id)

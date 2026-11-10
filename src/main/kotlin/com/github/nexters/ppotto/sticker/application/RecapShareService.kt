@@ -18,7 +18,7 @@ class RecapShareService(
         stickerId: StickerId,
         includePhotos: Boolean,
     ): String {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         val shareToken = sticker.shareToken ?: UUID.randomUUID().toString()
 
         if (!stickerCommandRepository.updateShare(sticker.id, shareToken, includePhotos)) {
@@ -31,7 +31,7 @@ class RecapShareService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         if (sticker.shareToken == null) {
             return
         }

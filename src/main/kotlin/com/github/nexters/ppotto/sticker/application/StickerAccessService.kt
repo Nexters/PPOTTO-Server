@@ -14,12 +14,18 @@ class StickerAccessService(
     private val stickerRepository: StickerRepository,
     private val boardAccessService: BoardAccessService,
 ) {
-    fun getOwned(
+    fun getAccessible(
         userId: UserId,
         stickerId: StickerId,
-    ): Sticker =
-        stickerRepository
-            .findById(stickerId)
-            ?.takeIf { boardAccessService.getById(it.boardId).userId == userId }
-            ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+    ): Sticker {
+        val sticker =
+            stickerRepository.findById(stickerId)
+                ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        try {
+            boardAccessService.getAccessibleById(sticker.boardId, userId)
+        } catch (_: NotFoundException) {
+            throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
+        }
+        return sticker
+    }
 }
