@@ -62,8 +62,7 @@ class StickerQueryService(
     fun getRecap(
         userId: UserId,
         stickerId: StickerId,
-    ): StickerRecapResult =
-        buildRecap(stickerAccessService.getAccessible(userId, stickerId), isParticipant = true, includePhotos = true)
+    ): StickerRecapResult = buildRecap(stickerAccessService.getAccessible(userId, stickerId), isParticipant = true, includePhotos = true)
 
     fun getSharedRecap(shareToken: String): StickerRecapResult {
         val sticker =

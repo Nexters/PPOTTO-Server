@@ -107,8 +107,7 @@ class StickerRepository(
                         .where(ANALYSIS.BOARD_ID.eq(boardId))
                         .and(ANALYSIS.USER_ID.eq(userId)),
                 ),
-            )
-            .and(STICKERS.DELETED_AT.isNull)
+            ).and(STICKERS.DELETED_AT.isNull)
             .orderBy(STICKERS.ID.asc())
             .fetch()
             .map { it.toDomain() }

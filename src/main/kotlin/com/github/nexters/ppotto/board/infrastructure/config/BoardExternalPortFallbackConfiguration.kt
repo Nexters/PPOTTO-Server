@@ -17,8 +17,7 @@ import org.springframework.context.annotation.Configuration
 class BoardExternalPortFallbackConfiguration {
     @Bean
     @ConditionalOnMissingBean
-    fun boardAnalysisActivityPort(): BoardAnalysisActivityPort =
-        BoardAnalysisActivityPort { error("AnalysisQueryService 연동이 필요합니다.") }
+    fun boardAnalysisActivityPort(): BoardAnalysisActivityPort = BoardAnalysisActivityPort { error("AnalysisQueryService 연동이 필요합니다.") }
 
     @Bean
     @ConditionalOnMissingBean
