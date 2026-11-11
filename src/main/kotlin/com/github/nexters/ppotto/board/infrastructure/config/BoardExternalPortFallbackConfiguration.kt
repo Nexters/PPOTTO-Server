@@ -8,6 +8,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerSummaryPort
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -16,8 +17,7 @@ import org.springframework.context.annotation.Configuration
 class BoardExternalPortFallbackConfiguration {
     @Bean
     @ConditionalOnMissingBean
-    fun boardAnalysisActivityPort(): BoardAnalysisActivityPort =
-        BoardAnalysisActivityPort { _, _ -> error("AnalysisQueryService 연동이 필요합니다.") }
+    fun boardAnalysisActivityPort(): BoardAnalysisActivityPort = BoardAnalysisActivityPort { error("AnalysisQueryService 연동이 필요합니다.") }
 
     @Bean
     @ConditionalOnMissingBean
@@ -46,5 +46,10 @@ class BoardExternalPortFallbackConfiguration {
             ) = error("StickerCommandService 연동이 필요합니다.")
 
             override fun deleteAllByBoardId(boardId: BoardId) = error("StickerCommandService 연동이 필요합니다.")
+
+            override fun deleteAllCreatedBy(
+                boardId: BoardId,
+                userId: UserId,
+            ) = error("StickerCommandService 연동이 필요합니다.")
         }
 }

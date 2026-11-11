@@ -21,7 +21,7 @@ class RecapCommentCommandService(
         positions: List<RecapCommentPosition>,
     ) {
         validatePositions(positions)
-        stickerAccessService.getOwned(userId, stickerId)
+        stickerAccessService.getAccessible(userId, stickerId)
 
         val updatedCount = stickerRecapRepository.updatePositions(stickerId, positions)
         if (updatedCount != positions.size) {

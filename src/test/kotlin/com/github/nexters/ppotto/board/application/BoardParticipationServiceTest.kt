@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.board.application
 
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardRole
@@ -10,10 +11,17 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
+import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
+import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import java.time.Instant
 
@@ -26,6 +34,9 @@ class BoardParticipationServiceTest(
     membershipRepository: BoardMembershipRepository,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    analysisRepository: AnalysisRepository,
+    stickerRepository: StickerRepository,
+    stickerRecapRepository: StickerRecapRepository,
 ) : IntegrationTest({
         Given("유효한 보드 초대가") {
             val owner = userRepository.saveTestUser("김용희")
@@ -195,6 +206,41 @@ class BoardParticipationServiceTest(
                 Then("보드를 찾을 수 없다") {
                     shouldThrow<NotFoundException> { participationService.leave(board.id, member.id) }
                         .errorCode shouldBe BoardErrorCode.NOT_FOUND
+                }
+            }
+        }
+
+        Given("오너와 멤버가 각각 스티커와 리캡을 만든 공동 보드에서") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            membershipRepository.saveIfAbsent(board.id, member.id)
+            val ownerAnalysis = analysisRepository.save(owner.id, board.id)
+            val memberAnalysis = analysisRepository.save(member.id, board.id)
+            val ownerSticker =
+                stickerRepository.save(ownerAnalysis.id, board.id, textStickerCreation(title = "오너 스티커"))
+            val memberSticker =
+                stickerRepository.save(memberAnalysis.id, board.id, textStickerCreation(title = "멤버 스티커"))
+            stickerRecapRepository.saveComments(
+                ownerSticker.id,
+                listOf(RecapCommentCreation("오너 리캡", null, null)),
+            )
+            stickerRecapRepository.saveComments(
+                memberSticker.id,
+                listOf(RecapCommentCreation("멤버 리캡", null, null)),
+            )
+
+            When("멤버가 보드에서 나가면") {
+                participationService.leave(board.id, member.id)
+
+                Then("멤버가 생성한 스티커와 리캡만 삭제한다") {
+                    stickerRepository.findById(memberSticker.id).shouldBeNull()
+                    stickerRecapRepository.findComments(memberSticker.id).shouldBeEmpty()
+                    stickerRepository.findById(ownerSticker.id).shouldNotBeNull()
+                    stickerRecapRepository
+                        .findComments(ownerSticker.id)
+                        .single()
+                        .content shouldBe "오너 리캡"
                 }
             }
         }

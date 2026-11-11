@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRep
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.board.support.changeAnalysisStatus
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -77,6 +78,26 @@ class BoardAnalysisContractTest(
                             boardCommandService.delete(board.id, user.id)
                         }.errorCode shouldBe BoardErrorCode.ACTIVE_ANALYSIS_EXISTS
                         boardRepository.findOwnedById(board.id, user.id)?.id shouldBe board.id
+                    }
+                }
+            }
+        }
+
+        AnalysisStatus.ACTIVE.forEach { status ->
+            Given("공동 보드 멤버의 $status 분석이 진행 중일 때") {
+                val owner = userRepository.saveTestUser()
+                val member = userRepository.saveTestUser()
+                val board = boardRepository.save(owner.id)
+                boardRepository.save(owner.id)
+                dslContext.addBoardMember(board.id, member.id)
+                analysisRepository.save(member.id, board.id).also { dslContext.changeAnalysisStatus(it.id, status) }
+
+                When("오너가 보드를 삭제하면") {
+                    Then("BOARD-005로 거부하고 보드를 유지한다") {
+                        shouldThrow<ConflictException> {
+                            boardCommandService.delete(board.id, owner.id)
+                        }.errorCode shouldBe BoardErrorCode.ACTIVE_ANALYSIS_EXISTS
+                        boardRepository.findOwnedById(board.id, owner.id)?.id shouldBe board.id
                     }
                 }
             }

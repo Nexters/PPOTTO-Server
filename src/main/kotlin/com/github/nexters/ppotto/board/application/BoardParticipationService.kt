@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.board.application.model.BoardJoinResult
+import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardInvitation
@@ -24,6 +25,7 @@ class BoardParticipationService(
     private val boardInvitationRepository: BoardInvitationRepository,
     private val boardMembershipRepository: BoardMembershipRepository,
     private val boardRepository: BoardRepository,
+    private val stickerCommandPort: BoardStickerCommandPort,
     private val userService: UserService,
 ) {
     @Transactional
@@ -50,7 +52,10 @@ class BoardParticipationService(
     ) {
         val board = boardRepository.findByIdForUpdate(boardId) ?: boardNotFound()
         if (board.userId == userId) throw ConflictException(BoardErrorCode.OWNER_CANNOT_LEAVE)
-        if (!boardMembershipRepository.delete(board.id, userId)) boardNotFound()
+        if (!boardMembershipRepository.exists(board.id, userId)) boardNotFound()
+
+        stickerCommandPort.deleteAllCreatedBy(board.id, userId)
+        check(boardMembershipRepository.delete(board.id, userId)) { "확인한 보드 참여 관계를 삭제하지 못했습니다." }
     }
 
     private fun resolveRoleOrAddMember(

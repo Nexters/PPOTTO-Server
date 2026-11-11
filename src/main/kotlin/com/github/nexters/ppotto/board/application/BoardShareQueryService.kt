@@ -48,7 +48,7 @@ class BoardShareQueryService(
 
     private fun resolve(shareToken: String): ResolvedShare {
         val share = boardShareRepository.findByShareToken(shareToken) ?: shareNotFound()
-        val board = boardMembershipRepository.findReadableById(share.boardId, share.sharerUserId) ?: shareNotFound()
+        val board = boardMembershipRepository.findAccessibleById(share.boardId, share.sharerUserId) ?: shareNotFound()
         val sharerName = userService.findActiveName(share.sharerUserId) ?: shareNotFound()
         return ResolvedShare(share, board, sharerName)
     }

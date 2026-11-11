@@ -29,10 +29,7 @@ class FakeBoardAnalysisActivityPort :
     ResettableFake {
     val activeBoardIds = mutableSetOf<BoardId>()
 
-    override fun hasActiveAnalysis(
-        boardId: BoardId,
-        userId: UserId,
-    ): Boolean = boardId in activeBoardIds
+    override fun hasActiveAnalysis(boardId: BoardId): Boolean = boardId in activeBoardIds
 
     override fun reset() {
         activeBoardIds.clear()
@@ -47,6 +44,7 @@ class FakeBoardStickerPort :
     val validatedStickerIds = mutableListOf<Set<StickerId>>()
     val updatedLayouts = mutableListOf<List<BoardStickerLayoutCommand>>()
     val deletedBoardIds = mutableListOf<BoardId>()
+    val deletedCreators = mutableListOf<Pair<BoardId, UserId>>()
 
     override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = stickersByBoardId[boardId].orEmpty()
 
@@ -78,10 +76,18 @@ class FakeBoardStickerPort :
         deletedBoardIds += boardId
     }
 
+    override fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ) {
+        deletedCreators += boardId to userId
+    }
+
     override fun reset() {
         stickersByBoardId.clear()
         validatedStickerIds.clear()
         updatedLayouts.clear()
         deletedBoardIds.clear()
+        deletedCreators.clear()
     }
 }

@@ -3,7 +3,9 @@ package com.github.nexters.ppotto.sticker.infrastructure
 import com.github.nexters.ppotto.global.identifier.AnalysisId
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.records.StickersRecord
+import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerCreation
@@ -87,6 +89,26 @@ class StickerRepository(
             .where(STICKERS.BOARD_ID.eq(boardId))
             .and(STICKERS.DELETED_AT.isNull)
             .orderBy(STICKERS.Z_INDEX.asc(), STICKERS.ID.asc())
+            .fetch()
+            .map { it.toDomain() }
+
+    fun findAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ): List<Sticker> =
+        dslContext
+            .selectFrom(STICKERS)
+            .where(STICKERS.BOARD_ID.eq(boardId))
+            .and(
+                STICKERS.ANALYSIS_ID.`in`(
+                    dslContext
+                        .select(ANALYSIS.ID)
+                        .from(ANALYSIS)
+                        .where(ANALYSIS.BOARD_ID.eq(boardId))
+                        .and(ANALYSIS.USER_ID.eq(userId)),
+                ),
+            ).and(STICKERS.DELETED_AT.isNull)
+            .orderBy(STICKERS.ID.asc())
             .fetch()
             .map { it.toDomain() }
 

@@ -4,10 +4,7 @@ import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
 
 fun interface BoardAnalysisActivityPort {
-    fun hasActiveAnalysis(
-        boardId: BoardId,
-        userId: UserId,
-    ): Boolean
+    fun hasActiveAnalysis(boardId: BoardId): Boolean
 }
 
 fun interface BoardActiveAnalysisPort {

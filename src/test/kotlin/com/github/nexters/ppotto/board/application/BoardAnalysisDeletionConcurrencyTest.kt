@@ -14,6 +14,7 @@ import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.ANALYSIS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -167,6 +168,11 @@ class BlockingBoardStickerCommandPort : BoardStickerCommandPort {
         deleteInvocation.countDown()
         check(deleteRelease.await(10, TimeUnit.SECONDS))
     }
+
+    override fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ) = Unit
 
     fun awaitDeleteInvocation(): Boolean = deleteInvocation.await(10, TimeUnit.SECONDS)
 

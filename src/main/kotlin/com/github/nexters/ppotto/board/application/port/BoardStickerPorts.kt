@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.global.error.CommonErrorCode
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import java.time.Instant
 
 fun interface BoardStickerQueryPort {
@@ -30,6 +31,11 @@ interface BoardStickerCommandPort {
     )
 
     fun deleteAllByBoardId(boardId: BoardId)
+
+    fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    )
 }
 
 data class BoardStickerItem(

@@ -17,10 +17,7 @@ class AnalysisQueryService(
     private val analysisRepository: AnalysisRepository,
     private val photoRepository: PhotoRepository,
 ) {
-    fun hasActiveAnalysis(
-        boardId: BoardId,
-        userId: UserId,
-    ): Boolean = analysisRepository.existsActiveByBoardIdAndUserId(boardId, userId)
+    fun hasActiveAnalysis(boardId: BoardId): Boolean = analysisRepository.existsActiveByBoardId(boardId)
 
     fun getActiveAnalysis(userId: UserId): AnalysisStatusResult? =
         analysisRepository

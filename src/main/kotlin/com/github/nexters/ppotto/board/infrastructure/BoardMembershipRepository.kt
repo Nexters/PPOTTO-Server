@@ -19,15 +19,15 @@ data class BoardWithMemberCount(
 class BoardMembershipRepository(
     private val dslContext: DSLContext,
 ) {
-    fun findReadableById(
+    fun findAccessibleById(
         id: BoardId,
         userId: UserId,
-    ): Board? = findReadableById(id, userId, forUpdate = false)
+    ): Board? = findAccessibleById(id, userId, forUpdate = false)
 
-    fun findReadableByIdForUpdate(
+    fun findAccessibleByIdForUpdate(
         id: BoardId,
         userId: UserId,
-    ): Board? = findReadableById(id, userId, forUpdate = true)
+    ): Board? = findAccessibleById(id, userId, forUpdate = true)
 
     fun findAccessibleByUserId(userId: UserId): List<BoardWithMemberCount> {
         val memberCount =
@@ -91,7 +91,7 @@ class BoardMembershipRepository(
             .and(BOARD_MEMBERS.USER_ID.eq(userId))
             .execute() == 1
 
-    private fun findReadableById(
+    private fun findAccessibleById(
         id: BoardId,
         userId: UserId,
         forUpdate: Boolean,

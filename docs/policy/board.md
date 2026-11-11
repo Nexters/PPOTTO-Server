@@ -27,6 +27,8 @@ GUI 2.0 보드 기능(F01–F09, 티켓 T01–T04)의 서버 정책을 세 단�
 | F05 초대 | 초대 코드는 영문·숫자 6자리 | `POST /boards/{boardId}/invitations` | `board/application/BoardInvitationServiceTest` "6자리 코드와 30일 만료 시각을 반환한다", `board/infrastructure/BoardInvitationRepositoryTest` "코드 형식 CHECK 제약으로 거부한다" |
 | F06 참여 | 이미 참여한 사용자가 다시 참여해도 참여 관계가 중복 생성되지 않는다 | `POST /board-invitations/{code}/join` | `board/application/BoardParticipationServiceTest` "기존 멤버가 다시 참여하면 → 인원을 늘리지 않고 MEMBER 결과를 반환한다", "방장이 참여하면 → 멤버 행을 만들지 않고 OWNER 결과를 반환한다" |
 | F07 나가기 | 참여자는 보드에서 나갈 수 있다. 나가면 즉시 목록과 조회에서 빠진다 | `DELETE /boards/{boardId}/members/me` | `board/application/BoardParticipationServiceTest` "참여자가 나가면 → 참여 관계가 사라지고 보드 목록에서 빠진다" |
+| F07 나가기 | 참여자가 나가면 해당 보드에서 자신이 생성한 스티커와 그 스티커의 리캡 연결 데이터를 삭제한다. 다른 참여자의 스티커와 리캡은 유지한다 | `DELETE /boards/{boardId}/members/me` | `board/application/BoardParticipationServiceTest` "멤버가 보드에서 나가면 → 멤버가 생성한 스티커와 리캡만 삭제한다" |
+| 공동 보드 편집 | 방장과 참여자는 사진 분석·스티커 생성, 레이아웃·드로잉·텍스트 편집, 스티커와 리캡의 조회·편집·공유·삭제를 할 수 있다. 보드 이름 변경과 보드 삭제는 방장만 가능하다 | 관련 보드·분석·스티커 API | `analysis/application/AnalysisServiceTest` "멤버 소유의 분석과 업로드 URL을 생성한다", `sticker/presentation/StickerControllerTest` "공동 보드 참여자가 스티커와 리캡의 조회·편집·공유·삭제를 요청하면" |
 | F08 공유 | 공유 범위는 보드만(`BOARD`) / 리캡까지(`RECAP`) / 테마 속 사진까지(`PHOTOS`) 셋 중 하나 | `POST /boards/{boardId}/share` | `board/application/BoardShareServiceTest` "방장 이름의 공유 링크를 요청한 범위로 저장한다", "같은 토큰을 유지하고 범위만 바꾼다" |
 | F08 공유 | 공동 보드를 공유하면 공유자가 아닌 참여자의 스티커도 노출된다 | `GET /boards/shared/{shareToken}` | `board/application/BoardShareQueryServiceTest` "보드 이름, 공유자 이름, 범위와 함께 모든 참여자의 스티커와 그림을 반환한다" |
 | F09 공유 웹 | 범위 밖 리캡·사진은 화면뿐 아니라 API 직접 호출로도 내려가지 않는다 | `GET /boards/shared/{shareToken}/stickers/{stickerId}` | `sticker/presentation/SharedBoardRecapControllerTest` "공유 범위 밖이라 BOARD-011을 반환한다", "사진을 뺀 리캡을 반환한다", `board/application/BoardShareQueryServiceTest` "리캡을 열 수 없다" |
@@ -51,7 +53,6 @@ GUI 2.0 보드 기능(F01–F09, 티켓 T01–T04)의 서버 정책을 세 단�
 | 나간 뒤 재참여 | 막지 않는다. 유효한 초대 코드로 다시 참여할 수 있다 | `board/application/BoardParticipationServiceTest` "참여자가 나가면 → 초대 코드로 다시 참여할 수 있다" |
 | 나간 사람의 공유 링크 | 즉시 열리지 않는다 | `board/application/BoardParticipationServiceTest` "참여자가 나가면 → 나간 참여자의 공유 링크는 더 이상 열리지 않는다" |
 | 나간 사람의 초대 코드 | 만료 시각까지 유효하다 | `board/application/BoardParticipationServiceTest` "참여자가 나가면 → 나간 참여자가 발급한 초대 코드는 만료 전까지 유효하다" |
-| 쓰기 권한 | 이름 변경, 삭제, 레이아웃 저장, 분석 생성은 방장만. 참여자는 `BOARD-002` | `board/presentation/BoardControllerTest` "쓰기는 방장 전용이라 BOARD-002로 404를 응답하고 …" 3건 |
 | 목록 정렬 | 최근 스티커가 추가된 순. 페이지 없이 전부 준다 | `board/application/BoardQueryServiceTest` "마지막 활동 시각과 순서는 스티커가 추가된 시각 그대로다" |
 | 초기 보드 | 가입 시 기본 보드 1개를 서버가 만든다 | `auth/infrastructure/integration/AuthDomainIntegrationTest` "계정과 기본 보드를 각각 한 번만 생성한다", "기존 사용자에게 기본 보드를 중복 생성하지 않는다" |
 
@@ -61,10 +62,9 @@ GUI 2.0 보드 기능(F01–F09, 티켓 T01–T04)의 서버 정책을 세 단�
 
 | 항목 | 질문 | 지금 상태 |
 |---|---|---|
-| 참여자 쓰기 권한 | 참여자가 사진을 올려 스티커를 만들 수 있나? 배치·그림을 바꿀 수 있나? 남의 스티커를 옮기거나 지울 수 있나? | 전부 방장만. 시안의 "참여자의 스티커도 사라진다" 문구와 맞지 않는다 |
-| 참여자 리캡 열람 | 같은 보드 참여자가 서로의 리캡(요약, 코멘트, 사진)을 볼 수 있나? 새 리캡 표시는 사람마다 따로인가? | 본인 것만 볼 수 있다. 표시는 스티커당 하나 |
-| 나갈 때 데이터 정리 | 나가는 사람의 스티커·리캡·원본 사진·그림을 지우나? | 참여자 스티커가 없어 지울 것이 없다. 참여자 쓰기 권한과 함께 정한다 |
-| 분석 중 나가기 | 자기 분석이 진행 중일 때 나갈 수 있나? | 참여자는 분석을 만들 수 없어 해당 없음 |
+| 나갈 때 드로잉·텍스트 정리 | 나가는 참여자가 생성한 드로잉·텍스트도 함께 삭제할까? | 현재 구현은 모두 유지한다. 생성자 정보와 삭제 정책이 확정되지 않았으므로 나가기 정책으로 굳히지 않는다 |
+| 나갈 때 분석·사진 정리 | 나가는 참여자의 분석 행과 업로드 사진 DB 데이터도 삭제할까? GCS 원본 객체는 언제 삭제할까? | 현재 구현은 분석·사진 DB 데이터와 GCS 객체를 유지한다 |
+| 분석 중 나가기 | 참여자 자신의 분석이 `UPLOADING` 또는 `ANALYZING`일 때 나가기를 허용할까? 허용한다면 진행 중 작업은 취소할까? | 현재 나가기는 분석 상태를 확인하거나 취소하지 않는다 |
 | 탈퇴한 참여자 | 탈퇴 즉시 보드에서 빠지나? 정리 배치까지 기다리나? | 배치까지 참여자 수에 포함된다 |
 | 탈퇴한 방장 | 방장이 탈퇴하면 공동 보드는? (삭제 / 다른 참여자에게 양도) | 배치까지 참여자 목록과 상세에 그대로 보인다 |
 | 100개 제한 집계 | 참여한 보드도 100개에 포함하나? 참여 보드 수에 별도 상한을 두나? | 만든 보드만 센다. 참여 보드는 상한 없음 |

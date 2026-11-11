@@ -8,10 +8,12 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutComman
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.board.support.awaitBlockedLock
 import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -90,13 +92,78 @@ class BoardLayoutConcurrencyTest(
                 }
             }
         }
+
+        Given("같은 공동 보드에 서로 다른 참여자 두 명이 있을 때") {
+            val owner = userRepository.saveTestUser()
+            val firstMember = userRepository.saveTestUser()
+            val secondMember = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            dslContext.addBoardMember(board.id, firstMember.id)
+            dslContext.addBoardMember(board.id, secondMember.id)
+            val firstDrawing = newDrawing(boardId = board.id)
+            val secondDrawing = newDrawing(boardId = board.id)
+
+            When("두 참여자가 레이아웃을 동시에 저장하면") {
+                val executor = Executors.newFixedThreadPool(2)
+                val firstFuture =
+                    executor.submit(
+                        Callable {
+                            runCatching {
+                                boardLayoutService.update(
+                                    board.id,
+                                    firstMember.id,
+                                    BoardLayoutUpdateCommand(
+                                        stickers = emptyList(),
+                                        createdDrawings = listOf(firstDrawing),
+                                        deletedDrawingIds = emptyList(),
+                                    ),
+                                )
+                            }
+                        },
+                    )
+                check(stickerPort.awaitLayoutValidation())
+                val secondFuture =
+                    executor.submit(
+                        Callable {
+                            runCatching {
+                                boardLayoutService.update(
+                                    board.id,
+                                    secondMember.id,
+                                    BoardLayoutUpdateCommand(
+                                        stickers = emptyList(),
+                                        createdDrawings = listOf(secondDrawing),
+                                        deletedDrawingIds = emptyList(),
+                                    ),
+                                )
+                            }
+                        },
+                    )
+                dslContext.awaitBlockedLock()
+                stickerPort.releaseLayout()
+                val firstResult = firstFuture.get(30, TimeUnit.SECONDS)
+                val secondResult = secondFuture.get(30, TimeUnit.SECONDS)
+                executor.shutdownNow()
+
+                Then("같은 보드 행에서 직렬화되어 두 변경을 모두 저장한다") {
+                    assertSoftly {
+                        firstResult.isSuccess shouldBe true
+                        secondResult.isSuccess shouldBe true
+                        drawingRepository
+                            .findByBoardId(board.id)
+                            .map { it.id }
+                            .toSet() shouldBe
+                            setOf(firstDrawing.id, secondDrawing.id)
+                    }
+                }
+            }
+        }
     })
 
 @TestConfiguration
 class BoardLayoutConcurrencyTestConfiguration {
     @Bean
     @Primary
-    fun completedBoardAnalysisActivityPort(): BoardAnalysisActivityPort = BoardAnalysisActivityPort { _, _ -> false }
+    fun completedBoardAnalysisActivityPort(): BoardAnalysisActivityPort = BoardAnalysisActivityPort { false }
 
     @Bean
     @Primary
@@ -136,6 +203,11 @@ class CoordinatedBoardStickerPort(
     override fun deleteAllByBoardId(boardId: BoardId) {
         drawingRowsAtDelete = dslContext.fetchCount(DRAWINGS, DRAWINGS.BOARD_ID.eq(boardId))
     }
+
+    override fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ) = Unit
 
     fun awaitLayoutValidation(): Boolean = layoutValidation.await(AWAIT_SECONDS, TimeUnit.SECONDS)
 

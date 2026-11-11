@@ -71,7 +71,7 @@ class BoardCommandService(
         if (boardRepository.countByUserId(userId) <= 1) {
             throw ConflictException(BoardErrorCode.LAST_BOARD_CANNOT_BE_DELETED)
         }
-        if (analysisActivityPort.hasActiveAnalysis(boardId, userId)) {
+        if (analysisActivityPort.hasActiveAnalysis(boardId)) {
             throw ConflictException(BoardErrorCode.ACTIVE_ANALYSIS_EXISTS)
         }
     }

@@ -91,7 +91,7 @@ class AnalysisService(
         boardId: BoardId,
         photoCreates: List<PhotoCreate>,
     ): List<Photo> {
-        boardAccessService.getOwnedByIdForUpdate(boardId, userId)
+        boardAccessService.getAccessibleByIdForUpdate(boardId, userId)
         validateNoActiveAnalysis(userId)
         val analysis = saveAnalysisWithConstraintFallback(userId, boardId)
         return photoRepository.saveAll(analysisId = analysis.id, boardId = boardId, items = photoCreates)

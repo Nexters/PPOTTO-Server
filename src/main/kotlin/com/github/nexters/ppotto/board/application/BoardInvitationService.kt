@@ -101,7 +101,7 @@ class BoardInvitationService(
         boardId: BoardId,
         userId: UserId,
     ): BoardInvitationIssueOutcome {
-        boardAccessService.getReadableByIdForUpdate(boardId, userId)
+        boardAccessService.getAccessibleByIdForUpdate(boardId, userId)
         val now = Instant.now()
         val existing = boardInvitationRepository.findByBoardIdAndInviterUserIdForUpdate(boardId, userId)
         if (existing != null && existing.expiresAt.isAfter(now)) {

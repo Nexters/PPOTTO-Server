@@ -28,6 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate
 import java.time.Duration
 import java.time.Instant
 
+@Suppress("TooManyFunctions")
 @Service
 class StickerCommandService(
     private val stickerRepository: StickerRepository,
@@ -45,7 +46,7 @@ class StickerCommandService(
         stickerId: StickerId,
         title: String,
     ): StickerTitleResult {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         sticker.rename(title)
 
         if (!stickerCommandRepository.updateTitle(sticker.id, sticker.title)) {
@@ -59,7 +60,7 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         if (sticker.viewedAt != null) {
             return
         }
@@ -75,7 +76,7 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         val drawingCommandPort = drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME)
         sticker.delete(Instant.now())
 
@@ -90,7 +91,7 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getOwned(userId, stickerId)
+        val sticker = stickerAccessService.getAccessible(userId, stickerId)
         val photoIds = validateRegeneratable(sticker)
         val previousSourcePhotoId = checkNotNull(sticker.sourcePhotoId) { "이미지형 스티커의 소스 사진이 비어 있습니다." }
         val previousImageKey = sticker.imageKey
@@ -194,11 +195,32 @@ class StickerCommandService(
     @Transactional
     fun deleteAllByBoardId(boardId: BoardId) {
         val stickers = stickerRepository.findAllByBoardId(boardId)
-        if (stickers.isEmpty()) {
+        val stickerIds = softDeleteAll(stickers)
+        if (stickerIds.isEmpty()) {
             return
         }
 
-        val drawingCommandPort = drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME)
+        drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME).deleteByStickerIds(boardId, stickerIds)
+        stickerRecapRepository.deleteByStickerIds(stickerIds)
+    }
+
+    @Transactional
+    fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ) {
+        val stickers = stickerRepository.findAllCreatedBy(boardId, userId)
+        val stickerIds = softDeleteAll(stickers)
+        if (stickerIds.isNotEmpty()) {
+            stickerRecapRepository.deleteByStickerIds(stickerIds)
+        }
+    }
+
+    private fun softDeleteAll(stickers: List<Sticker>): List<StickerId> {
+        if (stickers.isEmpty()) {
+            return emptyList()
+        }
+
         val deletedAt = Instant.now()
         stickers.forEach { sticker ->
             sticker.delete(deletedAt)
@@ -208,8 +230,7 @@ class StickerCommandService(
         }
 
         val stickerIds = stickers.map { it.id }
-        drawingCommandPort.deleteByStickerIds(boardId, stickerIds)
-        stickerRecapRepository.deleteByStickerIds(stickerIds)
+        return stickerIds
     }
 
     private fun publishStickerImageDeletion(

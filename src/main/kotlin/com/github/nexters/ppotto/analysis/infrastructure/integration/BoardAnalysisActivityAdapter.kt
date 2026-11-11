@@ -15,10 +15,7 @@ class BoardAnalysisActivityAdapter(
     private val analysisQueryService: AnalysisQueryService,
 ) : BoardAnalysisActivityPort,
     BoardActiveAnalysisPort {
-    override fun hasActiveAnalysis(
-        boardId: BoardId,
-        userId: UserId,
-    ): Boolean = analysisQueryService.hasActiveAnalysis(boardId, userId)
+    override fun hasActiveAnalysis(boardId: BoardId): Boolean = analysisQueryService.hasActiveAnalysis(boardId)
 
     override fun findByUserId(userId: UserId): BoardActiveAnalysis? =
         analysisQueryService

@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerSummaryPort
 import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
 import com.github.nexters.ppotto.sticker.application.model.StickerItemResult
@@ -55,6 +56,11 @@ class BoardStickerAdapter(
     ): Unit = stickerCommandService.updateLayouts(boardId, layouts.map { it.toStickerCommand() })
 
     override fun deleteAllByBoardId(boardId: BoardId): Unit = stickerCommandService.deleteAllByBoardId(boardId)
+
+    override fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ): Unit = stickerCommandService.deleteAllCreatedBy(boardId, userId)
 
     private fun StickerItemResult.toBoardItem() =
         BoardStickerItem(

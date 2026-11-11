@@ -20,7 +20,7 @@ class BoardExternalPortFallbackConfigurationTest :
                 Then("연동 누락 오류를 던진다") {
                     val exception =
                         shouldThrow<IllegalStateException> {
-                            analysisActivityPort.hasActiveAnalysis(BoardId(UUID.randomUUID()), UserId(UUID.randomUUID()))
+                            analysisActivityPort.hasActiveAnalysis(BoardId(UUID.randomUUID()))
                         }
                     exception.message shouldBe "AnalysisQueryService 연동이 필요합니다."
                 }
@@ -98,6 +98,16 @@ class BoardExternalPortFallbackConfigurationTest :
                     val exception =
                         shouldThrow<IllegalStateException> {
                             commandPort.deleteAllByBoardId(boardId)
+                        }
+                    exception.message shouldBe "StickerCommandService 연동이 필요합니다."
+                }
+            }
+
+            When("참여자가 만든 스티커를 삭제해도") {
+                Then("연동 누락 오류를 던진다") {
+                    val exception =
+                        shouldThrow<IllegalStateException> {
+                            commandPort.deleteAllCreatedBy(boardId, UserId(UUID.randomUUID()))
                         }
                     exception.message shouldBe "StickerCommandService 연동이 필요합니다."
                 }
