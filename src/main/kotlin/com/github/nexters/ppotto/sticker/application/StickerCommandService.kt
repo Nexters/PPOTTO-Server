@@ -194,11 +194,32 @@ class StickerCommandService(
     @Transactional
     fun deleteAllByBoardId(boardId: BoardId) {
         val stickers = stickerRepository.findAllByBoardId(boardId)
-        if (stickers.isEmpty()) {
+        val stickerIds = softDeleteAll(stickers)
+        if (stickerIds.isEmpty()) {
             return
         }
 
-        val drawingCommandPort = drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME)
+        drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME).deleteByStickerIds(boardId, stickerIds)
+        stickerRecapRepository.deleteByStickerIds(stickerIds)
+    }
+
+    @Transactional
+    fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ) {
+        val stickers = stickerRepository.findAllCreatedBy(boardId, userId)
+        val stickerIds = softDeleteAll(stickers)
+        if (stickerIds.isNotEmpty()) {
+            stickerRecapRepository.deleteByStickerIds(stickerIds)
+        }
+    }
+
+    private fun softDeleteAll(stickers: List<Sticker>): List<StickerId> {
+        if (stickers.isEmpty()) {
+            return emptyList()
+        }
+
         val deletedAt = Instant.now()
         stickers.forEach { sticker ->
             sticker.delete(deletedAt)
@@ -208,8 +229,7 @@ class StickerCommandService(
         }
 
         val stickerIds = stickers.map { it.id }
-        drawingCommandPort.deleteByStickerIds(boardId, stickerIds)
-        stickerRecapRepository.deleteByStickerIds(stickerIds)
+        return stickerIds
     }
 
     private fun publishStickerImageDeletion(

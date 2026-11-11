@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.board.support.awaitBlockedLock
 import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.DRAWINGS
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -199,6 +200,11 @@ class CoordinatedBoardStickerPort(
     override fun deleteAllByBoardId(boardId: BoardId) {
         drawingRowsAtDelete = dslContext.fetchCount(DRAWINGS, DRAWINGS.BOARD_ID.eq(boardId))
     }
+
+    override fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ) = Unit
 
     fun awaitLayoutValidation(): Boolean = layoutValidation.await(AWAIT_SECONDS, TimeUnit.SECONDS)
 

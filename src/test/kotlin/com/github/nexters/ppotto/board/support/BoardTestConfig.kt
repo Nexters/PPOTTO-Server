@@ -7,6 +7,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutComman
 import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.support.ResettableFake
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -43,6 +44,7 @@ class FakeBoardStickerPort :
     val validatedStickerIds = mutableListOf<Set<StickerId>>()
     val updatedLayouts = mutableListOf<List<BoardStickerLayoutCommand>>()
     val deletedBoardIds = mutableListOf<BoardId>()
+    val deletedCreators = mutableListOf<Pair<BoardId, UserId>>()
 
     override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = stickersByBoardId[boardId].orEmpty()
 
@@ -74,10 +76,18 @@ class FakeBoardStickerPort :
         deletedBoardIds += boardId
     }
 
+    override fun deleteAllCreatedBy(
+        boardId: BoardId,
+        userId: UserId,
+    ) {
+        deletedCreators += boardId to userId
+    }
+
     override fun reset() {
         stickersByBoardId.clear()
         validatedStickerIds.clear()
         updatedLayouts.clear()
         deletedBoardIds.clear()
+        deletedCreators.clear()
     }
 }
