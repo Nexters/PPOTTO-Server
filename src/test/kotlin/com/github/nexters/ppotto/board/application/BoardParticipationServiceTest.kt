@@ -237,7 +237,10 @@ class BoardParticipationServiceTest(
                     stickerRepository.findById(memberSticker.id).shouldBeNull()
                     stickerRecapRepository.findComments(memberSticker.id).shouldBeEmpty()
                     stickerRepository.findById(ownerSticker.id).shouldNotBeNull()
-                    stickerRecapRepository.findComments(ownerSticker.id).single().content shouldBe "오너 리캡"
+                    stickerRecapRepository
+                        .findComments(ownerSticker.id)
+                        .single()
+                        .content shouldBe "오너 리캡"
                 }
             }
         }

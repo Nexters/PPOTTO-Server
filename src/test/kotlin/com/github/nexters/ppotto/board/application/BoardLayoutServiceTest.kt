@@ -65,7 +65,9 @@ class BoardLayoutServiceTest(
                 )
 
                 Then("공동 편집 내용을 모두 저장한다") {
-                    stickerPort.updatedLayouts.single().map { it.id } shouldContainExactly listOf(sticker.id)
+                    stickerPort.updatedLayouts
+                        .single()
+                        .map { it.id } shouldContainExactly listOf(sticker.id)
                     drawingRepository.findByBoardId(board.id) shouldHaveSize 2
                 }
             }

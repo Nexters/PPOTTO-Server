@@ -148,7 +148,10 @@ class BoardLayoutConcurrencyTest(
                     assertSoftly {
                         firstResult.isSuccess shouldBe true
                         secondResult.isSuccess shouldBe true
-                        drawingRepository.findByBoardId(board.id).map { it.id }.toSet() shouldBe
+                        drawingRepository
+                            .findByBoardId(board.id)
+                            .map { it.id }
+                            .toSet() shouldBe
                             setOf(firstDrawing.id, secondDrawing.id)
                     }
                 }
@@ -160,7 +163,7 @@ class BoardLayoutConcurrencyTest(
 class BoardLayoutConcurrencyTestConfiguration {
     @Bean
     @Primary
-    fun completedBoardAnalysisActivityPort(): BoardAnalysisActivityPort = BoardAnalysisActivityPort { _, _ -> false }
+    fun completedBoardAnalysisActivityPort(): BoardAnalysisActivityPort = BoardAnalysisActivityPort { false }
 
     @Bean
     @Primary

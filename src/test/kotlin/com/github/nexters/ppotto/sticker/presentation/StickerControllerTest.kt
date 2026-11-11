@@ -16,8 +16,8 @@ import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import com.jayway.jsonpath.JsonPath
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import org.jooq.DSLContext
 import org.hamcrest.Matchers.containsString
+import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
@@ -90,7 +90,7 @@ class StickerControllerTest(
                         patch("/stickers/${sticker.id}")
                             .authenticatedAs(member.id.value)
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("""{"title":"참여자 제목"}""),
+                            .content("""{"title":"참여자 제목"}"""),
                     )
                 val viewResult = mockMvc.perform(post("/stickers/${sticker.id}/view").authenticatedAs(member.id.value))
                 val commentResult =

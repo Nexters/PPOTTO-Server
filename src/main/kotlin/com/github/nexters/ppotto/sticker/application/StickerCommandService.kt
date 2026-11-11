@@ -28,6 +28,7 @@ import org.springframework.transaction.support.TransactionTemplate
 import java.time.Duration
 import java.time.Instant
 
+@Suppress("TooManyFunctions")
 @Service
 class StickerCommandService(
     private val stickerRepository: StickerRepository,
