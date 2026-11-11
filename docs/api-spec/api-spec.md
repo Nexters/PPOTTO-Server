@@ -65,6 +65,7 @@
 | boards | POST | /boards | 보드 생성 | 200 | 400, 401 | Y |
 | boards | GET | /boards/{boardId} | 보드 상세 조회 (보드 렌더링) | 200 | 401, 404 | Y |
 | boards | GET | /boards/{boardId}/participants | 보드 참여자 목록 조회 | 200 | 401, 404 | Y |
+| boards | GET | /boards/{boardId}/events | 공동 보드 변경 이벤트 구독 (SSE) | 200 | 401, 404 | Y |
 | boards | PATCH | /boards/{boardId} | 보드 이름 변경 | 200 | 400, 401, 404 | Y |
 | boards | DELETE | /boards/{boardId} | 보드 삭제 | 200 | 400, 401, 404, 409 | Y |
 | boards | PATCH | /boards/{boardId}/layout | 편집 결과 일괄 저장 (편집 모드 종료 시) | 200 | 400, 401, 404 | Y |
@@ -1030,7 +1031,7 @@ Request example:
 ```
 
 #### Notes
-- 방장과 참여자(`board_members`) 모두 조회할 수 있습니다. 둘 다 아닌 사용자에게는 보드가 없는 것과 같은 `404 BOARD-002`로 응답합니다. 이름 변경·삭제·레이아웃 저장은 여전히 방장만 할 수 있습니다.
+- 방장과 참여자(`board_members`) 모두 조회하고 레이아웃을 저장할 수 있습니다. 둘 다 아닌 사용자에게는 보드가 없는 것과 같은 `404 BOARD-002`로 응답합니다. 이름 변경과 보드 삭제는 방장만 할 수 있습니다.
 - 보드, 스티커, 드로잉을 한 번에 반환합니다. isNew가 빨간 점 표시 여부입니다. imageUrl은 만료가 있으므로 보드에 진입할 때마다 새로 조회합니다.
 - 생성 직후라 아직 배치되지 않은 스티커는 `posX`/`posY`/`zIndex` 키 자체가 없습니다(서버가 null 필드를 직렬화하지 않음. 위 예시의 세 번째 스티커 참고). `scale`은 1, `rotation`은 0으로 채워져 있습니다. 클라이언트는 `posX` 키가 없으면 보드 상태를 보고 겹치지 않는 위치와 쌓임 순서를 계산해 `PATCH /boards/{boardId}/layout`로 채워야 합니다.
 
@@ -1504,7 +1505,7 @@ v1과 같다 (401 `COMMON-004`).
 - 서버는 null 필드를 생략하는 것이 기본이지만 이 응답의 `mainColor`, `analysisStatus`는 값이 없을 때도 키를 생략하지 않고 `null`을 명시한다. OpenAPI 스키마에서는 두 필드가 `required`가 아니다.
 - `lastActivityAt`은 스티커가 보드에 추가된 시각(`created_at`)만 따른다. 리캡 열람(`isNew` 해제), 공유 설정 변경, 배치·제목 변경, 재생성은 순서를 바꾸지 않는다. 가장 최근 스티커가 삭제되면 남은 스티커 중 가장 최근 것의 시각으로 돌아간다.
 - `previewImageUrls`는 만료가 있으므로 홈에 진입할 때마다 새로 조회한다.
-- 참여한 보드는 `GET /boards/{boardId}`(v1, v2)로 열 수 있다. 이름 변경, 삭제, 레이아웃 저장은 방장만 할 수 있다.
+- 참여한 보드는 `GET /boards/{boardId}`(v1, v2)로 열고 레이아웃을 저장할 수 있다. 이름 변경과 보드 삭제는 방장만 할 수 있다.
 
 ### GET /boards/{boardId} (X-API-Version: 2)
 
@@ -1605,6 +1606,83 @@ v1과 같다 (401 `COMMON-004`, 404 `BOARD-002`).
 #### Notes
 - 방장을 첫 번째로 반환하고, 참여자는 참여 시각과 ID 순서로 반환한다.
 - `participantCount`는 방장을 포함하며 `maxParticipantCount`는 현재 정책인 `8`이다.
+
+### GET /boards/{boardId}/events
+
+- Operation ID: `subscribeBoardEvents`
+- Summary: 공동 보드 변경 이벤트 구독 (SSE)
+
+#### Request Spec
+- 인증: 필요 (`Authorization: Bearer {accessToken}`)
+- Accept: `text/event-stream`
+
+| In | Name | Required | Type | Example | Description |
+| --- | --- | --- | --- | --- | --- |
+| path | boardId | Y | `string` | 01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b | 구독할 보드 ID |
+
+- Body: 없음
+
+#### Success Spec
+| Status | Content-Type | Description |
+| --- | --- | --- |
+| 200 | `text/event-stream` | 보드 변경 이벤트 스트림 |
+
+SSE frame example:
+```text
+id: 019a72c0-4d8e-7f10-a2b3-c4d5e6f70819
+event: BOARD_LAYOUT_UPDATED
+retry: 3000
+data: {"eventId":"019a72c0-4d8e-7f10-a2b3-c4d5e6f70819","type":"BOARD_LAYOUT_UPDATED","boardId":"01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b","occurredAt":"2026-11-12T12:00:00Z"}
+
+```
+
+#### BoardEvent
+| Field | Required | Type | Enum | Description |
+| --- | --- | --- | --- | --- |
+| eventId | Y | `string` | - | 이벤트 UUID. SSE `id`와 같은 값 |
+| type | Y | `string` | BOARD_LAYOUT_UPDATED | 이벤트 종류 |
+| boardId | Y | `string` | - | 변경된 보드 ID |
+| occurredAt | Y | `string` | - | 서버에서 변경 커밋을 확인한 UTC 시각 |
+
+#### Failure Spec
+| Status | Error Code | Message | 발생 조건 |
+| --- | --- | --- | --- |
+| 401 | COMMON-004 | 인증이 필요합니다. | Authorization 헤더 누락 또는 accessToken 만료 |
+| 404 | BOARD-002 | 보드를 찾을 수 없습니다. | 보드가 없거나 요청 사용자가 방장·참여자가 아님 |
+
+401 COMMON-004 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "COMMON-004",
+    "message": "인증이 필요합니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-11-12T12:00:00Z"
+  }
+}
+```
+
+404 BOARD-002 example:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "BOARD-002",
+    "message": "보드를 찾을 수 없습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-11-12T12:00:00Z"
+  }
+}
+```
+
+#### Notes
+- 이 응답은 장시간 유지되는 SSE 스트림이므로 성공 응답에 `ApiResponse` 봉투를 사용하지 않습니다. 연결 전 인증·권한 실패만 기존 오류 봉투로 반환합니다.
+- `BOARD_LAYOUT_UPDATED`는 `PATCH /boards/{boardId}/layout` 트랜잭션이 커밋된 뒤 발행합니다. 이벤트는 최종 레이아웃 데이터가 아니라 최신 보드 상태를 다시 조회하라는 신호입니다.
+- 서버는 일정 간격으로 SSE comment heartbeat를 보내 중간 프록시의 유휴 연결 종료를 방지합니다. heartbeat는 애플리케이션 이벤트가 아닙니다.
+- 서버는 과거 이벤트를 저장하거나 재전송하지 않습니다. 최초 연결과 재연결에 성공한 클라이언트는 `GET /boards/{boardId}`를 다시 호출해 연결이 끊긴 동안의 변경을 복구합니다.
 
 ### PATCH /boards/{boardId}/layout (X-API-Version: 2)
 
