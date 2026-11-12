@@ -19,7 +19,9 @@ import java.util.Collections
 class SentryHttpPayloadFilter : OncePerRequestFilter() {
     override fun shouldNotFilter(request: HttpServletRequest): Boolean {
         val path = request.servletPath
-        return PublicPaths.isDocument(path) || PublicPaths.isActuator(path)
+        return PublicPaths.isDocument(path) ||
+            PublicPaths.isActuator(path) ||
+            request.isBoardEventStream(path)
     }
 
     override fun doFilterInternal(
@@ -79,7 +81,11 @@ class SentryHttpPayloadFilter : OncePerRequestFilter() {
     private companion object {
         const val CACHE_LIMIT = HttpPayloadAttributes.REQUEST_CACHE_LIMIT_BYTES
         val EMPTY_BODY = ByteArray(0)
+        val BOARD_EVENT_STREAM_PATH = Regex("^/boards/[^/]+/events$")
     }
+
+    private fun HttpServletRequest.isBoardEventStream(path: String): Boolean =
+        method == "GET" && BOARD_EVENT_STREAM_PATH.matches(path)
 }
 
 private const val SENTRY_HTTP_PAYLOAD_FILTER_ORDER: Int = Ordered.HIGHEST_PRECEDENCE + 2

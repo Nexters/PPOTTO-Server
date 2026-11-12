@@ -155,6 +155,41 @@ class SentryHttpPayloadFilterTest :
             }
         }
 
+        Given("보드 이벤트 스트림 요청이면") {
+            sentry.clear()
+            val request =
+                MockHttpServletRequest("GET", "/boards/019a0000-0000-7000-8000-000000000001/events").apply {
+                    servletPath = "/boards/019a0000-0000-7000-8000-000000000001/events"
+                    addHeader("Accept", "text/event-stream")
+                }
+            val response = MockHttpServletResponse()
+            val chain =
+                servletChain { _, res ->
+                    res.contentType = "text/event-stream"
+                    res.writer.write(SSE_HEARTBEAT)
+                    res.writer.flush()
+                }
+
+            When("트랜잭션이 열린 상태에서 필터를 태우면") {
+                val transaction = Sentry.startTransaction("GET /boards/{boardId}/events", "http.server")
+                transaction.makeCurrent().use {
+                    filter.doFilter(request, response, chain)
+                }
+                transaction.finish()
+
+                Then("이벤트를 버퍼링하지 않고 즉시 응답에 기록한다") {
+                    response.contentAsString shouldBe SSE_HEARTBEAT
+                }
+
+                Then("스트리밍 본문을 span에 담지 않는다") {
+                    sentry
+                        .singleTransactionData()
+                        .keys
+                        .none { it.startsWith("http.") } shouldBe true
+                }
+            }
+        }
+
         Given("활성 트랜잭션이 없으면") {
             val request =
                 MockHttpServletRequest("GET", "/boards").apply {
@@ -174,6 +209,7 @@ class SentryHttpPayloadFilterTest :
     })
 
 private const val ECHO_BODY = """{"ok":true}"""
+private const val SSE_HEARTBEAT = ":heartbeat\n\n"
 
 private fun jsonRequest(
     method: String,
