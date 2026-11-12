@@ -84,8 +84,7 @@ class SentryHttpPayloadFilter : OncePerRequestFilter() {
         val BOARD_EVENT_STREAM_PATH = Regex("^/boards/[^/]+/events$")
     }
 
-    private fun HttpServletRequest.isBoardEventStream(path: String): Boolean =
-        method == "GET" && BOARD_EVENT_STREAM_PATH.matches(path)
+    private fun HttpServletRequest.isBoardEventStream(path: String): Boolean = method == "GET" && BOARD_EVENT_STREAM_PATH.matches(path)
 }
 
 private const val SENTRY_HTTP_PAYLOAD_FILTER_ORDER: Int = Ordered.HIGHEST_PRECEDENCE + 2
