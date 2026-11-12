@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
@@ -174,6 +175,23 @@ class GlobalExceptionHandlerIntegrationTest(
                         .andExpect(status().isNotAcceptable)
                         .andExpect(jsonPath("$.error.code").value("COMMON-008"))
                         .andExpect(jsonPath("$.error.message").value("지원하지 않는 Accept 형식입니다."))
+                }
+            }
+        }
+
+        Given("스트림 형식만 허용한 요청에서 컨트롤러 예외가 발생할 때") {
+            When("SSE Accept 헤더로 오류가 발생하는 경로를 호출하면") {
+                val result =
+                    advisedMockMvc.perform(
+                        get("/test-only/forbidden")
+                            .accept(MediaType.TEXT_EVENT_STREAM),
+                    )
+
+                Then("JSON 오류 봉투와 원래 상태 코드를 반환한다") {
+                    result
+                        .andExpect(status().isForbidden)
+                        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                        .andExpect(jsonPath("$.error.code").value("COMMON-005"))
                 }
             }
         }

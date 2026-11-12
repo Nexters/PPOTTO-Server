@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.global.error
 import com.github.nexters.ppotto.global.web.ApiResponse
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.ErrorResponseException
@@ -76,6 +77,9 @@ class GlobalExceptionHandler {
         } else {
             log.warn("{}: {}", e::class.simpleName, e.message)
         }
-        return ResponseEntity.status(status).body(ApiResponse.error(error))
+        return ResponseEntity
+            .status(status)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(ApiResponse.error(error))
     }
 }
