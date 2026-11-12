@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.board.application
 
+import com.github.nexters.ppotto.board.application.model.BoardEvent
 import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
@@ -8,6 +9,7 @@ import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.transaction.afterCommit
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -16,6 +18,7 @@ class BoardLayoutService(
     private val boardAccessService: BoardAccessService,
     private val drawingRepository: DrawingRepository,
     private val stickerCommandPort: BoardStickerCommandPort,
+    private val boardEventBroker: BoardEventBroker,
 ) {
     @Transactional
     fun update(
@@ -35,6 +38,8 @@ class BoardLayoutService(
 
         val softDeleted = drawingRepository.softDeleteByIds(boardId, command.deletedDrawingIds)
         check(softDeleted == command.deletedDrawingIds.size) { "소유권을 확인한 그림의 소프트 삭제가 반영되지 않았습니다." }
+
+        afterCommit { boardEventBroker.publish(BoardEvent.layoutUpdated(boardId)) }
     }
 
     private fun referencedStickerIds(command: BoardLayoutUpdateCommand): Set<StickerId> =

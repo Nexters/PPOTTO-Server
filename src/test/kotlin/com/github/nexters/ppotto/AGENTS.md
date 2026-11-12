@@ -79,7 +79,7 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/application/BoardParticipationConcurrencyTest.kt` | Last-seat race proving board-row serialization admits exactly one user and caps total participants at eight |
 | `board/application/BoardLayoutServiceTest.kt` | Idempotent layout, atomic ownership validation, and text content length rejection integration tests |
 | `board/application/BoardEventBrokerTest.kt` | Board-scoped event delivery, explicit unsubscribe, and failed event/heartbeat connection eviction unit tests |
-| `board/application/BoardEventSubscriptionServiceTest.kt` | Owner/member subscription access and stranger concealment integration tests |
+| `board/application/BoardEventSubscriptionServiceTest.kt` | Owner/member subscription access, stranger concealment, committed layout delivery, and rollback non-delivery integration tests |
 | `board/presentation/BoardEventControllerTest.kt` | Authenticated SSE stream opening with an initial heartbeat, hidden-board rejection, and unauthenticated rejection integration tests |
 | `board/application/BoardLayoutConcurrencyTest.kt` | Layout/delete serialization regression test preventing drawing reinsertion after board deletion |
 | `board/application/BoardStickerIntegrationTest.kt` | Production analysis/sticker port wiring, active-analysis deletion guard, detail/layout mapping, and cascade integration tests |
