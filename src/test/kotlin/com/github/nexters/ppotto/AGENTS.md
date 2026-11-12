@@ -78,6 +78,9 @@ Kotest BehaviorSpec (Given-When-Then) on JUnit Platform, with Testcontainers for
 | `board/application/BoardParticipationServiceTest.kt` | New, existing-member, owner, full-board, invalid-invitation, and inactive-user invitation-join integration tests, plus board-leave policy tests (membership removal, return to personal, leaver's share link closed, leaver's invitation still valid, rejoin allowed, owner rejected, non-member and deleted board not found) |
 | `board/application/BoardParticipationConcurrencyTest.kt` | Last-seat race proving board-row serialization admits exactly one user and caps total participants at eight |
 | `board/application/BoardLayoutServiceTest.kt` | Idempotent layout, atomic ownership validation, and text content length rejection integration tests |
+| `board/application/BoardEventBrokerTest.kt` | Board-scoped event delivery, explicit unsubscribe, and failed event/heartbeat connection eviction unit tests |
+| `board/application/BoardEventSubscriptionServiceTest.kt` | Owner/member subscription access and stranger concealment integration tests |
+| `board/presentation/BoardEventControllerTest.kt` | Authenticated SSE stream opening with an initial heartbeat, hidden-board rejection, and unauthenticated rejection integration tests |
 | `board/application/BoardLayoutConcurrencyTest.kt` | Layout/delete serialization regression test preventing drawing reinsertion after board deletion |
 | `board/application/BoardStickerIntegrationTest.kt` | Production analysis/sticker port wiring, active-analysis deletion guard, detail/layout mapping, and cascade integration tests |
 | `board/application/BoardAnalysisContractTest.kt` | Real `BoardAnalysisActivityAdapter` injection, per-status deletion guard, `uk_analysis_active` uniqueness/key-column/status alignment, and last-board/ownership precedence integration tests |
