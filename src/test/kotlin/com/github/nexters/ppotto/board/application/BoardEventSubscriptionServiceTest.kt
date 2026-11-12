@@ -62,7 +62,9 @@ class BoardEventSubscriptionServiceTest(
                             memberConnection.events.shouldBeEmpty()
                         }
 
-                        ownerConnection.events.single().boardId shouldBe board.id
+                        ownerConnection.events
+                            .single()
+                            .boardId shouldBe board.id
                         memberConnection.events shouldBe ownerConnection.events
                     } finally {
                         ownerSubscription.close()

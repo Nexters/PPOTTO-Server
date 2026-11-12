@@ -14,6 +14,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.request
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
@@ -46,7 +47,7 @@ class BoardEventControllerTest(
 
                 Then("heartbeat로 SSE 스트림을 연다") {
                     result.response.contentAsString shouldBe ":heartbeat\n\n"
-                    result.request.asyncContext.complete()
+                    checkNotNull(result.request.asyncContext).complete()
                 }
             }
 
@@ -60,7 +61,10 @@ class BoardEventControllerTest(
                     )
 
                 Then("BOARD-002를 반환한다") {
-                    result.andExpect(status().isNotFound)
+                    result
+                        .andExpect(status().isNotFound)
+                        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                        .andExpect(jsonPath("$.error.code").value("BOARD-002"))
                 }
             }
 
@@ -72,7 +76,10 @@ class BoardEventControllerTest(
                     )
 
                 Then("인증 오류를 반환한다") {
-                    result.andExpect(status().isUnauthorized)
+                    result
+                        .andExpect(status().isUnauthorized)
+                        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                        .andExpect(jsonPath("$.error.code").value("COMMON-004"))
                 }
             }
         }
