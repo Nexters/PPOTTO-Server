@@ -69,6 +69,24 @@ class BoardEventBrokerTest :
             }
         }
 
+        test("보드 삭제 이벤트를 모든 구독자에게 보내고 연결을 종료한다") {
+            val broker = BoardEventBroker()
+            val boardId = boardId()
+            val firstConnection = RecordingBoardEventConnection()
+            val secondConnection = RecordingBoardEventConnection()
+            broker.subscribe(boardId, userId(), firstConnection)
+            broker.subscribe(boardId, userId(), secondConnection)
+
+            val event = BoardEvent.deleted(boardId)
+            broker.publishAndClose(event)
+            broker.publish(BoardEvent.layoutUpdated(boardId))
+
+            firstConnection.events shouldContainExactly listOf(event)
+            secondConnection.events shouldContainExactly listOf(event)
+            firstConnection.completeCount shouldBe 1
+            secondConnection.completeCount shouldBe 1
+        }
+
         test("이벤트 전송에 실패한 연결은 다음 전송 대상에서 제거한다") {
             val broker = BoardEventBroker()
             val boardId = boardId()

@@ -12,6 +12,7 @@ import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.BoardTestConfig
 import com.github.nexters.ppotto.board.support.FakeBoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
+import com.github.nexters.ppotto.board.support.addBoardMember
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
@@ -23,7 +24,9 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -36,6 +39,7 @@ class BoardCommandServiceTest(
     userRepository: UserRepository,
     analysisActivityPort: FakeBoardAnalysisActivityPort,
     stickerPort: FakeBoardStickerPort,
+    dsl: DSLContext,
 ) : IntegrationTest({
         Given("이벤트를 구독 중인 보드의 방장이") {
             val owner = userRepository.saveTestUser()
@@ -163,4 +167,51 @@ class BoardCommandServiceTest(
                 }
             }
         }
+
+        Given("공동 보드의 방장과 참여자가 이벤트를 구독 중일 때") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            boardRepository.save(owner.id)
+            dsl.addBoardMember(board.id, member.id)
+
+            When("방장이 보드를 삭제하면") {
+                Then("두 사용자에게 삭제 이벤트를 보내고 연결을 종료한다") {
+                    val ownerEvents = LinkedBlockingQueue<BoardEvent>()
+                    val memberEvents = LinkedBlockingQueue<BoardEvent>()
+                    val completed = CountDownLatch(2)
+                    val ownerSubscription =
+                        boardEventBroker.subscribe(board.id, owner.id, recordingConnection(ownerEvents, completed))
+                    val memberSubscription =
+                        boardEventBroker.subscribe(board.id, member.id, recordingConnection(memberEvents, completed))
+                    try {
+                        boardCommandService.delete(board.id, owner.id)
+
+                        ownerEvents.poll(3, TimeUnit.SECONDS)?.type shouldBe BoardEventType.BOARD_DELETED
+                        memberEvents.poll(3, TimeUnit.SECONDS)?.type shouldBe BoardEventType.BOARD_DELETED
+                        completed.await(3, TimeUnit.SECONDS) shouldBe true
+                    } finally {
+                        ownerSubscription.close()
+                        memberSubscription.close()
+                    }
+                }
+            }
+        }
     })
+
+private fun recordingConnection(
+    events: LinkedBlockingQueue<BoardEvent>,
+    completed: CountDownLatch,
+): BoardEventConnection =
+    object : BoardEventConnection {
+        override fun send(event: BoardEvent): Boolean {
+            events.add(event)
+            return true
+        }
+
+        override fun heartbeat(): Boolean = true
+
+        override fun complete() {
+            completed.countDown()
+        }
+    }

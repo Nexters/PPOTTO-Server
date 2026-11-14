@@ -42,6 +42,14 @@ data class BoardEvent(
                 boardId = boardId,
                 occurredAt = Instant.now(),
             )
+
+        fun deleted(boardId: BoardId): BoardEvent =
+            BoardEvent(
+                eventId = UUID.randomUUID(),
+                type = BoardEventType.BOARD_DELETED,
+                boardId = boardId,
+                occurredAt = Instant.now(),
+            )
     }
 }
 
@@ -50,4 +58,5 @@ enum class BoardEventType {
     BOARD_NAME_UPDATED,
     BOARD_STICKERS_UPDATED,
     BOARD_PARTICIPANTS_UPDATED,
+    BOARD_DELETED,
 }

@@ -69,6 +69,7 @@ class BoardCommandService(
         drawingRepository.softDeleteAllByBoardId(boardId)
         stickerCommandPort.deleteAllByBoardId(boardId)
         check(boardRepository.softDelete(boardId, userId)) { "행 잠금을 잡은 보드의 소프트 삭제가 반영되지 않았습니다." }
+        afterCommit { boardEventBroker.publishAndClose(BoardEvent.deleted(boardId)) }
     }
 
     private fun validateDeletable(

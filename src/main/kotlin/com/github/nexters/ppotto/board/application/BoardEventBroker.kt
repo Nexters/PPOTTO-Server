@@ -55,6 +55,19 @@ class BoardEventBroker {
             }
     }
 
+    @Async(AsyncConfig.BOARD_EVENT_TASK_EXECUTOR)
+    fun publishAndClose(event: BoardEvent) {
+        connections.remove(event.boardId)
+            ?.values
+            ?.forEach { subscriber ->
+                try {
+                    subscriber.connection.send(event)
+                } finally {
+                    subscriber.connection.complete()
+                }
+            }
+    }
+
     fun heartbeat() {
         connections
             .toMap()
