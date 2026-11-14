@@ -57,7 +57,8 @@ class BoardEventBroker {
 
     @Async(AsyncConfig.BOARD_EVENT_TASK_EXECUTOR)
     fun publishAndClose(event: BoardEvent) {
-        connections.remove(event.boardId)
+        connections
+            .remove(event.boardId)
             ?.values
             ?.forEach { subscriber ->
                 try {
