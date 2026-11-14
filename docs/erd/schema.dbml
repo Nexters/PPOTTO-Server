@@ -448,6 +448,24 @@ Table stickers {
   }
 }
 
+Table sticker_views {
+  ~base_id
+  sticker_id uuid        [not null, ref: > stickers.id, note: 'ON DELETE CASCADE. 스티커가 하드 삭제되면 열람 기록도 함께 삭제한다']
+  user_id    uuid        [not null, note: '열람한 사용자. 사용자 식별자 정책에 따라 FK 없음']
+  viewed_at  timestamptz [not null, default: `now()`, note: '해당 사용자가 리캡을 처음 열람한 시각']
+
+  Note: '''
+  스티커 열람 여부를 사용자별로 저장한다. 행이 없으면 미열람, 있으면 열람 상태다.
+  반복 열람은 (sticker_id, user_id) 유니크 제약으로 멱등하게 처리한다.
+  보드 나가기와 사용자 탈퇴 시 해당 사용자의 열람 기록을 명시적으로 정리한다.
+  '''
+
+  indexes {
+    (sticker_id, user_id) [unique, name: 'uk_sticker_views_sticker_user']
+    (user_id, sticker_id) [name: 'ix_sticker_views_user_sticker', note: '사용자별 조회와 정리용']
+  }
+}
+
 Table sticker_photos {
   ~base_id
   sticker_id uuid [not null, ref: > stickers.id]

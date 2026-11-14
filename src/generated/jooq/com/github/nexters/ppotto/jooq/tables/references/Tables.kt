@@ -14,6 +14,7 @@ import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
 import com.github.nexters.ppotto.jooq.tables.RecapComments
 import com.github.nexters.ppotto.jooq.tables.StickerPhotos
+import com.github.nexters.ppotto.jooq.tables.StickerViews
 import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
@@ -66,6 +67,11 @@ val RECAP_COMMENTS: RecapComments = RecapComments.RECAP_COMMENTS
  * The table <code>public.sticker_photos</code>.
  */
 val STICKER_PHOTOS: StickerPhotos = StickerPhotos.STICKER_PHOTOS
+
+/**
+ * The table <code>public.sticker_views</code>.
+ */
+val STICKER_VIEWS: StickerViews = StickerViews.STICKER_VIEWS
 
 /**
  * The table <code>public.stickers</code>.

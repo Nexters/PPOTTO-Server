@@ -14,6 +14,7 @@ import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
 import com.github.nexters.ppotto.jooq.tables.RecapComments
 import com.github.nexters.ppotto.jooq.tables.StickerPhotos
+import com.github.nexters.ppotto.jooq.tables.StickerViews
 import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
@@ -47,6 +48,7 @@ val IX_STICKER_ANALYSIS: Index = Internal.createIndex(DSL.name("ix_sticker_analy
 val IX_STICKER_BOARD_Z: Index = Internal.createIndex(DSL.name("ix_sticker_board_z"), Stickers.STICKERS, arrayOf(Stickers.STICKERS.BOARD_ID, Stickers.STICKERS.Z_INDEX), false)
 val IX_STICKER_PHOTO_PHOTO: Index = Internal.createIndex(DSL.name("ix_sticker_photo_photo"), StickerPhotos.STICKER_PHOTOS, arrayOf(StickerPhotos.STICKER_PHOTOS.PHOTO_ID), false)
 val IX_STICKER_SOURCE_PHOTO: Index = Internal.createIndex(DSL.name("ix_sticker_source_photo"), Stickers.STICKERS, arrayOf(Stickers.STICKERS.SOURCE_PHOTO_ID), false)
+val IX_STICKER_VIEWS_USER_STICKER: Index = Internal.createIndex(DSL.name("ix_sticker_views_user_sticker"), StickerViews.STICKER_VIEWS, arrayOf(StickerViews.STICKER_VIEWS.USER_ID, StickerViews.STICKER_VIEWS.STICKER_ID), false)
 val IX_TERM_AGREEMENT_TERM: Index = Internal.createIndex(DSL.name("ix_term_agreement_term"), TermAgreements.TERM_AGREEMENTS, arrayOf(TermAgreements.TERM_AGREEMENTS.TERM_ID), false)
 val IX_TERMS_CODE_EFFECTIVE: Index = Internal.createIndex(DSL.name("ix_terms_code_effective"), Terms.TERMS, arrayOf(Terms.TERMS.CODE, Terms.TERMS.EFFECTIVE_AT), false)
 val UK_ANALYSIS_ACTIVE: Index = Internal.createIndex(DSL.name("uk_analysis_active"), Analysis.ANALYSIS, arrayOf(Analysis.ANALYSIS.USER_ID), true)
@@ -56,6 +58,7 @@ val UK_BOARD_MEMBERS_BOARD_USER: Index = Internal.createIndex(DSL.name("uk_board
 val UK_BOARD_SHARES_BOARD_SHARER: Index = Internal.createIndex(DSL.name("uk_board_shares_board_sharer"), BoardShares.BOARD_SHARES, arrayOf(BoardShares.BOARD_SHARES.BOARD_ID, BoardShares.BOARD_SHARES.SHARER_USER_ID), true)
 val UK_BOARD_SHARES_SHARE_TOKEN: Index = Internal.createIndex(DSL.name("uk_board_shares_share_token"), BoardShares.BOARD_SHARES, arrayOf(BoardShares.BOARD_SHARES.SHARE_TOKEN), true)
 val UK_PHOTOS_BURST_REPRESENTATIVE: Index = Internal.createIndex(DSL.name("uk_photos_burst_representative"), Photos.PHOTOS, arrayOf(Photos.PHOTOS.BURST_GROUP_ID), true)
+val UK_STICKER_VIEWS_STICKER_USER: Index = Internal.createIndex(DSL.name("uk_sticker_views_sticker_user"), StickerViews.STICKER_VIEWS, arrayOf(StickerViews.STICKER_VIEWS.STICKER_ID, StickerViews.STICKER_VIEWS.USER_ID), true)
 val UK_STICKERS_SHARE_TOKEN: Index = Internal.createIndex(DSL.name("uk_stickers_share_token"), Stickers.STICKERS, arrayOf(Stickers.STICKERS.SHARE_TOKEN), true)
 val UK_USER_DEVICE_TOKENS_USER_DEVICE: Index = Internal.createIndex(DSL.name("uk_user_device_tokens_user_device"), UserDeviceTokens.USER_DEVICE_TOKENS, arrayOf(UserDeviceTokens.USER_DEVICE_TOKENS.USER_ID, UserDeviceTokens.USER_DEVICE_TOKENS.DEVICE_ID), true)
 val UK_USERS_PROVIDER_UID: Index = Internal.createIndex(DSL.name("uk_users_provider_uid"), Users.USERS, arrayOf(Users.USERS.PROVIDER, Users.USERS.PROVIDER_USER_ID), true)

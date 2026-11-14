@@ -57,7 +57,7 @@ jooq {
                     }
                     forcedType {
                         includeTypes = "(?i)UUID"
-                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id|user_device_tokens\\.user_id|board_members\\.user_id|board_invitations\\.inviter_user_id|board_shares\\.sharer_user_id"
+                        includeExpression = "users\\.id|boards\\.user_id|analysis\\.user_id|term_agreements\\.user_id|user_device_tokens\\.user_id|board_members\\.user_id|board_invitations\\.inviter_user_id|board_shares\\.sharer_user_id|sticker_views\\.user_id"
                         userType = "com.github.nexters.ppotto.global.identifier.UserId"
                         converter = "com.github.nexters.ppotto.global.jooq.UserIdConverter"
                     }
@@ -75,7 +75,7 @@ jooq {
                     }
                     forcedType {
                         includeTypes = "(?i)UUID"
-                        includeExpression = "stickers\\.id|sticker_photos\\.sticker_id|recap_comments\\.sticker_id|drawings\\.sticker_id"
+                        includeExpression = "stickers\\.id|sticker_photos\\.sticker_id|recap_comments\\.sticker_id|drawings\\.sticker_id|sticker_views\\.sticker_id"
                         userType = "com.github.nexters.ppotto.global.identifier.StickerId"
                         converter = "com.github.nexters.ppotto.global.jooq.StickerIdConverter"
                     }
