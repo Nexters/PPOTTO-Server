@@ -5,6 +5,7 @@ import com.github.nexters.ppotto.auth.application.port.AuthUserPort
 import com.github.nexters.ppotto.auth.domain.SocialProfile
 import com.github.nexters.ppotto.board.application.BoardAccessService
 import com.github.nexters.ppotto.board.application.BoardCommandService
+import com.github.nexters.ppotto.board.application.BoardEventBroker
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
@@ -70,6 +71,7 @@ class FailingBoardAuthTestConfig {
         drawingRepository: DrawingRepository,
         analysisActivityPort: BoardAnalysisActivityPort,
         stickerCommandPort: BoardStickerCommandPort,
+        boardEventBroker: BoardEventBroker,
     ): BoardCommandService =
         FailingBoardCommandService(
             boardRepository,
@@ -77,6 +79,7 @@ class FailingBoardAuthTestConfig {
             drawingRepository,
             analysisActivityPort,
             stickerCommandPort,
+            boardEventBroker,
         )
 }
 
@@ -86,6 +89,14 @@ open class FailingBoardCommandService(
     drawingRepository: DrawingRepository,
     analysisActivityPort: BoardAnalysisActivityPort,
     stickerCommandPort: BoardStickerCommandPort,
-) : BoardCommandService(boardRepository, boardAccessService, drawingRepository, analysisActivityPort, stickerCommandPort) {
+    boardEventBroker: BoardEventBroker,
+) : BoardCommandService(
+        boardRepository,
+        boardAccessService,
+        drawingRepository,
+        analysisActivityPort,
+        stickerCommandPort,
+        boardEventBroker,
+    ) {
     override fun createDefault(userId: UserId): Board = error("기본 보드 생성 실패")
 }

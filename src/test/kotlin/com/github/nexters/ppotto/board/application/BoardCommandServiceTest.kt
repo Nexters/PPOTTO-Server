@@ -1,5 +1,8 @@
 package com.github.nexters.ppotto.board.application
 
+import com.github.nexters.ppotto.board.application.model.BoardEvent
+import com.github.nexters.ppotto.board.application.model.BoardEventType
+import com.github.nexters.ppotto.board.application.port.BoardEventConnection
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.DrawingScope
@@ -21,16 +24,54 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.springframework.context.annotation.Import
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 @Import(BoardTestConfig::class)
 class BoardCommandServiceTest(
     boardCommandService: BoardCommandService,
+    boardEventBroker: BoardEventBroker,
     boardRepository: BoardRepository,
     drawingRepository: DrawingRepository,
     userRepository: UserRepository,
     analysisActivityPort: FakeBoardAnalysisActivityPort,
     stickerPort: FakeBoardStickerPort,
 ) : IntegrationTest({
+        Given("이벤트를 구독 중인 보드의 방장이") {
+            val owner = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+
+            When("보드 이름을 변경하면") {
+                Then("변경된 이름을 저장하고 이름 변경 이벤트를 보낸다") {
+                    val events = LinkedBlockingQueue<BoardEvent>()
+                    val subscription =
+                        boardEventBroker.subscribe(
+                            board.id,
+                            object : BoardEventConnection {
+                                override fun send(event: BoardEvent): Boolean {
+                                    events.add(event)
+                                    return true
+                                }
+
+                                override fun heartbeat(): Boolean = true
+
+                                override fun complete() = Unit
+                            },
+                        )
+                    try {
+                        boardCommandService.rename(board.id, owner.id, "바뀐 보드")
+
+                        boardRepository.findOwnedById(board.id, owner.id)?.name shouldBe "바뀐 보드"
+                        val event = events.poll(3, TimeUnit.SECONDS)
+                        event?.type shouldBe BoardEventType.BOARD_NAME_UPDATED
+                        event?.boardId shouldBe board.id
+                    } finally {
+                        subscription.close()
+                    }
+                }
+            }
+        }
+
         Given("보드가 없는 사용자가") {
             val user = userRepository.saveTestUser()
 
