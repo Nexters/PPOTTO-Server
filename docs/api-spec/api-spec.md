@@ -1640,7 +1640,7 @@ data: {"eventId":"019a72c0-4d8e-7f10-a2b3-c4d5e6f70819","type":"BOARD_LAYOUT_UPD
 | Field | Required | Type | Enum | Description |
 | --- | --- | --- | --- | --- |
 | eventId | Y | `string` | - | 이벤트 UUID. SSE `id`와 같은 값 |
-| type | Y | `string` | BOARD_LAYOUT_UPDATED, BOARD_NAME_UPDATED | 이벤트 종류 |
+| type | Y | `string` | BOARD_LAYOUT_UPDATED, BOARD_NAME_UPDATED, BOARD_STICKERS_UPDATED | 이벤트 종류 |
 | boardId | Y | `string` | - | 변경된 보드 ID |
 | occurredAt | Y | `string` | - | 서버에서 변경 커밋을 확인한 UTC 시각 |
 
@@ -1682,6 +1682,7 @@ data: {"eventId":"019a72c0-4d8e-7f10-a2b3-c4d5e6f70819","type":"BOARD_LAYOUT_UPD
 - 이 응답은 장시간 유지되는 SSE 스트림이므로 성공 응답에 `ApiResponse` 봉투를 사용하지 않습니다. 연결 전 인증·권한 실패만 기존 오류 봉투로 반환합니다.
 - `BOARD_LAYOUT_UPDATED`는 `PATCH /boards/{boardId}/layout` 트랜잭션이 커밋된 뒤 발행합니다. 이벤트는 최종 레이아웃 데이터가 아니라 최신 보드 상태를 다시 조회하라는 신호입니다.
 - `BOARD_NAME_UPDATED`는 `PATCH /boards/{boardId}`로 보드 이름 변경이 저장된 뒤 발행합니다. 보드 상세와 목록에서 최신 이름을 다시 조회하는 신호입니다.
+- `BOARD_STICKERS_UPDATED`는 스티커 이름 변경, 이미지 재생성 또는 삭제가 저장된 뒤 발행합니다. 보드와 열려 있는 리캡의 최신 상태를 다시 조회하는 신호입니다.
 - 서버는 일정 간격으로 SSE comment heartbeat를 보내 중간 프록시의 유휴 연결 종료를 방지합니다. heartbeat는 애플리케이션 이벤트가 아닙니다.
 - 서버는 과거 이벤트를 저장하거나 재전송하지 않습니다. 최초 연결과 재연결에 성공한 클라이언트는 `GET /boards/{boardId}`를 다시 호출해 연결이 끊긴 동안의 변경을 복구합니다.
 

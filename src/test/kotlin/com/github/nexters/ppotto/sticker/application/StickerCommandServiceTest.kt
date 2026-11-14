@@ -5,6 +5,11 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRep
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.analysis.support.FakeStickerStorage
+import com.github.nexters.ppotto.board.application.BoardEventBroker
+import com.github.nexters.ppotto.board.application.BoardStickerEventService
+import com.github.nexters.ppotto.board.application.model.BoardEvent
+import com.github.nexters.ppotto.board.application.model.BoardEventType
+import com.github.nexters.ppotto.board.application.port.BoardEventConnection
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.addBoardMember
@@ -13,6 +18,7 @@ import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
+import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
@@ -44,6 +50,8 @@ import org.jooq.DSLContext
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 class StickerCommandServiceTest(
     service: StickerCommandService,
@@ -59,11 +67,42 @@ class StickerCommandServiceTest(
     photoRepository: PhotoRepository,
     transactionTemplate: TransactionTemplate,
     eventPublisher: ApplicationEventPublisher,
+    boardStickerEventService: BoardStickerEventService,
+    boardEventBroker: BoardEventBroker,
     objectStorageCleaner: RecordingObjectStorageCleaner,
     stickerStorage: FakeStickerStorage,
     dslContext: DSLContext,
 ) : IntegrationTest({
         fun imageKeyOf(stickerId: StickerId) = stickerRepository.findById(stickerId)?.imageKey
+
+        fun expectStickerEvent(
+            boardId: BoardId,
+            command: () -> Unit,
+        ) {
+            val events = LinkedBlockingQueue<BoardEvent>()
+            val subscription =
+                boardEventBroker.subscribe(
+                    boardId,
+                    object : BoardEventConnection {
+                        override fun send(event: BoardEvent): Boolean {
+                            events.add(event)
+                            return true
+                        }
+
+                        override fun heartbeat(): Boolean = true
+
+                        override fun complete() = Unit
+                    },
+                )
+            try {
+                command()
+                val event = events.poll(3, TimeUnit.SECONDS)
+                event?.type shouldBe BoardEventType.BOARD_STICKERS_UPDATED
+                event?.boardId shouldBe boardId
+            } finally {
+                subscription.close()
+            }
+        }
 
         fun regenerationLockOf(stickerId: StickerId) =
             dslContext
@@ -85,7 +124,28 @@ class StickerCommandServiceTest(
             regenerationPorts,
             transactionTemplate,
             eventPublisher,
+            boardStickerEventService,
         )
+
+        Given("보드의 스티커 변경을 구독 중일 때") {
+            When("스티커 이름을 변경하면") {
+                Then("같은 보드에 변경 이벤트를 보낸다") {
+                    val board = boardRepository.save(userRepository.saveTestUser().id)
+                    val analysis = analysisRepository.save(board.userId, board.id)
+                    val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+                    expectStickerEvent(board.id) { service.rename(board.userId, sticker.id, "새 제목") }
+                }
+            }
+
+            When("스티커를 삭제하면") {
+                Then("같은 보드에 변경 이벤트를 보낸다") {
+                    val board = boardRepository.save(userRepository.saveTestUser().id)
+                    val analysis = analysisRepository.save(board.userId, board.id)
+                    val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+                    expectStickerEvent(board.id) { service.delete(board.userId, sticker.id) }
+                }
+            }
+        }
 
         Given("사용자 보드에 스티커가 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
@@ -212,6 +272,19 @@ class StickerCommandServiceTest(
                     imageStickerCreation(sourcePhotoId = photoIds.first()),
                 )
             stickerRecapRepository.savePhotos(sticker.id, photoIds)
+
+            When("이미지를 재생성하면") {
+                Then("같은 보드에 변경 이벤트를 보낸다") {
+                    val target =
+                        stickerRepository.save(
+                            analysis.id,
+                            board.id,
+                            imageStickerCreation(sourcePhotoId = photoIds.first()),
+                        )
+                    stickerRecapRepository.savePhotos(target.id, photoIds)
+                    expectStickerEvent(board.id) { service.regenerate(board.userId, target.id) }
+                }
+            }
 
             When("공동 보드 참여자가 재생성을 요청하면") {
                 service.regenerate(member.id, sticker.id)
