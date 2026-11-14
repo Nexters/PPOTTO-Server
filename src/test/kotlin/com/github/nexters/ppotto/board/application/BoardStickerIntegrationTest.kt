@@ -109,10 +109,24 @@ class BoardStickerIntegrationTest(
                 stickerCommandService.markViewed(owner.id, sticker.id)
 
                 Then("방장의 보드와 리캡에서만 신규 표시가 사라진다") {
-                    boardQueryService.getDetail(board.id, owner.id).stickers.single().isNew shouldBe false
-                    boardQueryService.getDetail(board.id, member.id).stickers.single().isNew shouldBe true
-                    stickerQueryService.getRecap(owner.id, sticker.id).sticker.isNew shouldBe false
-                    stickerQueryService.getRecap(member.id, sticker.id).sticker.isNew shouldBe true
+                    boardQueryService
+                        .getDetail(board.id, owner.id)
+                        .stickers
+                        .single()
+                        .isNew shouldBe false
+                    boardQueryService
+                        .getDetail(board.id, member.id)
+                        .stickers
+                        .single()
+                        .isNew shouldBe true
+                    stickerQueryService
+                        .getRecap(owner.id, sticker.id)
+                        .sticker
+                        .isNew shouldBe false
+                    stickerQueryService
+                        .getRecap(member.id, sticker.id)
+                        .sticker
+                        .isNew shouldBe true
                 }
             }
         }

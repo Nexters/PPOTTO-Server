@@ -25,15 +25,16 @@ class StickerViewRepository(
                     .from(STICKERS)
                     .where(STICKERS.ID.eq(stickerId))
                     .and(STICKERS.DELETED_AT.isNull),
-            )
-            .onConflict(STICKER_VIEWS.STICKER_ID, STICKER_VIEWS.USER_ID)
+            ).onConflict(STICKER_VIEWS.STICKER_ID, STICKER_VIEWS.USER_ID)
             .doNothing()
             .execute() == 1
 
     fun existsActiveSticker(stickerId: StickerId): Boolean =
         dslContext.fetchExists(
             STICKERS,
-            STICKERS.ID.eq(stickerId).and(STICKERS.DELETED_AT.isNull),
+            STICKERS.ID
+                .eq(stickerId)
+                .and(STICKERS.DELETED_AT.isNull),
         )
 
     fun findViewedStickerIds(
@@ -60,10 +61,12 @@ class StickerViewRepository(
             .where(STICKER_VIEWS.USER_ID.eq(userId))
             .and(
                 STICKER_VIEWS.STICKER_ID.`in`(
-                    dslContext.select(STICKERS.ID).from(STICKERS).where(STICKERS.BOARD_ID.eq(boardId)),
+                    dslContext
+                        .select(STICKERS.ID)
+                        .from(STICKERS)
+                        .where(STICKERS.BOARD_ID.eq(boardId)),
                 ),
-            )
-            .execute()
+            ).execute()
 
     fun deleteAllByUser(userId: UserId): Int =
         dslContext

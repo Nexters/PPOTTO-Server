@@ -41,8 +41,8 @@ import com.github.nexters.ppotto.sticker.application.model.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.model.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
-import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
