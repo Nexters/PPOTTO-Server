@@ -100,7 +100,7 @@ class StickerCommandServiceTest(
             try {
                 command()
                 val event = events.poll(3, TimeUnit.SECONDS)
-                event?.type shouldBe BoardEventType.BOARD_STICKERS_UPDATED
+                event?.type shouldBe BoardEventType.BOARD_UPDATED
                 event?.boardId shouldBe boardId
             } finally {
                 subscription.close()

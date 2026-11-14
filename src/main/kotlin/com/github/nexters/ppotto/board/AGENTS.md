@@ -56,7 +56,7 @@ Board domain. `User : Board = 1:N`, and `Board : Drawing = 1:N`. Cross-domain re
 | `application/BoardLayoutService.kt` | Owner-or-member sticker/drawing guard sequence and atomic changed-layout persistence under the target board row lock, written as plain statements |
 | `application/BoardEventBroker.kt` | In-memory board-scoped user connection registry that broadcasts committed board events, disconnects departing members, delivers board deletion before closing all affected connections, removes failed connections, and sends heartbeats without depending on the SSE transport |
 | `application/BoardEventSubscriptionService.kt` | Owner-or-member access check and subscription registration under a short board-row transaction lock |
-| `application/model/BoardEvent.kt` | Board event payload and closed event type set for layout, name, sticker, and participant changes |
+| `application/model/BoardEvent.kt` | Board event payload and three event types for board changes, participant changes, and board deletion |
 | `application/BoardStickerEventService.kt` | Cross-domain sticker change publication after the caller's transaction commits |
 | `application/port/BoardEventConnection.kt` | Transport-neutral connection boundary for event delivery, heartbeat, and completion |
 | `application/port/BoardAnalysisActivityPort.kt` | Active-analysis contracts. `BoardAnalysisActivityPort` checks a board before deletion; `BoardActiveAnalysisPort` returns the caller's single active analysis (`BoardActiveAnalysis`: board id + `BoardAnalysisStatus`) for the v2 list. `BoardAnalysisStatus` (`UPLOADING`/`ANALYZING`) lives in this port file rather than `domain/` so `analysis` still references only board application/port contracts (`BoardAnalysisDependencyTest`) |

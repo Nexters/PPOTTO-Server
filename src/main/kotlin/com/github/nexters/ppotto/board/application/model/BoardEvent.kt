@@ -11,26 +11,10 @@ data class BoardEvent(
     val occurredAt: Instant,
 ) {
     companion object {
-        fun layoutUpdated(boardId: BoardId): BoardEvent =
+        fun updated(boardId: BoardId): BoardEvent =
             BoardEvent(
                 eventId = UUID.randomUUID(),
-                type = BoardEventType.BOARD_LAYOUT_UPDATED,
-                boardId = boardId,
-                occurredAt = Instant.now(),
-            )
-
-        fun nameUpdated(boardId: BoardId): BoardEvent =
-            BoardEvent(
-                eventId = UUID.randomUUID(),
-                type = BoardEventType.BOARD_NAME_UPDATED,
-                boardId = boardId,
-                occurredAt = Instant.now(),
-            )
-
-        fun stickersUpdated(boardId: BoardId): BoardEvent =
-            BoardEvent(
-                eventId = UUID.randomUUID(),
-                type = BoardEventType.BOARD_STICKERS_UPDATED,
+                type = BoardEventType.BOARD_UPDATED,
                 boardId = boardId,
                 occurredAt = Instant.now(),
             )
@@ -54,9 +38,7 @@ data class BoardEvent(
 }
 
 enum class BoardEventType {
-    BOARD_LAYOUT_UPDATED,
-    BOARD_NAME_UPDATED,
-    BOARD_STICKERS_UPDATED,
+    BOARD_UPDATED,
     BOARD_PARTICIPANTS_UPDATED,
     BOARD_DELETED,
 }

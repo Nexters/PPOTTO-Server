@@ -14,11 +14,11 @@ private val BOARD_EVENT_STREAM =
         value =
             listOf(
                 "id: 019a72c0-4d8e-7f10-a2b3-c4d5e6f70819",
-                "event: BOARD_LAYOUT_UPDATED",
+                "event: BOARD_UPDATED",
                 "retry: 3000",
                 "data: " +
                     "{\"eventId\":\"019a72c0-4d8e-7f10-a2b3-c4d5e6f70819\"," +
-                    "\"type\":\"BOARD_LAYOUT_UPDATED\"," +
+                    "\"type\":\"BOARD_UPDATED\"," +
                     "\"boardId\":\"01983f2a-3c4d-7e5f-a6b7-8c9d0e1f2a3b\"," +
                     "\"occurredAt\":\"2026-11-12T12:00:00Z\"}",
                 "",

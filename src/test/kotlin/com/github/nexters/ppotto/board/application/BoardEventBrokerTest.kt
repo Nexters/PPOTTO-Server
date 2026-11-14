@@ -21,7 +21,7 @@ class BoardEventBrokerTest :
             val subscription = broker.subscribe(boardId, userId(), connection)
             val otherSubscription = broker.subscribe(otherBoardId, userId(), otherConnection)
             try {
-                val event = BoardEvent.layoutUpdated(boardId)
+                val event = BoardEvent.updated(boardId)
                 broker.publish(event)
 
                 connection.events shouldContainExactly listOf(event)
@@ -39,7 +39,7 @@ class BoardEventBrokerTest :
             val subscription = broker.subscribe(boardId, userId(), connection)
 
             subscription.close()
-            broker.publish(BoardEvent.layoutUpdated(boardId))
+            broker.publish(BoardEvent.updated(boardId))
 
             connection.events.shouldBeEmpty()
         }
@@ -79,7 +79,7 @@ class BoardEventBrokerTest :
 
             val event = BoardEvent.deleted(boardId)
             broker.publishAndClose(event)
-            broker.publish(BoardEvent.layoutUpdated(boardId))
+            broker.publish(BoardEvent.updated(boardId))
 
             firstConnection.events shouldContainExactly listOf(event)
             secondConnection.events shouldContainExactly listOf(event)
@@ -93,8 +93,8 @@ class BoardEventBrokerTest :
             val connection = RecordingBoardEventConnection(sendResult = false)
             broker.subscribe(boardId, userId(), connection)
 
-            broker.publish(BoardEvent.layoutUpdated(boardId))
-            broker.publish(BoardEvent.layoutUpdated(boardId))
+            broker.publish(BoardEvent.updated(boardId))
+            broker.publish(BoardEvent.updated(boardId))
 
             connection.sendCount shouldBe 1
             connection.completeCount shouldBe 1

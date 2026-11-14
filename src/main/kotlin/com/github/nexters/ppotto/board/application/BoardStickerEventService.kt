@@ -10,6 +10,6 @@ class BoardStickerEventService(
     private val boardEventBroker: BoardEventBroker,
 ) {
     fun publishUpdated(boardId: BoardId) {
-        afterCommit { boardEventBroker.publish(BoardEvent.stickersUpdated(boardId)) }
+        afterCommit { boardEventBroker.publish(BoardEvent.updated(boardId)) }
     }
 }

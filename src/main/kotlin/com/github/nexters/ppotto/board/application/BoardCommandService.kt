@@ -53,7 +53,7 @@ class BoardCommandService(
         val board =
             boardRepository.updateName(boardId, userId, name)
                 ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
-        afterCommit { boardEventBroker.publish(BoardEvent.nameUpdated(boardId)) }
+        afterCommit { boardEventBroker.publish(BoardEvent.updated(boardId)) }
         return board
     }
 

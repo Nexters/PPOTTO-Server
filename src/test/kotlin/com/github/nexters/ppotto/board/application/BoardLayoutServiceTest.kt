@@ -1,6 +1,9 @@
 package com.github.nexters.ppotto.board.application
 
+import com.github.nexters.ppotto.board.application.model.BoardEvent
+import com.github.nexters.ppotto.board.application.model.BoardEventType
 import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
+import com.github.nexters.ppotto.board.application.port.BoardEventConnection
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.Drawing
@@ -31,16 +34,60 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.jooq.DSLContext
 import org.springframework.context.annotation.Import
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 @Import(BoardTestConfig::class)
 class BoardLayoutServiceTest(
     boardLayoutService: BoardLayoutService,
+    boardEventBroker: BoardEventBroker,
     boardRepository: BoardRepository,
     drawingRepository: DrawingRepository,
     userRepository: UserRepository,
     stickerPort: FakeBoardStickerPort,
     dslContext: DSLContext,
 ) : IntegrationTest({
+        Given("보드 이벤트를 구독 중인 방장이") {
+            val owner = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+
+            When("레이아웃을 저장하면") {
+                Then("보드 변경 이벤트를 보낸다") {
+                    val events = LinkedBlockingQueue<BoardEvent>()
+                    val subscription =
+                        boardEventBroker.subscribe(
+                            board.id,
+                            owner.id,
+                            object : BoardEventConnection {
+                                override fun send(event: BoardEvent): Boolean {
+                                    events.add(event)
+                                    return true
+                                }
+
+                                override fun heartbeat(): Boolean = true
+
+                                override fun complete() = Unit
+                            },
+                        )
+                    try {
+                        boardLayoutService.update(
+                            board.id,
+                            owner.id,
+                            BoardLayoutUpdateCommand(
+                                stickers = emptyList(),
+                                createdDrawings = listOf(newDrawing(boardId = board.id)),
+                                deletedDrawingIds = emptyList(),
+                            ),
+                        )
+
+                        events.poll(3, TimeUnit.SECONDS)?.type shouldBe BoardEventType.BOARD_UPDATED
+                    } finally {
+                        subscription.close()
+                    }
+                }
+            }
+        }
+
         Given("공동 보드에 참여한 사용자가") {
             val owner = userRepository.saveTestUser()
             val member = userRepository.saveTestUser()

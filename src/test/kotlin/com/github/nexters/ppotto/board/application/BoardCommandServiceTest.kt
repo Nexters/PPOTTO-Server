@@ -68,7 +68,7 @@ class BoardCommandServiceTest(
 
                         boardRepository.findOwnedById(board.id, owner.id)?.name shouldBe "바뀐 보드"
                         val event = events.poll(3, TimeUnit.SECONDS)
-                        event?.type shouldBe BoardEventType.BOARD_NAME_UPDATED
+                        event?.type shouldBe BoardEventType.BOARD_UPDATED
                         event?.boardId shouldBe board.id
                     } finally {
                         subscription.close()
