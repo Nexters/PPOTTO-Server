@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.board.application
 
+import com.github.nexters.ppotto.board.application.model.BoardEvent
 import com.github.nexters.ppotto.board.application.model.BoardJoinResult
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
@@ -14,6 +15,7 @@ import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.global.transaction.afterCommit
 import com.github.nexters.ppotto.user.application.UserService
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -27,6 +29,7 @@ class BoardParticipationService(
     private val boardRepository: BoardRepository,
     private val stickerCommandPort: BoardStickerCommandPort,
     private val userService: UserService,
+    private val boardEventBroker: BoardEventBroker,
 ) {
     @Transactional
     fun join(
@@ -56,6 +59,10 @@ class BoardParticipationService(
 
         stickerCommandPort.deleteAllCreatedBy(board.id, userId)
         check(boardMembershipRepository.delete(board.id, userId)) { "확인한 보드 참여 관계를 삭제하지 못했습니다." }
+        afterCommit {
+            boardEventBroker.disconnect(board.id, userId)
+            boardEventBroker.publish(BoardEvent.participantsUpdated(board.id))
+        }
     }
 
     private fun resolveRoleOrAddMember(
@@ -69,7 +76,9 @@ class BoardParticipationService(
                 if (boardMembershipRepository.countMembersByBoardId(board.id) >= Board.MAX_PARTICIPANT_COUNT - 1) {
                     throw ConflictException(BoardErrorCode.PARTICIPANT_LIMIT_EXCEEDED)
                 }
-                boardMembershipRepository.saveIfAbsent(board.id, userId)
+                if (boardMembershipRepository.saveIfAbsent(board.id, userId)) {
+                    afterCommit { boardEventBroker.publish(BoardEvent.participantsUpdated(board.id)) }
+                }
                 BoardRole.MEMBER
             }
         }

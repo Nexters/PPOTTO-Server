@@ -3,6 +3,7 @@ package com.github.nexters.ppotto.board.application
 import com.github.nexters.ppotto.board.application.model.BoardEvent
 import com.github.nexters.ppotto.board.application.port.BoardEventConnection
 import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -17,8 +18,8 @@ class BoardEventBrokerTest :
             val otherBoardId = boardId()
             val connection = RecordingBoardEventConnection()
             val otherConnection = RecordingBoardEventConnection()
-            val subscription = broker.subscribe(boardId, connection)
-            val otherSubscription = broker.subscribe(otherBoardId, otherConnection)
+            val subscription = broker.subscribe(boardId, userId(), connection)
+            val otherSubscription = broker.subscribe(otherBoardId, userId(), otherConnection)
             try {
                 val event = BoardEvent.layoutUpdated(boardId)
                 broker.publish(event)
@@ -35,7 +36,7 @@ class BoardEventBrokerTest :
             val broker = BoardEventBroker()
             val boardId = boardId()
             val connection = RecordingBoardEventConnection()
-            val subscription = broker.subscribe(boardId, connection)
+            val subscription = broker.subscribe(boardId, userId(), connection)
 
             subscription.close()
             broker.publish(BoardEvent.layoutUpdated(boardId))
@@ -43,11 +44,36 @@ class BoardEventBrokerTest :
             connection.events.shouldBeEmpty()
         }
 
+        test("나간 사용자의 연결만 종료한다") {
+            val broker = BoardEventBroker()
+            val boardId = boardId()
+            val departingUserId = userId()
+            val departingConnection = RecordingBoardEventConnection()
+            val secondDepartingConnection = RecordingBoardEventConnection()
+            val remainingConnection = RecordingBoardEventConnection()
+            broker.subscribe(boardId, departingUserId, departingConnection)
+            broker.subscribe(boardId, departingUserId, secondDepartingConnection)
+            val remainingSubscription = broker.subscribe(boardId, userId(), remainingConnection)
+            try {
+                broker.disconnect(boardId, departingUserId)
+                val event = BoardEvent.participantsUpdated(boardId)
+                broker.publish(event)
+
+                departingConnection.completeCount shouldBe 1
+                departingConnection.events.shouldBeEmpty()
+                secondDepartingConnection.completeCount shouldBe 1
+                secondDepartingConnection.events.shouldBeEmpty()
+                remainingConnection.events shouldContainExactly listOf(event)
+            } finally {
+                remainingSubscription.close()
+            }
+        }
+
         test("이벤트 전송에 실패한 연결은 다음 전송 대상에서 제거한다") {
             val broker = BoardEventBroker()
             val boardId = boardId()
             val connection = RecordingBoardEventConnection(sendResult = false)
-            broker.subscribe(boardId, connection)
+            broker.subscribe(boardId, userId(), connection)
 
             broker.publish(BoardEvent.layoutUpdated(boardId))
             broker.publish(BoardEvent.layoutUpdated(boardId))
@@ -59,7 +85,7 @@ class BoardEventBrokerTest :
         test("heartbeat에 실패한 연결은 다음 heartbeat 대상에서 제거한다") {
             val broker = BoardEventBroker()
             val connection = RecordingBoardEventConnection(heartbeatResult = false)
-            broker.subscribe(boardId(), connection)
+            broker.subscribe(boardId(), userId(), connection)
 
             broker.heartbeat()
             broker.heartbeat()
@@ -95,3 +121,5 @@ private class RecordingBoardEventConnection(
 }
 
 private fun boardId(): BoardId = BoardId(UUID.randomUUID())
+
+private fun userId(): UserId = UserId(UUID.randomUUID())

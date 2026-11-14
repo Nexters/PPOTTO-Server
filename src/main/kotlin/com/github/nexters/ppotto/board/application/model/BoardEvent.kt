@@ -34,6 +34,14 @@ data class BoardEvent(
                 boardId = boardId,
                 occurredAt = Instant.now(),
             )
+
+        fun participantsUpdated(boardId: BoardId): BoardEvent =
+            BoardEvent(
+                eventId = UUID.randomUUID(),
+                type = BoardEventType.BOARD_PARTICIPANTS_UPDATED,
+                boardId = boardId,
+                occurredAt = Instant.now(),
+            )
     }
 }
 
@@ -41,4 +49,5 @@ enum class BoardEventType {
     BOARD_LAYOUT_UPDATED,
     BOARD_NAME_UPDATED,
     BOARD_STICKERS_UPDATED,
+    BOARD_PARTICIPANTS_UPDATED,
 }

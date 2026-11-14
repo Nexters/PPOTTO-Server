@@ -4,6 +4,7 @@ import com.github.nexters.ppotto.board.application.model.BoardEvent
 import com.github.nexters.ppotto.board.application.port.BoardEventConnection
 import com.github.nexters.ppotto.global.config.AsyncConfig
 import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.UserId
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -12,26 +13,44 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 @Component
 class BoardEventBroker {
-    private val connections = ConcurrentHashMap<BoardId, ConcurrentHashMap<UUID, BoardEventConnection>>()
+    private val connections = ConcurrentHashMap<BoardId, ConcurrentHashMap<UUID, BoardEventSubscriber>>()
 
     fun subscribe(
         boardId: BoardId,
+        userId: UserId,
         connection: BoardEventConnection,
     ): BoardEventSubscription {
         val subscriptionId = UUID.randomUUID()
-        connections
-            .computeIfAbsent(boardId) { ConcurrentHashMap() }[subscriptionId] = connection
+        connections.compute(boardId) { _, boardConnections ->
+            (boardConnections ?: ConcurrentHashMap()).also {
+                it[subscriptionId] = BoardEventSubscriber(userId, connection)
+            }
+        }
         return BoardEventSubscription { remove(boardId, subscriptionId) }
+    }
+
+    fun disconnect(
+        boardId: BoardId,
+        userId: UserId,
+    ) {
+        connections[boardId]
+            ?.toMap()
+            ?.forEach { (subscriptionId, subscriber) ->
+                if (subscriber.userId == userId) {
+                    remove(boardId, subscriptionId)
+                    subscriber.connection.complete()
+                }
+            }
     }
 
     @Async(AsyncConfig.BOARD_EVENT_TASK_EXECUTOR)
     fun publish(event: BoardEvent) {
         connections[event.boardId]
             ?.toMap()
-            ?.forEach { (subscriptionId, connection) ->
-                if (!connection.send(event)) {
+            ?.forEach { (subscriptionId, subscriber) ->
+                if (!subscriber.connection.send(event)) {
                     remove(event.boardId, subscriptionId)
-                    connection.complete()
+                    subscriber.connection.complete()
                 }
             }
     }
@@ -42,10 +61,10 @@ class BoardEventBroker {
             .forEach { (boardId, boardConnections) ->
                 boardConnections
                     .toMap()
-                    .forEach { (subscriptionId, connection) ->
-                        if (!connection.heartbeat()) {
+                    .forEach { (subscriptionId, subscriber) ->
+                        if (!subscriber.connection.heartbeat()) {
                             remove(boardId, subscriptionId)
-                            connection.complete()
+                            subscriber.connection.complete()
                         }
                     }
             }
@@ -61,6 +80,11 @@ class BoardEventBroker {
         }
     }
 }
+
+private data class BoardEventSubscriber(
+    val userId: UserId,
+    val connection: BoardEventConnection,
+)
 
 class BoardEventSubscription internal constructor(
     private val unsubscribe: () -> Unit,

@@ -21,6 +21,7 @@ import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
+import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.jooq.tables.references.STICKER_VIEWS
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
@@ -77,12 +78,14 @@ class StickerCommandServiceTest(
 
         fun expectStickerEvent(
             boardId: BoardId,
+            userId: UserId,
             command: () -> Unit,
         ) {
             val events = LinkedBlockingQueue<BoardEvent>()
             val subscription =
                 boardEventBroker.subscribe(
                     boardId,
+                    userId,
                     object : BoardEventConnection {
                         override fun send(event: BoardEvent): Boolean {
                             events.add(event)
@@ -133,7 +136,7 @@ class StickerCommandServiceTest(
                     val board = boardRepository.save(userRepository.saveTestUser().id)
                     val analysis = analysisRepository.save(board.userId, board.id)
                     val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
-                    expectStickerEvent(board.id) { service.rename(board.userId, sticker.id, "새 제목") }
+                    expectStickerEvent(board.id, board.userId) { service.rename(board.userId, sticker.id, "새 제목") }
                 }
             }
 
@@ -142,7 +145,7 @@ class StickerCommandServiceTest(
                     val board = boardRepository.save(userRepository.saveTestUser().id)
                     val analysis = analysisRepository.save(board.userId, board.id)
                     val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
-                    expectStickerEvent(board.id) { service.delete(board.userId, sticker.id) }
+                    expectStickerEvent(board.id, board.userId) { service.delete(board.userId, sticker.id) }
                 }
             }
         }
@@ -282,7 +285,7 @@ class StickerCommandServiceTest(
                             imageStickerCreation(sourcePhotoId = photoIds.first()),
                         )
                     stickerRecapRepository.savePhotos(target.id, photoIds)
-                    expectStickerEvent(board.id) { service.regenerate(board.userId, target.id) }
+                    expectStickerEvent(board.id, board.userId) { service.regenerate(board.userId, target.id) }
                 }
             }
 

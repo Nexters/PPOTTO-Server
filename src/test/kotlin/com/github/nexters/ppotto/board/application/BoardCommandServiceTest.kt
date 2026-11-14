@@ -47,6 +47,7 @@ class BoardCommandServiceTest(
                     val subscription =
                         boardEventBroker.subscribe(
                             board.id,
+                            owner.id,
                             object : BoardEventConnection {
                                 override fun send(event: BoardEvent): Boolean {
                                     events.add(event)

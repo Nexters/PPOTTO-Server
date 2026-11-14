@@ -20,7 +20,7 @@ interface BoardEventApi {
     @Operation(
         operationId = "subscribeBoardEvents",
         summary = "공동 보드 변경 이벤트 구독",
-        description = "접근 가능한 보드의 레이아웃, 이름 및 스티커 변경 이벤트를 SSE로 구독함",
+        description = "접근 가능한 보드의 레이아웃, 이름, 스티커 및 참여자 변경 이벤트를 SSE로 구독함",
         parameters = [
             Parameter(
                 name = "boardId",
