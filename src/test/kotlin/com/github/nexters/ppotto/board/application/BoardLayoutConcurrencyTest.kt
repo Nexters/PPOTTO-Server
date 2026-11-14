@@ -184,7 +184,10 @@ class CoordinatedBoardStickerPort(
     var drawingRowsAtDelete: Int = -1
         private set
 
-    override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = emptyList()
+    override fun getByBoardId(
+        boardId: BoardId,
+        userId: UserId?,
+    ): List<BoardStickerItem> = emptyList()
 
     override fun ownsAll(
         boardId: BoardId,

@@ -62,13 +62,8 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getAccessible(userId, stickerId)
-        if (sticker.viewedAt != null) {
-            return
-        }
-
-        sticker.markViewed(Instant.now())
-        if (!stickerCommandRepository.markViewed(sticker.id, checkNotNull(sticker.viewedAt))) {
+        val sticker = stickerAccessService.getAccessibleForUpdate(userId, stickerId)
+        if (!stickerViewRepository.saveIfAbsent(sticker.id, userId) && !stickerViewRepository.existsActiveSticker(sticker.id)) {
             throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
         }
     }

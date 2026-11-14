@@ -7,9 +7,11 @@ import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.matchers.shouldBe
+import java.time.Instant
 
 class StickerViewRepositoryTest(
     stickerViewRepository: StickerViewRepository,
+    stickerCommandRepository: StickerCommandRepository,
     stickerRepository: StickerRepository,
     boardRepository: BoardRepository,
     analysisRepository: AnalysisRepository,
@@ -60,6 +62,15 @@ class StickerViewRepositoryTest(
                 Then("다른 사용자의 기록만 남는다") {
                     stickerViewRepository.findViewedStickerIds(firstUser.id, listOf(firstSticker.id, secondSticker.id)) shouldBe emptySet()
                     stickerViewRepository.findViewedStickerIds(secondUser.id, listOf(firstSticker.id)) shouldBe setOf(firstSticker.id)
+                }
+            }
+
+            When("삭제된 스티커에 열람 기록을 저장하려 하면") {
+                stickerCommandRepository.softDelete(firstSticker.id, Instant.now())
+
+                Then("열람 기록이 생성되지 않는다") {
+                    stickerViewRepository.saveIfAbsent(firstSticker.id, firstUser.id) shouldBe false
+                    stickerViewRepository.findViewedStickerIds(firstUser.id, listOf(firstSticker.id)) shouldBe emptySet()
                 }
             }
         }

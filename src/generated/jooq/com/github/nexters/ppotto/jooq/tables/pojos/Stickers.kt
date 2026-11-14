@@ -23,7 +23,6 @@ data class Stickers(
     val boardId: BoardId,
     val type: String,
     val title: String,
-    val viewedAt: Instant? = null,
     val sourcePhotoId: PhotoId? = null,
     val imageKey: String? = null,
     val textContent: String? = null,
@@ -66,12 +65,6 @@ data class Stickers(
         if (this.type != o.type)
             return false
         if (this.title != o.title)
-            return false
-        if (this.viewedAt == null) {
-            if (o.viewedAt != null)
-                return false
-        }
-        else if (this.viewedAt != o.viewedAt)
             return false
         if (this.sourcePhotoId == null) {
             if (o.sourcePhotoId != null)
@@ -194,7 +187,6 @@ data class Stickers(
         result = prime * result + this.boardId.hashCode()
         result = prime * result + this.type.hashCode()
         result = prime * result + this.title.hashCode()
-        result = prime * result + (if (this.viewedAt == null) 0 else this.viewedAt.hashCode())
         result = prime * result + (if (this.sourcePhotoId == null) 0 else this.sourcePhotoId.hashCode())
         result = prime * result + (if (this.imageKey == null) 0 else this.imageKey.hashCode())
         result = prime * result + (if (this.textContent == null) 0 else this.textContent.hashCode())
@@ -225,7 +217,6 @@ data class Stickers(
         sb.append(", ").append(boardId)
         sb.append(", ").append(type)
         sb.append(", ").append(title)
-        sb.append(", ").append(viewedAt)
         sb.append(", ").append(sourcePhotoId)
         sb.append(", ").append(imageKey)
         sb.append(", ").append(textContent)

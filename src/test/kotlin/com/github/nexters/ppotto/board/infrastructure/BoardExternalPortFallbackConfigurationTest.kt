@@ -62,7 +62,7 @@ class BoardExternalPortFallbackConfigurationTest :
                 Then("연동 누락 오류를 던진다") {
                     val exception =
                         shouldThrow<IllegalStateException> {
-                            queryPort.getByBoardId(BoardId(UUID.randomUUID()))
+                            queryPort.getByBoardId(BoardId(UUID.randomUUID()), null)
                         }
                     exception.message shouldBe "StickerQueryService 연동이 필요합니다."
                 }

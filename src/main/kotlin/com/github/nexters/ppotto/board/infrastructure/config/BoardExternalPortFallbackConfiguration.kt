@@ -29,7 +29,7 @@ class BoardExternalPortFallbackConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    fun boardStickerQueryPort(): BoardStickerQueryPort = BoardStickerQueryPort { error("StickerQueryService 연동이 필요합니다.") }
+    fun boardStickerQueryPort(): BoardStickerQueryPort = BoardStickerQueryPort { _, _ -> error("StickerQueryService 연동이 필요합니다.") }
 
     @Bean
     @ConditionalOnMissingBean

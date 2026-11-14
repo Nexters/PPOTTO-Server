@@ -14,7 +14,6 @@ class Sticker(
     val type: StickerType,
     title: String,
     val summary: String,
-    viewedAt: Instant?,
     sourcePhotoId: PhotoId?,
     imageKey: String?,
     val textContent: String?,
@@ -34,8 +33,6 @@ class Sticker(
     deletedAt: Instant?,
 ) {
     var title: String = title
-        private set
-    var viewedAt: Instant? = viewedAt
         private set
     var posX: Double? = posX
         private set
@@ -75,12 +72,6 @@ class Sticker(
 
     fun rename(title: String) {
         this.title = title.takeIf { isValidTitle(it) } ?: throw InvalidInputException()
-    }
-
-    fun markViewed(viewedAt: Instant) {
-        if (this.viewedAt == null) {
-            this.viewedAt = viewedAt
-        }
     }
 
     fun updateLayout(layout: StickerLayout) {

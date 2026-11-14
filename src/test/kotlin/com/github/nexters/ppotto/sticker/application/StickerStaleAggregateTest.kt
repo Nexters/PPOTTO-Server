@@ -79,14 +79,17 @@ class StickerStaleAggregateTest(
             }
 
             When("열람 처리하면") {
-                val exception = shouldThrow<NotFoundException> { service.markViewed(board.userId, sticker.id) }
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        transactionTemplate.executeWithoutResult { service.markViewed(board.userId, sticker.id) }
+                    }
 
                 Then("STICKER-001 오류로 실패한다") {
                     exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
                 }
 
-                Then("삭제된 행의 열람 시각은 비어 있다") {
-                    deletedRow().viewedAt.shouldBeNull()
+                Then("삭제된 스티커의 열람 기록이 생성되지 않는다") {
+                    stickerViewRepository.findViewedStickerIds(board.userId, listOf(sticker.id)) shouldBe emptySet()
                 }
             }
 

@@ -11,6 +11,7 @@ import com.github.nexters.ppotto.board.application.port.BoardStickerQueryPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerSummaryPort
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardStickerType
+import com.github.nexters.ppotto.board.infrastructure.BoardMembershipRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.changeAnalysisStatus
@@ -19,6 +20,7 @@ import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
+import com.github.nexters.ppotto.sticker.application.StickerQueryService
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
@@ -43,8 +45,10 @@ class BoardStickerIntegrationTest(
     boardLayoutService: BoardLayoutService,
     boardCommandService: BoardCommandService,
     stickerCommandService: StickerCommandService,
+    stickerQueryService: StickerQueryService,
     stickerCommandPort: BoardStickerCommandPort,
     boardRepository: BoardRepository,
+    boardMembershipRepository: BoardMembershipRepository,
     drawingRepository: DrawingRepository,
     stickerRepository: StickerRepository,
     stickerRecapRepository: StickerRecapRepository,
@@ -89,6 +93,26 @@ class BoardStickerIntegrationTest(
                         it.badgeOffsetY shouldBe sticker.badgeOffsetY
                         it.badgeRotation shouldBe sticker.badgeRotation
                     }
+                }
+            }
+        }
+
+        Given("두 참여자가 같은 스티커를 보는 공동 보드에서") {
+            val owner = userRepository.saveTestUser()
+            val member = userRepository.saveTestUser()
+            val board = boardRepository.save(owner.id)
+            boardMembershipRepository.saveIfAbsent(board.id, member.id)
+            val analysis = analysisRepository.save(owner.id, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+
+            When("방장만 리캡을 열람 처리하면") {
+                stickerCommandService.markViewed(owner.id, sticker.id)
+
+                Then("방장의 보드와 리캡에서만 신규 표시가 사라진다") {
+                    boardQueryService.getDetail(board.id, owner.id).stickers.single().isNew shouldBe false
+                    boardQueryService.getDetail(board.id, member.id).stickers.single().isNew shouldBe true
+                    stickerQueryService.getRecap(owner.id, sticker.id).sticker.isNew shouldBe false
+                    stickerQueryService.getRecap(member.id, sticker.id).sticker.isNew shouldBe true
                 }
             }
         }

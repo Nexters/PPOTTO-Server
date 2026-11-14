@@ -251,6 +251,11 @@ class BoardParticipationServiceTest(
                     stickerViewRepository.findViewedStickerIds(member.id, listOf(ownerSticker.id)) shouldBe emptySet()
                     stickerViewRepository.findViewedStickerIds(owner.id, listOf(ownerSticker.id)) shouldBe setOf(ownerSticker.id)
                 }
+
+                Then("다시 참여하면 이전 열람 기록이 복구되지 않는다") {
+                    membershipRepository.saveIfAbsent(board.id, member.id)
+                    stickerViewRepository.findViewedStickerIds(member.id, listOf(ownerSticker.id)) shouldBe emptySet()
+                }
             }
         }
     })

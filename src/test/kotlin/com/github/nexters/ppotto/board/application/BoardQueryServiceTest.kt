@@ -26,6 +26,7 @@ import com.github.nexters.ppotto.sticker.application.RecapShareService
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.imageStickerCreation
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -52,6 +53,7 @@ class BoardQueryServiceTest(
     stickerPort: FakeBoardStickerPort,
     dslContext: DSLContext,
     stickerRepository: StickerRepository,
+    stickerViewRepository: StickerViewRepository,
     stickerCommandRepository: StickerCommandRepository,
     analysisRepository: AnalysisRepository,
     photoRepository: PhotoRepository,
@@ -255,9 +257,9 @@ class BoardQueryServiceTest(
                 recapShareService.unshare(user.id, olderSticker.id)
                 val boards = boardQueryService.listSummaries(user.id)
 
-                Then("스티커 행은 수정되었다") {
+                Then("열람 기록과 스티커 공유 상태가 저장된다") {
                     val touched = stickerRepository.findById(olderSticker.id).shouldNotBeNull()
-                    touched.viewedAt.shouldNotBeNull()
+                    stickerViewRepository.findViewedStickerIds(user.id, listOf(olderSticker.id)) shouldBe setOf(olderSticker.id)
                     touched.updatedAt shouldBeGreaterThan olderSticker.createdAt
                 }
 

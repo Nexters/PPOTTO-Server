@@ -126,11 +126,6 @@ open class Stickers(
     val TITLE: TableField<StickersRecord, String?> = createField(DSL.name("title"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.stickers.viewed_at</code>.
-     */
-    val VIEWED_AT: TableField<StickersRecord, Instant?> = createField(DSL.name("viewed_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
-
-    /**
      * The column <code>public.stickers.source_photo_id</code>.
      */
     val SOURCE_PHOTO_ID: TableField<StickersRecord, PhotoId?> = createField(DSL.name("source_photo_id"), SQLDataType.UUID, this, "", PhotoIdConverter())

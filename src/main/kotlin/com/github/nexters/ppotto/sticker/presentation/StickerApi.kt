@@ -252,7 +252,7 @@ interface StickerApi {
     @Operation(
         operationId = "markViewed",
         summary = "리캡 열람 처리",
-        description = "새 리캡 표시(빨간 점)를 제거하며 여러 번 호출해도 같은 결과를 보장함",
+        description = "요청 사용자의 새 리캡 표시(빨간 점)를 제거하며 여러 번 호출해도 같은 결과를 보장함",
         parameters = [
             Parameter(
                 name = "stickerId",

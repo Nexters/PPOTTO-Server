@@ -62,7 +62,7 @@ class BoardQueryService(
         return BoardDetail(
             id = board.id,
             name = board.name,
-            stickers = stickerQueryPort.getByBoardId(boardId),
+            stickers = stickerQueryPort.getByBoardId(boardId, userId),
             drawings = drawingRepository.findByBoardId(boardId),
         )
     }

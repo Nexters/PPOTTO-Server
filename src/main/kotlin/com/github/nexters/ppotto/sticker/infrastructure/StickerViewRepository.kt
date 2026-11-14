@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.jooq.tables.references.STICKER_VIEWS
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 
 @Repository
@@ -18,10 +19,22 @@ class StickerViewRepository(
     ): Boolean =
         dslContext
             .insertInto(STICKER_VIEWS, STICKER_VIEWS.STICKER_ID, STICKER_VIEWS.USER_ID)
-            .values(stickerId, userId)
+            .select(
+                dslContext
+                    .select(STICKERS.ID, DSL.`val`(userId, STICKER_VIEWS.USER_ID.dataType))
+                    .from(STICKERS)
+                    .where(STICKERS.ID.eq(stickerId))
+                    .and(STICKERS.DELETED_AT.isNull),
+            )
             .onConflict(STICKER_VIEWS.STICKER_ID, STICKER_VIEWS.USER_ID)
             .doNothing()
             .execute() == 1
+
+    fun existsActiveSticker(stickerId: StickerId): Boolean =
+        dslContext.fetchExists(
+            STICKERS,
+            STICKERS.ID.eq(stickerId).and(STICKERS.DELETED_AT.isNull),
+        )
 
     fun findViewedStickerIds(
         userId: UserId,

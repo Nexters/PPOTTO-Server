@@ -20,17 +20,22 @@ import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import org.springframework.stereotype.Service
 
 @Service
 class StickerQueryService(
     private val stickerRepository: StickerRepository,
     private val stickerRecapRepository: StickerRecapRepository,
+    private val stickerViewRepository: StickerViewRepository,
     private val stickerAccessService: StickerAccessService,
     private val recapPhotoQueryPorts: List<RecapPhotoQueryPort>,
     private val stickerImageStoragePorts: List<StickerImageStoragePort>,
 ) {
-    fun getByBoardId(boardId: BoardId): List<StickerItemResult> = toResults(stickerRepository.findAllByBoardId(boardId))
+    fun getByBoardId(
+        boardId: BoardId,
+        userId: UserId?,
+    ): List<StickerItemResult> = toResults(stickerRepository.findAllByBoardId(boardId), userId)
 
     fun getBoardSummaries(
         boardIds: Set<BoardId>,
@@ -62,14 +67,14 @@ class StickerQueryService(
     fun getRecap(
         userId: UserId,
         stickerId: StickerId,
-    ): StickerRecapResult = buildRecap(stickerAccessService.getAccessible(userId, stickerId), isParticipant = true, includePhotos = true)
+    ): StickerRecapResult = buildRecap(stickerAccessService.getAccessible(userId, stickerId), userId, includePhotos = true)
 
     fun getSharedRecap(shareToken: String): StickerRecapResult {
         val sticker =
             stickerRepository.findByShareToken(shareToken)
                 ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
 
-        return buildRecap(sticker, isParticipant = false, includePhotos = sticker.sharePhotos)
+        return buildRecap(sticker, null, includePhotos = sticker.sharePhotos)
     }
 
     fun findRecapInBoard(
@@ -80,11 +85,11 @@ class StickerQueryService(
         stickerRepository
             .findById(stickerId)
             ?.takeIf { it.boardId == boardId }
-            ?.let { buildRecap(it, isParticipant = false, includePhotos = includePhotos) }
+            ?.let { buildRecap(it, null, includePhotos = includePhotos) }
 
     private fun buildRecap(
         sticker: Sticker,
-        isParticipant: Boolean,
+        userId: UserId?,
         includePhotos: Boolean,
     ): StickerRecapResult {
         val comments =
@@ -103,9 +108,9 @@ class StickerQueryService(
             }
 
         return StickerRecapResult(
-            sticker = toResults(listOf(sticker), isParticipant).single(),
+            sticker = toResults(listOf(sticker), userId).single(),
             summary = sticker.summary,
-            share = if (isParticipant && sticker.shareToken != null) RecapShareResult(sticker.sharePhotos) else null,
+            share = if (userId != null && sticker.shareToken != null) RecapShareResult(sticker.sharePhotos) else null,
             comments = comments,
             photos = photos,
         )
@@ -157,15 +162,18 @@ class StickerQueryService(
 
     private fun toResults(
         stickers: List<Sticker>,
-        isParticipant: Boolean = true,
+        userId: UserId?,
     ): List<StickerItemResult> {
         val imageUrls = issueReadUrls(stickers.mapNotNull { it.imageKey })
+        val viewedStickerIds =
+            userId?.let { stickerViewRepository.findViewedStickerIds(it, stickers.map { sticker -> sticker.id }) }
+                ?: emptySet()
 
         return stickers.map { sticker ->
             StickerItemResult(
                 id = sticker.id,
                 title = sticker.title,
-                isNew = isParticipant && sticker.viewedAt == null,
+                isNew = userId != null && sticker.id !in viewedStickerIds,
                 type = sticker.type,
                 imageUrl = sticker.imageKey?.let { imageUrls[it] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
                 textContent = sticker.textContent,
