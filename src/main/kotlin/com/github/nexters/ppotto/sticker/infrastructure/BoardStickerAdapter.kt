@@ -25,9 +25,12 @@ class BoardStickerAdapter(
 ) : BoardStickerQueryPort,
     BoardStickerSummaryPort,
     BoardStickerCommandPort {
-    override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> =
+    override fun getByBoardId(
+        boardId: BoardId,
+        userId: UserId?,
+    ): List<BoardStickerItem> =
         stickerQueryService
-            .getByBoardId(boardId)
+            .getByBoardId(boardId, userId)
             .map { it.toBoardItem() }
 
     override fun getByBoardIds(

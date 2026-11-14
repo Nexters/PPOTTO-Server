@@ -46,7 +46,13 @@ class FakeBoardStickerPort :
     val deletedBoardIds = mutableListOf<BoardId>()
     val deletedCreators = mutableListOf<Pair<BoardId, UserId>>()
 
-    override fun getByBoardId(boardId: BoardId): List<BoardStickerItem> = stickersByBoardId[boardId].orEmpty()
+    override fun getByBoardId(
+        boardId: BoardId,
+        userId: UserId?,
+    ): List<BoardStickerItem> =
+        stickersByBoardId[boardId]
+            .orEmpty()
+            .map { sticker -> if (userId == null) sticker.copy(isNew = false) else sticker }
 
     override fun ownsAll(
         boardId: BoardId,

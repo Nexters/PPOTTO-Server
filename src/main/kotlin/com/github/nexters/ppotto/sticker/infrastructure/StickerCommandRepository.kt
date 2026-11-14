@@ -4,7 +4,6 @@ import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import org.jooq.DSLContext
-import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
 import java.time.Instant
 
@@ -19,17 +18,6 @@ class StickerCommandRepository(
         dslContext
             .update(STICKERS)
             .set(STICKERS.TITLE, title)
-            .where(STICKERS.ID.eq(stickerId))
-            .and(STICKERS.DELETED_AT.isNull)
-            .execute() == 1
-
-    fun markViewed(
-        stickerId: StickerId,
-        viewedAt: Instant,
-    ): Boolean =
-        dslContext
-            .update(STICKERS)
-            .set(STICKERS.VIEWED_AT, DSL.coalesce(STICKERS.VIEWED_AT, viewedAt))
             .where(STICKERS.ID.eq(stickerId))
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1

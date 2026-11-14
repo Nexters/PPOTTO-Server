@@ -188,7 +188,6 @@ class StickerRepository(
             type = StickerType.valueOf(type),
             title = title,
             summary = summary,
-            viewedAt = viewedAt,
             sourcePhotoId = sourcePhotoId,
             imageKey = imageKey,
             textContent = textContent,

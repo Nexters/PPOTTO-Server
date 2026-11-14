@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.support.addBoardMember
+import com.github.nexters.ppotto.jooq.tables.references.STICKER_VIEWS
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
@@ -198,7 +199,13 @@ class StickerControllerTest(
 
             When("리캡을 두 번 열람 처리하면") {
                 mockMvc.perform(post("/stickers/${sticker.id}/view").authenticatedAs(board.userId.value))
-                val firstViewedAt = checkNotNull(stickerRepository.findById(sticker.id)?.viewedAt)
+                val firstViewedAt =
+                    dslContext
+                        .select(STICKER_VIEWS.VIEWED_AT)
+                        .from(STICKER_VIEWS)
+                        .where(STICKER_VIEWS.STICKER_ID.eq(sticker.id))
+                        .and(STICKER_VIEWS.USER_ID.eq(board.userId))
+                        .fetchSingle(STICKER_VIEWS.VIEWED_AT)
                 val result = mockMvc.perform(post("/stickers/${sticker.id}/view").authenticatedAs(board.userId.value))
 
                 Then("두 번째 호출도 성공한다") {
@@ -206,7 +213,12 @@ class StickerControllerTest(
                 }
 
                 Then("최초 열람 시각을 덮어쓰지 않는다") {
-                    stickerRepository.findById(sticker.id)?.viewedAt shouldBe firstViewedAt
+                    dslContext
+                        .select(STICKER_VIEWS.VIEWED_AT)
+                        .from(STICKER_VIEWS)
+                        .where(STICKER_VIEWS.STICKER_ID.eq(sticker.id))
+                        .and(STICKER_VIEWS.USER_ID.eq(board.userId))
+                        .fetchSingle(STICKER_VIEWS.VIEWED_AT) shouldBe firstViewedAt
                 }
 
                 Then("이후 리캡 조회에서 isNew가 false로 뒤집힌다") {

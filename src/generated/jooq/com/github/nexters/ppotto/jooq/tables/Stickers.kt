@@ -24,11 +24,13 @@ import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_ANALYSIS
 import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_BOARD
 import com.github.nexters.ppotto.jooq.keys.STICKERS__FK_STICKERS_SOURCE_PHOTO
 import com.github.nexters.ppotto.jooq.keys.STICKER_PHOTOS__FK_STICKER_PHOTOS_STICKER
+import com.github.nexters.ppotto.jooq.keys.STICKER_VIEWS__FK_STICKER_VIEWS_STICKER
 import com.github.nexters.ppotto.jooq.tables.Analysis.AnalysisPath
 import com.github.nexters.ppotto.jooq.tables.Boards.BoardsPath
 import com.github.nexters.ppotto.jooq.tables.Photos.PhotosPath
 import com.github.nexters.ppotto.jooq.tables.RecapComments.RecapCommentsPath
 import com.github.nexters.ppotto.jooq.tables.StickerPhotos.StickerPhotosPath
+import com.github.nexters.ppotto.jooq.tables.StickerViews.StickerViewsPath
 import com.github.nexters.ppotto.jooq.tables.records.StickersRecord
 
 import java.time.Instant
@@ -122,11 +124,6 @@ open class Stickers(
      * The column <code>public.stickers.title</code>.
      */
     val TITLE: TableField<StickersRecord, String?> = createField(DSL.name("title"), SQLDataType.CLOB.nullable(false), this, "")
-
-    /**
-     * The column <code>public.stickers.viewed_at</code>.
-     */
-    val VIEWED_AT: TableField<StickersRecord, Instant?> = createField(DSL.name("viewed_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "", OffsetDateTimeInstantConverter())
 
     /**
      * The column <code>public.stickers.source_photo_id</code>.
@@ -308,6 +305,22 @@ open class Stickers(
 
     val stickerPhotos: StickerPhotosPath
         get(): StickerPhotosPath = stickerPhotos()
+
+    private lateinit var _stickerViews: StickerViewsPath
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>public.sticker_views</code> table
+     */
+    fun stickerViews(): StickerViewsPath {
+        if (!this::_stickerViews.isInitialized)
+            _stickerViews = StickerViewsPath(this, null, STICKER_VIEWS__FK_STICKER_VIEWS_STICKER.inverseKey)
+
+        return _stickerViews;
+    }
+
+    val stickerViews: StickerViewsPath
+        get(): StickerViewsPath = stickerViews()
     override fun getChecks(): List<Check<StickersRecord>> = listOf(
         Internal.createCheck(this, DSL.name("chk_sticker_main_color"), "(((main_color)::text ~ '^#[0-9A-Fa-f]{6}\$'::text))", true),
         Internal.createCheck(this, DSL.name("chk_stickers_content"), "(((((type)::text = 'IMAGE'::text) AND (image_key IS NOT NULL)) OR (((type)::text = 'TEXT'::text) AND (text_content IS NOT NULL))))", true)

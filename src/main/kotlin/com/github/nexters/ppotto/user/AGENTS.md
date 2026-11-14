@@ -9,7 +9,7 @@ User account domain. Owns active social identity uniqueness, encrypted provider 
 | `domain/` | Pure account model with statement-bodied validation and withdrawal transition, encrypted-token value type, and `USER-*` errors. The provider enum is the shared `global/oauth/OAuthProvider` |
 | `application/port/SocialAccountRevoker.kt` | Provider-account revoke boundary; the auth domain provides the real adapter |
 | `application/port/UserSessionRevoker.kt` | Auth integration boundary that revokes the service refresh token on withdrawal |
-| `application/port/WithdrawnUserDataPorts.kt` | Per-provider deletion contracts the cleanup service fans out to: board(+drawing), sticker(+recap, sticker image objects), analysis(+photo, original GCS objects), term agreement |
+| `application/port/WithdrawnUserDataPorts.kt` | Per-provider deletion contracts the cleanup service fans out to: board(+drawing), sticker(+recap, sticker image objects, user views), analysis(+photo, original GCS objects), term agreement |
 | `application/model/UserModels.kt` | `SocialUserCommand`, `UserRegistrationResult`, and `WithdrawnUserCleanupResult` — every application-layer value type of this domain |
 | `application/UserService.kt` | Atomic social lookup/create, active account/name lookup, participant display-name lookup, and withdrawal ordering |
 | `application/WithdrawnUserCleanupService.kt` | Bounded cleanup batch; orders the four deletion ports itself and hard-deletes a user only after they all succeed. Owns `MAX_CLEANUP_BATCH_SIZE` |

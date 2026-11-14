@@ -11,13 +11,13 @@ import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.StaleStickerRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext
 import org.springframework.context.ApplicationEventPublisher
@@ -28,6 +28,7 @@ class StickerStaleAggregateTest(
     stickerRepository: StickerRepository,
     stickerCommandRepository: StickerCommandRepository,
     stickerRecapRepository: StickerRecapRepository,
+    stickerViewRepository: StickerViewRepository,
     boardAccessService: BoardAccessService,
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
@@ -50,6 +51,7 @@ class StickerStaleAggregateTest(
                     staleRepository,
                     stickerCommandRepository,
                     stickerRecapRepository,
+                    stickerViewRepository,
                     StickerAccessService(staleRepository, boardAccessService),
                     listOf(StickerDrawingCommandPort { _, _ -> }),
                     emptyList(),
@@ -76,14 +78,17 @@ class StickerStaleAggregateTest(
             }
 
             When("열람 처리하면") {
-                val exception = shouldThrow<NotFoundException> { service.markViewed(board.userId, sticker.id) }
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        transactionTemplate.executeWithoutResult { service.markViewed(board.userId, sticker.id) }
+                    }
 
                 Then("STICKER-001 오류로 실패한다") {
                     exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
                 }
 
-                Then("삭제된 행의 열람 시각은 비어 있다") {
-                    deletedRow().viewedAt.shouldBeNull()
+                Then("삭제된 스티커의 열람 기록이 생성되지 않는다") {
+                    stickerViewRepository.findViewedStickerIds(board.userId, listOf(sticker.id)) shouldBe emptySet()
                 }
             }
 

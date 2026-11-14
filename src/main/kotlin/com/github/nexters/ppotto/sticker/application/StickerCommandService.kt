@@ -21,6 +21,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerType
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -34,6 +35,7 @@ class StickerCommandService(
     private val stickerRepository: StickerRepository,
     private val stickerCommandRepository: StickerCommandRepository,
     private val stickerRecapRepository: StickerRecapRepository,
+    private val stickerViewRepository: StickerViewRepository,
     private val stickerAccessService: StickerAccessService,
     private val drawingCommandPorts: List<StickerDrawingCommandPort>,
     private val stickerRegenerationPorts: List<StickerRegenerationPort>,
@@ -60,13 +62,8 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getAccessible(userId, stickerId)
-        if (sticker.viewedAt != null) {
-            return
-        }
-
-        sticker.markViewed(Instant.now())
-        if (!stickerCommandRepository.markViewed(sticker.id, checkNotNull(sticker.viewedAt))) {
+        val sticker = stickerAccessService.getAccessibleForUpdate(userId, stickerId)
+        if (!stickerViewRepository.saveIfAbsent(sticker.id, userId) && !stickerViewRepository.existsActiveSticker(sticker.id)) {
             throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
         }
     }
@@ -209,6 +206,7 @@ class StickerCommandService(
         boardId: BoardId,
         userId: UserId,
     ) {
+        stickerViewRepository.deleteAllByBoardAndUser(boardId, userId)
         val stickers = stickerRepository.findAllCreatedBy(boardId, userId)
         val stickerIds = softDeleteAll(stickers)
         if (stickerIds.isNotEmpty()) {

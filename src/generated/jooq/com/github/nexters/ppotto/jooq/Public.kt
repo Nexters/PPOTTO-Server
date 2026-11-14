@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.jooq.tables.Drawings
 import com.github.nexters.ppotto.jooq.tables.Photos
 import com.github.nexters.ppotto.jooq.tables.RecapComments
 import com.github.nexters.ppotto.jooq.tables.StickerPhotos
+import com.github.nexters.ppotto.jooq.tables.StickerViews
 import com.github.nexters.ppotto.jooq.tables.Stickers
 import com.github.nexters.ppotto.jooq.tables.TermAgreements
 import com.github.nexters.ppotto.jooq.tables.Terms
@@ -86,6 +87,11 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
     val STICKER_PHOTOS: StickerPhotos get() = StickerPhotos.STICKER_PHOTOS
 
     /**
+     * The table <code>public.sticker_views</code>.
+     */
+    val STICKER_VIEWS: StickerViews get() = StickerViews.STICKER_VIEWS
+
+    /**
      * The table <code>public.stickers</code>.
      */
     val STICKERS: Stickers get() = Stickers.STICKERS
@@ -122,6 +128,7 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
         Photos.PHOTOS,
         RecapComments.RECAP_COMMENTS,
         StickerPhotos.STICKER_PHOTOS,
+        StickerViews.STICKER_VIEWS,
         Stickers.STICKERS,
         TermAgreements.TERM_AGREEMENTS,
         Terms.TERMS,

@@ -9,7 +9,10 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import java.time.Instant
 
 fun interface BoardStickerQueryPort {
-    fun getByBoardId(boardId: BoardId): List<BoardStickerItem>
+    fun getByBoardId(
+        boardId: BoardId,
+        userId: UserId?,
+    ): List<BoardStickerItem>
 }
 
 fun interface BoardStickerSummaryPort {

@@ -16,6 +16,7 @@ import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
+import com.github.nexters.ppotto.jooq.tables.references.STICKER_VIEWS
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationPort
@@ -25,6 +26,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.imageStickerCreation
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -48,6 +50,7 @@ class StickerCommandServiceTest(
     stickerRepository: StickerRepository,
     stickerCommandRepository: StickerCommandRepository,
     stickerRecapRepository: StickerRecapRepository,
+    stickerViewRepository: StickerViewRepository,
     stickerAccessService: StickerAccessService,
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
@@ -76,6 +79,7 @@ class StickerCommandServiceTest(
             stickerRepository,
             stickerCommandRepository,
             stickerRecapRepository,
+            stickerViewRepository,
             stickerAccessService,
             drawingCommandPorts,
             regenerationPorts,
@@ -102,11 +106,22 @@ class StickerCommandServiceTest(
 
             When("두 번 열람 처리하면") {
                 service.markViewed(board.userId, sticker.id)
-                val firstViewedAt = checkNotNull(stickerRepository.findById(sticker.id)?.viewedAt)
+                val firstViewedAt =
+                    dslContext
+                        .select(STICKER_VIEWS.VIEWED_AT)
+                        .from(STICKER_VIEWS)
+                        .where(STICKER_VIEWS.STICKER_ID.eq(sticker.id))
+                        .and(STICKER_VIEWS.USER_ID.eq(board.userId))
+                        .fetchSingle(STICKER_VIEWS.VIEWED_AT)
                 service.markViewed(board.userId, sticker.id)
 
                 Then("최초 열람 시각을 덮어쓰지 않는다") {
-                    stickerRepository.findById(sticker.id)?.viewedAt shouldBe firstViewedAt
+                    dslContext
+                        .select(STICKER_VIEWS.VIEWED_AT)
+                        .from(STICKER_VIEWS)
+                        .where(STICKER_VIEWS.STICKER_ID.eq(sticker.id))
+                        .and(STICKER_VIEWS.USER_ID.eq(board.userId))
+                        .fetchSingle(STICKER_VIEWS.VIEWED_AT) shouldBe firstViewedAt
                 }
             }
 

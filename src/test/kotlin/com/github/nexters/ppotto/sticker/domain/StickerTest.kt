@@ -33,16 +33,6 @@ class StickerTest :
                 }
             }
 
-            When("두 번 열람 처리하면") {
-                val firstViewedAt = Instant.parse("2026-07-30T01:00:00Z")
-                sticker.markViewed(firstViewedAt)
-                sticker.markViewed(Instant.parse("2026-07-30T02:00:00Z"))
-
-                Then("최초 열람 시각을 유지한다") {
-                    sticker.viewedAt shouldBe firstViewedAt
-                }
-            }
-
             When("두 번 삭제 처리하면") {
                 val firstDeletedAt = Instant.parse("2026-07-30T03:00:00Z")
                 sticker.delete(firstDeletedAt)
@@ -210,7 +200,6 @@ private fun imageSticker(
     type = StickerType.IMAGE,
     title = "이미지",
     summary = "웃기고 귀여우면 일단 주워요",
-    viewedAt = null,
     sourcePhotoId = PhotoId(UUID.randomUUID()),
     imageKey = imageKey,
     textContent = null,

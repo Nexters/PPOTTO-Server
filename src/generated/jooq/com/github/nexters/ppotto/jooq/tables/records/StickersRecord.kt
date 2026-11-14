@@ -42,85 +42,81 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         set(value): Unit = set(4, value)
         get(): String = get(4) as String
 
-    open var viewedAt: Instant?
-        set(value): Unit = set(5, value)
-        get(): Instant? = get(5) as Instant?
-
     open var sourcePhotoId: PhotoId?
-        set(value): Unit = set(6, value)
-        get(): PhotoId? = get(6) as PhotoId?
+        set(value): Unit = set(5, value)
+        get(): PhotoId? = get(5) as PhotoId?
 
     open var imageKey: String?
+        set(value): Unit = set(6, value)
+        get(): String? = get(6) as String?
+
+    open var textContent: String?
         set(value): Unit = set(7, value)
         get(): String? = get(7) as String?
 
-    open var textContent: String?
-        set(value): Unit = set(8, value)
-        get(): String? = get(8) as String?
-
     open var posX: Double?
+        set(value): Unit = set(8, value)
+        get(): Double? = get(8) as Double?
+
+    open var posY: Double?
         set(value): Unit = set(9, value)
         get(): Double? = get(9) as Double?
 
-    open var posY: Double?
+    open var scale: Double?
         set(value): Unit = set(10, value)
         get(): Double? = get(10) as Double?
 
-    open var scale: Double?
+    open var rotation: Double?
         set(value): Unit = set(11, value)
         get(): Double? = get(11) as Double?
 
-    open var rotation: Double?
-        set(value): Unit = set(12, value)
-        get(): Double? = get(12) as Double?
-
     open var zIndex: Int?
-        set(value): Unit = set(13, value)
-        get(): Int? = get(13) as Int?
+        set(value): Unit = set(12, value)
+        get(): Int? = get(12) as Int?
 
     open var badgeOffsetX: Double?
+        set(value): Unit = set(13, value)
+        get(): Double? = get(13) as Double?
+
+    open var badgeOffsetY: Double?
         set(value): Unit = set(14, value)
         get(): Double? = get(14) as Double?
 
-    open var badgeOffsetY: Double?
+    open var badgeRotation: Double?
         set(value): Unit = set(15, value)
         get(): Double? = get(15) as Double?
 
-    open var badgeRotation: Double?
-        set(value): Unit = set(16, value)
-        get(): Double? = get(16) as Double?
-
     open var createdAt: Instant?
+        set(value): Unit = set(16, value)
+        get(): Instant? = get(16) as Instant?
+
+    open var updatedAt: Instant?
         set(value): Unit = set(17, value)
         get(): Instant? = get(17) as Instant?
 
-    open var updatedAt: Instant?
+    open var deletedAt: Instant?
         set(value): Unit = set(18, value)
         get(): Instant? = get(18) as Instant?
 
-    open var deletedAt: Instant?
-        set(value): Unit = set(19, value)
-        get(): Instant? = get(19) as Instant?
-
     open var summary: String
-        set(value): Unit = set(20, value)
-        get(): String = get(20) as String
+        set(value): Unit = set(19, value)
+        get(): String = get(19) as String
 
     open var regenerationLockedUntil: Instant?
-        set(value): Unit = set(21, value)
-        get(): Instant? = get(21) as Instant?
+        set(value): Unit = set(20, value)
+        get(): Instant? = get(20) as Instant?
 
     open var mainColor: String?
+        set(value): Unit = set(21, value)
+        get(): String? = get(21) as String?
+
+    open var shareToken: String?
         set(value): Unit = set(22, value)
         get(): String? = get(22) as String?
 
-    open var shareToken: String?
-        set(value): Unit = set(23, value)
-        get(): String? = get(23) as String?
-
     open var sharePhotos: Boolean?
-        set(value): Unit = set(24, value)
-        get(): Boolean? = get(24) as Boolean?
+        set(value): Unit = set(23, value)
+        get(): Boolean? = get(23) as Boolean?
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -131,13 +127,12 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
     /**
      * Create a detached, initialised StickersRecord
      */
-    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, viewedAt: Instant? = null, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null, mainColor: String? = null, shareToken: String? = null, sharePhotos: Boolean? = null): this() {
+    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null, mainColor: String? = null, shareToken: String? = null, sharePhotos: Boolean? = null): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId
         this.type = type
         this.title = title
-        this.viewedAt = viewedAt
         this.sourcePhotoId = sourcePhotoId
         this.imageKey = imageKey
         this.textContent = textContent
@@ -170,7 +165,6 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
             this.boardId = value.boardId
             this.type = value.type
             this.title = value.title
-            this.viewedAt = value.viewedAt
             this.sourcePhotoId = value.sourcePhotoId
             this.imageKey = value.imageKey
             this.textContent = value.textContent

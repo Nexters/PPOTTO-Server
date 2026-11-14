@@ -17,12 +17,27 @@ class StickerAccessService(
     fun getAccessible(
         userId: UserId,
         stickerId: StickerId,
+    ): Sticker = getAccessible(userId, stickerId, lockBoard = false)
+
+    fun getAccessibleForUpdate(
+        userId: UserId,
+        stickerId: StickerId,
+    ): Sticker = getAccessible(userId, stickerId, lockBoard = true)
+
+    private fun getAccessible(
+        userId: UserId,
+        stickerId: StickerId,
+        lockBoard: Boolean,
     ): Sticker {
         val sticker =
             stickerRepository.findById(stickerId)
                 ?: throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
         try {
-            boardAccessService.getAccessibleById(sticker.boardId, userId)
+            if (lockBoard) {
+                boardAccessService.getAccessibleByIdForUpdate(sticker.boardId, userId)
+            } else {
+                boardAccessService.getAccessibleById(sticker.boardId, userId)
+            }
         } catch (_: NotFoundException) {
             throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
         }

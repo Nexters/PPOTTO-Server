@@ -10,7 +10,10 @@ interface WithdrawnUserBoardDeletionPort {
 }
 
 fun interface WithdrawnUserStickerDeletionPort {
-    fun deleteAllByBoardIds(boardIds: Collection<BoardId>)
+    fun deleteAllByUserAndBoardIds(
+        userId: UserId,
+        boardIds: Collection<BoardId>,
+    )
 }
 
 fun interface WithdrawnUserAnalysisDeletionPort {

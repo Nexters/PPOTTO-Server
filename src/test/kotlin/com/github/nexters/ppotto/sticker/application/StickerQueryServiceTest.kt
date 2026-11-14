@@ -13,6 +13,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.imageStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -34,6 +35,7 @@ class StickerQueryServiceTest(
     stickerRepository: StickerRepository,
     stickerCommandRepository: StickerCommandRepository,
     stickerRecapRepository: StickerRecapRepository,
+    stickerViewRepository: StickerViewRepository,
     stickerAccessService: StickerAccessService,
     photoRepository: PhotoRepository,
     analysisRepository: AnalysisRepository,
@@ -74,7 +76,7 @@ class StickerQueryServiceTest(
             )
 
             When("보드 스티커를 조회하면") {
-                val result = service.getByBoardId(board.id).single()
+                val result = service.getByBoardId(board.id, board.userId).single()
 
                 Then("읽기용 이미지 URL과 배치를 반환한다") {
                     result.id shouldBe sticker.id
@@ -142,10 +144,11 @@ class StickerQueryServiceTest(
                 StickerQueryService(
                     stickerRepository,
                     stickerRecapRepository,
+                    stickerViewRepository,
                     stickerAccessService,
                     emptyList(),
                     listOf(signingPort),
-                ).getByBoardId(board.id)
+                ).getByBoardId(board.id, board.userId)
 
                 Then("RSA 서명은 열린 트랜잭션 없이 실행된다") {
                     signingPort.transactionActiveAtSigning shouldBe false

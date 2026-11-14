@@ -11,6 +11,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.StaleStickerRepository
 import com.github.nexters.ppotto.sticker.support.stickerLayout
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
@@ -31,6 +32,7 @@ class StickerBoardSurfaceTest(
     stickerRepository: StickerRepository,
     stickerCommandRepository: StickerCommandRepository,
     stickerRecapRepository: StickerRecapRepository,
+    stickerViewRepository: StickerViewRepository,
     stickerAccessService: StickerAccessService,
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
@@ -48,6 +50,7 @@ class StickerBoardSurfaceTest(
                 StaleStickerRepository(dslContext, staleStickers),
                 stickerCommandRepository,
                 stickerRecapRepository,
+                stickerViewRepository,
                 stickerAccessService,
                 listOf(StickerDrawingCommandPort { _, _ -> }),
                 emptyList(),

@@ -28,7 +28,7 @@ class BoardShareQueryService(
             boardName = board.name,
             sharerName = sharerName,
             scope = share.scope,
-            stickers = stickerQueryPort.getByBoardId(board.id).map { it.copy(isNew = false) },
+            stickers = stickerQueryPort.getByBoardId(board.id, null),
             drawings = drawingRepository.findByBoardId(board.id),
         )
     }

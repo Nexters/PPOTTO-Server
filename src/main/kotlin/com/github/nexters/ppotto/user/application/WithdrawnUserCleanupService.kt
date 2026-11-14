@@ -40,7 +40,7 @@ class WithdrawnUserCleanupService(
 
     private fun deleteAllDataOf(userId: UserId) {
         val boardIds = boardDeletionPort.findAllBoardIds(userId)
-        stickerDeletionPort.deleteAllByBoardIds(boardIds)
+        stickerDeletionPort.deleteAllByUserAndBoardIds(userId, boardIds)
         analysisDeletionPort.deleteAllByUserId(userId)
         boardDeletionPort.deleteAllByUserId(userId)
         termAgreementDeletionPort.deleteAllByUserId(userId)

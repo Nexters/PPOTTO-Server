@@ -41,6 +41,9 @@ import com.github.nexters.ppotto.sticker.application.model.AnalysisStickerResult
 import com.github.nexters.ppotto.sticker.application.model.SaveAnalysisResultCommand
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.domain.StickerType
+import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
+import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
 import com.github.nexters.ppotto.support.saveTestUser
@@ -90,6 +93,8 @@ class WithdrawnUserDataDeletionIntegrationTest(
     termAgreementDeletionPort: WithdrawnUserTermAgreementDeletionPort,
     photoStorage: FakePhotoStorage,
     objectStorageCleaner: RecordingObjectStorageCleaner,
+    stickerRepository: StickerRepository,
+    stickerViewRepository: StickerViewRepository,
     dslContext: DSLContext,
 ) : IntegrationTest({
         fun saveAnalysisSticker(
@@ -217,6 +222,10 @@ class WithdrawnUserDataDeletionIntegrationTest(
             val otherBoard = boardRepository.save(other.id)
             dslContext.addBoardMember(otherBoard.id, fixture.userId)
             dslContext.addBoardMember(fixture.boardId, other.id)
+            val otherAnalysis = analysisRepository.save(other.id, otherBoard.id)
+            val otherSticker = stickerRepository.save(otherAnalysis.id, otherBoard.id, textStickerCreation())
+            stickerViewRepository.saveIfAbsent(otherSticker.id, fixture.userId)
+            stickerViewRepository.saveIfAbsent(otherSticker.id, other.id)
             val issuedInvitation =
                 boardInvitationRepository.save(
                     otherBoard.id,
@@ -242,6 +251,11 @@ class WithdrawnUserDataDeletionIntegrationTest(
                 Then("탈퇴 사용자가 참여했던 다른 사용자의 보드는 남긴다") {
                     dslContext.fetchExists(BOARDS, BOARDS.ID.eq(otherBoard.id)) shouldBe true
                     dslContext.fetchExists(BOARD_SHARES, BOARD_SHARES.ID.eq(otherShare.id)) shouldBe true
+                }
+
+                Then("다른 사용자의 스티커 열람 기록 중 탈퇴 사용자 것만 지운다") {
+                    stickerViewRepository.findViewedStickerIds(fixture.userId, listOf(otherSticker.id)) shouldBe emptySet()
+                    stickerViewRepository.findViewedStickerIds(other.id, listOf(otherSticker.id)) shouldBe setOf(otherSticker.id)
                 }
             }
         }

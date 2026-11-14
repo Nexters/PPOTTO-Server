@@ -44,9 +44,9 @@ private class RecordingDeletionPorts(
         }
 
     val stickerPort =
-        WithdrawnUserStickerDeletionPort { boardIds ->
+        WithdrawnUserStickerDeletionPort { userId, boardIds ->
             deletionOrder += "sticker"
-            sticker.deleteAllByBoardIds(boardIds)
+            sticker.deleteAllByUserAndBoardIds(userId, boardIds)
         }
 
     val analysisPort =
@@ -120,7 +120,7 @@ class WithdrawnUserCleanupServiceTest(
                 WithdrawnUserCleanupService(
                     userRepository = userRepository,
                     boardDeletionPort = boardDeletionPort,
-                    stickerDeletionPort = WithdrawnUserStickerDeletionPort { error("연관 데이터 삭제 실패") },
+                    stickerDeletionPort = WithdrawnUserStickerDeletionPort { _, _ -> error("연관 데이터 삭제 실패") },
                     analysisDeletionPort = analysisDeletionPort,
                     termAgreementDeletionPort = termAgreementDeletionPort,
                 )
