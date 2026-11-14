@@ -10,6 +10,7 @@ import com.github.nexters.ppotto.jooq.tables.references.PHOTOS
 import com.github.nexters.ppotto.jooq.tables.references.RECAP_COMMENTS
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.jooq.tables.references.STICKER_PHOTOS
+import com.github.nexters.ppotto.jooq.tables.references.STICKER_VIEWS
 import com.github.nexters.ppotto.jooq.tables.references.TERMS
 import com.github.nexters.ppotto.jooq.tables.references.TERM_AGREEMENTS
 import com.github.nexters.ppotto.jooq.tables.references.USERS
@@ -35,6 +36,7 @@ class DatabaseCleaner(
             listOf(
                 RECAP_COMMENTS,
                 STICKER_PHOTOS,
+                STICKER_VIEWS,
                 DRAWINGS,
                 STICKERS,
                 PHOTOS,

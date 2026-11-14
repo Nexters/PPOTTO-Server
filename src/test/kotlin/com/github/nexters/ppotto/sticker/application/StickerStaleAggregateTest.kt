@@ -11,6 +11,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerCommandRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.StaleStickerRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -28,6 +29,7 @@ class StickerStaleAggregateTest(
     stickerRepository: StickerRepository,
     stickerCommandRepository: StickerCommandRepository,
     stickerRecapRepository: StickerRecapRepository,
+    stickerViewRepository: StickerViewRepository,
     boardAccessService: BoardAccessService,
     analysisRepository: AnalysisRepository,
     boardRepository: BoardRepository,
@@ -50,6 +52,7 @@ class StickerStaleAggregateTest(
                     staleRepository,
                     stickerCommandRepository,
                     stickerRecapRepository,
+                    stickerViewRepository,
                     StickerAccessService(staleRepository, boardAccessService),
                     listOf(StickerDrawingCommandPort { _, _ -> }),
                     emptyList(),

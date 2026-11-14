@@ -14,6 +14,7 @@ import com.github.nexters.ppotto.global.error.UnauthorizedException
 import com.github.nexters.ppotto.sticker.domain.RecapCommentCreation
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
+import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
@@ -37,6 +38,7 @@ class BoardParticipationServiceTest(
     analysisRepository: AnalysisRepository,
     stickerRepository: StickerRepository,
     stickerRecapRepository: StickerRecapRepository,
+    stickerViewRepository: StickerViewRepository,
 ) : IntegrationTest({
         Given("유효한 보드 초대가") {
             val owner = userRepository.saveTestUser("김용희")
@@ -229,6 +231,8 @@ class BoardParticipationServiceTest(
                 memberSticker.id,
                 listOf(RecapCommentCreation("멤버 리캡", null, null)),
             )
+            stickerViewRepository.saveIfAbsent(ownerSticker.id, member.id)
+            stickerViewRepository.saveIfAbsent(ownerSticker.id, owner.id)
 
             When("멤버가 보드에서 나가면") {
                 participationService.leave(board.id, member.id)
@@ -241,6 +245,11 @@ class BoardParticipationServiceTest(
                         .findComments(ownerSticker.id)
                         .single()
                         .content shouldBe "오너 리캡"
+                }
+
+                Then("나간 멤버의 열람 기록만 삭제한다") {
+                    stickerViewRepository.findViewedStickerIds(member.id, listOf(ownerSticker.id)) shouldBe emptySet()
+                    stickerViewRepository.findViewedStickerIds(owner.id, listOf(ownerSticker.id)) shouldBe setOf(ownerSticker.id)
                 }
             }
         }
