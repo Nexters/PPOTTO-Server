@@ -9,6 +9,7 @@ import java.util.UUID
 data class StickerItemResult(
     val id: StickerId,
     val title: String,
+    val creatorName: String,
     val isNew: Boolean,
     val type: StickerType,
     val imageUrl: String?,

@@ -44,6 +44,7 @@ interface BoardStickerCommandPort {
 data class BoardStickerItem(
     val id: StickerId,
     val title: String,
+    val creatorName: String,
     val isNew: Boolean,
     val type: BoardStickerType,
     val imageUrl: String?,

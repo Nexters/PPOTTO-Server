@@ -69,6 +69,7 @@ class BoardStickerAdapter(
         BoardStickerItem(
             id = id,
             title = title,
+            creatorName = creatorName,
             isNew = isNew,
             type = type.toBoardType(),
             imageUrl = imageUrl,

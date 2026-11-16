@@ -69,6 +69,7 @@ private val RECAP_DETAIL_RESPONSE =
                         StickerResponse(
                             id = StickerId(STICKER_ID),
                             title = "동물 밈 짤줍",
+                            creatorName = "김용희",
                             isNew = false,
                             type = StickerType.IMAGE,
                             imageUrl = "https://storage.googleapis.com/ppotto-stickers/01983f2b.png?X-Goog-Signature=sample",

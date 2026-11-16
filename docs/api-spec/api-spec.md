@@ -900,6 +900,7 @@ Request example:
       {
         "id": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
         "title": "동물 밈 짤줍",
+        "creatorName": "김용희",
         "isNew": false,
         "type": "IMAGE",
         "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-1a2b.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=8f3a...",
@@ -916,6 +917,7 @@ Request example:
       {
         "id": "01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
         "title": "언제까지 일해요",
+        "creatorName": "김용희",
         "isNew": true,
         "type": "TEXT",
         "imageUrl": null,
@@ -932,6 +934,7 @@ Request example:
       {
         "id": "01983f2b-5e6f-7a7b-c8d9-0e1f2a3b4c5d",
         "title": "방금 만든 스티커",
+        "creatorName": "김용희",
         "isNew": true,
         "type": "IMAGE",
         "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-5e6f.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=2a7c...",
@@ -1033,6 +1036,7 @@ Request example:
 #### Notes
 - 방장과 참여자(`board_members`) 모두 조회하고 레이아웃을 저장할 수 있습니다. 둘 다 아닌 사용자에게는 보드가 없는 것과 같은 `404 BOARD-002`로 응답합니다. 이름 변경과 보드 삭제는 방장만 할 수 있습니다.
 - 보드, 스티커, 드로잉을 한 번에 반환합니다. `isNew`는 요청 사용자의 미열람 여부이며 빨간 점 표시 여부입니다. imageUrl은 만료가 있으므로 보드에 진입할 때마다 새로 조회합니다.
+- 각 스티커의 `creatorName`은 스티커를 생성한 사용자의 현재 이름입니다. 개인 보드와 공동 보드에 동일하게 포함됩니다.
 - 생성 직후라 아직 배치되지 않은 스티커는 `posX`/`posY`/`zIndex` 키 자체가 없습니다(서버가 null 필드를 직렬화하지 않음. 위 예시의 세 번째 스티커 참고). `scale`은 1, `rotation`은 0으로 채워져 있습니다. 클라이언트는 `posX` 키가 없으면 보드 상태를 보고 겹치지 않는 위치와 쌓임 순서를 계산해 `PATCH /boards/{boardId}/layout`로 채워야 합니다.
 
 ### PATCH /boards/{boardId}
@@ -2293,6 +2297,7 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
       {
         "id": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
         "title": "동물 밈 짤줍",
+        "creatorName": "김용희",
         "isNew": false,
         "type": "IMAGE",
         "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-1a2b.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=8f3a...",
@@ -2385,6 +2390,7 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 - `RECAP` 범위이면 `photos`는 항상 빈 배열입니다. 서버가 사진 읽기 URL 자체를 발급하지 않습니다.
 - 공유 범위는 공동 보드의 모든 스티커에 똑같이 적용합니다. 공유자가 아닌 참여자의 스티커도 같은 범위로 리캡과 사진을 반환합니다.
 - `sticker.isNew`는 항상 `false`입니다.
+- `sticker.creatorName`은 스티커를 생성한 사용자의 현재 이름입니다.
 - 사진 URL의 만료(1시간)는 그대로입니다.
 
 ## 8. stickers API
@@ -2416,6 +2422,7 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
     "sticker": {
       "id": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
       "title": "동물 밈 짤줍",
+      "creatorName": "김용희",
       "isNew": false,
       "type": "IMAGE",
       "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-1a2b.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=8f3a...",
@@ -2604,6 +2611,7 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
 - 응답 스키마는 `GET /stickers/{stickerId}`와 완전히 같습니다.
 - **공유할 때 `includePhotos`를 false로 두었다면 `photos`는 항상 빈 배열입니다.** 서버가 사진 읽기 URL 자체를 발급하지 않으므로, 클라이언트가 무엇을 보내도 원본 사진은 링크로 새어 나가지 않습니다.
 - `sticker.isNew`는 항상 false입니다. 익명 공유 조회에는 사용자별 열람 상태를 적용하지 않습니다.
+- `sticker.creatorName`은 스티커를 생성한 사용자의 현재 이름입니다. 인증 조회와 공개 공유 조회에 동일하게 포함됩니다.
 - 사진 URL의 만료(1시간)는 그대로입니다. 공유 링크 자체에는 만료가 없고 소유자가 해제할 때까지 유효합니다.
 
 ### POST /stickers/{stickerId}/share
@@ -2981,6 +2989,7 @@ Request example:
     "sticker": {
       "id": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
       "title": "동물 밈 짤줍",
+      "creatorName": "김용희",
       "isNew": false,
       "type": "IMAGE",
       "imageUrl": "https://storage.googleapis.com/ppotto-stickers/01983f2b-1a2b.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Expires=3600&X-Goog-Signature=8f3a...",

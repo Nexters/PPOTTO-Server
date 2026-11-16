@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.analysis.application.AnalysisQueryService
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
@@ -21,6 +22,7 @@ import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
+import com.github.nexters.ppotto.user.application.UserService
 import org.springframework.stereotype.Service
 
 @Service
@@ -29,6 +31,8 @@ class StickerQueryService(
     private val stickerRecapRepository: StickerRecapRepository,
     private val stickerViewRepository: StickerViewRepository,
     private val stickerAccessService: StickerAccessService,
+    private val analysisQueryService: AnalysisQueryService,
+    private val userService: UserService,
     private val recapPhotoQueryPorts: List<RecapPhotoQueryPort>,
     private val stickerImageStoragePorts: List<StickerImageStoragePort>,
 ) {
@@ -164,15 +168,20 @@ class StickerQueryService(
         stickers: List<Sticker>,
         userId: UserId?,
     ): List<StickerItemResult> {
+        if (stickers.isEmpty()) return emptyList()
+        val creatorIds = analysisQueryService.findCreatorIds(stickers.map { it.analysisId }.toSet())
+        val creatorNames = userService.findDisplayNames(creatorIds.values.toSet())
         val imageUrls = issueReadUrls(stickers.mapNotNull { it.imageKey })
         val viewedStickerIds =
             userId?.let { stickerViewRepository.findViewedStickerIds(it, stickers.map { sticker -> sticker.id }) }
                 ?: emptySet()
 
         return stickers.map { sticker ->
+            val creatorId = checkNotNull(creatorIds[sticker.analysisId]) { "스티커 분석의 작성자가 누락되었습니다: ${sticker.id}" }
             StickerItemResult(
                 id = sticker.id,
                 title = sticker.title,
+                creatorName = checkNotNull(creatorNames[creatorId]) { "스티커 작성자 이름이 누락되었습니다: $creatorId" },
                 isNew = userId != null && sticker.id !in viewedStickerIds,
                 type = sticker.type,
                 imageUrl = sticker.imageKey?.let { imageUrls[it] ?: error("스티커 이미지 읽기 URL이 누락되었습니다.") },
