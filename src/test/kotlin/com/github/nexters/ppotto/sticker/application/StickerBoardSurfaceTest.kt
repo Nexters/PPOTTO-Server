@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.board.application.BoardStickerEventService
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.StickerId
@@ -39,6 +40,7 @@ class StickerBoardSurfaceTest(
     userRepository: UserRepository,
     transactionTemplate: TransactionTemplate,
     eventPublisher: ApplicationEventPublisher,
+    boardStickerEventService: BoardStickerEventService,
     dslContext: DSLContext,
 ) : IntegrationTest({
         fun layoutOf(id: StickerId) = StickerLayoutCommand(id, stickerLayout())
@@ -56,6 +58,7 @@ class StickerBoardSurfaceTest(
                 emptyList(),
                 transactionTemplate,
                 eventPublisher,
+                boardStickerEventService,
             )
 
         Given("한 보드에 스티커 두 개가 있는 상태에서") {

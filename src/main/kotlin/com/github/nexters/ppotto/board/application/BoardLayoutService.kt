@@ -39,7 +39,7 @@ class BoardLayoutService(
         val softDeleted = drawingRepository.softDeleteByIds(boardId, command.deletedDrawingIds)
         check(softDeleted == command.deletedDrawingIds.size) { "소유권을 확인한 그림의 소프트 삭제가 반영되지 않았습니다." }
 
-        afterCommit { boardEventBroker.publish(BoardEvent.layoutUpdated(boardId)) }
+        afterCommit { boardEventBroker.publish(BoardEvent.updated(boardId)) }
     }
 
     private fun referencedStickerIds(command: BoardLayoutUpdateCommand): Set<StickerId> =

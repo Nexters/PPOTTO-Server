@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.board.application.BoardAccessService
+import com.github.nexters.ppotto.board.application.BoardStickerEventService
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
@@ -35,6 +36,7 @@ class StickerStaleAggregateTest(
     userRepository: UserRepository,
     transactionTemplate: TransactionTemplate,
     eventPublisher: ApplicationEventPublisher,
+    boardStickerEventService: BoardStickerEventService,
     dslContext: DSLContext,
 ) : IntegrationTest({
         Given("소유권 확인 직후 다른 트랜잭션이 스티커를 삭제한 상태에서") {
@@ -57,6 +59,7 @@ class StickerStaleAggregateTest(
                     emptyList(),
                     transactionTemplate,
                     eventPublisher,
+                    boardStickerEventService,
                 )
 
             fun deletedRow() =

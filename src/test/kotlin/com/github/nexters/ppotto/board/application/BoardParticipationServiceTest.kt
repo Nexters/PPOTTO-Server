@@ -1,6 +1,9 @@
 package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.board.application.model.BoardEvent
+import com.github.nexters.ppotto.board.application.model.BoardEventType
+import com.github.nexters.ppotto.board.application.port.BoardEventConnection
 import com.github.nexters.ppotto.board.domain.Board
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.BoardRole
@@ -24,7 +27,10 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import org.springframework.transaction.support.TransactionTemplate
 import java.time.Instant
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 class BoardParticipationServiceTest(
     participationService: BoardParticipationService,
@@ -39,7 +45,75 @@ class BoardParticipationServiceTest(
     stickerRepository: StickerRepository,
     stickerRecapRepository: StickerRecapRepository,
     stickerViewRepository: StickerViewRepository,
+    boardEventSubscriptionService: BoardEventSubscriptionService,
+    transactionTemplate: TransactionTemplate,
 ) : IntegrationTest({
+        Given("보드의 참여자 변경을 구독 중일 때") {
+            When("새 멤버가 참여한 뒤 기존 멤버가 나가면") {
+                Then("실제 참여 관계 변경만 남은 참여자에게 알린다") {
+                    val owner = userRepository.saveTestUser()
+                    val member = userRepository.saveTestUser()
+                    val newcomer = userRepository.saveTestUser()
+                    val board = boardRepository.save(owner.id)
+                    membershipRepository.saveIfAbsent(board.id, member.id)
+                    val invitation = invitationService.issue(board.id, owner.id)
+                    val ownerConnection = ParticipationEventConnection()
+                    val memberConnection = ParticipationEventConnection()
+                    val ownerSubscription =
+                        boardEventSubscriptionService.subscribe(board.id, owner.id, ownerConnection)
+                    val memberSubscription =
+                        boardEventSubscriptionService.subscribe(board.id, member.id, memberConnection)
+                    try {
+                        participationService.join(invitation.code, newcomer.id)
+                        val ownerJoinEvent = ownerConnection.events.poll(3, TimeUnit.SECONDS)
+                        val memberJoinEvent = memberConnection.events.poll(3, TimeUnit.SECONDS)
+                        ownerJoinEvent?.type shouldBe BoardEventType.BOARD_PARTICIPANTS_UPDATED
+                        memberJoinEvent?.type shouldBe BoardEventType.BOARD_PARTICIPANTS_UPDATED
+
+                        participationService.join(invitation.code, newcomer.id)
+                        ownerConnection.events.poll(200, TimeUnit.MILLISECONDS) shouldBe null
+
+                        participationService.leave(board.id, member.id)
+                        val ownerLeaveEvent = ownerConnection.events.poll(3, TimeUnit.SECONDS)
+                        ownerLeaveEvent?.type shouldBe BoardEventType.BOARD_PARTICIPANTS_UPDATED
+                        memberConnection.events.poll(200, TimeUnit.MILLISECONDS) shouldBe null
+                        memberConnection.completed shouldBe true
+                        shouldThrow<NotFoundException> {
+                            boardEventSubscriptionService.subscribe(board.id, member.id, ParticipationEventConnection())
+                        }
+                    } finally {
+                        ownerSubscription.close()
+                        memberSubscription.close()
+                    }
+                }
+            }
+        }
+
+        Given("신규 참여 트랜잭션이 롤백되면") {
+            When("참여를 요청하면") {
+                Then("참여 관계와 이벤트가 남지 않는다") {
+                    val owner = userRepository.saveTestUser()
+                    val newcomer = userRepository.saveTestUser()
+                    val board = boardRepository.save(owner.id)
+                    val invitation = invitationService.issue(board.id, owner.id)
+                    val connection = ParticipationEventConnection()
+                    val subscription = boardEventSubscriptionService.subscribe(board.id, owner.id, connection)
+                    try {
+                        transactionTemplate.executeWithoutResult { status ->
+                            participationService.join(invitation.code, newcomer.id)
+                            connection.events.isEmpty() shouldBe true
+                            status.setRollbackOnly()
+                        }
+
+                        membershipRepository.exists(board.id, newcomer.id) shouldBe false
+                        connection.events.poll(200, TimeUnit.MILLISECONDS) shouldBe null
+                    } finally {
+                        subscription.close()
+                    }
+                }
+            }
+        }
+
         Given("유효한 보드 초대가") {
             val owner = userRepository.saveTestUser("김용희")
             val member = userRepository.saveTestUser("이수민")
@@ -259,3 +333,18 @@ class BoardParticipationServiceTest(
             }
         }
     })
+
+private class ParticipationEventConnection : BoardEventConnection {
+    val events = LinkedBlockingQueue<BoardEvent>()
+
+    @Volatile
+    var completed = false
+
+    override fun send(event: BoardEvent): Boolean = events.offer(event)
+
+    override fun heartbeat(): Boolean = true
+
+    override fun complete() {
+        completed = true
+    }
+}

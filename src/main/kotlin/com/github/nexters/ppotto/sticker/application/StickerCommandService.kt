@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.board.application.BoardStickerEventService
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -41,6 +42,7 @@ class StickerCommandService(
     private val stickerRegenerationPorts: List<StickerRegenerationPort>,
     private val transactionTemplate: TransactionTemplate,
     private val eventPublisher: ApplicationEventPublisher,
+    private val boardStickerEventService: BoardStickerEventService,
 ) {
     @Transactional
     fun rename(
@@ -54,6 +56,7 @@ class StickerCommandService(
         if (!stickerCommandRepository.updateTitle(sticker.id, sticker.title)) {
             throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
         }
+        boardStickerEventService.publishUpdated(sticker.boardId)
         return StickerTitleResult(sticker.id, sticker.title)
     }
 
@@ -82,6 +85,7 @@ class StickerCommandService(
         }
         drawingCommandPort.deleteByStickerIds(sticker.boardId, listOf(sticker.id))
         stickerRecapRepository.deleteByStickerIds(listOf(sticker.id))
+        boardStickerEventService.publishUpdated(sticker.boardId)
     }
 
     fun regenerate(
@@ -141,6 +145,7 @@ class StickerCommandService(
                 if (!stickerCommandRepository.updateStickerImage(sticker)) {
                     throw NotFoundException(StickerErrorCode.STICKER_NOT_FOUND)
                 }
+                boardStickerEventService.publishUpdated(sticker.boardId)
             }
             swapped = true
         } finally {

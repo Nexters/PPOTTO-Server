@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.board.application
 
+import com.github.nexters.ppotto.board.application.model.BoardEvent
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.domain.Board
@@ -12,6 +13,7 @@ import com.github.nexters.ppotto.global.error.NotFoundException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.lock.AdvisoryLock
+import com.github.nexters.ppotto.global.transaction.afterCommit
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -24,6 +26,7 @@ class BoardCommandService(
     private val drawingRepository: DrawingRepository,
     private val analysisActivityPort: BoardAnalysisActivityPort,
     private val stickerCommandPort: BoardStickerCommandPort,
+    private val boardEventBroker: BoardEventBroker,
 ) {
     @Transactional
     @AdvisoryLock(namespace = BOARD_USER_LOCK_NAMESPACE, key = "#userId")
@@ -46,9 +49,13 @@ class BoardCommandService(
         boardId: BoardId,
         userId: UserId,
         name: String,
-    ): Board =
-        boardRepository.updateName(boardId, userId, name)
-            ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
+    ): Board {
+        val board =
+            boardRepository.updateName(boardId, userId, name)
+                ?: throw NotFoundException(BoardErrorCode.NOT_FOUND)
+        afterCommit { boardEventBroker.publish(BoardEvent.updated(boardId)) }
+        return board
+    }
 
     @Transactional
     @AdvisoryLock(namespace = BOARD_USER_LOCK_NAMESPACE, key = "#userId")
@@ -62,6 +69,7 @@ class BoardCommandService(
         drawingRepository.softDeleteAllByBoardId(boardId)
         stickerCommandPort.deleteAllByBoardId(boardId)
         check(boardRepository.softDelete(boardId, userId)) { "행 잠금을 잡은 보드의 소프트 삭제가 반영되지 않았습니다." }
+        afterCommit { boardEventBroker.publishAndClose(BoardEvent.deleted(boardId)) }
     }
 
     private fun validateDeletable(
