@@ -61,6 +61,7 @@ private val SHARED_BOARD_RESPONSE =
                             BoardStickerResponse(
                                 id = StickerId(UUID.fromString("01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")),
                                 title = "동물 밈 짤줍",
+                                creatorName = "김용희",
                                 isNew = false,
                                 type = BoardStickerType.IMAGE,
                                 imageUrl =

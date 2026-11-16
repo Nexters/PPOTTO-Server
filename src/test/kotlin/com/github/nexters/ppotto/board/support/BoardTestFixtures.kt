@@ -69,6 +69,7 @@ fun boardStickerItem(id: StickerId = StickerId(UUID.randomUUID())): BoardSticker
     BoardStickerItem(
         id = id,
         title = "스티커",
+        creatorName = "김용희",
         isNew = true,
         type = BoardStickerType.TEXT,
         imageUrl = null,

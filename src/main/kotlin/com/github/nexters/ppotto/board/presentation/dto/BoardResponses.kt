@@ -64,6 +64,9 @@ data class BoardStickerResponse(
     @field:Schema(description = "제목 뱃지 문구이자 리캡 제목", example = "동물 밈 짤줍")
     val title: String,
 
+    @field:Schema(description = "스티커를 생성한 참여자의 이름", example = "김용희")
+    val creatorName: String,
+
     @get:Schema(description = "미열람 여부. 뱃지에 빨간 점 표시", example = "false")
     @get:JsonProperty("isNew")
     val isNew: Boolean,
@@ -110,6 +113,7 @@ data class BoardStickerResponse(
             BoardStickerResponse(
                 id = sticker.id,
                 title = sticker.title,
+                creatorName = sticker.creatorName,
                 isNew = sticker.isNew,
                 type = sticker.type,
                 imageUrl = sticker.imageUrl,

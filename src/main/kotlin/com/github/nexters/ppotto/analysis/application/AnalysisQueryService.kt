@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.analysis.application
 
 import com.github.nexters.ppotto.analysis.application.model.AnalysisStatusResult
 import com.github.nexters.ppotto.analysis.domain.AnalysisErrorCode
+import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisCreatorRepository
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoRepository
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -15,9 +16,12 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 class AnalysisQueryService(
     private val analysisRepository: AnalysisRepository,
+    private val analysisCreatorRepository: AnalysisCreatorRepository,
     private val photoRepository: PhotoRepository,
 ) {
     fun hasActiveAnalysis(boardId: BoardId): Boolean = analysisRepository.existsActiveByBoardId(boardId)
+
+    fun findCreatorIds(ids: Collection<AnalysisId>): Map<AnalysisId, UserId> = analysisCreatorRepository.findUserIdsByIds(ids)
 
     fun getActiveAnalysis(userId: UserId): AnalysisStatusResult? =
         analysisRepository

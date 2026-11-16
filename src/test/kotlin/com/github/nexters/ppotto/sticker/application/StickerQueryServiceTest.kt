@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.application
 
+import com.github.nexters.ppotto.analysis.application.AnalysisQueryService
 import com.github.nexters.ppotto.analysis.domain.PhotoContentType
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.PhotoCreate
@@ -17,6 +18,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.imageStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.saveTestUser
+import com.github.nexters.ppotto.user.application.UserService
 import com.github.nexters.ppotto.user.infrastructure.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -39,8 +41,10 @@ class StickerQueryServiceTest(
     stickerAccessService: StickerAccessService,
     photoRepository: PhotoRepository,
     analysisRepository: AnalysisRepository,
+    analysisQueryService: AnalysisQueryService,
     boardRepository: BoardRepository,
     userRepository: UserRepository,
+    userService: UserService,
 ) : IntegrationTest({
         Given("이미지 스티커와 리캡 데이터가 등록된 상태에서") {
             val board = boardRepository.save(userRepository.saveTestUser().id)
@@ -83,6 +87,7 @@ class StickerQueryServiceTest(
                     result.imageUrl.shouldStartWith("https://storage.googleapis.com/ppotto-test-bucket/stickers/recap.png?")
                     result.imageUrl.shouldContain("X-Goog-Expires=3600")
                     result.isNew shouldBe true
+                    result.creatorName shouldBe "테스트사용자"
                 }
             }
 
@@ -91,6 +96,7 @@ class StickerQueryServiceTest(
 
                 Then("한 줄 요약과 코멘트와 촬영 시각순 사진을 반환한다") {
                     result.sticker.isNew shouldBe true
+                    result.sticker.creatorName shouldBe "테스트사용자"
                     result.summary shouldBe "웃기고 귀여우면 일단 주워요"
                     result.comments.map { it.content } shouldContainExactly listOf("말풍선", "키워드")
                     result.photos.map { it.id } shouldContainExactly photos.reversed().map { it.id }
@@ -146,6 +152,8 @@ class StickerQueryServiceTest(
                     stickerRecapRepository,
                     stickerViewRepository,
                     stickerAccessService,
+                    analysisQueryService,
+                    userService,
                     emptyList(),
                     listOf(signingPort),
                 ).getByBoardId(board.id, board.userId)

@@ -131,6 +131,26 @@ class BoardStickerIntegrationTest(
             }
         }
 
+        Given("방장과 멤버가 각각 스티커를 만든 공동 보드에서") {
+            val owner = userRepository.saveTestUser("김용희")
+            val member = userRepository.saveTestUser("이수민")
+            val board = boardRepository.save(owner.id)
+            boardMembershipRepository.saveIfAbsent(board.id, member.id)
+            val ownerAnalysis = analysisRepository.save(owner.id, board.id)
+            val memberAnalysis = analysisRepository.save(member.id, board.id)
+            val ownerSticker = stickerRepository.save(ownerAnalysis.id, board.id, textStickerCreation())
+            val memberSticker = stickerRepository.save(memberAnalysis.id, board.id, textStickerCreation())
+
+            When("멤버가 보드 상세를 조회하면") {
+                val detail = boardQueryService.getDetail(board.id, member.id)
+
+                Then("스티커별 실제 생성자의 이름을 반환한다") {
+                    val expected = mapOf(ownerSticker.id to "김용희", memberSticker.id to "이수민")
+                    detail.stickers.associate { it.id to it.creatorName } shouldBe expected
+                }
+            }
+        }
+
         Given("실제 스티커가 있는 보드에서") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)

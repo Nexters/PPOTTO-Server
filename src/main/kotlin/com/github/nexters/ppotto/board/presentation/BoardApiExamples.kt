@@ -208,6 +208,7 @@ private val DETAIL_STICKERS =
         BoardStickerResponse(
             id = STICKER_ID,
             title = "동물 밈 짤줍",
+            creatorName = "김용희",
             isNew = false,
             type = BoardStickerType.IMAGE,
             imageUrl =
@@ -226,6 +227,7 @@ private val DETAIL_STICKERS =
         BoardStickerResponse(
             id = StickerId(UUID.fromString("01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
             title = "언제까지 일해요",
+            creatorName = "김용희",
             isNew = true,
             type = BoardStickerType.TEXT,
             imageUrl = null,
