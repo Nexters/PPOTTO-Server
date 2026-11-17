@@ -174,6 +174,11 @@ open class Drawings(
      */
     val ROTATION: TableField<DrawingsRecord, Double?> = createField(DSL.name("rotation"), SQLDataType.DOUBLE.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.DOUBLE)), this, "")
 
+    /**
+     * The column <code>public.drawings.layout_version</code>.
+     */
+    val LAYOUT_VERSION: TableField<DrawingsRecord, Long?> = createField(DSL.name("layout_version"), SQLDataType.BIGINT.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.BIGINT)), this, "")
+
     private constructor(alias: Name, aliased: Table<DrawingsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<DrawingsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<DrawingsRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
@@ -200,7 +205,8 @@ open class Drawings(
         Internal.createCheck(this, DSL.name("chk_drawings_scope_sticker"), "((((scope)::text = 'STICKER'::text) = (sticker_id IS NOT NULL)))", true),
         Internal.createCheck(this, DSL.name("chk_drawings_stroke_shape"), "((((type)::text = 'STROKE'::text) = ((stroke IS NOT NULL) AND (stroke_width IS NOT NULL))))", true),
         Internal.createCheck(this, DSL.name("chk_drawings_text_shape"), "((((type)::text = 'TEXT'::text) = ((content IS NOT NULL) AND (font_size IS NOT NULL) AND (pos_x IS NOT NULL) AND (pos_y IS NOT NULL) AND (max_width IS NOT NULL))))", true),
-        Internal.createCheck(this, DSL.name("chk_drawings_type"), "(((type)::text = ANY ((ARRAY['STROKE'::character varying, 'TEXT'::character varying])::text[])))", true)
+        Internal.createCheck(this, DSL.name("chk_drawings_type"), "(((type)::text = ANY ((ARRAY['STROKE'::character varying, 'TEXT'::character varying])::text[])))", true),
+        Internal.createCheck(this, DSL.name("ck_drawings_layout_version_nonnegative"), "((layout_version >= 0))", true)
     )
     override fun `as`(alias: String): Drawings = Drawings(DSL.name(alias), this)
     override fun `as`(alias: Name): Drawings = Drawings(alias, this)

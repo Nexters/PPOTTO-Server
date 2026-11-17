@@ -82,6 +82,7 @@ class BoardStickerAdapter(
             badgeOffsetX = badgeOffsetX,
             badgeOffsetY = badgeOffsetY,
             badgeRotation = badgeRotation,
+            layoutVersion = layoutVersion,
         )
 
     private fun StickerType.toBoardType() =

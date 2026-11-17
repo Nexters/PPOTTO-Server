@@ -15,6 +15,7 @@ sealed interface Drawing {
     val type: DrawingType
     val color: String
     val zIndex: Int
+    val layoutVersion: Long
     val createdAt: Instant
     val updatedAt: Instant
 
@@ -25,6 +26,7 @@ sealed interface Drawing {
         override val scope: DrawingScope,
         override val color: String,
         override val zIndex: Int,
+        override val layoutVersion: Long,
         override val createdAt: Instant,
         override val updatedAt: Instant,
         val stroke: Map<String, Any?>,
@@ -40,6 +42,7 @@ sealed interface Drawing {
         override val scope: DrawingScope,
         override val color: String,
         override val zIndex: Int,
+        override val layoutVersion: Long,
         override val createdAt: Instant,
         override val updatedAt: Instant,
         val content: String,

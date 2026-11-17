@@ -220,6 +220,11 @@ open class Stickers(
      */
     val SHARE_PHOTOS: TableField<StickersRecord, Boolean?> = createField(DSL.name("share_photos"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "")
 
+    /**
+     * The column <code>public.stickers.layout_version</code>.
+     */
+    val LAYOUT_VERSION: TableField<StickersRecord, Long?> = createField(DSL.name("layout_version"), SQLDataType.BIGINT.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.BIGINT)), this, "")
+
     private constructor(alias: Name, aliased: Table<StickersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<StickersRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
@@ -323,7 +328,8 @@ open class Stickers(
         get(): StickerViewsPath = stickerViews()
     override fun getChecks(): List<Check<StickersRecord>> = listOf(
         Internal.createCheck(this, DSL.name("chk_sticker_main_color"), "(((main_color)::text ~ '^#[0-9A-Fa-f]{6}\$'::text))", true),
-        Internal.createCheck(this, DSL.name("chk_stickers_content"), "(((((type)::text = 'IMAGE'::text) AND (image_key IS NOT NULL)) OR (((type)::text = 'TEXT'::text) AND (text_content IS NOT NULL))))", true)
+        Internal.createCheck(this, DSL.name("chk_stickers_content"), "(((((type)::text = 'IMAGE'::text) AND (image_key IS NOT NULL)) OR (((type)::text = 'TEXT'::text) AND (text_content IS NOT NULL))))", true),
+        Internal.createCheck(this, DSL.name("ck_stickers_layout_version_nonnegative"), "((layout_version >= 0))", true)
     )
     override fun `as`(alias: String): Stickers = Stickers(DSL.name(alias), this)
     override fun `as`(alias: Name): Stickers = Stickers(alias, this)

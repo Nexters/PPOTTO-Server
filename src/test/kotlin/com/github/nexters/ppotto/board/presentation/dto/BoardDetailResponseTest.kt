@@ -28,6 +28,7 @@ private val STROKE =
         scope = DrawingScope.BOARD,
         color = "#FFD400",
         zIndex = 6,
+        layoutVersion = 2,
         createdAt = Instant.EPOCH,
         updatedAt = Instant.EPOCH,
         stroke = mapOf("points" to listOf(listOf(1.0, 2.0))),
@@ -42,6 +43,7 @@ private val TEXT =
         scope = DrawingScope.BOARD,
         color = "#FFFFFF",
         zIndex = 7,
+        layoutVersion = 3,
         createdAt = Instant.EPOCH,
         updatedAt = Instant.EPOCH,
         content = "여름 휴가",
@@ -73,6 +75,15 @@ class BoardDetailResponseTest :
                         .id shouldBe STROKE_ID
                 }
 
+                Then("스티커와 선의 배치 버전을 반환한다") {
+                    response.stickers
+                        .single()
+                        .layoutVersion shouldBe 0
+                    response.drawings
+                        .single()
+                        .layoutVersion shouldBe 2
+                }
+
                 Then("겹침 순서가 stroke JSON 안의 zIndex 키로 합쳐진다") {
                     response.drawings
                         .single()
@@ -89,6 +100,13 @@ class BoardDetailResponseTest :
 
                 Then("선과 텍스트가 모두 내려간다") {
                     response.drawings.map { it.id } shouldContainExactly listOf(STROKE_ID, TEXT_ID)
+                }
+
+                Then("스티커와 각 그림의 배치 버전을 반환한다") {
+                    response.stickers
+                        .single()
+                        .layoutVersion shouldBe 0
+                    response.drawings.map { it.layoutVersion } shouldContainExactly listOf(2L, 3L)
                 }
 
                 Then("겹침 순서는 stroke JSON 이 아니라 zIndex 필드로 내려간다") {

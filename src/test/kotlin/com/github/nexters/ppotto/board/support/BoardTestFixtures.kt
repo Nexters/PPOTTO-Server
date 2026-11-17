@@ -82,6 +82,7 @@ fun boardStickerItem(id: StickerId = StickerId(UUID.randomUUID())): BoardSticker
         badgeOffsetX = 0.0,
         badgeOffsetY = 0.0,
         badgeRotation = 0.0,
+        layoutVersion = 0,
     )
 
 fun DSLContext.addBoardMember(

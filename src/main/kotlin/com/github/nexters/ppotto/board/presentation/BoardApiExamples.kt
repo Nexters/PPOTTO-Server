@@ -223,6 +223,7 @@ private val DETAIL_STICKERS =
             badgeOffsetX = -24.0,
             badgeOffsetY = 96.0,
             badgeRotation = 0.0,
+            layoutVersion = 0,
         ),
         BoardStickerResponse(
             id = StickerId(UUID.fromString("01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
@@ -240,6 +241,7 @@ private val DETAIL_STICKERS =
             badgeOffsetX = 12.0,
             badgeOffsetY = -60.0,
             badgeRotation = -4.0,
+            layoutVersion = 0,
         ),
     )
 
@@ -261,6 +263,7 @@ private val BOARD_DETAIL_RESPONSE =
                                 stroke = LEGACY_STICKER_STROKE,
                                 color = "#FFD400",
                                 strokeWidth = 4.0,
+                                layoutVersion = 0,
                             ),
                             DrawingResponse(
                                 id = DELETED_DRAWING_ID,
@@ -269,6 +272,7 @@ private val BOARD_DETAIL_RESPONSE =
                                 stroke = LEGACY_BOARD_STROKE,
                                 color = "#FFFFFF",
                                 strokeWidth = 2.5,
+                                layoutVersion = 0,
                             ),
                         ),
                 ),
@@ -352,6 +356,7 @@ private val BOARD_DETAIL_V2_RESPONSE =
                                 zIndex = 6,
                                 stroke = STICKER_STROKE,
                                 strokeWidth = 4.0,
+                                layoutVersion = 0,
                             ),
                             DrawingV2Response.Text(
                                 id = TEXT_DRAWING_ID,
@@ -365,6 +370,7 @@ private val BOARD_DETAIL_V2_RESPONSE =
                                 posY = 290.5,
                                 maxWidth = 280.0,
                                 rotation = 0.0,
+                                layoutVersion = 0,
                             ),
                         ),
                 ),

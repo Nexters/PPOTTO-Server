@@ -57,6 +57,7 @@ data class BoardStickerItem(
     val badgeOffsetX: Double,
     val badgeOffsetY: Double,
     val badgeRotation: Double,
+    val layoutVersion: Long,
 )
 
 data class BoardStickerSummary(

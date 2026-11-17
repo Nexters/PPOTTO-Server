@@ -107,6 +107,9 @@ data class BoardStickerResponse(
 
     @field:Schema(description = "뱃지 회전 각도(degree)", example = "0")
     val badgeRotation: Double,
+
+    @field:Schema(description = "배치 변경 버전. 새 스티커와 기존 스티커는 0부터 시작", example = "0")
+    val layoutVersion: Long,
 ) {
     companion object {
         fun from(sticker: BoardStickerItem): BoardStickerResponse =
@@ -126,6 +129,7 @@ data class BoardStickerResponse(
                 badgeOffsetX = sticker.badgeOffsetX,
                 badgeOffsetY = sticker.badgeOffsetY,
                 badgeRotation = sticker.badgeRotation,
+                layoutVersion = sticker.layoutVersion,
             )
     }
 }
@@ -154,6 +158,9 @@ data class DrawingResponse(
 
     @field:Schema(description = "선 굵기", example = "4")
     val strokeWidth: Double,
+
+    @field:Schema(description = "배치 변경 버전. 새 선은 0부터 시작", example = "0")
+    val layoutVersion: Long,
 ) {
     companion object {
         fun from(drawing: Drawing.Stroke): DrawingResponse =
@@ -164,6 +171,7 @@ data class DrawingResponse(
                 stroke = drawing.stroke.withLegacyZIndex(drawing.zIndex),
                 color = drawing.color,
                 strokeWidth = drawing.strokeWidth,
+                layoutVersion = drawing.layoutVersion,
             )
     }
 }

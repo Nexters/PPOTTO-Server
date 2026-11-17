@@ -195,6 +195,7 @@ class StickerQueryService(
                 badgeOffsetX = sticker.badgeOffsetX,
                 badgeOffsetY = sticker.badgeOffsetY,
                 badgeRotation = sticker.badgeRotation,
+                layoutVersion = sticker.layoutVersion,
             )
         }
     }

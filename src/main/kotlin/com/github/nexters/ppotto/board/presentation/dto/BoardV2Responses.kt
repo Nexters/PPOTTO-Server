@@ -59,6 +59,7 @@ sealed interface DrawingV2Response {
     val stickerId: StickerId?
     val color: String
     val zIndex: Int
+    val layoutVersion: Long
 
     @Schema(name = "DrawingStrokeResponse", description = "선")
     data class Stroke(
@@ -79,6 +80,9 @@ sealed interface DrawingV2Response {
         @get:Schema(description = "겹침 순서", example = "6")
         @get:JsonProperty("zIndex")
         override val zIndex: Int,
+
+        @field:Schema(description = "배치 변경 버전. 새 선은 0부터 시작", example = "0")
+        override val layoutVersion: Long,
 
         @field:Schema(
             description = "선 데이터. 저장한 그대로 내려감",
@@ -110,6 +114,9 @@ sealed interface DrawingV2Response {
         @get:JsonProperty("zIndex")
         override val zIndex: Int,
 
+        @field:Schema(description = "배치 변경 버전. 새 텍스트는 0부터 시작", example = "0")
+        override val layoutVersion: Long,
+
         @field:Schema(description = "표시할 문구. 저장된 줄바꿈이 그대로 내려감", example = "여름 휴가")
         val content: String,
 
@@ -139,6 +146,7 @@ sealed interface DrawingV2Response {
                         stickerId = drawing.stickerId,
                         color = drawing.color,
                         zIndex = drawing.zIndex,
+                        layoutVersion = drawing.layoutVersion,
                         stroke = drawing.stroke,
                         strokeWidth = drawing.strokeWidth,
                     )
@@ -150,6 +158,7 @@ sealed interface DrawingV2Response {
                         stickerId = drawing.stickerId,
                         color = drawing.color,
                         zIndex = drawing.zIndex,
+                        layoutVersion = drawing.layoutVersion,
                         content = drawing.content,
                         fontSize = drawing.fontSize,
                         posX = drawing.posX,

@@ -85,6 +85,9 @@ class BoardQueryServiceTest(
                     detail.name shouldBe "여름 휴가"
                     detail.stickers.map { it.id } shouldContainExactly listOf(sticker.id)
                     detail.drawings.map { it.id } shouldContainExactly listOf(drawing.id)
+                    detail.drawings
+                        .single()
+                        .layoutVersion shouldBe 0
                 }
             }
 

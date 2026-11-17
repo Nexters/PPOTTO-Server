@@ -36,7 +36,8 @@ data class Drawings(
     val posX: Double? = null,
     val posY: Double? = null,
     val maxWidth: Double? = null,
-    val rotation: Double? = null
+    val rotation: Double? = null,
+    val layoutVersion: Long? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -143,6 +144,12 @@ data class Drawings(
         }
         else if (this.rotation != o.rotation)
             return false
+        if (this.layoutVersion == null) {
+            if (o.layoutVersion != null)
+                return false
+        }
+        else if (this.layoutVersion != o.layoutVersion)
+            return false
         return true
     }
 
@@ -167,6 +174,7 @@ data class Drawings(
         result = prime * result + (if (this.posY == null) 0 else this.posY.hashCode())
         result = prime * result + (if (this.maxWidth == null) 0 else this.maxWidth.hashCode())
         result = prime * result + (if (this.rotation == null) 0 else this.rotation.hashCode())
+        result = prime * result + (if (this.layoutVersion == null) 0 else this.layoutVersion.hashCode())
         return result
     }
 
@@ -191,6 +199,7 @@ data class Drawings(
         sb.append(", ").append(posY)
         sb.append(", ").append(maxWidth)
         sb.append(", ").append(rotation)
+        sb.append(", ").append(layoutVersion)
 
         sb.append(")")
         return sb.toString()

@@ -28,6 +28,7 @@ class Sticker(
     badgeRotation: Double,
     shareToken: String?,
     sharePhotos: Boolean,
+    val layoutVersion: Long,
     val createdAt: Instant,
     val updatedAt: Instant,
     deletedAt: Instant?,

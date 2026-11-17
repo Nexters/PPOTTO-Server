@@ -912,7 +912,8 @@ Request example:
         "zIndex": 3,
         "badgeOffsetX": -24,
         "badgeOffsetY": 96,
-        "badgeRotation": 0
+        "badgeRotation": 0,
+        "layoutVersion": 0
       },
       {
         "id": "01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
@@ -929,7 +930,8 @@ Request example:
         "zIndex": 5,
         "badgeOffsetX": 12,
         "badgeOffsetY": -60,
-        "badgeRotation": -4
+        "badgeRotation": -4,
+        "layoutVersion": 0
       },
       {
         "id": "01983f2b-5e6f-7a7b-c8d9-0e1f2a3b4c5d",
@@ -943,7 +945,8 @@ Request example:
         "rotation": 0,
         "badgeOffsetX": 0,
         "badgeOffsetY": 0,
-        "badgeRotation": 0
+        "badgeRotation": 0,
+        "layoutVersion": 0
       }
     ],
     "drawings": [
@@ -968,7 +971,8 @@ Request example:
           ]
         },
         "color": "#FFD400",
-        "strokeWidth": 4
+        "strokeWidth": 4,
+        "layoutVersion": 0
       },
       {
         "id": "01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
@@ -991,7 +995,8 @@ Request example:
           ]
         },
         "color": "#FFFFFF",
-        "strokeWidth": 2.5
+        "strokeWidth": 2.5,
+        "layoutVersion": 0
       }
     ]
   },
@@ -1037,6 +1042,7 @@ Request example:
 - 방장과 참여자(`board_members`) 모두 조회하고 레이아웃을 저장할 수 있습니다. 둘 다 아닌 사용자에게는 보드가 없는 것과 같은 `404 BOARD-002`로 응답합니다. 이름 변경과 보드 삭제는 방장만 할 수 있습니다.
 - 보드, 스티커, 드로잉을 한 번에 반환합니다. `isNew`는 요청 사용자의 미열람 여부이며 빨간 점 표시 여부입니다. imageUrl은 만료가 있으므로 보드에 진입할 때마다 새로 조회합니다.
 - 각 스티커의 `creatorName`은 스티커를 생성한 사용자의 현재 이름입니다. 개인 보드와 공동 보드에 동일하게 포함됩니다.
+- 스티커와 드로잉의 `layoutVersion`은 항목별 배치 버전이며 초기값은 0입니다.
 - 생성 직후라 아직 배치되지 않은 스티커는 `posX`/`posY`/`zIndex` 키 자체가 없습니다(서버가 null 필드를 직렬화하지 않음. 위 예시의 세 번째 스티커 참고). `scale`은 1, `rotation`은 0으로 채워져 있습니다. 클라이언트는 `posX` 키가 없으면 보드 상태를 보고 겹치지 않는 위치와 쌓임 순서를 계산해 `PATCH /boards/{boardId}/layout`로 채워야 합니다.
 
 ### PATCH /boards/{boardId}
@@ -1536,7 +1542,8 @@ v1과 다른 점은 `drawings` 배열뿐이다. `id`, `name`, `stickers`는 v1�
       "color": "#FFD400",
       "zIndex": 6,
       "stroke": { "points": [[10.5, 22], [14.2, 25.1], [19.8, 27.4]] },
-      "strokeWidth": 4
+      "strokeWidth": 4,
+      "layoutVersion": 0
     },
     {
       "type": "TEXT",
@@ -1549,7 +1556,8 @@ v1과 다른 점은 `drawings` 배열뿐이다. `id`, `name`, `stickers`는 v1�
       "posX": 80,
       "posY": 290.5,
       "maxWidth": 280,
-      "rotation": 0
+      "rotation": 0,
+      "layoutVersion": 0
     }
   ]
 }
@@ -2309,7 +2317,8 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
         "zIndex": 3,
         "badgeOffsetX": -24,
         "badgeOffsetY": 96,
-        "badgeRotation": 0
+        "badgeRotation": 0,
+        "layoutVersion": 0
       }
     ],
     "drawings": []

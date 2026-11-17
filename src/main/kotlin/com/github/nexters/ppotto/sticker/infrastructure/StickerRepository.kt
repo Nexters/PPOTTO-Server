@@ -202,6 +202,7 @@ class StickerRepository(
             badgeRotation = badgeRotation!!,
             shareToken = shareToken,
             sharePhotos = sharePhotos!!,
+            layoutVersion = layoutVersion!!,
             createdAt = createdAt!!,
             updatedAt = updatedAt!!,
             deletedAt = deletedAt,

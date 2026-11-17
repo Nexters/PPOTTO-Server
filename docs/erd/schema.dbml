@@ -406,6 +406,7 @@ Table stickers {
   share_photos boolean [not null, default: false, note: 'false면 공유 링크 응답의 photos 가 빈 배열이다. 서버가 사진 읽기 URL 자체를 발급하지 않으므로 클라이언트가 무엇을 보내도 원본은 새지 않는다']
 
   // 보드 상 배치
+  layout_version bigint [not null, default: 0, note: '배치 변경 충돌 검사에 사용할 항목별 버전. 기존 행은 0부터 시작한다. DB에서 0 이상으로 제한한다']
   pos_x    double  [null, note: '클라이언트가 배치를 정하기 전에는 NULL']
   pos_y    double  [null, note: '클라이언트가 배치를 정하기 전에는 NULL']
   scale    double  [not null, default: 1]
@@ -486,6 +487,7 @@ Table sticker_photos {
 
 Table drawings {
   ~base_id
+  layout_version bigint [not null, default: 0, note: '선과 텍스트의 배치 변경 충돌 검사에 사용할 항목별 버전. 기존 행은 0부터 시작한다. DB에서 0 이상으로 제한한다']
   board_id   uuid          [not null]
   sticker_id uuid          [null, note: 'scope=STICKER 일 때만 채운다']
   scope      drawing_scope [not null]

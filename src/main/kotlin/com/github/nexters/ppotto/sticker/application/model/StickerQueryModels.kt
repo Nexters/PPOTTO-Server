@@ -23,6 +23,7 @@ data class StickerItemResult(
     val badgeOffsetX: Double,
     val badgeOffsetY: Double,
     val badgeRotation: Double,
+    val layoutVersion: Long,
 )
 
 data class StickerBoardSummaryResult(
