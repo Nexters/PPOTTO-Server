@@ -56,6 +56,11 @@ interface BoardLayoutV2Api {
         ],
     )
     @BoardNotFoundApiResponse
+    @OpenApiResponse(
+        responseCode = "409",
+        description = "조회한 뒤 스티커 배치가 변경됨 (STICKER-009)",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ApiErrorResponse::class))],
+    )
     fun update(
         userId: UserId,
         boardId: BoardId,

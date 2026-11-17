@@ -20,4 +20,5 @@ enum class StickerErrorCode(
     REGENERATION_PHOTOS_NOT_FOUND(HttpStatus.BAD_REQUEST, "STICKER-006", "재생성할 사진 구성이 없습니다."),
     UNDELETABLE_STICKER(HttpStatus.BAD_REQUEST, "STICKER-007", "삭제할 수 없는 스티커가 포함되어 있습니다."),
     UNEDITABLE_STICKER(HttpStatus.BAD_REQUEST, "STICKER-008", "편집할 수 없는 스티커가 포함되어 있습니다."),
+    LAYOUT_CONFLICT(HttpStatus.CONFLICT, "STICKER-009", "다른 참여자가 스티커 배치를 변경했습니다."),
 }

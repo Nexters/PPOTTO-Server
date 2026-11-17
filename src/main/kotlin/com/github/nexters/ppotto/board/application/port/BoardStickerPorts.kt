@@ -78,6 +78,7 @@ data class BoardStickerLayoutCommand(
     val badgeOffsetX: Double,
     val badgeOffsetY: Double,
     val badgeRotation: Double,
+    val expectedLayoutVersion: Long? = null,
 ) {
     init {
         val invalid =
@@ -88,7 +89,8 @@ data class BoardStickerLayoutCommand(
                 !rotation.isFinite() ||
                 !badgeOffsetX.isFinite() ||
                 !badgeOffsetY.isFinite() ||
-                !badgeRotation.isFinite()
+                !badgeRotation.isFinite() ||
+                (expectedLayoutVersion != null && expectedLayoutVersion < 0)
         if (invalid) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
     }
 

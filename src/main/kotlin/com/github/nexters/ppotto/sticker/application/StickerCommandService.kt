@@ -1,6 +1,7 @@
 package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.board.application.BoardStickerEventService
+import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -188,11 +189,18 @@ class StickerCommandService(
         for (command in layouts) {
             val sticker = stickersById.getValue(command.id)
             sticker.updateLayout(command.layout)
-            if (!stickerCommandRepository.updateLayout(sticker)) {
-                throw InvalidInputException(StickerErrorCode.UNEDITABLE_STICKER)
+            if (!stickerCommandRepository.updateLayout(sticker, command.layout.title, command.expectedLayoutVersion)) {
+                throw layoutUpdateFailure(command)
             }
         }
     }
+
+    private fun layoutUpdateFailure(command: StickerLayoutCommand): BusinessException =
+        if (command.expectedLayoutVersion != null && stickerCommandRepository.existsActiveById(command.id)) {
+            ConflictException(StickerErrorCode.LAYOUT_CONFLICT)
+        } else {
+            InvalidInputException(StickerErrorCode.UNEDITABLE_STICKER)
+        }
 
     @Transactional
     fun deleteAllByBoardId(boardId: BoardId) {

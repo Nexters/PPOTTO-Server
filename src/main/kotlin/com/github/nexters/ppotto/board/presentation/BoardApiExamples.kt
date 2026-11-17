@@ -24,6 +24,7 @@ import com.github.nexters.ppotto.board.presentation.dto.DrawingResponse
 import com.github.nexters.ppotto.board.presentation.dto.DrawingV2Response
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.StickerLayoutRequest
+import com.github.nexters.ppotto.board.presentation.dto.StickerLayoutV2Request
 import com.github.nexters.ppotto.board.presentation.dto.withLegacyZIndex
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
@@ -282,7 +283,24 @@ private val BOARD_DETAIL_RESPONSE =
 private val STICKER_MOVE_LAYOUT_V2_REQUEST =
     ApiExample(
         name = "스티커 이동 모드 종료",
-        value = BoardLayoutV2Request(stickers = listOf(MOVED_STICKER_LAYOUT)),
+        value =
+            BoardLayoutV2Request(
+                stickers =
+                    listOf(
+                        StickerLayoutV2Request(
+                            id = MOVED_STICKER_LAYOUT.id,
+                            posX = MOVED_STICKER_LAYOUT.posX,
+                            posY = MOVED_STICKER_LAYOUT.posY,
+                            scale = MOVED_STICKER_LAYOUT.scale,
+                            rotation = MOVED_STICKER_LAYOUT.rotation,
+                            zIndex = MOVED_STICKER_LAYOUT.zIndex,
+                            badgeOffsetX = MOVED_STICKER_LAYOUT.badgeOffsetX,
+                            badgeOffsetY = MOVED_STICKER_LAYOUT.badgeOffsetY,
+                            badgeRotation = MOVED_STICKER_LAYOUT.badgeRotation,
+                            expectedLayoutVersion = 0,
+                        ),
+                    ),
+            ),
     )
 
 private val DRAWING_MODE_LAYOUT_V2_REQUEST =

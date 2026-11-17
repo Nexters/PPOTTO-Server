@@ -94,6 +94,7 @@ class BoardStickerAdapter(
     private fun BoardStickerLayoutCommand.toStickerCommand() =
         StickerLayoutCommand(
             id = id,
+            expectedLayoutVersion = expectedLayoutVersion,
             layout =
                 StickerLayout(
                     title = title,

@@ -440,7 +440,7 @@ class BoardLayoutServiceTest(
 private fun stickerLayout(id: StickerId) =
     BoardStickerLayoutCommand(
         id = id,
-        title = "새 제목",
+        title = null,
         posX = 1.0,
         posY = 2.0,
         scale = 1.0,
@@ -449,4 +449,5 @@ private fun stickerLayout(id: StickerId) =
         badgeOffsetX = 0.0,
         badgeOffsetY = 0.0,
         badgeRotation = 0.0,
+        expectedLayoutVersion = 0,
     )

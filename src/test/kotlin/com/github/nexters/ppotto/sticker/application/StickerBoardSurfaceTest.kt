@@ -43,7 +43,7 @@ class StickerBoardSurfaceTest(
     boardStickerEventService: BoardStickerEventService,
     dslContext: DSLContext,
 ) : IntegrationTest({
-        fun layoutOf(id: StickerId) = StickerLayoutCommand(id, stickerLayout())
+        fun layoutOf(id: StickerId) = StickerLayoutCommand(id, stickerLayout(), expectedLayoutVersion = 0)
 
         fun posXOf(id: StickerId) = stickerRepository.findById(id)?.posX
 

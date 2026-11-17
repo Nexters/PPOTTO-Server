@@ -4,7 +4,6 @@ import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.board.support.BoardTestConfig
-import com.github.nexters.ppotto.board.support.FakeBoardStickerPort
 import com.github.nexters.ppotto.board.support.uuidV7
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.support.IntegrationTest
@@ -32,7 +31,6 @@ class BoardLayoutControllerTest(
     boardRepository: BoardRepository,
     drawingRepository: DrawingRepository,
     userRepository: UserRepository,
-    stickerPort: FakeBoardStickerPort,
 ) : IntegrationTest({
         Given("인증된 사용자의 빈 보드가 있을 때") {
             val user = userRepository.saveTestUser()
@@ -51,9 +49,9 @@ class BoardLayoutControllerTest(
                     .content(body),
             )
 
-            fun stickerLayoutBody(title: String) =
+            fun stickerLayoutBody() =
                 """
-                {"stickers":[{"id":"${uuidV7()}","title":"$title","posX":80,"posY":290.5,"scale":1,
+                {"stickers":[{"id":"${uuidV7()}","expectedLayoutVersion":0,"posX":80,"posY":290.5,"scale":1,
                 "rotation":0,"zIndex":6,"badgeOffsetX":0,"badgeOffsetY":0,"badgeRotation":0}]}
                 """.trimIndent()
 
@@ -125,31 +123,36 @@ class BoardLayoutControllerTest(
                 }
             }
 
-            When("v1으로 최대 길이를 넘는 스티커 제목을 보내면") {
-                val result = layoutRequest("1", stickerLayoutBody("가".repeat(TOO_LONG_TITLE_LENGTH)))
+            When("v2 스티커 배치 버전을 생략하면") {
+                val body = stickerLayoutBody().replace("\"expectedLayoutVersion\":0,", "")
 
-                Then("COMMON-001로 400을 응답한다") {
-                    result
+                Then("v2에서만 입력 오류로 거부한다") {
+                    layoutRequest("2", body)
                         .andExpect(status().isBadRequest)
                         .andExpect(jsonPath("$.error.code").value("COMMON-001"))
-                }
-
-                Then("스티커 배치를 위임하지 않는다") {
-                    stickerPort.updatedLayouts.shouldBeEmpty()
                 }
             }
 
-            When("v2로 최대 길이를 넘는 스티커 제목을 보내면") {
-                val result = layoutRequest("2", stickerLayoutBody("가".repeat(TOO_LONG_TITLE_LENGTH)))
+            When("v1 스티커 배치 요청에 버전이 없으면") {
+                val body = stickerLayoutBody().replace("\"expectedLayoutVersion\":0,", "")
 
-                Then("COMMON-001로 400을 응답한다") {
-                    result
+                Then("기존 요청 형식을 받아 소유권 검사까지 진행한다") {
+                    layoutRequest("1", body)
+                        .andExpect(status().isBadRequest)
+                        .andExpect(jsonPath("$.error.code").value("BOARD-001"))
+                }
+            }
+
+            When("v1으로 최대 길이를 넘는 스티커 제목을 보내면") {
+                val body =
+                    stickerLayoutBody()
+                        .replace("\"expectedLayoutVersion\":0,", "")
+                        .replace("\"posX\"", "\"title\":\"${"가".repeat(TOO_LONG_TITLE_LENGTH)}\",\"posX\"")
+
+                Then("기존 제목 검증을 유지한다") {
+                    layoutRequest("1", body)
                         .andExpect(status().isBadRequest)
                         .andExpect(jsonPath("$.error.code").value("COMMON-001"))
-                }
-
-                Then("스티커 배치를 위임하지 않는다") {
-                    stickerPort.updatedLayouts.shouldBeEmpty()
                 }
             }
 

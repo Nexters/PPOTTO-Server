@@ -1703,7 +1703,27 @@ data: {"eventId":"019a72c0-4d8e-7f10-a2b3-c4d5e6f70819","type":"BOARD_UPDATED","
 - Operation ID: `saveBoardLayoutV2`
 - Summary: 편집 결과 일괄 저장 (선과 텍스트)
 
-`stickers`는 v1과 완전히 같다. `drawings.created` 항목만 `type` 판별자를 가진 합집합으로 바뀐다.
+`stickers`는 v1과 달리 `title` 대신 조회한 스티커의 `layoutVersion`을 `expectedLayoutVersion`으로 받는다. 버전 불일치 시 `409 STICKER-009`로 요청 전체를 롤백한다. `drawings.created`는 `type` 판별자를 가진 합집합이다.
+
+Request example (스티커 이동 모드 종료):
+```json
+{
+  "stickers": [
+    {
+      "id": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "expectedLayoutVersion": 0,
+      "posX": 80,
+      "posY": 290.5,
+      "scale": 1.1,
+      "rotation": -8,
+      "zIndex": 6,
+      "badgeOffsetX": -24,
+      "badgeOffsetY": 96,
+      "badgeRotation": 0
+    }
+  ]
+}
+```
 
 Request example (드로잉 모드 종료 — 선 생성 1건, 삭제 1건):
 ```json
@@ -1753,11 +1773,11 @@ Request example (텍스트 모드 종료 — 텍스트 생성 1건):
 v1과 같다 (200, `data: null`).
 
 #### Failure Spec
-v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
-| 400 | STICKER-008 | 편집할 수 없는 스티커가 포함되어 있습니다. | 저장 대상 스티커 중 이미 삭제되었거나 이 보드에 속하지 않는 스티커가 있음 |
+v1과 같고, 다음 오류가 추가된다.
 
 | Status | Error Code | 발생 조건 |
 | --- | --- | --- |
+| 409 | STICKER-009 | `expectedLayoutVersion`과 현재 스티커 배치 버전이 다름. 전체 요청 롤백 |
 | 400 | COMMON-001 | `type`이 `STROKE`/`TEXT`가 아님 |
 | 400 | COMMON-001 | `content`가 비었거나 32자 초과 |
 | 400 | COMMON-001 | `color`가 `#RRGGBB` 형식이 아님 |

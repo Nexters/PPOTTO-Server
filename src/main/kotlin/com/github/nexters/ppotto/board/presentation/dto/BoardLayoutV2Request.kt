@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
+import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
@@ -16,6 +17,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Positive
+import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 
 const val DRAWING_COLOR_PATTERN = "^#[0-9A-Fa-f]{6}$"
@@ -23,8 +25,8 @@ const val DRAWING_COLOR_PATTERN = "^#[0-9A-Fa-f]{6}$"
 @Schema(description = "보드 편집 결과 일괄 저장 요청 (v2). 편집 모드에서 바뀐 것만 보냄")
 data class BoardLayoutV2Request(
     @field:Valid
-    @field:Schema(description = "변경된 스티커 배치. v1과 동일")
-    val stickers: List<StickerLayoutRequest>? = null,
+    @field:Schema(description = "변경된 스티커 배치")
+    val stickers: List<StickerLayoutV2Request>? = null,
 
     @field:Valid
     @field:Schema(description = "선과 텍스트의 생성·삭제 변경분")
@@ -32,13 +34,64 @@ data class BoardLayoutV2Request(
 ) {
     fun toCommand(boardId: BoardId): BoardLayoutUpdateCommand =
         BoardLayoutUpdateCommand(
-            stickers = stickers.orEmpty().map(StickerLayoutRequest::toCommand),
+            stickers = stickers.orEmpty().map(StickerLayoutV2Request::toCommand),
             createdDrawings =
                 drawings
                     ?.created
                     .orEmpty()
                     .map { it.toDomain(boardId) },
             deletedDrawingIds = drawings?.deletedIds.orEmpty(),
+        )
+}
+
+@Schema(description = "스티커 배치 (v2)")
+data class StickerLayoutV2Request(
+    @get:Schema(description = "스티커 ID (uuidv7)", example = "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f")
+    @get:JsonProperty("id")
+    val id: StickerId,
+
+    @field:Schema(description = "보드 좌표 X", example = "80")
+    val posX: Double,
+
+    @field:Schema(description = "보드 좌표 Y", example = "290.5")
+    val posY: Double,
+
+    @field:Schema(description = "확대 비율", example = "1.1")
+    val scale: Double,
+
+    @field:Schema(description = "회전 각도(degree)", example = "-8")
+    val rotation: Double,
+
+    @get:Schema(description = "겹침 순서", example = "6")
+    @get:JsonProperty("zIndex")
+    val zIndex: Int,
+
+    @field:Schema(description = "스티커 기준 뱃지 상대 좌표 X", example = "-24")
+    val badgeOffsetX: Double,
+
+    @field:Schema(description = "스티커 기준 뱃지 상대 좌표 Y", example = "96")
+    val badgeOffsetY: Double,
+
+    @field:Schema(description = "뱃지 회전 각도(degree)", example = "0")
+    val badgeRotation: Double,
+
+    @field:PositiveOrZero
+    @field:Schema(description = "조회 당시의 스티커 배치 버전", example = "0")
+    val expectedLayoutVersion: Long,
+) {
+    fun toCommand(): BoardStickerLayoutCommand =
+        BoardStickerLayoutCommand(
+            id = id,
+            title = null,
+            posX = posX,
+            posY = posY,
+            scale = scale,
+            rotation = rotation,
+            zIndex = zIndex,
+            badgeOffsetX = badgeOffsetX,
+            badgeOffsetY = badgeOffsetY,
+            badgeRotation = badgeRotation,
+            expectedLayoutVersion = expectedLayoutVersion,
         )
 }
 
