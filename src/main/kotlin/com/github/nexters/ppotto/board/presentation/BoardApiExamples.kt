@@ -20,6 +20,7 @@ import com.github.nexters.ppotto.board.presentation.dto.DrawingChangesRequest
 import com.github.nexters.ppotto.board.presentation.dto.DrawingChangesV2Request
 import com.github.nexters.ppotto.board.presentation.dto.DrawingCreateRequest
 import com.github.nexters.ppotto.board.presentation.dto.DrawingCreateV2Request
+import com.github.nexters.ppotto.board.presentation.dto.DrawingDeleteV2Request
 import com.github.nexters.ppotto.board.presentation.dto.DrawingResponse
 import com.github.nexters.ppotto.board.presentation.dto.DrawingV2Response
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
@@ -322,7 +323,7 @@ private val DRAWING_MODE_LAYOUT_V2_REQUEST =
                                     strokeWidth = 4.0,
                                 ),
                             ),
-                        deletedIds = listOf(DELETED_DRAWING_ID),
+                        deleted = listOf(DrawingDeleteV2Request(DELETED_DRAWING_ID, 0)),
                     ),
             ),
     )

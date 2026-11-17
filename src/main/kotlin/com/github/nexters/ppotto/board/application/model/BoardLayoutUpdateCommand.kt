@@ -10,16 +10,21 @@ data class BoardLayoutUpdateCommand(
     val stickers: List<BoardStickerLayoutCommand>,
     val createdDrawings: List<NewDrawing>,
     val deletedDrawingIds: List<DrawingId>,
+    val insertedDrawings: List<NewDrawing> = emptyList(),
+    val updatedDrawings: List<DrawingLayoutUpdateCommand> = emptyList(),
+    val versionedDeletedDrawings: List<DrawingLayoutDeleteCommand> = emptyList(),
 ) {
     init {
-        val createdIds = createdDrawings.map { it.id }.toSet()
-        val deletedIds = deletedDrawingIds.toSet()
+        val createdIds = (createdDrawings + insertedDrawings).map { it.id }
+        val updatedIds = updatedDrawings.map { it.drawing.id }
+        val deletedIds = deletedDrawingIds + versionedDeletedDrawings.map { it.id }
         val stickerIds = stickers.map { it.id }.toSet()
         val duplicated =
-            createdIds.size != createdDrawings.size ||
-                deletedIds.size != deletedDrawingIds.size ||
+            createdIds.size != createdIds.toSet().size ||
+                updatedIds.size != updatedIds.toSet().size ||
+                deletedIds.size != deletedIds.toSet().size ||
                 stickerIds.size != stickers.size ||
-                createdIds.any(deletedIds::contains)
+                (createdIds + updatedIds + deletedIds).size != (createdIds + updatedIds + deletedIds).toSet().size
         if (duplicated) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
     }
 }

@@ -1,7 +1,6 @@
 package com.github.nexters.ppotto.sticker.application
 
 import com.github.nexters.ppotto.board.application.BoardStickerEventService
-import com.github.nexters.ppotto.global.error.BusinessException
 import com.github.nexters.ppotto.global.error.ConflictException
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.error.NotFoundException
@@ -9,6 +8,7 @@ import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
 import com.github.nexters.ppotto.sticker.application.model.StickerTitleResult
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
@@ -195,9 +195,9 @@ class StickerCommandService(
         }
     }
 
-    private fun layoutUpdateFailure(command: StickerLayoutCommand): BusinessException =
+    private fun layoutUpdateFailure(command: StickerLayoutCommand): RuntimeException =
         if (command.expectedLayoutVersion != null && stickerCommandRepository.existsActiveById(command.id)) {
-            ConflictException(StickerErrorCode.LAYOUT_CONFLICT)
+            StickerLayoutConflictException(command.id)
         } else {
             InvalidInputException(StickerErrorCode.UNEDITABLE_STICKER)
         }

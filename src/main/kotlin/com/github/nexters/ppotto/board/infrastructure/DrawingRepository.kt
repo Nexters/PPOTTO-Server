@@ -1,9 +1,13 @@
 package com.github.nexters.ppotto.board.infrastructure
 
+import com.github.nexters.ppotto.board.application.model.DrawingLayoutDeleteCommand
+import com.github.nexters.ppotto.board.application.model.DrawingLayoutUpdateCommand
+import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.DrawingType
 import com.github.nexters.ppotto.board.domain.NewDrawing
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
@@ -19,6 +23,7 @@ import tools.jackson.module.kotlin.readValue
 import java.time.Instant
 
 @Repository
+@Suppress("TooManyFunctions")
 class DrawingRepository(
     private val dslContext: DSLContext,
     private val objectMapper: ObjectMapper,
@@ -28,12 +33,91 @@ class DrawingRepository(
 
         return upsertQuery(drawings)
             .where(DRAWINGS.BOARD_ID.eq(excluded(DRAWINGS.BOARD_ID)))
+            .and(DRAWINGS.DELETED_AT.isNull)
             .returning()
             .fetch()
             .map { it.toDomain() }
             .associateBy { it.id }
-            .let { upserted -> drawings.map { upserted.getValue(it.id) } }
+            .let { upserted ->
+                if (upserted.size != drawings.size) throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
+                drawings.map { upserted.getValue(it.id) }
+            }
     }
+
+    fun insertAll(drawings: List<NewDrawing>) {
+        drawings.forEach { drawing ->
+            val inserted =
+                dslContext
+                    .insertInto(DRAWINGS)
+                    .set(drawing.toRecord())
+                    .onConflict(DRAWINGS.ID)
+                    .doNothing()
+                    .execute()
+            if (inserted != 1) throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
+        }
+    }
+
+    fun updateVersioned(command: DrawingLayoutUpdateCommand): Boolean {
+        val drawing = command.drawing
+        val record = drawing.toRecord()
+        val query =
+            dslContext
+                .update(DRAWINGS)
+                .set(DRAWINGS.Z_INDEX, drawing.zIndex)
+                .set(DRAWINGS.COLOR, drawing.color)
+                .set(DRAWINGS.LAYOUT_VERSION, DRAWINGS.LAYOUT_VERSION.plus(1L))
+                .set(DRAWINGS.STROKE, record.stroke)
+                .set(DRAWINGS.STROKE_WIDTH, record.strokeWidth)
+                .set(DRAWINGS.CONTENT, record.content)
+                .set(DRAWINGS.FONT_SIZE, record.fontSize)
+                .set(DRAWINGS.POS_X, record.posX)
+                .set(DRAWINGS.POS_Y, record.posY)
+                .set(DRAWINGS.MAX_WIDTH, record.maxWidth)
+                .set(DRAWINGS.ROTATION, record.rotation)
+                .where(DRAWINGS.ID.eq(drawing.id))
+                .and(DRAWINGS.BOARD_ID.eq(drawing.boardId))
+                .and(DRAWINGS.DELETED_AT.isNull)
+                .and(DRAWINGS.LAYOUT_VERSION.eq(command.expectedLayoutVersion))
+                .and(DRAWINGS.TYPE.eq(drawing.type.name))
+                .and(DRAWINGS.SCOPE.eq(drawing.scope.name))
+                .and(
+                    if (drawing.stickerId == null) {
+                        DRAWINGS.STICKER_ID.isNull
+                    } else {
+                        DRAWINGS.STICKER_ID.eq(drawing.stickerId)
+                    },
+                )
+        return query.execute() == 1
+    }
+
+    fun matchesIdentity(drawing: NewDrawing): Boolean =
+        dslContext
+            .selectOne()
+            .from(DRAWINGS)
+            .where(DRAWINGS.ID.eq(drawing.id))
+            .and(DRAWINGS.BOARD_ID.eq(drawing.boardId))
+            .and(DRAWINGS.TYPE.eq(drawing.type.name))
+            .and(DRAWINGS.SCOPE.eq(drawing.scope.name))
+            .and(
+                if (drawing.stickerId == null) {
+                    DRAWINGS.STICKER_ID.isNull
+                } else {
+                    DRAWINGS.STICKER_ID.eq(drawing.stickerId)
+                },
+            ).fetchOne() != null
+
+    fun softDeleteVersioned(
+        boardId: BoardId,
+        command: DrawingLayoutDeleteCommand,
+    ): Boolean =
+        dslContext
+            .update(DRAWINGS)
+            .set(DRAWINGS.DELETED_AT, Instant.now())
+            .where(DRAWINGS.BOARD_ID.eq(boardId))
+            .and(DRAWINGS.ID.eq(command.id))
+            .and(DRAWINGS.DELETED_AT.isNull)
+            .and(DRAWINGS.LAYOUT_VERSION.eq(command.expectedLayoutVersion))
+            .execute() == 1
 
     private fun upsertQuery(drawings: List<NewDrawing>): InsertOnDuplicateSetMoreStep<DrawingsRecord> {
         val records = drawings.map { it.toRecord() }
@@ -56,7 +140,7 @@ class DrawingRepository(
             .set(DRAWINGS.POS_Y, excluded(DRAWINGS.POS_Y))
             .set(DRAWINGS.MAX_WIDTH, excluded(DRAWINGS.MAX_WIDTH))
             .set(DRAWINGS.ROTATION, excluded(DRAWINGS.ROTATION))
-            .setNull(DRAWINGS.DELETED_AT)
+            .set(DRAWINGS.LAYOUT_VERSION, DRAWINGS.LAYOUT_VERSION.plus(1L))
     }
 
     fun findByBoardId(boardId: BoardId): List<Drawing> =

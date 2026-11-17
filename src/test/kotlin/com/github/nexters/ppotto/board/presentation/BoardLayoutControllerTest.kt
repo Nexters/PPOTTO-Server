@@ -203,6 +203,64 @@ class BoardLayoutControllerTest(
                 }
             }
 
+            When("v2로 기존 텍스트의 배치를 수정하면") {
+                layoutRequest(
+                    "2",
+                    """{"drawings":{"created":[{"type":"TEXT","id":"$drawingId","scope":"BOARD",
+                    "color":"#FFFFFF","zIndex":7,"content":"여름 휴가","fontSize":26,
+                    "posX":80,"posY":290.5,"maxWidth":280}]}}""",
+                ).andExpect(status().isOk)
+
+                val updated =
+                    layoutRequest(
+                        "2",
+                        """{"drawings":{"updated":[{"type":"TEXT","id":"$drawingId","scope":"BOARD",
+                        "color":"#FFFFFF","zIndex":7,"content":"여름 휴가","fontSize":26,
+                        "posX":120,"posY":290.5,"maxWidth":280,"expectedLayoutVersion":0}]}}""",
+                    )
+
+                Then("새 위치와 버전을 저장한다") {
+                    updated.andExpect(status().isOk)
+                    val text =
+                        drawingRepository
+                            .findByBoardId(board.id)
+                            .single()
+                            .shouldBeInstanceOf<Drawing.Text>()
+                    text.posX shouldBe 120.0
+                    text.layoutVersion shouldBe 1
+                }
+
+                Then("같은 버전의 재요청은 충돌로 거부한다") {
+                    layoutRequest(
+                        "2",
+                        """{"drawings":{"deleted":[{"id":"$drawingId","expectedLayoutVersion":0}]}}""",
+                    ).andExpect(status().isConflict)
+                        .andExpect(jsonPath("$.error.code").value("BOARD-013"))
+                }
+            }
+
+            When("v2에서 버전 없이 기존 텍스트 수정을 요청하면") {
+                val result =
+                    layoutRequest(
+                        "2",
+                        """{"drawings":{"updated":[{"type":"TEXT","id":"$drawingId","scope":"BOARD",
+                        "color":"#FFFFFF","zIndex":7,"content":"여름 휴가","fontSize":26,
+                        "posX":120,"posY":290.5,"maxWidth":280}]}}""",
+                    )
+
+                Then("잘못된 요청으로 거부한다") {
+                    result.andExpect(status().isBadRequest)
+                }
+            }
+
+            When("v2에서 삭제 ID만 보내면") {
+                val result = layoutRequest("2", """{"drawings":{"deletedIds":["$drawingId"]}}""")
+
+                Then("성공으로 처리하지 않고 거부한다") {
+                    result.andExpect(status().isBadRequest)
+                }
+            }
+
             When("인증 없이 레이아웃 저장을 요청하면") {
                 val result =
                     mockMvc.perform(

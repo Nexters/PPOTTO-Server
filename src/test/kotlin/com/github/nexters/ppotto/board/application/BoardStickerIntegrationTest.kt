@@ -2,6 +2,7 @@ package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.board.application.model.BoardLayoutConflictException
 import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.port.BoardActiveAnalysisPort
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
@@ -185,6 +186,36 @@ class BoardStickerIntegrationTest(
                             badgeRotation shouldBe 8.0
                         }
                     drawingRepository.findByBoardId(board.id).map { it.id } shouldContainExactly listOf(drawing.id)
+                }
+            }
+        }
+
+        Given("같은 스티커 배치를 이미 저장한 보드에서") {
+            val user = userRepository.saveTestUser()
+            val board = boardRepository.save(user.id)
+            val analysis = analysisRepository.save(user.id, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+            val layout = updatedLayout(sticker.id).copy(title = null, expectedLayoutVersion = 0)
+            boardLayoutService.update(
+                board.id,
+                user.id,
+                BoardLayoutUpdateCommand(listOf(layout), emptyList(), emptyList()),
+            )
+
+            When("이전 버전으로 다시 스티커 배치를 저장하면") {
+                val exception =
+                    shouldThrow<BoardLayoutConflictException> {
+                        boardLayoutService.update(
+                            board.id,
+                            user.id,
+                            BoardLayoutUpdateCommand(listOf(layout), emptyList(), emptyList()),
+                        )
+                    }
+
+                Then("그림·텍스트와 같은 보드 배치 충돌 코드를 반환한다") {
+                    exception.errorCode shouldBe BoardErrorCode.LAYOUT_CONFLICT
+                    exception.stickerIds shouldBe setOf(sticker.id)
+                    exception.drawingIds.shouldBeEmpty()
                 }
             }
         }

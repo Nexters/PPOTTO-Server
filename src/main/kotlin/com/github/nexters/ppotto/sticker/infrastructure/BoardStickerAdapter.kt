@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.infrastructure
 
+import com.github.nexters.ppotto.board.application.model.BoardLayoutConflictException
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
@@ -13,6 +14,7 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
 import com.github.nexters.ppotto.sticker.application.model.StickerItemResult
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
@@ -56,7 +58,13 @@ class BoardStickerAdapter(
     override fun updateLayouts(
         boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
-    ): Unit = stickerCommandService.updateLayouts(boardId, layouts.map { it.toStickerCommand() })
+    ) {
+        try {
+            stickerCommandService.updateLayouts(boardId, layouts.map { it.toStickerCommand() })
+        } catch (exception: StickerLayoutConflictException) {
+            throw BoardLayoutConflictException(stickerIds = setOf(exception.stickerId), cause = exception)
+        }
+    }
 
     override fun deleteAllByBoardId(boardId: BoardId): Unit = stickerCommandService.deleteAllByBoardId(boardId)
 

@@ -25,6 +25,7 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.jooq.tables.references.STICKER_VIEWS
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationResult
@@ -172,13 +173,13 @@ class StickerCommandServiceTest(
 
                 Then("같은 이전 버전의 재요청은 충돌로 거절한다") {
                     val exception =
-                        shouldThrow<ConflictException> {
+                        shouldThrow<StickerLayoutConflictException> {
                             service.updateLayouts(
                                 board.id,
                                 listOf(StickerLayoutCommand(sticker.id, stickerLayout(posX = 22.0), expectedLayoutVersion = 0)),
                             )
                         }
-                    exception.errorCode shouldBe StickerErrorCode.LAYOUT_CONFLICT
+                    exception.stickerId shouldBe sticker.id
                     stickerRepository.findById(sticker.id)?.posX shouldBe 11.0
                     stickerRepository.findById(sticker.id)?.layoutVersion shouldBe 1
                 }
@@ -193,7 +194,7 @@ class StickerCommandServiceTest(
 
                 Then("앞서 쓴 항목까지 모두 롤백한다") {
                     val exception =
-                        shouldThrow<ConflictException> {
+                        shouldThrow<StickerLayoutConflictException> {
                             service.updateLayouts(
                                 board.id,
                                 listOf(
@@ -202,7 +203,7 @@ class StickerCommandServiceTest(
                                 ),
                             )
                         }
-                    exception.errorCode shouldBe StickerErrorCode.LAYOUT_CONFLICT
+                    exception.stickerId shouldBe second.id
                     stickerRepository.findById(sticker.id)?.layoutVersion shouldBe 0
                     stickerRepository.findById(sticker.id)?.posX shouldBe null
                     stickerRepository.findById(second.id)?.layoutVersion shouldBe 1

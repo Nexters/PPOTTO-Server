@@ -1703,7 +1703,7 @@ data: {"eventId":"019a72c0-4d8e-7f10-a2b3-c4d5e6f70819","type":"BOARD_UPDATED","
 - Operation ID: `saveBoardLayoutV2`
 - Summary: 편집 결과 일괄 저장 (선과 텍스트)
 
-`stickers`는 v1과 달리 `title` 대신 조회한 스티커의 `layoutVersion`을 `expectedLayoutVersion`으로 받는다. 버전 불일치 시 `409 STICKER-009`로 요청 전체를 롤백한다. `drawings.created`는 `type` 판별자를 가진 합집합이다.
+`stickers`는 v1과 달리 `title` 대신 조회한 스티커의 `layoutVersion`을 `expectedLayoutVersion`으로 받는다. `drawings.created`는 새 항목만 생성하며, 기존 항목은 `drawings.updated`와 `drawings.deleted`에 조회 당시의 `layoutVersion`을 `expectedLayoutVersion`으로 보낸다. 스티커 또는 그림·텍스트의 버전이 달라지면 `409 BOARD-013`으로 요청 전체를 롤백한다.
 
 Request example (스티커 이동 모드 종료):
 ```json
@@ -1741,7 +1741,9 @@ Request example (드로잉 모드 종료 — 선 생성 1건, 삭제 1건):
         "strokeWidth": 4
       }
     ],
-    "deletedIds": ["01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a"]
+    "deleted": [
+      { "id": "01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a", "expectedLayoutVersion": 0 }
+    ]
   }
 }
 ```
@@ -1769,6 +1771,30 @@ Request example (텍스트 모드 종료 — 텍스트 생성 1건):
 }
 ```
 
+Request example (기존 텍스트 이동):
+```json
+{
+  "drawings": {
+    "updated": [
+      {
+        "type": "TEXT",
+        "id": "01983f2c-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+        "scope": "BOARD",
+        "color": "#FFFFFF",
+        "zIndex": 7,
+        "content": "여름 휴가",
+        "fontSize": 26,
+        "posX": 120,
+        "posY": 310,
+        "maxWidth": 280,
+        "rotation": 0,
+        "expectedLayoutVersion": 0
+      }
+    ]
+  }
+}
+```
+
 #### Success Spec
 v1과 같다 (200, `data: null`).
 
@@ -1777,15 +1803,18 @@ v1과 같고, 다음 오류가 추가된다.
 
 | Status | Error Code | 발생 조건 |
 | --- | --- | --- |
-| 409 | STICKER-009 | `expectedLayoutVersion`과 현재 스티커 배치 버전이 다름. 전체 요청 롤백 |
+| 409 | BOARD-013 | 스티커, 그림 또는 텍스트의 배치 버전이 조회 당시와 다르거나 그림·텍스트가 삭제됨. 전체 요청 롤백 |
 | 400 | COMMON-001 | `type`이 `STROKE`/`TEXT`가 아님 |
 | 400 | COMMON-001 | `content`가 비었거나 32자 초과 |
 | 400 | COMMON-001 | `color`가 `#RRGGBB` 형식이 아님 |
 | 400 | COMMON-001 | `fontSize` 또는 `maxWidth`가 0 이하 |
 
 #### Notes
-- `created`는 v1과 같이 `id` 기준 upsert입니다. 같은 id를 다시 보내면 수정이고, 재시도해도 중복 저장되지 않습니다 (멱등). 삭제한 id를 다시 `created`로 보내면 되살아납니다.
-- `deletedIds`는 선과 텍스트를 구분하지 않습니다.
+- v2의 `created`는 새 항목만 생성합니다. 기존 항목 ID를 다시 보내면 `BOARD-001`로 거부하며 삭제된 항목도 되살리지 않습니다.
+- `updated`는 현재 `type`, `scope`, `stickerId`를 유지해야 합니다. 다른 값으로 바꾸면 `BOARD-001`로 거부합니다.
+- `deleted`는 선과 텍스트를 구분하지 않으며 각 항목의 조회 당시 배치 버전이 필요합니다.
+- 기존 `deletedIds` 형식은 v2에서 400으로 거부합니다. 삭제 요청이 무시된 채 성공 응답을 받지 않도록 합니다.
+- v1의 기존 요청 형식은 유지합니다. v1으로 수정한 그림·텍스트도 배치 버전이 증가합니다.
 - `content`의 줄바꿈은 클라이언트가 실측해 넣은 그대로 저장하고 서버는 다시 감싸지 않습니다. `maxWidth`는 그 줄바꿈 기준이 된 편집창 폭이며 렌더 폭 보존용입니다.
 - `zIndex`는 스티커의 `zIndex`와 같은 숫자 공간을 씁니다.
 - v1에서는 `color`가 공백만 아니면 통과했지만 v2는 `#RRGGBB`를 강제합니다.

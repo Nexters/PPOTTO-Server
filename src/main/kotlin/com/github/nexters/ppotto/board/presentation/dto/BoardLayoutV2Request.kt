@@ -4,10 +4,14 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
+import com.github.nexters.ppotto.board.application.model.DrawingLayoutDeleteCommand
+import com.github.nexters.ppotto.board.application.model.DrawingLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.Drawing
 import com.github.nexters.ppotto.board.domain.DrawingScope
 import com.github.nexters.ppotto.board.domain.NewDrawing
+import com.github.nexters.ppotto.global.error.CommonErrorCode
+import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
@@ -22,25 +26,36 @@ import jakarta.validation.constraints.Size
 
 const val DRAWING_COLOR_PATTERN = "^#[0-9A-Fa-f]{6}$"
 
-@Schema(description = "보드 편집 결과 일괄 저장 요청 (v2). 편집 모드에서 바뀐 것만 보냄")
+@Schema(description = "보드 편집 결과 일괄 저장 요청 (v2). 변경된 항목만 보냄")
 data class BoardLayoutV2Request(
     @field:Valid
     @field:Schema(description = "변경된 스티커 배치")
     val stickers: List<StickerLayoutV2Request>? = null,
 
     @field:Valid
-    @field:Schema(description = "선과 텍스트의 생성·삭제 변경분")
+    @field:Schema(description = "선과 텍스트의 생성·수정·삭제 변경분")
     val drawings: DrawingChangesV2Request? = null,
 ) {
     fun toCommand(boardId: BoardId): BoardLayoutUpdateCommand =
         BoardLayoutUpdateCommand(
             stickers = stickers.orEmpty().map(StickerLayoutV2Request::toCommand),
-            createdDrawings =
+            createdDrawings = emptyList(),
+            deletedDrawingIds = emptyList(),
+            insertedDrawings =
                 drawings
                     ?.created
                     .orEmpty()
                     .map { it.toDomain(boardId) },
-            deletedDrawingIds = drawings?.deletedIds.orEmpty(),
+            updatedDrawings =
+                drawings
+                    ?.updated
+                    .orEmpty()
+                    .map { it.toCommand(boardId) },
+            versionedDeletedDrawings =
+                drawings
+                    ?.deleted
+                    .orEmpty()
+                    .map(DrawingDeleteV2Request::toCommand),
         )
 }
 
@@ -95,20 +110,102 @@ data class StickerLayoutV2Request(
         )
 }
 
-@Schema(description = "선과 텍스트의 생성·삭제 변경분")
+@Schema(description = "선과 텍스트의 생성·수정·삭제 변경분")
 data class DrawingChangesV2Request(
     @field:Valid
-    @field:Schema(
-        description = "새로 만든 선과 텍스트. 클라이언트가 만든 id로 upsert하므로 재시도해도 멱등이고, 같은 id를 다시 보내면 수정이 된다",
-    )
+    @field:Schema(description = "새로 만든 선과 텍스트. 이미 존재하는 ID는 생성할 수 없음")
     val created: List<DrawingCreateV2Request>? = null,
 
-    @field:Schema(
-        description = "삭제할 그림 ID 목록. 선과 텍스트를 구분하지 않는다",
-        example = "[\"01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a\"]",
-    )
-    val deletedIds: List<DrawingId>? = null,
+    @field:Valid
+    @field:Schema(description = "기존 선과 텍스트의 수정. 조회 당시 배치 버전이 필요함")
+    val updated: List<DrawingUpdateV2Request>? = null,
+
+    @field:Valid
+    @field:Schema(description = "삭제할 선과 텍스트의 ID와 조회 당시 배치 버전")
+    val deleted: List<DrawingDeleteV2Request>? = null,
+
+    @get:JsonProperty("deletedIds")
+    @field:Schema(hidden = true)
+    val legacyDeletedIds: List<DrawingId>? = null,
+) {
+    init {
+        if (legacyDeletedIds != null) throw InvalidInputException(CommonErrorCode.INVALID_INPUT)
+    }
+}
+
+data class DrawingDeleteV2Request(
+    val id: DrawingId,
+    @field:PositiveOrZero
+    val expectedLayoutVersion: Long,
+) {
+    fun toCommand() = DrawingLayoutDeleteCommand(id, expectedLayoutVersion)
+}
+
+@Schema(
+    description = "기존 선 또는 텍스트의 수정. type이 판별자다",
+    discriminatorProperty = "type",
+    oneOf = [DrawingUpdateV2Request.Stroke::class, DrawingUpdateV2Request.Text::class],
 )
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = DrawingUpdateV2Request.Stroke::class, name = "STROKE"),
+    JsonSubTypes.Type(value = DrawingUpdateV2Request.Text::class, name = "TEXT"),
+)
+sealed interface DrawingUpdateV2Request {
+    fun toCommand(boardId: BoardId): DrawingLayoutUpdateCommand
+
+    @Schema(name = "DrawingUpdateStrokeRequest", description = "기존 선 수정")
+    data class Stroke(
+        val id: DrawingId,
+        val scope: DrawingScope,
+        val stickerId: StickerId? = null,
+        @field:NotBlank
+        @field:Pattern(regexp = DRAWING_COLOR_PATTERN)
+        val color: String,
+        val zIndex: Int,
+        @field:NotEmpty
+        val stroke: Map<String, Any?>,
+        @field:Positive
+        val strokeWidth: Double,
+        @field:PositiveOrZero
+        val expectedLayoutVersion: Long,
+    ) : DrawingUpdateV2Request {
+        override fun toCommand(boardId: BoardId) =
+            DrawingLayoutUpdateCommand(
+                NewDrawing.Stroke(id, boardId, stickerId, scope, color, zIndex, stroke, strokeWidth),
+                expectedLayoutVersion,
+            )
+    }
+
+    @Schema(name = "DrawingUpdateTextRequest", description = "기존 텍스트 수정")
+    data class Text(
+        val id: DrawingId,
+        val scope: DrawingScope,
+        val stickerId: StickerId? = null,
+        @field:NotBlank
+        @field:Pattern(regexp = DRAWING_COLOR_PATTERN)
+        val color: String,
+        val zIndex: Int,
+        @field:NotBlank
+        @field:Size(max = Drawing.Text.MAX_CONTENT_LENGTH)
+        val content: String,
+        @field:Positive
+        val fontSize: Double,
+        val posX: Double,
+        val posY: Double,
+        @field:Positive
+        val maxWidth: Double,
+        val rotation: Double = 0.0,
+        @field:PositiveOrZero
+        val expectedLayoutVersion: Long,
+    ) : DrawingUpdateV2Request {
+        override fun toCommand(boardId: BoardId) =
+            DrawingLayoutUpdateCommand(
+                NewDrawing.Text(id, boardId, stickerId, scope, color, zIndex, content, fontSize, posX, posY, maxWidth, rotation),
+                expectedLayoutVersion,
+            )
+    }
+}
 
 @Schema(
     description = "새 선 또는 텍스트. type이 판별자다",
@@ -132,7 +229,7 @@ sealed interface DrawingCreateV2Request {
     @Schema(name = "DrawingCreateStrokeRequest", description = "새 선")
     data class Stroke(
         @get:Schema(
-            description = "클라이언트가 생성한 uuidv7. 서버가 이 id로 upsert함",
+            description = "클라이언트가 생성한 새 선의 uuidv7",
             example = "01983f2c-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
         )
         @get:JsonProperty("id")
@@ -181,7 +278,7 @@ sealed interface DrawingCreateV2Request {
     @Schema(name = "DrawingCreateTextRequest", description = "새 텍스트")
     data class Text(
         @get:Schema(
-            description = "클라이언트가 생성한 uuidv7. 서버가 이 id로 upsert함",
+            description = "클라이언트가 생성한 새 텍스트의 uuidv7",
             example = "01983f2c-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
         )
         @get:JsonProperty("id")

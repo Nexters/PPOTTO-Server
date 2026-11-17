@@ -487,7 +487,7 @@ Table sticker_photos {
 
 Table drawings {
   ~base_id
-  layout_version bigint [not null, default: 0, note: '선과 텍스트의 배치 변경 충돌 검사에 사용할 항목별 버전. 기존 행은 0부터 시작한다. DB에서 0 이상으로 제한한다']
+  layout_version bigint [not null, default: 0, note: '선과 텍스트의 배치 버전. 수정 시 증가하며 v2 수정·삭제는 조회 당시 버전과 일치해야 한다. DB에서 0 이상으로 제한한다']
   board_id   uuid          [not null]
   sticker_id uuid          [null, note: 'scope=STICKER 일 때만 채운다']
   scope      drawing_scope [not null]

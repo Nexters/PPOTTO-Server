@@ -2,7 +2,10 @@ package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.board.application.model.BoardEvent
 import com.github.nexters.ppotto.board.application.model.BoardEventType
+import com.github.nexters.ppotto.board.application.model.BoardLayoutConflictException
 import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
+import com.github.nexters.ppotto.board.application.model.DrawingLayoutDeleteCommand
+import com.github.nexters.ppotto.board.application.model.DrawingLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.port.BoardEventConnection
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
 import com.github.nexters.ppotto.board.domain.BoardErrorCode
@@ -432,6 +435,69 @@ class BoardLayoutServiceTest(
                 Then("COMMON-001로 거부하고 스티커 배치를 위임하지 않는다") {
                     exception.errorCode shouldBe CommonErrorCode.INVALID_INPUT
                     stickerPort.updatedLayouts.shouldBeEmpty()
+                }
+            }
+        }
+
+        Given("v2 배치에서 선과 텍스트를 함께 수정하는 사용자가") {
+            val user = userRepository.saveTestUser()
+            val board = boardRepository.save(user.id)
+            val stroke = newDrawing(boardId = board.id)
+            val text = newTextDrawing(boardId = board.id)
+            drawingRepository.insertAll(listOf(stroke, text))
+
+            When("뒤 항목의 버전이 맞지 않으면") {
+                val exception =
+                    shouldThrow<BoardLayoutConflictException> {
+                        boardLayoutService.update(
+                            board.id,
+                            user.id,
+                            BoardLayoutUpdateCommand(
+                                stickers = emptyList(),
+                                createdDrawings = emptyList(),
+                                deletedDrawingIds = emptyList(),
+                                updatedDrawings =
+                                    listOf(
+                                        DrawingLayoutUpdateCommand(stroke.copy(color = "#FFD400"), 0),
+                                        DrawingLayoutUpdateCommand(text.copy(posX = 120.0), 1),
+                                    ),
+                            ),
+                        )
+                    }
+
+                Then("앞 항목의 저장까지 롤백한다") {
+                    exception.errorCode shouldBe BoardErrorCode.LAYOUT_CONFLICT
+                    exception.drawingIds shouldBe setOf(text.id)
+                    exception.stickerIds.shouldBeEmpty()
+                    val drawings = drawingRepository.findByBoardId(board.id).associateBy { it.id }
+                    drawings.getValue(stroke.id).color shouldBe "#FFFFFF"
+                    drawings.getValue(stroke.id).layoutVersion shouldBe 0
+                    drawings
+                        .getValue(text.id)
+                        .shouldBeInstanceOf<Drawing.Text>()
+                        .posX shouldBe 80.0
+                }
+            }
+
+            When("오래된 버전으로 삭제하면") {
+                val exception =
+                    shouldThrow<BoardLayoutConflictException> {
+                        boardLayoutService.update(
+                            board.id,
+                            user.id,
+                            BoardLayoutUpdateCommand(
+                                stickers = emptyList(),
+                                createdDrawings = emptyList(),
+                                deletedDrawingIds = emptyList(),
+                                versionedDeletedDrawings = listOf(DrawingLayoutDeleteCommand(stroke.id, 1)),
+                            ),
+                        )
+                    }
+
+                Then("그림을 유지한다") {
+                    exception.errorCode shouldBe BoardErrorCode.LAYOUT_CONFLICT
+                    exception.drawingIds shouldBe setOf(stroke.id)
+                    drawingRepository.findByBoardId(board.id) shouldHaveSize 2
                 }
             }
         }
