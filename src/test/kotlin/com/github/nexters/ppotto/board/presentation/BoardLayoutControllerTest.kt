@@ -236,6 +236,7 @@ class BoardLayoutControllerTest(
                         """{"drawings":{"deleted":[{"id":"$drawingId","expectedLayoutVersion":0}]}}""",
                     ).andExpect(status().isConflict)
                         .andExpect(jsonPath("$.error.code").value("BOARD-013"))
+                        .andExpect(jsonPath("$.error.details.drawingIds[0]").value(drawingId.toString()))
                 }
             }
 

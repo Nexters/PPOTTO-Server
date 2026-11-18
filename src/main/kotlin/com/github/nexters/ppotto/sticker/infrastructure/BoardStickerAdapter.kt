@@ -14,8 +14,8 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
 import com.github.nexters.ppotto.sticker.application.model.StickerItemResult
-import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.springframework.stereotype.Component
@@ -55,6 +55,11 @@ class BoardStickerAdapter(
         stickerIds: Set<StickerId>,
     ): Boolean = stickerCommandService.validateOwnedByBoard(boardId, stickerIds)
 
+    override fun findDeletedIds(
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
+    ): Set<StickerId> = stickerCommandService.findDeletedIds(boardId, stickerIds)
+
     override fun updateLayouts(
         boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
@@ -62,7 +67,7 @@ class BoardStickerAdapter(
         try {
             stickerCommandService.updateLayouts(boardId, layouts.map { it.toStickerCommand() })
         } catch (exception: StickerLayoutConflictException) {
-            throw BoardLayoutConflictException(stickerIds = setOf(exception.stickerId), cause = exception)
+            throw BoardLayoutConflictException(stickerIds = exception.stickerIds, cause = exception)
         }
     }
 

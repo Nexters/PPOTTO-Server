@@ -119,6 +119,19 @@ class DrawingRepository(
             .and(DRAWINGS.LAYOUT_VERSION.eq(command.expectedLayoutVersion))
             .execute() == 1
 
+    fun findActiveLayoutVersions(ids: Collection<DrawingId>): Map<DrawingId, Long> =
+        ids
+            .takeIf { it.isNotEmpty() }
+            ?.let { drawingIds ->
+                dslContext
+                    .select(DRAWINGS.ID, DRAWINGS.LAYOUT_VERSION)
+                    .from(DRAWINGS)
+                    .where(DRAWINGS.ID.`in`(drawingIds))
+                    .and(DRAWINGS.DELETED_AT.isNull)
+                    .fetch()
+                    .associate { it.value1()!! to it.value2()!! }
+            } ?: emptyMap()
+
     private fun upsertQuery(drawings: List<NewDrawing>): InsertOnDuplicateSetMoreStep<DrawingsRecord> {
         val records = drawings.map { it.toRecord() }
         return records

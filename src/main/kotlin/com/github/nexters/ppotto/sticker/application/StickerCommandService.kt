@@ -8,8 +8,8 @@ import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.PhotoId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
-import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.application.model.StickerTitleResult
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationPort
@@ -77,7 +77,7 @@ class StickerCommandService(
         userId: UserId,
         stickerId: StickerId,
     ) {
-        val sticker = stickerAccessService.getAccessible(userId, stickerId)
+        val sticker = stickerAccessService.getAccessibleForUpdate(userId, stickerId)
         val drawingCommandPort = drawingCommandPorts.singlePort(DRAWING_COMMAND_PORT_NAME)
         sticker.delete(Instant.now())
 
@@ -174,6 +174,11 @@ class StickerCommandService(
         stickerIds: Collection<StickerId>,
     ): Boolean = stickerRepository.validateOwnedByBoard(boardId, stickerIds)
 
+    fun findDeletedIds(
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
+    ): Set<StickerId> = stickerCommandRepository.findDeletedIds(boardId, stickerIds)
+
     @Transactional
     fun updateLayouts(
         boardId: BoardId,
@@ -186,18 +191,40 @@ class StickerCommandService(
             throw InvalidInputException(StickerErrorCode.UNEDITABLE_STICKER)
         }
 
+        validateLayoutVersions(layouts, stickersById)
+
         for (command in layouts) {
             val sticker = stickersById.getValue(command.id)
             sticker.updateLayout(command.layout)
             if (!stickerCommandRepository.updateLayout(sticker, command.layout.title, command.expectedLayoutVersion)) {
-                throw layoutUpdateFailure(command)
+                throw layoutUpdateFailure(boardId, command)
             }
         }
     }
 
-    private fun layoutUpdateFailure(command: StickerLayoutCommand): RuntimeException =
-        if (command.expectedLayoutVersion != null && stickerCommandRepository.existsActiveById(command.id)) {
-            StickerLayoutConflictException(command.id)
+    private fun validateLayoutVersions(
+        layouts: List<StickerLayoutCommand>,
+        stickersById: Map<StickerId, Sticker>,
+    ) {
+        val conflicts =
+            layouts
+                .filter { command ->
+                    command.expectedLayoutVersion != null &&
+                        stickersById.getValue(command.id).layoutVersion != command.expectedLayoutVersion
+                }.mapTo(mutableSetOf()) { it.id }
+        if (conflicts.isNotEmpty()) throw StickerLayoutConflictException(conflicts)
+    }
+
+    private fun layoutUpdateFailure(
+        boardId: BoardId,
+        command: StickerLayoutCommand,
+    ): RuntimeException =
+        if (
+            command.expectedLayoutVersion != null &&
+            (stickerCommandRepository.existsActiveById(command.id) ||
+                stickerCommandRepository.findDeletedIds(boardId, setOf(command.id)).isNotEmpty())
+        ) {
+            StickerLayoutConflictException(setOf(command.id))
         } else {
             InvalidInputException(StickerErrorCode.UNEDITABLE_STICKER)
         }

@@ -501,6 +501,67 @@ class BoardLayoutServiceTest(
                 }
             }
         }
+
+        Given("두 텍스트의 배치를 함께 저장하는 사용자가") {
+            val user = userRepository.saveTestUser()
+            val board = boardRepository.save(user.id)
+            val first = newTextDrawing(boardId = board.id)
+            val second = newTextDrawing(boardId = board.id)
+            drawingRepository.insertAll(listOf(first, second))
+            drawingRepository.updateVersioned(DrawingLayoutUpdateCommand(first.copy(posX = 110.0), 0))
+            drawingRepository.updateVersioned(DrawingLayoutUpdateCommand(second.copy(posX = 130.0), 0))
+
+            When("두 항목 모두 오래된 버전으로 저장하면") {
+                val command =
+                    BoardLayoutUpdateCommand(
+                        stickers = emptyList(),
+                        createdDrawings = emptyList(),
+                        deletedDrawingIds = emptyList(),
+                        updatedDrawings =
+                            listOf(
+                                DrawingLayoutUpdateCommand(first.copy(posX = 210.0), 0),
+                                DrawingLayoutUpdateCommand(second.copy(posX = 230.0), 0),
+                            ),
+                    )
+                val conflict = shouldThrow<BoardLayoutConflictException> { boardLayoutService.update(board.id, user.id, command) }
+
+                Then("충돌한 두 ID를 함께 알리고 기존 배치를 유지한다") {
+                    conflict.drawingIds shouldBe setOf(first.id, second.id)
+                    val drawings = drawingRepository.findByBoardId(board.id).associateBy { it.id }
+                    drawings
+                        .getValue(first.id)
+                        .shouldBeInstanceOf<Drawing.Text>()
+                        .posX shouldBe 110.0
+                    drawings
+                        .getValue(second.id)
+                        .shouldBeInstanceOf<Drawing.Text>()
+                        .posX shouldBe 130.0
+                }
+            }
+
+            When("이미 삭제된 항목의 배치를 저장하면") {
+                drawingRepository.softDeleteByIds(board.id, listOf(first.id))
+
+                val conflict =
+                    shouldThrow<BoardLayoutConflictException> {
+                        boardLayoutService.update(
+                            board.id,
+                            user.id,
+                            BoardLayoutUpdateCommand(
+                                stickers = emptyList(),
+                                createdDrawings = emptyList(),
+                                deletedDrawingIds = emptyList(),
+                                updatedDrawings = listOf(DrawingLayoutUpdateCommand(first.copy(posX = 210.0), 0)),
+                            ),
+                        )
+                    }
+
+                Then("삭제된 항목을 되살리지 않는다") {
+                    conflict.drawingIds shouldBe setOf(first.id)
+                    drawingRepository.findByBoardId(board.id).map { it.id } shouldBe listOf(second.id)
+                }
+            }
+        }
     })
 
 private fun stickerLayout(id: StickerId) =

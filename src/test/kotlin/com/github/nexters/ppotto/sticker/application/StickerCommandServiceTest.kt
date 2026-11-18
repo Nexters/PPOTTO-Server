@@ -179,7 +179,7 @@ class StickerCommandServiceTest(
                                 listOf(StickerLayoutCommand(sticker.id, stickerLayout(posX = 22.0), expectedLayoutVersion = 0)),
                             )
                         }
-                    exception.stickerId shouldBe sticker.id
+                    exception.stickerIds shouldBe setOf(sticker.id)
                     stickerRepository.findById(sticker.id)?.posX shouldBe 11.0
                     stickerRepository.findById(sticker.id)?.layoutVersion shouldBe 1
                 }
@@ -203,7 +203,7 @@ class StickerCommandServiceTest(
                                 ),
                             )
                         }
-                    exception.stickerId shouldBe second.id
+                    exception.stickerIds shouldBe setOf(second.id)
                     stickerRepository.findById(sticker.id)?.layoutVersion shouldBe 0
                     stickerRepository.findById(sticker.id)?.posX shouldBe null
                     stickerRepository.findById(second.id)?.layoutVersion shouldBe 1

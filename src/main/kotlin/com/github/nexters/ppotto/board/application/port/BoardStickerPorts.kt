@@ -23,6 +23,11 @@ fun interface BoardStickerSummaryPort {
 }
 
 interface BoardStickerCommandPort {
+    fun findDeletedIds(
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
+    ): Set<StickerId>
+
     fun ownsAll(
         boardId: BoardId,
         stickerIds: Set<StickerId>,

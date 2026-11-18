@@ -9,6 +9,7 @@ import com.github.nexters.ppotto.board.domain.BoardErrorCode
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.BoardId
+import com.github.nexters.ppotto.global.identifier.DrawingId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.global.transaction.afterCommit
@@ -31,11 +32,16 @@ class BoardLayoutService(
         boardAccessService.getAccessibleByIdForUpdate(boardId, userId)
         validateDrawingOwnership(boardId, command)
 
-        if (!stickerCommandPort.ownsAll(boardId, referencedStickerIds(command))) {
-            throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
+        val versionedStickerIds = command.stickers.filter { it.expectedLayoutVersion != null }.mapTo(mutableSetOf()) { it.id }
+        val deletedStickerIds = stickerCommandPort.findDeletedIds(boardId, versionedStickerIds)
+        validateStickerOwnership(boardId, command, deletedStickerIds)
+
+        val drawingConflicts = drawingConflicts(command)
+        updateStickers(boardId, command, deletedStickerIds, drawingConflicts)
+        if (deletedStickerIds.isNotEmpty() || drawingConflicts.isNotEmpty()) {
+            throw BoardLayoutConflictException(stickerIds = deletedStickerIds, drawingIds = drawingConflicts)
         }
 
-        stickerCommandPort.updateLayouts(boardId, command.stickers)
         drawingRepository.upsertAll(command.createdDrawings)
         drawingRepository.insertAll(command.insertedDrawings)
         command.updatedDrawings.forEach(::updateDrawing)
@@ -49,6 +55,49 @@ class BoardLayoutService(
         }
 
         afterCommit { boardEventBroker.publish(BoardEvent.updated(boardId)) }
+    }
+
+    private fun updateStickers(
+        boardId: BoardId,
+        command: BoardLayoutUpdateCommand,
+        deletedStickerIds: Set<StickerId>,
+        drawingConflicts: Set<DrawingId>,
+    ) {
+        try {
+            stickerCommandPort.updateLayouts(
+                boardId,
+                command.stickers
+                    .filterNot { it.id in deletedStickerIds },
+            )
+        } catch (exception: BoardLayoutConflictException) {
+            throw BoardLayoutConflictException(
+                stickerIds = exception.stickerIds + deletedStickerIds,
+                drawingIds = drawingConflicts,
+                cause = exception,
+            )
+        }
+    }
+
+    private fun validateStickerOwnership(
+        boardId: BoardId,
+        command: BoardLayoutUpdateCommand,
+        deletedStickerIds: Set<StickerId>,
+    ) {
+        if (!stickerCommandPort.ownsAll(boardId, referencedStickerIds(command) - deletedStickerIds)) {
+            throw InvalidInputException(BoardErrorCode.INVALID_LAYOUT)
+        }
+    }
+
+    private fun drawingConflicts(command: BoardLayoutUpdateCommand): Set<DrawingId> {
+        val expectedVersions =
+            command.updatedDrawings.map { it.drawing.id to it.expectedLayoutVersion } +
+                command.versionedDeletedDrawings.map { it.id to it.expectedLayoutVersion }
+        val currentVersions = drawingRepository.findActiveLayoutVersions(expectedVersions.map { it.first })
+        return expectedVersions
+            .filter { (id, expected) ->
+                val current = currentVersions[id]
+                current == null || current != expected
+            }.mapTo(mutableSetOf()) { it.first }
     }
 
     private fun updateDrawing(update: DrawingLayoutUpdateCommand) {

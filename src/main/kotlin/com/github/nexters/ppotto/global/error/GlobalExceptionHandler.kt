@@ -24,7 +24,7 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException::class)
     fun handleBusinessException(e: BusinessException): ResponseEntity<ApiResponse<Unit>> =
-        respond(e.errorCode.status, ErrorResponse.of(e.errorCode, e.message), e)
+        respond(e.errorCode.status, ErrorResponse.of(e.errorCode, e.message, e.details), e)
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
     fun handleMethodArgumentNotValid(e: MethodArgumentNotValidException): ResponseEntity<ApiResponse<Unit>> =

@@ -9,4 +9,10 @@ class BoardLayoutConflictException(
     val stickerIds: Set<StickerId> = emptySet(),
     val drawingIds: Set<DrawingId> = emptySet(),
     cause: Throwable? = null,
-) : ConflictException(BoardErrorCode.LAYOUT_CONFLICT, cause = cause)
+) : ConflictException(BoardErrorCode.LAYOUT_CONFLICT, cause = cause) {
+    override val details: Map<String, List<String>> =
+        mapOf(
+            "stickerIds" to stickerIds.map(StickerId::toString).sorted(),
+            "drawingIds" to drawingIds.map(DrawingId::toString).sorted(),
+        )
+}

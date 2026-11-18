@@ -49,6 +49,7 @@
 | error.message | 사용자 또는 개발자 확인용 메시지 |
 | error.fieldErrors | 요청 바디 검증 실패 시 필드별 오류. 그 외 빈 배열 |
 | error.timestamp | 에러 발생 시각. UTC ISO-8601 |
+| error.details | 오류별 추가 정보. 해당하지 않으면 생략 |
 
 ## 3. 엔드포인트 요약
 
@@ -1705,6 +1706,22 @@ data: {"eventId":"019a72c0-4d8e-7f10-a2b3-c4d5e6f70819","type":"BOARD_UPDATED","
 
 `stickers`는 v1과 달리 `title` 대신 조회한 스티커의 `layoutVersion`을 `expectedLayoutVersion`으로 받는다. `drawings.created`는 새 항목만 생성하며, 기존 항목은 `drawings.updated`와 `drawings.deleted`에 조회 당시의 `layoutVersion`을 `expectedLayoutVersion`으로 보낸다. 스티커 또는 그림·텍스트의 버전이 달라지면 `409 BOARD-013`으로 요청 전체를 롤백한다.
 
+```json
+{
+  "success": false,
+  "error": {
+    "code": "BOARD-013",
+    "message": "보드 항목이 변경되거나 삭제되었습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-11-18T00:00:00Z",
+    "details": {
+      "stickerIds": ["01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f"],
+      "drawingIds": ["01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a"]
+    }
+  }
+}
+```
+
 Request example (스티커 이동 모드 종료):
 ```json
 {
@@ -1803,7 +1820,7 @@ v1과 같고, 다음 오류가 추가된다.
 
 | Status | Error Code | 발생 조건 |
 | --- | --- | --- |
-| 409 | BOARD-013 | 스티커, 그림 또는 텍스트의 배치 버전이 조회 당시와 다르거나 그림·텍스트가 삭제됨. 전체 요청 롤백 |
+| 409 | BOARD-013 | 스티커, 그림 또는 텍스트의 배치 버전이 조회 당시와 다르거나 항목이 삭제됨. 전체 요청 롤백 |
 | 400 | COMMON-001 | `type`이 `STROKE`/`TEXT`가 아님 |
 | 400 | COMMON-001 | `content`가 비었거나 32자 초과 |
 | 400 | COMMON-001 | `color`가 `#RRGGBB` 형식이 아님 |
@@ -1815,6 +1832,7 @@ v1과 같고, 다음 오류가 추가된다.
 - `deleted`는 선과 텍스트를 구분하지 않으며 각 항목의 조회 당시 배치 버전이 필요합니다.
 - 기존 `deletedIds` 형식은 v2에서 400으로 거부합니다. 삭제 요청이 무시된 채 성공 응답을 받지 않도록 합니다.
 - v1의 기존 요청 형식은 유지합니다. v1으로 수정한 그림·텍스트도 배치 버전이 증가합니다.
+- 이 보드에서 삭제된 스티커의 배치를 저장하려는 요청은 `BOARD-013`으로 거부합니다. 다른 보드의 스티커나 존재하지 않는 ID는 `BOARD-001`로 거부합니다.
 - `content`의 줄바꿈은 클라이언트가 실측해 넣은 그대로 저장하고 서버는 다시 감싸지 않습니다. `maxWidth`는 그 줄바꿈 기준이 된 편집창 폭이며 렌더 폭 보존용입니다.
 - `zIndex`는 스티커의 `zIndex`와 같은 숫자 공간을 씁니다.
 - v1에서는 `color`가 공백만 아니면 통과했지만 v2는 `#RRGGBB`를 강제합니다.

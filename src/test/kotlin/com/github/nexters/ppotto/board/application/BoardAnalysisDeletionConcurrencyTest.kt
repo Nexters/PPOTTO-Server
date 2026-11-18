@@ -148,6 +148,11 @@ class BoardAnalysisDeletionConcurrencyTestConfiguration {
 }
 
 class BlockingBoardStickerCommandPort : BoardStickerCommandPort {
+    override fun findDeletedIds(
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
+    ): Set<StickerId> = emptySet()
+
     @Volatile
     private var deleteInvocation = CountDownLatch(1)
 

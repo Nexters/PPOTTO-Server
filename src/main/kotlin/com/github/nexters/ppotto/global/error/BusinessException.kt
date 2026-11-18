@@ -4,7 +4,9 @@ open class BusinessException(
     val errorCode: ErrorCode,
     override val message: String = errorCode.message,
     cause: Throwable? = null,
-) : RuntimeException(message, cause)
+) : RuntimeException(message, cause) {
+    open val details: Map<String, List<String>>? = null
+}
 
 open class InvalidInputException(
     errorCode: ErrorCode = CommonErrorCode.INVALID_INPUT,
