@@ -32,7 +32,10 @@ class BoardLayoutService(
         boardAccessService.getAccessibleByIdForUpdate(boardId, userId)
         validateDrawingOwnership(boardId, command)
 
-        val versionedStickerIds = command.stickers.filter { it.expectedLayoutVersion != null }.mapTo(mutableSetOf()) { it.id }
+        val versionedStickerIds =
+            command.stickers
+                .filter { it.expectedLayoutVersion != null }
+                .mapTo(mutableSetOf()) { it.id }
         val deletedStickerIds = stickerCommandPort.findDeletedIds(boardId, versionedStickerIds)
         validateStickerOwnership(boardId, command, deletedStickerIds)
 

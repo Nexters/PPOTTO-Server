@@ -6,6 +6,7 @@ import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.global.error.InvalidInputException
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.domain.Sticker
 import com.github.nexters.ppotto.sticker.domain.StickerErrorCode
@@ -125,14 +126,14 @@ class StickerBoardSurfaceTest(
                 val stale = listOf(first.id, second.id).map { checkNotNull(stickerRepository.findById(it)) }
                 stickerCommandRepository.softDelete(second.id, Instant.now())
                 val exception =
-                    shouldThrow<InvalidInputException> {
+                    shouldThrow<StickerLayoutConflictException> {
                         transactionTemplate.executeWithoutResult {
                             serviceReading(stale).updateLayouts(board.id, listOf(layoutOf(first.id), layoutOf(second.id)))
                         }
                     }
 
-                Then("STICKER-008 오류로 거부한다") {
-                    exception.errorCode shouldBe StickerErrorCode.UNEDITABLE_STICKER
+                Then("삭제된 스티커의 충돌 ID를 반환한다") {
+                    exception.stickerIds shouldBe setOf(second.id)
                 }
 
                 Then("먼저 반영된 배치까지 롤백한다") {

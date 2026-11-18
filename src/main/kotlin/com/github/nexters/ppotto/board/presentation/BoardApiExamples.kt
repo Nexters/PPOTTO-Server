@@ -438,6 +438,12 @@ private val ACTIVE_ANALYSIS_EXISTS =
         summary = "진행 중인 분석이 이 보드를 대상으로 함",
     )
 
+private val LAYOUT_CONFLICT =
+    ApiExamples.errorExample(
+        errorCode = BoardErrorCode.LAYOUT_CONFLICT,
+        summary = "조회한 뒤 스티커, 그림 또는 텍스트의 배치가 변경되거나 삭제됨",
+    )
+
 @Component
 class BoardApiExamples : ApiExampleProvider {
     override val examples: Map<KFunction<*>, OperationExamples> =
@@ -530,6 +536,7 @@ class BoardApiExamples : ApiExampleProvider {
                                     UNEDITABLE_STICKER,
                                 ),
                             "404" to listOf(BOARD_NOT_FOUND),
+                            "409" to listOf(LAYOUT_CONFLICT),
                         ),
                 ),
         )

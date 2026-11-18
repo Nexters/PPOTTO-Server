@@ -135,6 +135,7 @@ data class DrawingChangesV2Request(
 
 data class DrawingDeleteV2Request(
     val id: DrawingId,
+
     @field:PositiveOrZero
     val expectedLayoutVersion: Long,
 ) {
@@ -159,14 +160,19 @@ sealed interface DrawingUpdateV2Request {
         val id: DrawingId,
         val scope: DrawingScope,
         val stickerId: StickerId? = null,
+
         @field:NotBlank
         @field:Pattern(regexp = DRAWING_COLOR_PATTERN)
         val color: String,
+
         val zIndex: Int,
+
         @field:NotEmpty
         val stroke: Map<String, Any?>,
+
         @field:Positive
         val strokeWidth: Double,
+
         @field:PositiveOrZero
         val expectedLayoutVersion: Long,
     ) : DrawingUpdateV2Request {
@@ -182,20 +188,26 @@ sealed interface DrawingUpdateV2Request {
         val id: DrawingId,
         val scope: DrawingScope,
         val stickerId: StickerId? = null,
+
         @field:NotBlank
         @field:Pattern(regexp = DRAWING_COLOR_PATTERN)
         val color: String,
+
         val zIndex: Int,
+
         @field:NotBlank
         @field:Size(max = Drawing.Text.MAX_CONTENT_LENGTH)
         val content: String,
+
         @field:Positive
         val fontSize: Double,
         val posX: Double,
         val posY: Double,
+
         @field:Positive
         val maxWidth: Double,
         val rotation: Double = 0.0,
+
         @field:PositiveOrZero
         val expectedLayoutVersion: Long,
     ) : DrawingUpdateV2Request {

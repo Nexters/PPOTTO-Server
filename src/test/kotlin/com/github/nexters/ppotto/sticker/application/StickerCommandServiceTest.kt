@@ -626,7 +626,7 @@ class StickerCommandServiceTest(
             When("스티커 삭제를 요청하면") {
                 val exception =
                     shouldThrow<IllegalStateException> {
-                        serviceWithoutPort.delete(board.userId, sticker.id)
+                        transactionTemplate.executeWithoutResult { serviceWithoutPort.delete(board.userId, sticker.id) }
                     }
 
                 Then("연동 누락 오류를 던진다") {

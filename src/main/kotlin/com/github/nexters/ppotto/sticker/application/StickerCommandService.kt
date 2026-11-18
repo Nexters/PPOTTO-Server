@@ -221,8 +221,10 @@ class StickerCommandService(
     ): RuntimeException =
         if (
             command.expectedLayoutVersion != null &&
-            (stickerCommandRepository.existsActiveById(command.id) ||
-                stickerCommandRepository.findDeletedIds(boardId, setOf(command.id)).isNotEmpty())
+            (
+                stickerCommandRepository.existsActiveById(command.id) ||
+                    stickerCommandRepository.findDeletedIds(boardId, setOf(command.id)).isNotEmpty()
+            )
         ) {
             StickerLayoutConflictException(setOf(command.id))
         } else {

@@ -96,7 +96,10 @@ class StickerStaleAggregateTest(
             }
 
             When("삭제하면") {
-                val exception = shouldThrow<NotFoundException> { service.delete(board.userId, sticker.id) }
+                val exception =
+                    shouldThrow<NotFoundException> {
+                        transactionTemplate.executeWithoutResult { service.delete(board.userId, sticker.id) }
+                    }
 
                 Then("STICKER-001 오류로 실패한다") {
                     exception.errorCode shouldBe StickerErrorCode.STICKER_NOT_FOUND
