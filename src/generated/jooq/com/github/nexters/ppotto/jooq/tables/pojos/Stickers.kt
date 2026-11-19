@@ -41,7 +41,8 @@ data class Stickers(
     val regenerationLockedUntil: Instant? = null,
     val mainColor: String? = null,
     val shareToken: String? = null,
-    val sharePhotos: Boolean? = null
+    val sharePhotos: Boolean? = null,
+    val layoutVersion: Long? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -176,6 +177,12 @@ data class Stickers(
         }
         else if (this.sharePhotos != o.sharePhotos)
             return false
+        if (this.layoutVersion == null) {
+            if (o.layoutVersion != null)
+                return false
+        }
+        else if (this.layoutVersion != o.layoutVersion)
+            return false
         return true
     }
 
@@ -206,6 +213,7 @@ data class Stickers(
         result = prime * result + (if (this.mainColor == null) 0 else this.mainColor.hashCode())
         result = prime * result + (if (this.shareToken == null) 0 else this.shareToken.hashCode())
         result = prime * result + (if (this.sharePhotos == null) 0 else this.sharePhotos.hashCode())
+        result = prime * result + (if (this.layoutVersion == null) 0 else this.layoutVersion.hashCode())
         return result
     }
 
@@ -236,6 +244,7 @@ data class Stickers(
         sb.append(", ").append(mainColor)
         sb.append(", ").append(shareToken)
         sb.append(", ").append(sharePhotos)
+        sb.append(", ").append(layoutVersion)
 
         sb.append(")")
         return sb.toString()

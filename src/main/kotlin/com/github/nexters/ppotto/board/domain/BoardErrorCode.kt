@@ -20,4 +20,5 @@ enum class BoardErrorCode(
     SHARE_NOT_FOUND(HttpStatus.NOT_FOUND, "BOARD-010", "공유된 보드를 찾을 수 없습니다."),
     SHARED_RECAP_NOT_FOUND(HttpStatus.NOT_FOUND, "BOARD-011", "공유된 리캡을 찾을 수 없습니다."),
     OWNER_CANNOT_LEAVE(HttpStatus.CONFLICT, "BOARD-012", "방장은 보드를 나갈 수 없습니다."),
+    LAYOUT_CONFLICT(HttpStatus.CONFLICT, "BOARD-013", "보드 항목이 변경되거나 삭제되었습니다."),
 }

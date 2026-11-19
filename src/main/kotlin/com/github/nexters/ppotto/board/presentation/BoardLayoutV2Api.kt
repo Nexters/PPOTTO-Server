@@ -24,8 +24,9 @@ interface BoardLayoutV2Api {
         operationId = "updateV2",
         summary = "보드 편집 결과 저장 (v2)",
         description =
-            "스티커 배치와 선·텍스트의 생성·삭제를 하나의 트랜잭션으로 반영함. 편집 모드에서 바뀐 필드만 보냄. " +
-                "created는 id 기준 upsert라 같은 id를 다시 보내면 수정이고, 삭제한 id를 다시 보내면 되살아남",
+            "스티커 배치와 선·텍스트의 생성·수정·삭제를 하나의 트랜잭션으로 반영함. " +
+                "변경된 항목만 보내며, 기존 항목의 수정·삭제는 조회 당시 배치 버전이 일치할 때만 반영함. " +
+                "충돌하면 변경사항을 적용하지 않고 충돌한 ID를 반환함",
         parameters = [
             Parameter(
                 name = "boardId",
@@ -56,6 +57,11 @@ interface BoardLayoutV2Api {
         ],
     )
     @BoardNotFoundApiResponse
+    @OpenApiResponse(
+        responseCode = "409",
+        description = "조회한 뒤 스티커 또는 선·텍스트 배치가 변경되거나 삭제됨 (BOARD-013). error.details에 충돌한 ID 목록 포함",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ApiErrorResponse::class))],
+    )
     fun update(
         userId: UserId,
         boardId: BoardId,

@@ -49,6 +49,7 @@
 | error.message | 사용자 또는 개발자 확인용 메시지 |
 | error.fieldErrors | 요청 바디 검증 실패 시 필드별 오류. 그 외 빈 배열 |
 | error.timestamp | 에러 발생 시각. UTC ISO-8601 |
+| error.details | 오류별 추가 정보. 해당하지 않으면 생략 |
 
 ## 3. 엔드포인트 요약
 
@@ -912,7 +913,8 @@ Request example:
         "zIndex": 3,
         "badgeOffsetX": -24,
         "badgeOffsetY": 96,
-        "badgeRotation": 0
+        "badgeRotation": 0,
+        "layoutVersion": 0
       },
       {
         "id": "01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b",
@@ -929,7 +931,8 @@ Request example:
         "zIndex": 5,
         "badgeOffsetX": 12,
         "badgeOffsetY": -60,
-        "badgeRotation": -4
+        "badgeRotation": -4,
+        "layoutVersion": 0
       },
       {
         "id": "01983f2b-5e6f-7a7b-c8d9-0e1f2a3b4c5d",
@@ -943,7 +946,8 @@ Request example:
         "rotation": 0,
         "badgeOffsetX": 0,
         "badgeOffsetY": 0,
-        "badgeRotation": 0
+        "badgeRotation": 0,
+        "layoutVersion": 0
       }
     ],
     "drawings": [
@@ -968,7 +972,8 @@ Request example:
           ]
         },
         "color": "#FFD400",
-        "strokeWidth": 4
+        "strokeWidth": 4,
+        "layoutVersion": 0
       },
       {
         "id": "01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a",
@@ -991,7 +996,8 @@ Request example:
           ]
         },
         "color": "#FFFFFF",
-        "strokeWidth": 2.5
+        "strokeWidth": 2.5,
+        "layoutVersion": 0
       }
     ]
   },
@@ -1037,6 +1043,7 @@ Request example:
 - 방장과 참여자(`board_members`) 모두 조회하고 레이아웃을 저장할 수 있습니다. 둘 다 아닌 사용자에게는 보드가 없는 것과 같은 `404 BOARD-002`로 응답합니다. 이름 변경과 보드 삭제는 방장만 할 수 있습니다.
 - 보드, 스티커, 드로잉을 한 번에 반환합니다. `isNew`는 요청 사용자의 미열람 여부이며 빨간 점 표시 여부입니다. imageUrl은 만료가 있으므로 보드에 진입할 때마다 새로 조회합니다.
 - 각 스티커의 `creatorName`은 스티커를 생성한 사용자의 현재 이름입니다. 개인 보드와 공동 보드에 동일하게 포함됩니다.
+- 스티커와 드로잉의 `layoutVersion`은 항목별 배치 버전이며 초기값은 0입니다.
 - 생성 직후라 아직 배치되지 않은 스티커는 `posX`/`posY`/`zIndex` 키 자체가 없습니다(서버가 null 필드를 직렬화하지 않음. 위 예시의 세 번째 스티커 참고). `scale`은 1, `rotation`은 0으로 채워져 있습니다. 클라이언트는 `posX` 키가 없으면 보드 상태를 보고 겹치지 않는 위치와 쌓임 순서를 계산해 `PATCH /boards/{boardId}/layout`로 채워야 합니다.
 
 ### PATCH /boards/{boardId}
@@ -1536,7 +1543,8 @@ v1과 다른 점은 `drawings` 배열뿐이다. `id`, `name`, `stickers`는 v1�
       "color": "#FFD400",
       "zIndex": 6,
       "stroke": { "points": [[10.5, 22], [14.2, 25.1], [19.8, 27.4]] },
-      "strokeWidth": 4
+      "strokeWidth": 4,
+      "layoutVersion": 0
     },
     {
       "type": "TEXT",
@@ -1549,7 +1557,8 @@ v1과 다른 점은 `drawings` 배열뿐이다. `id`, `name`, `stickers`는 v1�
       "posX": 80,
       "posY": 290.5,
       "maxWidth": 280,
-      "rotation": 0
+      "rotation": 0,
+      "layoutVersion": 0
     }
   ]
 }
@@ -1695,7 +1704,43 @@ data: {"eventId":"019a72c0-4d8e-7f10-a2b3-c4d5e6f70819","type":"BOARD_UPDATED","
 - Operation ID: `saveBoardLayoutV2`
 - Summary: 편집 결과 일괄 저장 (선과 텍스트)
 
-`stickers`는 v1과 완전히 같다. `drawings.created` 항목만 `type` 판별자를 가진 합집합으로 바뀐다.
+`stickers`는 v1과 달리 `title` 대신 조회한 스티커의 `layoutVersion`을 `expectedLayoutVersion`으로 받는다. `drawings.created`는 새 항목만 생성하며, 기존 항목은 `drawings.updated`와 `drawings.deleted`에 조회 당시의 `layoutVersion`을 `expectedLayoutVersion`으로 보낸다. 스티커 또는 그림·텍스트의 버전이 달라지면 `409 BOARD-013`으로 요청 전체를 롤백한다.
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "BOARD-013",
+    "message": "보드 항목이 변경되거나 삭제되었습니다.",
+    "fieldErrors": [],
+    "timestamp": "2026-11-18T00:00:00Z",
+    "details": {
+      "stickerIds": ["01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f"],
+      "drawingIds": ["01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a"]
+    }
+  }
+}
+```
+
+Request example (스티커 이동 모드 종료):
+```json
+{
+  "stickers": [
+    {
+      "id": "01983f2b-1a2b-7c3d-8e4f-5a6b7c8d9e0f",
+      "expectedLayoutVersion": 0,
+      "posX": 80,
+      "posY": 290.5,
+      "scale": 1.1,
+      "rotation": -8,
+      "zIndex": 6,
+      "badgeOffsetX": -24,
+      "badgeOffsetY": 96,
+      "badgeRotation": 0
+    }
+  ]
+}
+```
 
 Request example (드로잉 모드 종료 — 선 생성 1건, 삭제 1건):
 ```json
@@ -1713,7 +1758,9 @@ Request example (드로잉 모드 종료 — 선 생성 1건, 삭제 1건):
         "strokeWidth": 4
       }
     ],
-    "deletedIds": ["01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a"]
+    "deleted": [
+      { "id": "01983f2c-2b3c-7d4e-9f5a-6b7c8d9e0f1a", "expectedLayoutVersion": 0 }
+    ]
   }
 }
 ```
@@ -1741,23 +1788,51 @@ Request example (텍스트 모드 종료 — 텍스트 생성 1건):
 }
 ```
 
+Request example (기존 텍스트 이동):
+```json
+{
+  "drawings": {
+    "updated": [
+      {
+        "type": "TEXT",
+        "id": "01983f2c-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+        "scope": "BOARD",
+        "color": "#FFFFFF",
+        "zIndex": 7,
+        "content": "여름 휴가",
+        "fontSize": 26,
+        "posX": 120,
+        "posY": 310,
+        "maxWidth": 280,
+        "rotation": 0,
+        "expectedLayoutVersion": 0
+      }
+    ]
+  }
+}
+```
+
 #### Success Spec
 v1과 같다 (200, `data: null`).
 
 #### Failure Spec
-v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
-| 400 | STICKER-008 | 편집할 수 없는 스티커가 포함되어 있습니다. | 저장 대상 스티커 중 이미 삭제되었거나 이 보드에 속하지 않는 스티커가 있음 |
+v1과 같고, 다음 오류가 추가된다.
 
 | Status | Error Code | 발생 조건 |
 | --- | --- | --- |
+| 409 | BOARD-013 | 스티커, 그림 또는 텍스트의 배치 버전이 조회 당시와 다르거나 항목이 삭제됨. 전체 요청 롤백 |
 | 400 | COMMON-001 | `type`이 `STROKE`/`TEXT`가 아님 |
 | 400 | COMMON-001 | `content`가 비었거나 32자 초과 |
 | 400 | COMMON-001 | `color`가 `#RRGGBB` 형식이 아님 |
 | 400 | COMMON-001 | `fontSize` 또는 `maxWidth`가 0 이하 |
 
 #### Notes
-- `created`는 v1과 같이 `id` 기준 upsert입니다. 같은 id를 다시 보내면 수정이고, 재시도해도 중복 저장되지 않습니다 (멱등). 삭제한 id를 다시 `created`로 보내면 되살아납니다.
-- `deletedIds`는 선과 텍스트를 구분하지 않습니다.
+- v2의 `created`는 새 항목만 생성합니다. 기존 항목 ID를 다시 보내면 `BOARD-001`로 거부하며 삭제된 항목도 되살리지 않습니다.
+- `updated`는 현재 `type`, `scope`, `stickerId`를 유지해야 합니다. 다른 값으로 바꾸면 `BOARD-001`로 거부합니다.
+- `deleted`는 선과 텍스트를 구분하지 않으며 각 항목의 조회 당시 배치 버전이 필요합니다.
+- 기존 `deletedIds` 형식은 v2에서 400으로 거부합니다. 삭제 요청이 무시된 채 성공 응답을 받지 않도록 합니다.
+- v1의 기존 요청 형식은 유지합니다. v1으로 수정한 그림·텍스트도 배치 버전이 증가합니다.
+- 이 보드에서 삭제된 스티커의 배치를 저장하려는 요청은 `BOARD-013`으로 거부합니다. 다른 보드의 스티커나 존재하지 않는 ID는 `BOARD-001`로 거부합니다.
 - `content`의 줄바꿈은 클라이언트가 실측해 넣은 그대로 저장하고 서버는 다시 감싸지 않습니다. `maxWidth`는 그 줄바꿈 기준이 된 편집창 폭이며 렌더 폭 보존용입니다.
 - `zIndex`는 스티커의 `zIndex`와 같은 숫자 공간을 씁니다.
 - v1에서는 `color`가 공백만 아니면 통과했지만 v2는 `#RRGGBB`를 강제합니다.
@@ -2309,7 +2384,8 @@ v1과 같고, 400 `COMMON-001` 발생 조건에 다음이 추가된다.
         "zIndex": 3,
         "badgeOffsetX": -24,
         "badgeOffsetY": 96,
-        "badgeRotation": 0
+        "badgeRotation": 0,
+        "layoutVersion": 0
       }
     ],
     "drawings": []

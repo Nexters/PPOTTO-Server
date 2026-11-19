@@ -94,6 +94,10 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
         set(value): Unit = set(17, value)
         get(): Double? = get(17) as Double?
 
+    open var layoutVersion: Long?
+        set(value): Unit = set(18, value)
+        get(): Long? = get(18) as Long?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -103,7 +107,7 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
     /**
      * Create a detached, initialised DrawingsRecord
      */
-    constructor(id: DrawingId? = null, boardId: BoardId, stickerId: StickerId? = null, scope: String, stroke: JSONB? = null, color: String, strokeWidth: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, type: String? = null, zIndex: Int? = null, content: String? = null, fontSize: Double? = null, posX: Double? = null, posY: Double? = null, maxWidth: Double? = null, rotation: Double? = null): this() {
+    constructor(id: DrawingId? = null, boardId: BoardId, stickerId: StickerId? = null, scope: String, stroke: JSONB? = null, color: String, strokeWidth: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, type: String? = null, zIndex: Int? = null, content: String? = null, fontSize: Double? = null, posX: Double? = null, posY: Double? = null, maxWidth: Double? = null, rotation: Double? = null, layoutVersion: Long? = null): this() {
         this.id = id
         this.boardId = boardId
         this.stickerId = stickerId
@@ -122,6 +126,7 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
         this.posY = posY
         this.maxWidth = maxWidth
         this.rotation = rotation
+        this.layoutVersion = layoutVersion
         resetTouchedOnNotNull()
     }
 
@@ -148,6 +153,7 @@ open class DrawingsRecord private constructor() : UpdatableRecordImpl<DrawingsRe
             this.posY = value.posY
             this.maxWidth = value.maxWidth
             this.rotation = value.rotation
+            this.layoutVersion = value.layoutVersion
             resetTouchedOnNotNull()
         }
     }

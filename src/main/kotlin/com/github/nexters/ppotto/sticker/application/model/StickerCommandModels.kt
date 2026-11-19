@@ -11,4 +11,5 @@ data class StickerTitleResult(
 data class StickerLayoutCommand(
     val id: StickerId,
     val layout: StickerLayout,
+    val expectedLayoutVersion: Long? = null,
 )

@@ -41,10 +41,16 @@ class FakeBoardStickerPort :
     BoardStickerCommandPort,
     ResettableFake {
     val stickersByBoardId = mutableMapOf<BoardId, List<BoardStickerItem>>()
+    val deletedStickerIdsByBoardId = mutableMapOf<BoardId, Set<StickerId>>()
     val validatedStickerIds = mutableListOf<Set<StickerId>>()
     val updatedLayouts = mutableListOf<List<BoardStickerLayoutCommand>>()
     val deletedBoardIds = mutableListOf<BoardId>()
     val deletedCreators = mutableListOf<Pair<BoardId, UserId>>()
+
+    override fun findDeletedIds(
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
+    ): Set<StickerId> = deletedStickerIdsByBoardId[boardId].orEmpty() intersect stickerIds
 
     override fun getByBoardId(
         boardId: BoardId,
@@ -91,6 +97,7 @@ class FakeBoardStickerPort :
 
     override fun reset() {
         stickersByBoardId.clear()
+        deletedStickerIdsByBoardId.clear()
         validatedStickerIds.clear()
         updatedLayouts.clear()
         deletedBoardIds.clear()

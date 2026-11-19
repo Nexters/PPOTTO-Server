@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.infrastructure
 
+import com.github.nexters.ppotto.board.application.model.BoardLayoutConflictException
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerItem
 import com.github.nexters.ppotto.board.application.port.BoardStickerLayoutCommand
@@ -14,6 +15,7 @@ import com.github.nexters.ppotto.sticker.application.StickerCommandService
 import com.github.nexters.ppotto.sticker.application.StickerQueryService
 import com.github.nexters.ppotto.sticker.application.model.StickerItemResult
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.domain.StickerLayout
 import com.github.nexters.ppotto.sticker.domain.StickerType
 import org.springframework.stereotype.Component
@@ -53,10 +55,21 @@ class BoardStickerAdapter(
         stickerIds: Set<StickerId>,
     ): Boolean = stickerCommandService.validateOwnedByBoard(boardId, stickerIds)
 
+    override fun findDeletedIds(
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
+    ): Set<StickerId> = stickerCommandService.findDeletedIds(boardId, stickerIds)
+
     override fun updateLayouts(
         boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,
-    ): Unit = stickerCommandService.updateLayouts(boardId, layouts.map { it.toStickerCommand() })
+    ) {
+        try {
+            stickerCommandService.updateLayouts(boardId, layouts.map { it.toStickerCommand() })
+        } catch (exception: StickerLayoutConflictException) {
+            throw BoardLayoutConflictException(stickerIds = exception.stickerIds, cause = exception)
+        }
+    }
 
     override fun deleteAllByBoardId(boardId: BoardId): Unit = stickerCommandService.deleteAllByBoardId(boardId)
 
@@ -82,6 +95,7 @@ class BoardStickerAdapter(
             badgeOffsetX = badgeOffsetX,
             badgeOffsetY = badgeOffsetY,
             badgeRotation = badgeRotation,
+            layoutVersion = layoutVersion,
         )
 
     private fun StickerType.toBoardType() =
@@ -93,6 +107,7 @@ class BoardStickerAdapter(
     private fun BoardStickerLayoutCommand.toStickerCommand() =
         StickerLayoutCommand(
             id = id,
+            expectedLayoutVersion = expectedLayoutVersion,
             layout =
                 StickerLayout(
                     title = title,

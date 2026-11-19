@@ -17,6 +17,9 @@ data class ErrorResponse(
 
     @field:Schema(description = "에러 발생 시각. UTC ISO-8601", example = "2026-07-27T05:02:11Z")
     val timestamp: Instant,
+
+    @field:Schema(description = "오류별 추가 정보. 해당하지 않으면 생략")
+    val details: Map<String, List<String>>? = null,
 ) {
     @Schema(description = "요청 바디 필드 검증 실패 상세")
     data class FieldErrorDetail(
@@ -34,7 +37,8 @@ data class ErrorResponse(
         fun of(
             errorCode: ErrorCode,
             message: String = errorCode.message,
-        ): ErrorResponse = ErrorResponse(errorCode.code, message, emptyList(), Instant.now())
+            details: Map<String, List<String>>? = null,
+        ): ErrorResponse = ErrorResponse(errorCode.code, message, emptyList(), Instant.now(), details)
 
         fun of(
             errorCode: ErrorCode,

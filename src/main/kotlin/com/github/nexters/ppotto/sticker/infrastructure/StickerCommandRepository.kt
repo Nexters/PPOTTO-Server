@@ -1,5 +1,6 @@
 package com.github.nexters.ppotto.sticker.infrastructure
 
+import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.StickerId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.sticker.domain.Sticker
@@ -22,21 +23,54 @@ class StickerCommandRepository(
             .and(STICKERS.DELETED_AT.isNull)
             .execute() == 1
 
-    fun updateLayout(sticker: Sticker): Boolean =
+    fun updateLayout(
+        sticker: Sticker,
+        title: String?,
+        expectedLayoutVersion: Long?,
+    ): Boolean {
+        val update =
+            dslContext
+                .update(STICKERS)
+                .set(STICKERS.POS_X, sticker.posX)
+                .set(STICKERS.POS_Y, sticker.posY)
+                .set(STICKERS.SCALE, sticker.scale)
+                .set(STICKERS.ROTATION, sticker.rotation)
+                .set(STICKERS.Z_INDEX, sticker.zIndex)
+                .set(STICKERS.BADGE_OFFSET_X, sticker.badgeOffsetX)
+                .set(STICKERS.BADGE_OFFSET_Y, sticker.badgeOffsetY)
+                .set(STICKERS.BADGE_ROTATION, sticker.badgeRotation)
+                .set(STICKERS.LAYOUT_VERSION, STICKERS.LAYOUT_VERSION.plus(1L))
+        if (title != null) update.set(STICKERS.TITLE, sticker.title)
+        val condition =
+            STICKERS.ID
+                .eq(sticker.id)
+                .and(STICKERS.DELETED_AT.isNull)
+                .let { if (expectedLayoutVersion == null) it else it.and(STICKERS.LAYOUT_VERSION.eq(expectedLayoutVersion)) }
+        return update.where(condition).execute() == 1
+    }
+
+    fun existsActiveById(stickerId: StickerId): Boolean =
         dslContext
-            .update(STICKERS)
-            .set(STICKERS.TITLE, sticker.title)
-            .set(STICKERS.POS_X, sticker.posX)
-            .set(STICKERS.POS_Y, sticker.posY)
-            .set(STICKERS.SCALE, sticker.scale)
-            .set(STICKERS.ROTATION, sticker.rotation)
-            .set(STICKERS.Z_INDEX, sticker.zIndex)
-            .set(STICKERS.BADGE_OFFSET_X, sticker.badgeOffsetX)
-            .set(STICKERS.BADGE_OFFSET_Y, sticker.badgeOffsetY)
-            .set(STICKERS.BADGE_ROTATION, sticker.badgeRotation)
-            .where(STICKERS.ID.eq(sticker.id))
+            .selectOne()
+            .from(STICKERS)
+            .where(STICKERS.ID.eq(stickerId))
             .and(STICKERS.DELETED_AT.isNull)
-            .execute() == 1
+            .fetchOne() != null
+
+    fun findDeletedIds(
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
+    ): Set<StickerId> {
+        if (stickerIds.isEmpty()) return emptySet()
+        return dslContext
+            .select(STICKERS.ID)
+            .from(STICKERS)
+            .where(STICKERS.BOARD_ID.eq(boardId))
+            .and(STICKERS.ID.`in`(stickerIds))
+            .and(STICKERS.DELETED_AT.isNotNull)
+            .fetch(STICKERS.ID)
+            .mapTo(mutableSetOf()) { checkNotNull(it) }
+    }
 
     fun tryClaimRegenerationLock(
         stickerId: StickerId,

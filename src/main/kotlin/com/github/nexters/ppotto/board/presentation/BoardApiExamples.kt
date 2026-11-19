@@ -20,10 +20,12 @@ import com.github.nexters.ppotto.board.presentation.dto.DrawingChangesRequest
 import com.github.nexters.ppotto.board.presentation.dto.DrawingChangesV2Request
 import com.github.nexters.ppotto.board.presentation.dto.DrawingCreateRequest
 import com.github.nexters.ppotto.board.presentation.dto.DrawingCreateV2Request
+import com.github.nexters.ppotto.board.presentation.dto.DrawingDeleteV2Request
 import com.github.nexters.ppotto.board.presentation.dto.DrawingResponse
 import com.github.nexters.ppotto.board.presentation.dto.DrawingV2Response
 import com.github.nexters.ppotto.board.presentation.dto.RenameBoardRequest
 import com.github.nexters.ppotto.board.presentation.dto.StickerLayoutRequest
+import com.github.nexters.ppotto.board.presentation.dto.StickerLayoutV2Request
 import com.github.nexters.ppotto.board.presentation.dto.withLegacyZIndex
 import com.github.nexters.ppotto.global.identifier.BoardId
 import com.github.nexters.ppotto.global.identifier.DrawingId
@@ -223,6 +225,7 @@ private val DETAIL_STICKERS =
             badgeOffsetX = -24.0,
             badgeOffsetY = 96.0,
             badgeRotation = 0.0,
+            layoutVersion = 0,
         ),
         BoardStickerResponse(
             id = StickerId(UUID.fromString("01983f2b-3c4d-7e5f-a6b7-8c9d0e1f2a3b")),
@@ -240,6 +243,7 @@ private val DETAIL_STICKERS =
             badgeOffsetX = 12.0,
             badgeOffsetY = -60.0,
             badgeRotation = -4.0,
+            layoutVersion = 0,
         ),
     )
 
@@ -261,6 +265,7 @@ private val BOARD_DETAIL_RESPONSE =
                                 stroke = LEGACY_STICKER_STROKE,
                                 color = "#FFD400",
                                 strokeWidth = 4.0,
+                                layoutVersion = 0,
                             ),
                             DrawingResponse(
                                 id = DELETED_DRAWING_ID,
@@ -269,6 +274,7 @@ private val BOARD_DETAIL_RESPONSE =
                                 stroke = LEGACY_BOARD_STROKE,
                                 color = "#FFFFFF",
                                 strokeWidth = 2.5,
+                                layoutVersion = 0,
                             ),
                         ),
                 ),
@@ -278,7 +284,24 @@ private val BOARD_DETAIL_RESPONSE =
 private val STICKER_MOVE_LAYOUT_V2_REQUEST =
     ApiExample(
         name = "스티커 이동 모드 종료",
-        value = BoardLayoutV2Request(stickers = listOf(MOVED_STICKER_LAYOUT)),
+        value =
+            BoardLayoutV2Request(
+                stickers =
+                    listOf(
+                        StickerLayoutV2Request(
+                            id = MOVED_STICKER_LAYOUT.id,
+                            posX = MOVED_STICKER_LAYOUT.posX,
+                            posY = MOVED_STICKER_LAYOUT.posY,
+                            scale = MOVED_STICKER_LAYOUT.scale,
+                            rotation = MOVED_STICKER_LAYOUT.rotation,
+                            zIndex = MOVED_STICKER_LAYOUT.zIndex,
+                            badgeOffsetX = MOVED_STICKER_LAYOUT.badgeOffsetX,
+                            badgeOffsetY = MOVED_STICKER_LAYOUT.badgeOffsetY,
+                            badgeRotation = MOVED_STICKER_LAYOUT.badgeRotation,
+                            expectedLayoutVersion = 0,
+                        ),
+                    ),
+            ),
     )
 
 private val DRAWING_MODE_LAYOUT_V2_REQUEST =
@@ -300,7 +323,7 @@ private val DRAWING_MODE_LAYOUT_V2_REQUEST =
                                     strokeWidth = 4.0,
                                 ),
                             ),
-                        deletedIds = listOf(DELETED_DRAWING_ID),
+                        deleted = listOf(DrawingDeleteV2Request(DELETED_DRAWING_ID, 0)),
                     ),
             ),
     )
@@ -352,6 +375,7 @@ private val BOARD_DETAIL_V2_RESPONSE =
                                 zIndex = 6,
                                 stroke = STICKER_STROKE,
                                 strokeWidth = 4.0,
+                                layoutVersion = 0,
                             ),
                             DrawingV2Response.Text(
                                 id = TEXT_DRAWING_ID,
@@ -365,6 +389,7 @@ private val BOARD_DETAIL_V2_RESPONSE =
                                 posY = 290.5,
                                 maxWidth = 280.0,
                                 rotation = 0.0,
+                                layoutVersion = 0,
                             ),
                         ),
                 ),
@@ -411,6 +436,12 @@ private val ACTIVE_ANALYSIS_EXISTS =
     ApiExamples.errorExample(
         errorCode = BoardErrorCode.ACTIVE_ANALYSIS_EXISTS,
         summary = "진행 중인 분석이 이 보드를 대상으로 함",
+    )
+
+private val LAYOUT_CONFLICT =
+    ApiExamples.errorExample(
+        errorCode = BoardErrorCode.LAYOUT_CONFLICT,
+        summary = "조회한 뒤 스티커, 그림 또는 텍스트의 배치가 변경되거나 삭제됨",
     )
 
 @Component
@@ -505,6 +536,7 @@ class BoardApiExamples : ApiExampleProvider {
                                     UNEDITABLE_STICKER,
                                 ),
                             "404" to listOf(BOARD_NOT_FOUND),
+                            "409" to listOf(LAYOUT_CONFLICT),
                         ),
                 ),
         )

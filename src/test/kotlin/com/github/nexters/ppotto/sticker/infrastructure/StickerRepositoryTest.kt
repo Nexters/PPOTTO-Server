@@ -68,6 +68,7 @@ class StickerRepositoryTest(
                 Then("저장한 aggregate 데이터를 반환한다") {
                     sticker?.title shouldBe "여름 사진"
                     sticker?.summary shouldBe "여름 내내 바다만 찍었어요"
+                    sticker?.layoutVersion shouldBe 0
                     photoIds shouldContainExactly photos.map { it.id }
                     comments.map { it.content } shouldContainExactly listOf("키워드 칩", "말풍선")
                 }

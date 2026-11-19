@@ -118,6 +118,10 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         set(value): Unit = set(23, value)
         get(): Boolean? = get(23) as Boolean?
 
+    open var layoutVersion: Long?
+        set(value): Unit = set(24, value)
+        get(): Long? = get(24) as Long?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -127,7 +131,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
     /**
      * Create a detached, initialised StickersRecord
      */
-    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null, mainColor: String? = null, shareToken: String? = null, sharePhotos: Boolean? = null): this() {
+    constructor(id: StickerId? = null, analysisId: AnalysisId, boardId: BoardId, type: String, title: String, sourcePhotoId: PhotoId? = null, imageKey: String? = null, textContent: String? = null, posX: Double? = null, posY: Double? = null, scale: Double? = null, rotation: Double? = null, zIndex: Int? = null, badgeOffsetX: Double? = null, badgeOffsetY: Double? = null, badgeRotation: Double? = null, createdAt: Instant? = null, updatedAt: Instant? = null, deletedAt: Instant? = null, summary: String, regenerationLockedUntil: Instant? = null, mainColor: String? = null, shareToken: String? = null, sharePhotos: Boolean? = null, layoutVersion: Long? = null): this() {
         this.id = id
         this.analysisId = analysisId
         this.boardId = boardId
@@ -152,6 +156,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
         this.mainColor = mainColor
         this.shareToken = shareToken
         this.sharePhotos = sharePhotos
+        this.layoutVersion = layoutVersion
         resetTouchedOnNotNull()
     }
 
@@ -184,6 +189,7 @@ open class StickersRecord private constructor() : UpdatableRecordImpl<StickersRe
             this.mainColor = value.mainColor
             this.shareToken = value.shareToken
             this.sharePhotos = value.sharePhotos
+            this.layoutVersion = value.layoutVersion
             resetTouchedOnNotNull()
         }
     }

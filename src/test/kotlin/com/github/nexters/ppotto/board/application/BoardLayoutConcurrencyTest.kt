@@ -198,6 +198,11 @@ class CoordinatedBoardStickerPort(
         return true
     }
 
+    override fun findDeletedIds(
+        boardId: BoardId,
+        stickerIds: Set<StickerId>,
+    ): Set<StickerId> = emptySet()
+
     override fun updateLayouts(
         boardId: BoardId,
         layouts: List<BoardStickerLayoutCommand>,

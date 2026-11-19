@@ -76,6 +76,7 @@ private val SHARED_BOARD_RESPONSE =
                                 badgeOffsetX = -24.0,
                                 badgeOffsetY = 96.0,
                                 badgeRotation = 0.0,
+                                layoutVersion = 0,
                             ),
                         ),
                     drawings =
@@ -92,6 +93,7 @@ private val SHARED_BOARD_RESPONSE =
                                 posY = 290.5,
                                 maxWidth = 280.0,
                                 rotation = 0.0,
+                                layoutVersion = 0,
                             ),
                         ),
                 ),

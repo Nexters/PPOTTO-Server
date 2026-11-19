@@ -35,6 +35,11 @@ class BoardExternalPortFallbackConfiguration {
     @ConditionalOnMissingBean
     fun boardStickerCommandPort(): BoardStickerCommandPort =
         object : BoardStickerCommandPort {
+            override fun findDeletedIds(
+                boardId: BoardId,
+                stickerIds: Set<StickerId>,
+            ): Set<StickerId> = error("StickerCommandService 연동이 필요합니다.")
+
             override fun ownsAll(
                 boardId: BoardId,
                 stickerIds: Set<StickerId>,

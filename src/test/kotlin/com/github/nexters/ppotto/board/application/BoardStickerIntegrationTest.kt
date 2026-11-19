@@ -2,7 +2,9 @@ package com.github.nexters.ppotto.board.application
 
 import com.github.nexters.ppotto.analysis.domain.AnalysisStatus
 import com.github.nexters.ppotto.analysis.infrastructure.persistence.AnalysisRepository
+import com.github.nexters.ppotto.board.application.model.BoardLayoutConflictException
 import com.github.nexters.ppotto.board.application.model.BoardLayoutUpdateCommand
+import com.github.nexters.ppotto.board.application.model.DrawingLayoutUpdateCommand
 import com.github.nexters.ppotto.board.application.port.BoardActiveAnalysisPort
 import com.github.nexters.ppotto.board.application.port.BoardAnalysisActivityPort
 import com.github.nexters.ppotto.board.application.port.BoardStickerCommandPort
@@ -14,6 +16,7 @@ import com.github.nexters.ppotto.board.domain.BoardStickerType
 import com.github.nexters.ppotto.board.infrastructure.BoardMembershipRepository
 import com.github.nexters.ppotto.board.infrastructure.BoardRepository
 import com.github.nexters.ppotto.board.infrastructure.DrawingRepository
+import com.github.nexters.ppotto.board.support.awaitBlockedLock
 import com.github.nexters.ppotto.board.support.changeAnalysisStatus
 import com.github.nexters.ppotto.board.support.newDrawing
 import com.github.nexters.ppotto.global.error.ConflictException
@@ -38,6 +41,11 @@ import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import org.jooq.DSLContext
 import org.springframework.context.ApplicationContext
+import org.springframework.transaction.support.TransactionTemplate
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class BoardStickerIntegrationTest(
     applicationContext: ApplicationContext,
@@ -55,6 +63,7 @@ class BoardStickerIntegrationTest(
     analysisRepository: AnalysisRepository,
     userRepository: UserRepository,
     dslContext: DSLContext,
+    transactionTemplate: TransactionTemplate,
 ) : IntegrationTest({
         Given("실제 보드와 스티커 연동 빈이 기동된 상태에서") {
             val user = userRepository.saveTestUser()
@@ -189,6 +198,61 @@ class BoardStickerIntegrationTest(
             }
         }
 
+        Given("같은 스티커 배치를 이미 저장한 보드에서") {
+            val user = userRepository.saveTestUser()
+            val board = boardRepository.save(user.id)
+            val analysis = analysisRepository.save(user.id, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+            val layout = updatedLayout(sticker.id).copy(title = null, expectedLayoutVersion = 0)
+            boardLayoutService.update(
+                board.id,
+                user.id,
+                BoardLayoutUpdateCommand(listOf(layout), emptyList(), emptyList()),
+            )
+
+            When("이전 버전으로 다시 스티커 배치를 저장하면") {
+                val exception =
+                    shouldThrow<BoardLayoutConflictException> {
+                        boardLayoutService.update(
+                            board.id,
+                            user.id,
+                            BoardLayoutUpdateCommand(listOf(layout), emptyList(), emptyList()),
+                        )
+                    }
+
+                Then("그림·텍스트와 같은 보드 배치 충돌 코드를 반환한다") {
+                    exception.errorCode shouldBe BoardErrorCode.LAYOUT_CONFLICT
+                    exception.stickerIds shouldBe setOf(sticker.id)
+                    exception.drawingIds.shouldBeEmpty()
+                }
+            }
+
+            When("스티커와 그림이 모두 이전 버전이면") {
+                val drawing = newDrawing(boardId = board.id)
+                drawingRepository.insertAll(listOf(drawing))
+                drawingRepository.updateVersioned(DrawingLayoutUpdateCommand(drawing.copy(color = "#FFD400"), 0))
+
+                val conflict =
+                    shouldThrow<BoardLayoutConflictException> {
+                        boardLayoutService.update(
+                            board.id,
+                            user.id,
+                            BoardLayoutUpdateCommand(
+                                stickers = listOf(layout),
+                                createdDrawings = emptyList(),
+                                deletedDrawingIds = emptyList(),
+                                updatedDrawings = listOf(DrawingLayoutUpdateCommand(drawing.copy(color = "#FF0000"), 0)),
+                            ),
+                        )
+                    }
+
+                Then("한 충돌에 두 항목의 ID를 함께 담는다") {
+                    conflict.stickerIds shouldBe setOf(sticker.id)
+                    conflict.drawingIds shouldBe setOf(drawing.id)
+                }
+            }
+        }
+
         Given("다른 보드의 스티커를 소유한 사용자가") {
             val user = userRepository.saveTestUser()
             val board = boardRepository.save(user.id)
@@ -230,6 +294,90 @@ class BoardStickerIntegrationTest(
                         .shouldNotBeNull()
                         .title shouldBe otherSticker.title
                 }
+            }
+        }
+
+        Given("삭제된 스티커가 있는 보드에서") {
+            val user = userRepository.saveTestUser()
+            val board = boardRepository.save(user.id)
+            val analysis = analysisRepository.save(user.id, board.id)
+            val deletedSticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+            val activeSticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+            stickerCommandService.delete(user.id, deletedSticker.id)
+            val activeLayout = updatedLayout(activeSticker.id).copy(title = null, expectedLayoutVersion = 0)
+            boardLayoutService.update(
+                board.id,
+                user.id,
+                BoardLayoutUpdateCommand(listOf(activeLayout), emptyList(), emptyList()),
+            )
+            val deletedLayout = updatedLayout(deletedSticker.id).copy(title = null, expectedLayoutVersion = 0)
+
+            When("삭제된 스티커와 이전 버전의 스티커를 함께 저장하면") {
+                val conflict =
+                    shouldThrow<BoardLayoutConflictException> {
+                        boardLayoutService.update(
+                            board.id,
+                            user.id,
+                            BoardLayoutUpdateCommand(listOf(deletedLayout, activeLayout), emptyList(), emptyList()),
+                        )
+                    }
+
+                Then("삭제와 버전 충돌의 ID를 함께 알리고 저장을 롤백한다") {
+                    conflict.stickerIds shouldBe setOf(deletedSticker.id, activeSticker.id)
+                    stickerRepository.findById(deletedSticker.id).shouldBeNull()
+                    stickerRepository.findById(activeSticker.id)?.layoutVersion shouldBe 1
+                }
+            }
+        }
+
+        Given("스티커 삭제와 배치 저장이 같은 보드에서 겹칠 때") {
+            val user = userRepository.saveTestUser()
+            val board = boardRepository.save(user.id)
+            val analysis = analysisRepository.save(user.id, board.id)
+            val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+            val executor = Executors.newFixedThreadPool(2)
+            val boardLocked = CountDownLatch(1)
+            val releaseBoard = CountDownLatch(1)
+
+            try {
+                val lockFuture =
+                    executor.submit(
+                        Callable {
+                            transactionTemplate.executeWithoutResult {
+                                boardRepository.findByIdForUpdate(board.id)
+                                boardLocked.countDown()
+                                check(releaseBoard.await(30, TimeUnit.SECONDS))
+                            }
+                        },
+                    )
+                check(boardLocked.await(10, TimeUnit.SECONDS))
+                val deleteFuture = executor.submit(Callable { stickerCommandService.delete(user.id, sticker.id) })
+                dslContext.awaitBlockedLock()
+                releaseBoard.countDown()
+                lockFuture.get(30, TimeUnit.SECONDS)
+                deleteFuture.get(30, TimeUnit.SECONDS)
+
+                When("삭제 전에 조회한 버전으로 배치를 저장하면") {
+                    val conflict =
+                        shouldThrow<BoardLayoutConflictException> {
+                            boardLayoutService.update(
+                                board.id,
+                                user.id,
+                                BoardLayoutUpdateCommand(
+                                    stickers = listOf(updatedLayout(sticker.id).copy(title = null, expectedLayoutVersion = 0)),
+                                    createdDrawings = emptyList(),
+                                    deletedDrawingIds = emptyList(),
+                                ),
+                            )
+                        }
+
+                    Then("삭제가 보드 잠금 뒤에 실행되고 충돌 응답에 스티커 ID를 담는다") {
+                        conflict.stickerIds shouldBe setOf(sticker.id)
+                    }
+                }
+            } finally {
+                releaseBoard.countDown()
+                executor.shutdownNow()
             }
         }
 

@@ -25,6 +25,7 @@ import com.github.nexters.ppotto.global.identifier.UserId
 import com.github.nexters.ppotto.jooq.tables.references.STICKERS
 import com.github.nexters.ppotto.jooq.tables.references.STICKER_VIEWS
 import com.github.nexters.ppotto.sticker.application.model.StickerLayoutCommand
+import com.github.nexters.ppotto.sticker.application.model.StickerLayoutConflictException
 import com.github.nexters.ppotto.sticker.application.port.StickerDrawingCommandPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationPort
 import com.github.nexters.ppotto.sticker.application.port.StickerRegenerationResult
@@ -35,6 +36,7 @@ import com.github.nexters.ppotto.sticker.infrastructure.StickerRecapRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerRepository
 import com.github.nexters.ppotto.sticker.infrastructure.StickerViewRepository
 import com.github.nexters.ppotto.sticker.support.imageStickerCreation
+import com.github.nexters.ppotto.sticker.support.stickerLayout
 import com.github.nexters.ppotto.sticker.support.textStickerCreation
 import com.github.nexters.ppotto.support.IntegrationTest
 import com.github.nexters.ppotto.support.RecordingObjectStorageCleaner
@@ -154,6 +156,60 @@ class StickerCommandServiceTest(
             val board = boardRepository.save(userRepository.saveTestUser().id)
             val analysis = analysisRepository.save(board.userId, board.id)
             val sticker = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+
+            When("조회한 버전으로 배치를 저장하면") {
+                service.rename(board.userId, sticker.id, "다른 화면에서 바꾼 제목")
+                service.updateLayouts(
+                    board.id,
+                    listOf(StickerLayoutCommand(sticker.id, stickerLayout(posX = 11.0), expectedLayoutVersion = 0)),
+                )
+
+                Then("배치 버전만 증가하고 별도로 바뀐 제목은 유지한다") {
+                    val saved = stickerRepository.findById(sticker.id)
+                    saved?.posX shouldBe 11.0
+                    saved?.layoutVersion shouldBe 1
+                    saved?.title shouldBe "다른 화면에서 바꾼 제목"
+                }
+
+                Then("같은 이전 버전의 재요청은 충돌로 거절한다") {
+                    val exception =
+                        shouldThrow<StickerLayoutConflictException> {
+                            service.updateLayouts(
+                                board.id,
+                                listOf(StickerLayoutCommand(sticker.id, stickerLayout(posX = 22.0), expectedLayoutVersion = 0)),
+                            )
+                        }
+                    exception.stickerIds shouldBe setOf(sticker.id)
+                    stickerRepository.findById(sticker.id)?.posX shouldBe 11.0
+                    stickerRepository.findById(sticker.id)?.layoutVersion shouldBe 1
+                }
+            }
+
+            When("여러 스티커 중 뒤쪽 항목에 충돌이 있으면") {
+                val second = stickerRepository.save(analysis.id, board.id, textStickerCreation())
+                service.updateLayouts(
+                    board.id,
+                    listOf(StickerLayoutCommand(second.id, stickerLayout(posX = 30.0), expectedLayoutVersion = 0)),
+                )
+
+                Then("앞서 쓴 항목까지 모두 롤백한다") {
+                    val exception =
+                        shouldThrow<StickerLayoutConflictException> {
+                            service.updateLayouts(
+                                board.id,
+                                listOf(
+                                    StickerLayoutCommand(sticker.id, stickerLayout(posX = 20.0), expectedLayoutVersion = 0),
+                                    StickerLayoutCommand(second.id, stickerLayout(posX = 40.0), expectedLayoutVersion = 0),
+                                ),
+                            )
+                        }
+                    exception.stickerIds shouldBe setOf(second.id)
+                    stickerRepository.findById(sticker.id)?.layoutVersion shouldBe 0
+                    stickerRepository.findById(sticker.id)?.posX shouldBe null
+                    stickerRepository.findById(second.id)?.layoutVersion shouldBe 1
+                    stickerRepository.findById(second.id)?.posX shouldBe 30.0
+                }
+            }
 
             When("제목을 변경하면") {
                 val renamed = service.rename(board.userId, sticker.id, "새 제목")
@@ -570,7 +626,7 @@ class StickerCommandServiceTest(
             When("스티커 삭제를 요청하면") {
                 val exception =
                     shouldThrow<IllegalStateException> {
-                        serviceWithoutPort.delete(board.userId, sticker.id)
+                        transactionTemplate.executeWithoutResult { serviceWithoutPort.delete(board.userId, sticker.id) }
                     }
 
                 Then("연동 누락 오류를 던진다") {
